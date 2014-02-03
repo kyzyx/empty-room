@@ -90,7 +90,7 @@ class DataGrabber {
                     if (exposure < 200) grabber->getDevice()->setExposure(exposure + 10);
                     cout << "Exposure is " << exposure+10 << endl;
                 } else if (event.getKeyCode() == '[') {
-                    if (gain > 50) grabber->getDevice()->setExposure(gain - 50);
+                    if (gain > 50) grabber->getDevice()->setGain(gain - 50);
                     cout << "Gain is " << gain-50 << endl;
                 } else if (event.getKeyCode() == ']') {
                     if (gain < 1000) grabber->getDevice()->setGain(gain + 50);
