@@ -14,7 +14,8 @@ using namespace openni_wrapper;
 using namespace io;
 
 void savepoints(const string& filename, PointCloud<PointXYZ>::Ptr cloud) {
-    savePLYFileBinary(filename, *cloud);
+    PLYWriter w;
+    w.write<PointXYZ>(filename, *cloud, true, false);
 }
 class DataGrabber {
     public:
