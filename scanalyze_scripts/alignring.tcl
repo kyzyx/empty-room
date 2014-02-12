@@ -14,22 +14,28 @@ while {$numchars > 0} {
 }
 close $fileid
 
-foreach x $files {readfile $x}
 set numFiles [llength $files]
+set ext ".xf"
 for {set i 0} {$i < $numFiles} {incr i} {
-    set notMoving [lindex $files $i]
+    if {$i == 0} {
+        readfile [lindex $files $i]
+    }
+    set notMoving [file root [lindex $files $i]]
     if {$i == [expr $numFiles - 1]} {
-        set moving $notMoving
-        set notMoving [lindex $files 0]
-   } else {
-        set moving [lindex $files [expr $i+1]]
-   }
-    set moving [file root $moving]
-    set notMoving [file root $notMoving]
-    plv_icpregister 0.2 0 6 20 1 plane $moving $notMoving abs 0.001 1 400 0
+        set moving $notMoving$point
+        set notMoving [file root [lindex $files 0]]
+    } else {
+        set moving [file root [lindex $files [expr $i+1]]]
+        if {$i != 0} {
+            file copy -force -- $notMoving$ext $moving$ext
+        }
+        readfile [lindex $files [expr $i+1]]
+    }
+    set err [plv_icpregister 0.5 0 20 5 1 plane $moving $notMoving$point abs 3.0 1 400 0]
+    saveScanMetaData $moving xform
 }
-plv_globalreg init_import
-plv_globalreg register 0.01 
+#plv_globalreg init_import
+#plv_globalreg register 0.01
 fileWriteAllScanXforms
 
 
