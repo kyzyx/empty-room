@@ -18,26 +18,35 @@ void savepoints(const string& filename, PointCloud<PointXYZ>::Ptr cloud) {
     w.write<PointXYZ>(filename, *cloud, true, false);
 }
 class DataGrabber {
-    public:
-        DataGrabber ()
-            : save(false), continuous(false), framecount(0), savedImages(0),
-            path("data/"), rgbviewer("RGB Image") , depthviewer("Depth Image")
-        {
+    private:
+        void init() {
             rgbviewer.setSize(IMG_WIDTH, IMG_HEIGHT);
             depthviewer.setSize(IMG_WIDTH, IMG_HEIGHT);
             rgbviewer.setPosition(IMG_WIDTH,0);
             depthbuffer = new unsigned short[IMG_WIDTH*IMG_HEIGHT];
             rgbbuffer = new unsigned char[3*IMG_WIDTH*IMG_HEIGHT];
         }
+    public:
+        DataGrabber ()
+            : save(false), continuous(false),
+            framecount(0), savedImages(0), captureFreq(7),
+            path("data/"), rgbviewer("RGB Image") , depthviewer("Depth Image")
+        {
+            init();
+        }
         DataGrabber (string outputpath)
-            : save(false), continuous(false), framecount(0), savedImages(0),
+            : save(false), continuous(false),
+            framecount(0), savedImages(0), captureFreq(7),
             path(outputpath), rgbviewer("RGB Image") , depthviewer("Depth Image")
         {
-            rgbviewer.setSize(IMG_WIDTH, IMG_HEIGHT);
-            depthviewer.setSize(IMG_WIDTH, IMG_HEIGHT);
-            rgbviewer.setPosition(IMG_WIDTH,0);
-            depthbuffer = new unsigned short[IMG_WIDTH*IMG_HEIGHT];
-            rgbbuffer = new unsigned char[3*IMG_WIDTH*IMG_HEIGHT];
+            init();
+        }
+        DataGrabber (string outputpath, int freq)
+            : save(false), continuous(false),
+            framecount(0), savedImages(0), captureFreq(freq),
+            path(outputpath), rgbviewer("RGB Image") , depthviewer("Depth Image")
+        {
+            init();
         }
         ~DataGrabber() {
             delete [] depthbuffer;
@@ -51,7 +60,7 @@ class DataGrabber {
             cloud_ = cloud;
             if (continuous) {
                 framecount++;
-                if (framecount%5 == 4) {
+                if (framecount%captureFreq == captureFreq-1) {
                     save = true;
                 }
             }
@@ -163,6 +172,8 @@ class DataGrabber {
         bool continuous;
         int savedImages;
         int framecount;
+
+        int captureFreq;
 };
 
 int main(int argc, char** argv) {
