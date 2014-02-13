@@ -94,17 +94,25 @@ class DataGrabber {
                 if (event.getKeyCode() == ' ') {
                     save = true;
                 } else if (event.getKeyCode() == ',') {
-                    if (exposure > 10) grabber->getDevice()->setExposure(exposure - 10);
-                    cout << "Exposure is " << exposure-10 << endl;
+                    if (exposure > 10) {
+                        grabber->getDevice()->setExposure(exposure - 10);
+                        cout << "Exposure is " << exposure-10 << endl;
+                    }
                 } else if (event.getKeyCode() == '.') {
-                    if (exposure < 200) grabber->getDevice()->setExposure(exposure + 10);
-                    cout << "Exposure is " << exposure+10 << endl;
+                    if (exposure < 200) {
+                        grabber->getDevice()->setExposure(exposure + 10);
+                        cout << "Exposure is " << exposure+10 << endl;
+                    }
                 } else if (event.getKeyCode() == '[') {
-                    if (gain > 50) grabber->getDevice()->setGain(gain - 50);
-                    cout << "Gain is " << gain-50 << endl;
+                    if (gain > 100) {
+                        grabber->getDevice()->setGain(gain - 25);
+                        cout << "Gain is " << gain-25 << endl;
+                    }
                 } else if (event.getKeyCode() == ']') {
-                    if (gain < 1000) grabber->getDevice()->setGain(gain + 50);
-                    cout << "Gain is " << gain+50 << endl;
+                    if (gain < 1000) {
+                        grabber->getDevice()->setGain(gain + 25);
+                        cout << "Gain is " << gain+25 << endl;
+                    }
                 } else if (event.getKeyCode() == 'z') {
                     continuous = !continuous;
                 }
