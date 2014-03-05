@@ -65,8 +65,7 @@ bool OrientationFinder::computeNormals(bool ccw)
         }
 
         // Update face normal
-        double norm = c.norm();
-        if (norm > 0) facenormals[i] = c/norm;
+        facenormals[i] = c;
     }
 
     // Update vertex normals
@@ -89,6 +88,7 @@ bool OrientationFinder::computeNormals(bool ccw)
 bool OrientationFinder::computeOrientation()
 {
     int numbins = 4*resolution*resolution;
+    vector<double> totalarea(numbins,0);
     vector<vector<int> > histogram(numbins);
     // 1. Compute face normals
     if (facenormals.empty()) {
@@ -97,15 +97,17 @@ bool OrientationFinder::computeOrientation()
 
     // 2. Fill in histogram
     for (int i = 0; i < mesh->polygons.size(); ++i) {
+        double norm = facenormals[i].norm();
+        if (norm == 0) continue;
         double x,y,z;
         if (facenormals[i](1) < 0) {
-            x = -facenormals[i](0);
-            y = -facenormals[i](1);
-            z = -facenormals[i](2);
+            x = -facenormals[i](0)/norm;
+            y = -facenormals[i](1)/norm;
+            z = -facenormals[i](2)/norm;
         } else {
-            x = facenormals[i](0);
-            y = facenormals[i](1);
-            z = facenormals[i](2);
+            x = facenormals[i](0)/norm;
+            y = facenormals[i](1)/norm;
+            z = facenormals[i](2)/norm;
         }
         double theta = atan2(x,z);
         if (theta < 0) theta += 2*M_PI;
@@ -115,12 +117,13 @@ bool OrientationFinder::computeOrientation()
         if (phiind == resolution) phiind--;
         int ind = thetaind*resolution + phiind;
         histogram[ind].push_back(i);
+        totalarea[ind] += norm;
     }
 
     // 3. Find histogram peaks
     for (int a = 0; a < 3; ++a) {
         int maxbin = -1;
-        int maxcount = 0;
+        double maxarea = 0;
         for (int i = 0; i < numbins; ++i) {
             double theta = (i/resolution)*M_PI/(2*resolution);
             double phi = (i%resolution)*M_PI/(2*resolution);
@@ -139,16 +142,20 @@ bool OrientationFinder::computeOrientation()
             }
             if (!perpendicular) continue;
 
-            if (histogram[i].size() > maxcount) {
+            if (totalarea[i] > maxarea) {
                 maxbin = i;
-                maxcount = histogram[i].size();
+                maxarea = totalarea[i];
             }
         }
 
         // 4. Compute average normal in peak bin
         Eigen::Vector3f axis(0.,0.,0.);
         for (int i = 0; i < histogram[maxbin].size(); ++i) {
-            axis += facenormals[histogram[maxbin][i]];
+            if (facenormals[histogram[maxbin][i]](1) < 0) {
+                axis -= facenormals[histogram[maxbin][i]];
+            } else {
+                axis += facenormals[histogram[maxbin][i]];
+            }
         }
         axis = axis.normalized();
         axes.push_back(axis);
