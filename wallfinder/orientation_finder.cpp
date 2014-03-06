@@ -9,15 +9,8 @@
 using namespace std;
 using namespace pcl;
 
-OrientationFinder::OrientationFinder() :
-    resolution(100),
-    anglethreshold(M_PI/40)
-{
-}
 
 OrientationFinder::OrientationFinder(pcl::PolygonMesh::Ptr m) :
-    resolution(100),
-    anglethreshold(M_PI/40),
     mesh(m),
     cloud(new pcl::PointCloud<PointNormal>())
 {
@@ -85,7 +78,8 @@ bool OrientationFinder::computeNormals(bool ccw)
     return true;
 }
 
-bool OrientationFinder::computeOrientation()
+bool OrientationFinder::computeOrientation(
+        int resolution, double anglethreshold)
 {
     int numbins = 4*resolution*resolution;
     vector<double> totalarea(numbins,0);
