@@ -12,6 +12,7 @@
 #include <iostream>
 
 #include "orientation_finder.h"
+#include "wall_finder.h"
 
 
 using namespace std;
@@ -27,6 +28,8 @@ int main(int argc, char* argv[]) {
     // Parse arguments
     // OrientationFinder parameters
     // Display or not display
+    bool ccw = false;
+    if (console::find_switch(argc, argv, "-ccw")) ccw = true;
     /*bool rotate = true;
     double noise = 0.005;
     if (console::find_switch(argc, argv, "-rotate")) rotate = true;
@@ -39,6 +42,7 @@ int main(int argc, char* argv[]) {
     io::loadPolygonFile(argv[1], *mesh);
 
     OrientationFinder of(mesh);
+    of.computeNormals(ccw);
     if (!of.computeOrientation()) {
         cout << "Error computing orientation! Non-triangle mesh!" << endl;
     }
@@ -47,10 +51,14 @@ int main(int argc, char* argv[]) {
         cout << of.getAxis(i) << endl;
         cout << 180*acos(of.getAxis(i).dot(of.getAxis((i+1)%3)))/M_PI - 90 << " degrees from perpendicular" << endl;
     }
+    WallFinder wf;
+    vector<int> labels(of.getCloud()->size());
+    wf.findFloorAndCeiling(of, labels);
 
     visualization::PCLVisualizer viewer("Room");
     viewer.setBackgroundColor(0,0,0);
     viewer.addPointCloud<PointNormal>(of.getCloud(), "Room");
+    viewer.addPointCloudNormals<PointNormal>(of.getCloud(), 20);
     viewer.initCameraParameters();
     viewer.setCameraPosition(0,0,0,0,0,1,0,-1,0);
     PointXYZ yax(of.getAxis(0)(0), of.getAxis(0)(1), of.getAxis(0)(2));
