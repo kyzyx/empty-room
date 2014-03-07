@@ -203,3 +203,45 @@ void NormalOrientationFinder::fillHistogram(int resolution) {
     }
 }
 // End Compute orientation with normals
+// Compute orientation with planes
+#include <pcl/ModelCoefficients.h>
+#include <pcl/filters/extract_indices.h>
+#include <pcl/sample_consensus/method_types.h>
+#include <pcl/sample_consensus/model_types.h>
+#include <pcl/segmentation/sac_segmentation.h>
+void PlaneOrientationFinder::fillHistogram(int resolution) {
+    ModelCoefficients coefficients;
+    PointIndices::Ptr inliers (new PointIndices());
+    SACSegmentation<PointNormal> seg;
+    seg.setOptimizeCoefficients(true);
+    seg.setModelType(SACMODEL_PLANE);
+    seg.setMethodType(SAC_RANSAC);
+    seg.setDistanceThreshold(planeDistance);
+    ExtractIndices<PointNormal> extract;
+    int nr_points = cloud->points.size();
+    PointCloud<PointNormal>::Ptr segmented_cloud(new PointCloud<PointNormal>(*cloud));
+    PointCloud<PointNormal>::Ptr swap_cloud(new PointCloud<PointNormal>());
+    while (segmented_cloud->points.size() > 0.1*nr_points) {
+        seg.setInputCloud (segmented_cloud);
+        seg.segment (*inliers, coefficients);
+        if (inliers->indices.size () == 0) {
+            break;
+        }
+        if (coefficients.values[1] < 0) {
+            for (int i = 0; i < 4; ++i) {
+                coefficients.values[i] = -coefficients.values[i];
+            }
+        }
+        Eigen::Vector3f candidate(coefficients.values[0],
+                                  coefficients.values[1],
+                                  coefficients.values[2]);
+        addNormToHistogram(candidate(0), candidate(1), candidate(2), resolution, inliers->indices.size());
+
+        extract.setInputCloud(segmented_cloud);
+        extract.setIndices(inliers);
+        extract.setNegative(true);
+        extract.filter(*swap_cloud);
+        segmented_cloud.swap(swap_cloud);
+    }
+}
+// End Compute orientation with planes

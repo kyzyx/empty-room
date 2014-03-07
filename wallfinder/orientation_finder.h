@@ -58,4 +58,15 @@ class NormalOrientationFinder : public OrientationFinder {
         virtual bool prepareComputeOrientation();
         virtual void fillHistogram(int resolution);
 };
+class PlaneOrientationFinder : public OrientationFinder {
+    public:
+        PlaneOrientationFinder(pcl::PolygonMesh::Ptr m)
+            : OrientationFinder(m), planeDistance(0.01) {;}
+        PlaneOrientationFinder(pcl::PolygonMesh::Ptr m, double distanceThreshold)
+            : OrientationFinder(m), planeDistance(distanceThreshold) {;}
+    protected:
+        virtual void fillHistogram(int resolution);
+    private:
+        double planeDistance;
+};
 #endif
