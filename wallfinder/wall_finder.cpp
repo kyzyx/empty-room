@@ -110,11 +110,17 @@ double WallFinder::findExtremal(
         if (inliers->indices.size () == 0) {
             break;
         }
-        Eigen::Vector3f candidate(coefficients.values[0], coefficients.values[1], coefficients.values[2]);
+        Eigen::Vector3f candidate(coefficients.values[0],
+                                  coefficients.values[1],
+                                  coefficients.values[2]);
         if (candidate.dot(dir) < 0) {
-            for (int i = 0; i < 4; ++i) coefficients.values[i] = - coefficients.values[i];
+            for (int i = 0; i < 4; ++i) {
+                coefficients.values[i] = - coefficients.values[i];
+            }
         }
-        if (best_dist < coefficients.values[3]) best_dist = coefficients.values[3];
+        if (best_dist < coefficients.values[3]) {
+            best_dist = coefficients.values[3];
+        }
         extract.setInputCloud(segmented_cloud);
         extract.setIndices(inliers);
         extract.setNegative(true);
@@ -135,7 +141,6 @@ double WallFinder::findFloorAndCeiling(
     PointCloud<PointNormal>::Ptr floorcandidates(new PointCloud<PointNormal>());
     PointCloud<PointNormal>::ConstPtr cloud = of.getCloud();
     floor = findExtremal(cloud, Eigen::Vector3f(0.,1.,0.), anglethreshold, resolution, floorcandidates);
-    cout << "-------------------------" << endl;
     PointCloud<PointNormal>::Ptr ceilcandidates(new PointCloud<PointNormal>());
     ceiling = findExtremal(cloud, Eigen::Vector3f(0.,-1.,0.), anglethreshold, resolution, ceilcandidates);
     for (int i = 0; i < cloud->size(); ++i) {
@@ -277,11 +282,6 @@ void WallFinder::findWalls(
         if (numsegs*resolution > minlength) {
             segments.push_back(Segment(1,width-numsegs,width,i));
         }
-    }
-    for (int i = 0; i < segments.size(); ++i) {
-        cout << (segments[i].direction?"Vertical":"Horizontal");
-        cout << " segment (" << segments[i].start*resolution << "," << segments[i].end*resolution;
-        cout << ") at " << segments[i].coord*resolution << endl;
     }
     // Add all segments bordering empty space
     // Find discontinuities and fill them in
