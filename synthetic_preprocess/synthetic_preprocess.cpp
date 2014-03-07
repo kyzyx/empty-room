@@ -50,18 +50,18 @@ int main(int argc, char* argv[]) {
         double pitch = angle(gen)*PI/24;
         double roll = angle(gen)*PI/24;
         Eigen::Matrix4f rot1, rot2, rot3;
-        rot1 << cos(yaw), -sin(yaw), 0, 0,
-                sin(yaw),  cos(yaw), 0, 0,
-                       0,         0, 1, 0,
-                       0,         0, 0, 1;
-        rot2 << cos(pitch),         0, sin(pitch), 0,
-                         0,         1,          0, 0,
-               -sin(pitch),         0, cos(pitch), 0,
-                         0,         0,          0, 1;
-        rot3 <<          1,         0,          0, 0,
-                         0, cos(roll), -sin(roll), 0,
-                         0, sin(roll),  cos(roll), 0,
-                         0,         0,          0, 1;
+        rot1 << cos(pitch), -sin(pitch), 0, 0,
+                sin(pitch),  cos(pitch), 0, 0,
+                         0,           0, 1, 0,
+                         0,           0, 0, 1;
+        rot2 << cos(yaw), 0, sin(yaw), 0,
+                       0, 1,        0, 0,
+               -sin(yaw), 0, cos(yaw), 0,
+                       0,         0,          0, 1;
+        rot3 <<        1,         0,          0, 0,
+                       0, cos(roll), -sin(roll), 0,
+                       0, sin(roll),  cos(roll), 0,
+                       0,         0,          0, 1;
         printf("Yaw: %.4f, Pitch: %.4f, Roll: %.4f\n", yaw, pitch, roll);
         transformPointCloud(cloud, cloud, rot3*rot2*rot1);
     }
