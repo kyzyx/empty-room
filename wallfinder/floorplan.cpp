@@ -55,6 +55,7 @@ int main(int argc, char* argv[]) {
     WallFinder wf;
     vector<int> labels(of.getCloud()->size());
     wf.findFloorAndCeiling(of, labels);
+    wf.findWalls(of, labels);
 
     visualization::PCLVisualizer viewer("Room");
     viewer.setBackgroundColor(0,0,0);

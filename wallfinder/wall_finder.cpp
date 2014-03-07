@@ -149,9 +149,141 @@ double WallFinder::findFloorAndCeiling(
     }
     return floor;
 }
+
+class Grid {
+    public:
+        Grid(int w, int h, double r) : width(w), height(h), resolution(r) {
+            grid = new GridCell*[width];
+            for (int i = 0; i < width; ++i) grid[i] = new GridCell[height];
+        }
+        void insert(const PointNormal& p) {
+            int r = p.x/resolution;
+            int c = p.z/resolution;
+            if (r < 0 || c < 0 || r >= width || c >= width) {
+                return;
+            }
+            grid[r][c].add(p);
+        }
+        int getCount(int i, int j) {
+            if (i < 0 || j < 0 || i >= width || j >= height) return 0;
+            return grid[i][j].count;
+        }
+    private:
+        class GridCell {
+            public:
+                GridCell() : count(0), hi(0), lo(9999) {;}
+                void add(PointNormal p) {
+                    ++count;
+                    if (p.y > hi) hi = p.y;
+                    if (p.y < lo) lo = p.y;
+                }
+                int count;
+                double hi;
+                double lo;
+        };
+        GridCell** grid;
+        int width;
+        int height;
+        double resolution;
+};
+
+class Segment {
+    public:
+    Segment(int d, int s, int e, int c) : direction(d), start(s), end(e), coord(c) {;}
+    int direction;
+    int start;
+    int end;
+    int coord;
+};
 void WallFinder::findWalls(
         OrientationFinder& of,
         vector<int>& labels,
+        double minlength,
         double resolution)
 {
+    // Create grid
+    float maxx = numeric_limits<float>::min();
+    float maxz = numeric_limits<float>::min();
+    PointCloud<PointNormal>::const_iterator it;
+    for (it = of.getCloud()->begin(); it != of.getCloud()->end(); ++it) {
+        maxx = max(it->x, maxx);
+        maxz = max(it->z, maxz);
+    }
+    int width = maxx/resolution + 1;
+    int height = maxz/resolution + 1;
+    Grid grid(width, height, resolution);
+    for (it = of.getCloud()->begin(); it != of.getCloud()->end(); ++it) {
+        grid.insert(*it);
+    }
+
+    // Scan grid and extract line segments
+    int wallthreshold = 10;
+    int skipsallowed = 2;
+    vector<Segment> segments;
+    // Check vertical walls
+    int numsegs = 0;
+    int skipped = 0;
+    for (int i = 0; i < width; ++i) {
+        numsegs = 0;
+        skipped = 0;
+        for (int j = 0; j < height; ++j) {
+            if (grid.getCount(i,j) > wallthreshold &&
+                grid.getCount(i-1,j) < grid.getCount(i,j) &&
+                grid.getCount(i+1,j) < grid.getCount(i,j))
+            {
+                numsegs += skipped + 1;
+                skipped = 0;
+            } else {
+                if (numsegs && skipped < skipsallowed) {
+                    skipped++;
+                }
+                else {
+                    if (numsegs*resolution > minlength) {
+                        segments.push_back(Segment(0,j-numsegs,j,i));
+                    }
+                    numsegs = 0;
+                    skipped = 0;
+                }
+            }
+        }
+        if (numsegs*resolution > minlength) {
+            segments.push_back(Segment(0,height-numsegs,height,i));
+        }
+    }
+    // Check horizontal walls
+    for (int i = 0; i < height; ++i) {
+        numsegs = 0;
+        skipped = 0;
+        for (int j = 0; j < width; ++j) {
+            if (grid.getCount(j,i) > wallthreshold &&
+                grid.getCount(j,i-1) < grid.getCount(j,i) &&
+                grid.getCount(j,i+1) < grid.getCount(j,i))
+            {
+                numsegs += skipped + 1;
+                skipped = 0;
+            } else {
+                if (numsegs && skipped < skipsallowed) {
+                    skipped++;
+                }
+                else {
+                    if (numsegs*resolution > minlength) {
+                        segments.push_back(Segment(1,j-numsegs,j,i));
+                    }
+                    numsegs = 0;
+                    skipped = 0;
+                }
+            }
+        }
+        if (numsegs*resolution > minlength) {
+            segments.push_back(Segment(1,width-numsegs,width,i));
+        }
+    }
+    for (int i = 0; i < segments.size(); ++i) {
+        cout << (segments[i].direction?"Vertical":"Horizontal");
+        cout << " segment (" << segments[i].start*resolution << "," << segments[i].end*resolution;
+        cout << ") at " << segments[i].coord*resolution << endl;
+    }
+    // Add all segments bordering empty space
+    // Find discontinuities and fill them in
+    // Label wall points
 }

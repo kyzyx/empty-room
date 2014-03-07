@@ -24,14 +24,21 @@ class WallFinder {
          *
          * Returns the floor plane level
          */
-        double findFloorAndCeiling(OrientationFinder& of, std::vector<int>& labels, double resolution=0.01);
+        double findFloorAndCeiling(
+                OrientationFinder& of,
+                std::vector<int>& labels,
+                double resolution=0.01);
         /**
          * Label the point cloud with wall points
          * resolution denotes the threshold beyond which points are not
          * considered on the same plane
          *
          */
-        void findWalls(OrientationFinder& of, std::vector<int>& labels, double resolution=0.01);
+        void findWalls(
+                OrientationFinder& of,
+                std::vector<int>& labels,
+                double minlength=0.2,
+                double resolution=0.01);
 
     private:
         double findExtremal(
