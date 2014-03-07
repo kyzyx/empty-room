@@ -11,6 +11,9 @@
 
 using namespace pcl;
 using namespace std;
+template <typename T> int sgn(T val) {
+    return (T(0) < val) - (val < T(0));
+}
 
 template <typename PointT>
 class DotComparison : public ComparisonBase<PointT> {
@@ -161,13 +164,19 @@ class Grid {
             grid = new GridCell*[width];
             for (int i = 0; i < width; ++i) grid[i] = new GridCell[height];
         }
-        void insert(const PointNormal& p) {
+        void insert(const PointNormal& p, int idx) {
             int r = p.x/resolution;
             int c = p.z/resolution;
             if (r < 0 || c < 0 || r >= width || c >= width) {
                 return;
             }
-            grid[r][c].add(p);
+            grid[r][c].add(p, idx);
+        }
+        vector<int>& getPointIndices(int i, int j) {
+            return grid[i][j].pointindices;
+        }
+        vector<int>& getPointIndices(pair<int,int> p) {
+            return grid[p.first][p.second].pointindices;
         }
         int getCount(int i, int j) {
             if (i < 0 || j < 0 || i >= width || j >= height) return 0;
@@ -177,14 +186,16 @@ class Grid {
         class GridCell {
             public:
                 GridCell() : count(0), hi(0), lo(9999) {;}
-                void add(PointNormal p) {
+                void add(PointNormal p, int i) {
                     ++count;
                     if (p.y > hi) hi = p.y;
                     if (p.y < lo) lo = p.y;
+                    pointindices.push_back(i);
                 }
                 int count;
                 double hi;
                 double lo;
+                vector<int> pointindices;
         };
         GridCell** grid;
         int width;
@@ -192,19 +203,12 @@ class Grid {
         double resolution;
 };
 
-class Segment {
-    public:
-    Segment(int d, int s, int e, int c) : direction(d), start(s), end(e), coord(c) {;}
-    int direction;
-    int start;
-    int end;
-    int coord;
-};
 void WallFinder::findWalls(
         OrientationFinder& of,
         vector<int>& labels,
         double minlength,
-        double resolution)
+        double resolution,
+        double anglethreshold)
 {
     // Create grid
     float maxx = numeric_limits<float>::min();
@@ -217,11 +221,12 @@ void WallFinder::findWalls(
     int width = maxx/resolution + 1;
     int height = maxz/resolution + 1;
     Grid grid(width, height, resolution);
-    for (it = of.getCloud()->begin(); it != of.getCloud()->end(); ++it) {
-        grid.insert(*it);
+    for (int i = 0; i < of.getCloud()->size(); ++i) {
+        grid.insert(of.getCloud()->at(i), i);
     }
 
     // Scan grid and extract line segments
+    int overlapthreshold = 6;
     int wallthreshold = 10;
     int skipsallowed = 2;
     vector<Segment> segments;
@@ -283,7 +288,119 @@ void WallFinder::findWalls(
             segments.push_back(Segment(1,width-numsegs,width,i));
         }
     }
-    // Add all segments bordering empty space
+    // Filter out segments with no empty space
+    vector<Segment> candidatewalls;
+    vector<Segment> walls;
+    int maxidx = -1;
+    double maxlength = 0;
+    for (int i = 0; i < segments.size(); ++i) {
+        int netcount = 0;
+        for (int j = segments[i].start; j < segments[i].end; ++j) {
+            vector<int>& indices = grid.getPointIndices(segments[i].getCoords(j));
+            for (int k = 0; k < indices.size(); ++k) {
+                if (segments[i].direction) {
+                    netcount += -sgn<double>(of.getCloud()->at(indices[k]).normal_z);
+                } else {
+                    netcount += -sgn<double>(of.getCloud()->at(indices[k]).normal_x);
+                }
+            }
+        }
+        segments[i].norm = sgn<int>(netcount);
+        if (maxlength < segments[i].end - segments[i].start) {
+            maxlength = segments[i].end - segments[i].start;
+            maxidx = i;
+        }
+        candidatewalls.push_back(segments[i]);
+    }
     // Find discontinuities and fill them in
-    // Label wall points
+    // Create edge cost matrix based on compatibility
+    // Two segments are compatible if:
+    //     Perpendicular: endpoints are close together and normals are compatible
+    //     Parallel: Normals are compatible and coords are similar and close together
+    double** edges = new double*[candidatewalls.size()];
+    for (int i = 0; i < candidatewalls.size(); ++i) {
+        edges[i] = new double[candidatewalls.size()];
+        for (int j = 0; j < i; ++j) {
+            if (candidatewalls[i].direction == candidatewalls[j].direction) {
+                if (abs(candidatewalls[i].coord - candidatewalls[j].coord) < 3 &&
+                    candidatewalls[i].norm == candidatewalls[j].norm)
+                {
+                    edges[i][j] = min(
+                            abs(candidatewalls[i].start - candidatewalls[j].end),
+                            abs(candidatewalls[j].start - candidatewalls[i].end)
+                    );
+                } else {
+                    edges[i][j] = numeric_limits<double>::max();
+                }
+            } else {
+                // HACK: Uses fact that vertical edges are always before horizontal ones
+                Segment& a = candidatewalls[i];
+                Segment& b = candidatewalls[j];
+                int n = a.norm*b.norm;
+                if (b.coord >= a.end - overlapthreshold && a.coord >= b.end - overlapthreshold && n >= 0) {
+                    edges[i][j] = b.coord - a.end + a.coord - b.end;
+                } else if (b.coord >= a.end - overlapthreshold && a.coord <= b.start + overlapthreshold && n <= 0) {
+                    edges[i][j] = b.coord - a.end + b.start - a.coord;
+                } else if (b.coord <= a.start + overlapthreshold && a.coord >= b.end - overlapthreshold && n <= 0) {
+                    edges[i][j] = a.start - b.coord + a.coord - b.end;
+                } else if (b.coord <= a.start + overlapthreshold && a.coord <= b.start + overlapthreshold && n >= 0) {
+                    edges[i][j] = a.start - b.coord + b.start - a.coord;
+                } else {
+                    edges[i][j] = numeric_limits<double>::max();
+                }
+                edges[i][j] = abs(edges[i][j]);
+            }
+        }
+    }
+    // Starting with largest planar section, wind around compatible sections
+    if (maxidx == -1) {
+        cerr << "Error! No walls found!" << endl;
+        return;
+    }
+    int curridx = maxidx;
+    vector<int> wall;
+    vector<bool> inwall(candidatewalls.size());
+    do {
+        double mindist = numeric_limits<double>::max();
+        int besti;
+        for (int i = 0; i < candidatewalls.size(); ++i) {
+            if (wall.size() && i == wall.back()) continue;
+            double d;
+            if (curridx < i) {
+                d = edges[i][curridx];
+            } else if (curridx > i) {
+                d = edges[curridx][i];
+            }
+            if (d < mindist) {
+                mindist = d;
+                besti = i;
+            }
+        }
+        wall.push_back(curridx);
+        wallsegments.push_back(candidatewalls[curridx]);
+        inwall[curridx] = true;
+        curridx = besti;
+        if (inwall[curridx]) {
+            break;
+        }
+    } while(curridx != maxidx);
+    if (curridx != maxidx) {
+        cerr << "Error determining floor plan!" << endl;
+    }
+    // Extend walls to meet
+    // Add labels
+    for (int i = 0; i < wall.size(); ++i) {
+        for (int j = candidatewalls[i].start; j < candidatewalls[i].end; ++j) {
+            Segment& s = candidatewalls[i];
+            vector<int>& indices = grid.getPointIndices(candidatewalls[i].getCoords(j));
+            for (vector<int>::iterator i = indices.begin(); i != indices.end(); ++i) {
+                Eigen::Vector3f normal(
+                        of.getCloud()->at(*i).normal_x,
+                        of.getCloud()->at(*i).normal_y,
+                        of.getCloud()->at(*i).normal_z);
+                Eigen::Vector3f axis = s.norm*(s.direction?Eigen::Vector3f::UnitZ():Eigen::Vector3f::UnitX());
+                if (acos(normal.dot(axis)) < anglethreshold) labels[*i] = LABEL_WALL;
+            }
+        }
+    }
 }

@@ -62,11 +62,26 @@ int main(int argc, char* argv[]) {
     viewer.addPointCloud<PointNormal>(of.getCloud(), "Room");
     viewer.addPointCloudNormals<PointNormal>(of.getCloud(), 20);
     viewer.initCameraParameters();
-    viewer.setCameraPosition(0,0,0,0,0,1,0,-1,0);
+    viewer.setCameraPosition(-1,-1,-1,0,0,1,0,-1,0);
     viewer.addCoordinateSystem();
     PointXYZ yax(of.getAxis(0)(0), of.getAxis(0)(1), of.getAxis(0)(2));
     PointXYZ xax(of.getAxis(1)(0), of.getAxis(1)(1), of.getAxis(1)(2));
     PointXYZ zax(of.getAxis(2)(0), of.getAxis(2)(1), of.getAxis(2)(2));
+    char n[] = {'L', 'i', '0'};
+    double res = 0.01;
+    for (int i = 0; i < wf.wallsegments.size(); ++i) {
+        if (wf.wallsegments[i].direction == 0) {
+            PointXYZ start(wf.wallsegments[i].coord*res, 0, wf.wallsegments[i].start*res);
+            PointXYZ end(wf.wallsegments[i].coord*res, 0, wf.wallsegments[i].end*res);
+            viewer.addLine(start, end, 1, 0, i/(double)wf.wallsegments.size(), n);
+            n[2]++;
+        } else {
+            PointXYZ start(wf.wallsegments[i].start*res, 0, wf.wallsegments[i].coord*res);
+            PointXYZ end(wf.wallsegments[i].end*res, 0, wf.wallsegments[i].coord*res);
+            viewer.addLine(start, end, 1, 0, i/(double)wf.wallsegments.size(), n);
+            n[2]++;
+        }
+    }
     viewer.addArrow(yax, PointXYZ(0,0,0), 0., 1., 0., false, "yaxis", 0);
     viewer.addArrow(xax, PointXYZ(0,0,0), 1., 0., 0., false, "xaxis", 0);
     viewer.addArrow(zax, PointXYZ(0,0,0), 0., 0., 1., false, "zaxis", 0);
