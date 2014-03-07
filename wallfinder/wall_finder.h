@@ -40,7 +40,8 @@ class WallFinder {
         double findFloorAndCeiling(
                 OrientationFinder& of,
                 std::vector<int>& labels,
-                double resolution=0.01);
+                double resolution=0.01,
+                double anglethreshold=M_PI/40);
         /**
          * Label the point cloud with wall points
          * resolution denotes the threshold beyond which points are not

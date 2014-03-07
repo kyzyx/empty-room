@@ -136,9 +136,9 @@ double WallFinder::findExtremal(
 double WallFinder::findFloorAndCeiling(
         OrientationFinder& of,
         vector<int>& labels,
-        double resolution)
+        double resolution,
+        double anglethreshold)
 {
-    double anglethreshold = 0.01;
     double floor, ceiling;
 
     PointCloud<PointNormal>::Ptr floorcandidates(new PointCloud<PointNormal>());
