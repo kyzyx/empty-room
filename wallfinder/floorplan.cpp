@@ -58,7 +58,7 @@ int main(int argc, char* argv[]) {
     PolygonMesh::Ptr mesh(new PolygonMesh());
     io::loadPolygonFile(argv[1], *mesh);
 
-    OrientationFinder of(mesh);
+    NormalOrientationFinder of(mesh);
     of.computeNormals(ccw);
     if (!of.computeOrientation()) {
         cout << "Error computing orientation! Non-triangle mesh!" << endl;

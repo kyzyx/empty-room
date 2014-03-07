@@ -23,8 +23,7 @@ class OrientationFinder {
          * anglethreshold lists the absolute angle off of a right angle
          *      that axes can be at
          */
-        bool computeOrientation(int resolution=100, double anglethreshold=M_PI/40);
-
+        bool computeOrientation(double anglethreshold=M_PI/40, int resolution=100);
         void normalize();
 
         // Accessors
@@ -32,8 +31,15 @@ class OrientationFinder {
         pcl::PointCloud<pcl::PointNormal>::ConstPtr getCloud() const {
             return pcl::PointCloud<pcl::PointNormal>::ConstPtr(cloud);
         }
-    private:
-        OrientationFinder() {;}
+    protected:
+        void addNormToHistogram(double x, double y, double z, int resolution, double weight);
+        virtual bool prepareComputeOrientation() { return true; }
+        virtual void fillHistogram(int resolution) = 0;
+
+        // Histogram counters
+        std::vector<double> totalweight;
+        std::vector<std::vector<Eigen::Vector3f> > histogram;
+        std::vector<std::vector<double> > histogramweights;
 
         // Basic geometry info
         pcl::PolygonMesh::Ptr mesh;
@@ -41,5 +47,15 @@ class OrientationFinder {
         std::vector<Eigen::Vector3f> facenormals;
 
         std::vector<Eigen::Vector3f> axes;
+    private:
+        OrientationFinder() {;}
+};
+
+class NormalOrientationFinder : public OrientationFinder {
+    public:
+        NormalOrientationFinder(pcl::PolygonMesh::Ptr m) : OrientationFinder(m) {;}
+    protected:
+        virtual bool prepareComputeOrientation();
+        virtual void fillHistogram(int resolution);
 };
 #endif

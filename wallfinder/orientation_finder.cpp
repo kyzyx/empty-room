@@ -79,46 +79,33 @@ bool OrientationFinder::computeNormals(bool ccw)
     return true;
 }
 
-bool OrientationFinder::computeOrientation(
-        int resolution, double anglethreshold)
+void OrientationFinder::addNormToHistogram(
+        double x, double y, double z, int resolution, double weight)
+{
+    double theta = atan2(x,z);
+    if (theta < 0) theta += 2*M_PI;
+    double phi = acos(y);
+    int thetaind = theta/M_PI*2*resolution;
+    int phiind = 2*phi/M_PI*resolution;
+    if (phiind == resolution) phiind--;
+    int ind = thetaind*resolution + phiind;
+    histogram[ind].push_back(Eigen::Vector3f(x,y,z));
+    histogramweights[ind].push_back(weight);
+    totalweight[ind] += weight;
+}
+bool OrientationFinder::computeOrientation(double anglethreshold, int resolution)
 {
     int numbins = 4*resolution*resolution;
-    vector<double> totalarea(numbins,0);
-    vector<vector<int> > histogram(numbins);
-    // 1. Compute face normals
-    if (facenormals.empty()) {
-        if (!computeNormals()) return false;
-    }
+    totalweight.resize(numbins,0);
+    histogram.resize(numbins);
+    histogramweights.resize(numbins);
+    if (!prepareComputeOrientation()) return false;
+    fillHistogram(resolution);
 
-    // 2. Fill in histogram
-    for (int i = 0; i < mesh->polygons.size(); ++i) {
-        double norm = facenormals[i].norm();
-        if (norm == 0) continue;
-        double x,y,z;
-        if (facenormals[i](1) < 0) {
-            x = -facenormals[i](0)/norm;
-            y = -facenormals[i](1)/norm;
-            z = -facenormals[i](2)/norm;
-        } else {
-            x = facenormals[i](0)/norm;
-            y = facenormals[i](1)/norm;
-            z = facenormals[i](2)/norm;
-        }
-        double theta = atan2(x,z);
-        if (theta < 0) theta += 2*M_PI;
-        double phi = acos(y);
-        int thetaind = theta/M_PI*2*resolution;
-        int phiind = 2*phi/M_PI*resolution;
-        if (phiind == resolution) phiind--;
-        int ind = thetaind*resolution + phiind;
-        histogram[ind].push_back(i);
-        totalarea[ind] += norm;
-    }
-
-    // 3. Find histogram peaks
+    // Find histogram peaks
     for (int a = 0; a < 3; ++a) {
         int maxbin = -1;
-        double maxarea = 0;
+        double maxweight = 0;
         for (int i = 0; i < numbins; ++i) {
             double theta = (i/resolution)*M_PI/(2*resolution);
             double phi = (i%resolution)*M_PI/(2*resolution);
@@ -137,19 +124,19 @@ bool OrientationFinder::computeOrientation(
             }
             if (!perpendicular) continue;
 
-            if (totalarea[i] > maxarea) {
+            if (totalweight[i] > maxweight) {
                 maxbin = i;
-                maxarea = totalarea[i];
+                maxweight = totalweight[i];
             }
         }
 
-        // 4. Compute average normal in peak bin
+        // Compute average normal in peak bin
         Eigen::Vector3f axis(0.,0.,0.);
         for (int i = 0; i < histogram[maxbin].size(); ++i) {
-            if (facenormals[histogram[maxbin][i]](1) < 0) {
-                axis -= facenormals[histogram[maxbin][i]];
+            if (histogram[maxbin][i](1) < 0) {
+                axis -= histogramweights[maxbin][i]*histogram[maxbin][i];
             } else {
-                axis += facenormals[histogram[maxbin][i]];
+                axis += histogramweights[maxbin][i]*histogram[maxbin][i];
             }
         }
         axis = axis.normalized();
@@ -191,3 +178,28 @@ void OrientationFinder::normalize()
     trans.block<3,1>(0,3) = -minimum;
     transformPointCloudWithNormals(*cloud, *cloud, trans);
 }
+// Compute orientation with normals
+bool NormalOrientationFinder::prepareComputeOrientation() {
+    if (facenormals.empty()) {
+        if (!computeNormals()) return false;
+    }
+    return true;
+}
+void NormalOrientationFinder::fillHistogram(int resolution) {
+    for (int i = 0; i < mesh->polygons.size(); ++i) {
+        double norm = facenormals[i].norm();
+        if (norm == 0) continue;
+        double x,y,z;
+        if (facenormals[i](1) < 0) {
+            x = -facenormals[i](0)/norm;
+            y = -facenormals[i](1)/norm;
+            z = -facenormals[i](2)/norm;
+        } else {
+            x = facenormals[i](0)/norm;
+            y = facenormals[i](1)/norm;
+            z = facenormals[i](2)/norm;
+        }
+        addNormToHistogram(x,y,z,resolution,norm);
+    }
+}
+// End Compute orientation with normals
