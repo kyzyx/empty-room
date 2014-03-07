@@ -106,7 +106,7 @@ double WallFinder::findExtremal(
     int nr_points = outcloud->points.size();
     PointCloud<PointNormal>::Ptr segmented_cloud(new PointCloud<PointNormal>(*outcloud));
     PointCloud<PointNormal>::Ptr swap_cloud(new PointCloud<PointNormal>());
-    double best_dist = numeric_limits<double>::min();
+    double best_dist = -numeric_limits<double>::max();
     while (segmented_cloud->points.size() > 0.1*nr_points) {
         seg.setInputCloud (segmented_cloud);
         seg.segment (*inliers, coefficients);
@@ -118,7 +118,7 @@ double WallFinder::findExtremal(
                                   coefficients.values[2]);
         if (candidate.dot(dir) < 0) {
             for (int i = 0; i < 4; ++i) {
-                coefficients.values[i] = - coefficients.values[i];
+                coefficients.values[i] = -coefficients.values[i];
             }
         }
         if (best_dist < coefficients.values[3]) {
@@ -145,13 +145,14 @@ double WallFinder::findFloorAndCeiling(
     PointCloud<PointNormal>::ConstPtr cloud = of.getCloud();
     floor = findExtremal(cloud, Eigen::Vector3f(0.,1.,0.), anglethreshold, resolution, floorcandidates);
     PointCloud<PointNormal>::Ptr ceilcandidates(new PointCloud<PointNormal>());
-    ceiling = findExtremal(cloud, Eigen::Vector3f(0.,-1.,0.), anglethreshold, resolution, ceilcandidates);
+    ceiling = -findExtremal(cloud, Eigen::Vector3f(0.,-1.,0.), anglethreshold, resolution, ceilcandidates);
+    double t = cos(anglethreshold);
     for (int i = 0; i < cloud->size(); ++i) {
         if (abs((*cloud)[i].y - floor) < resolution &&
-                (*cloud)[i].normal_y > 1. - anglethreshold) {
+                (*cloud)[i].normal_y > t) {
             labels[i] = LABEL_FLOOR;
-        } else if (abs((*cloud)[i].y - floor) < resolution &&
-                (*cloud)[i].normal_y < -1. + anglethreshold) {
+        } else if (abs((*cloud)[i].y - ceiling) < resolution &&
+                (*cloud)[i].normal_y < -t) {
             labels[i] = LABEL_CEILING;
         }
     }
@@ -211,8 +212,8 @@ void WallFinder::findWalls(
         double anglethreshold)
 {
     // Create grid
-    float maxx = numeric_limits<float>::min();
-    float maxz = numeric_limits<float>::min();
+    float maxx = -numeric_limits<float>::max();
+    float maxz = -numeric_limits<float>::max();
     PointCloud<PointNormal>::const_iterator it;
     for (it = of.getCloud()->begin(); it != of.getCloud()->end(); ++it) {
         maxx = max(it->x, maxx);
@@ -387,19 +388,31 @@ void WallFinder::findWalls(
     if (curridx != maxidx) {
         cerr << "Error determining floor plan!" << endl;
     }
-    // Extend walls to meet
-    // Add labels
-    for (int i = 0; i < wall.size(); ++i) {
-        for (int j = candidatewalls[i].start; j < candidatewalls[i].end; ++j) {
-            Segment& s = candidatewalls[i];
-            vector<int>& indices = grid.getPointIndices(candidatewalls[i].getCoords(j));
-            for (vector<int>::iterator i = indices.begin(); i != indices.end(); ++i) {
-                Eigen::Vector3f normal(
-                        of.getCloud()->at(*i).normal_x,
-                        of.getCloud()->at(*i).normal_y,
-                        of.getCloud()->at(*i).normal_z);
-                Eigen::Vector3f axis = s.norm*(s.direction?Eigen::Vector3f::UnitZ():Eigen::Vector3f::UnitX());
-                if (acos(normal.dot(axis)) < anglethreshold) labels[*i] = LABEL_WALL;
+    // TODO: Extend walls to meet to obtain accurate floor plan
+    // Add labels to all compatible pixels regardless of bin
+    int i;
+    for (it = of.getCloud()->begin(), i=0; it != of.getCloud()->end(); ++it, ++i) {
+        for (int j = 0; j < wallsegments.size(); ++j) {
+            bool horiz = wallsegments[j].direction;
+            // Check if on same plane
+            double coord = horiz?it->z:it->x;
+            if (abs(resolution*wallsegments[j].coord - coord) > 2*resolution) {
+                continue;
+            }
+            // Check if within bounds
+            coord = horiz?it->x:it->z;
+            if (coord > resolution*(wallsegments[j].end + 2) || coord < resolution*(wallsegments[j].start - 2)) {
+                continue;
+            }
+            // Check if compatible normal
+            Eigen::Vector3f normal(it->normal_x,
+                                   it->normal_y,
+                                   it->normal_z);
+            Eigen::Vector3f axis = (horiz?Eigen::Vector3f::UnitZ():Eigen::Vector3f::UnitX());
+            axis *= -wallsegments[j].norm;
+            if (acos(normal.dot(axis)) < anglethreshold) {
+                labels[i] = LABEL_WALL;
+                break;
             }
         }
     }

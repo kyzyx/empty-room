@@ -49,18 +49,54 @@ int main(int argc, char* argv[]) {
     of.normalize();
 
     for (int i = 0; i < 3; ++i) {
-        cout << of.getAxis(i) << endl;
+        //cout << of.getAxis(i) << endl;
         cout << 180*acos(of.getAxis(i).dot(of.getAxis((i+1)%3)))/M_PI - 90 << " degrees from perpendicular" << endl;
     }
     WallFinder wf;
-    vector<int> labels(of.getCloud()->size());
+    vector<int> labels(of.getCloud()->size(), WallFinder::LABEL_NONE);
     wf.findFloorAndCeiling(of, labels);
     wf.findWalls(of, labels);
 
+    vector<int> wallindices, floorindices, ceilindices, cornerindices, indices;
+    for (int i = 0; i < labels.size(); ++i) {
+        switch(labels[i]) {
+            case WallFinder::LABEL_WALL: wallindices.push_back(i);
+                             break;
+            case WallFinder::LABEL_FLOOR: floorindices.push_back(i);
+                             break;
+            case WallFinder::LABEL_CEILING: ceilindices.push_back(i);
+                             break;
+            case WallFinder::LABEL_CORNER: cornerindices.push_back(i);
+                             break;
+            default: indices.push_back(i);
+        }
+    }
+
+    PointCloud<PointNormal>::Ptr walls(new PointCloud<PointNormal>(*(of.getCloud()), wallindices));
+    PointCloud<PointNormal>::Ptr floors(new PointCloud<PointNormal>(*(of.getCloud()), floorindices));
+    PointCloud<PointNormal>::Ptr ceils(new PointCloud<PointNormal>(*(of.getCloud()), ceilindices));
+    PointCloud<PointNormal>::Ptr corners(new PointCloud<PointNormal>(*(of.getCloud()), cornerindices));
+    PointCloud<PointNormal>::Ptr other(new PointCloud<PointNormal>(*(of.getCloud()), indices));
+
     visualization::PCLVisualizer viewer("Room");
     viewer.setBackgroundColor(0,0,0);
-    viewer.addPointCloud<PointNormal>(of.getCloud(), "Room");
-    viewer.addPointCloudNormals<PointNormal>(of.getCloud(), 20);
+
+    viewer.addPointCloud<PointNormal>(walls, "Walls");
+    //viewer.addPointCloudNormals<PointNormal>(walls, 20);
+    viewer.setPointCloudRenderingProperties(visualization::PCL_VISUALIZER_COLOR, 0,1,0,"Walls");
+    viewer.addPointCloud<PointNormal>(floors, "Floors");
+    //viewer.addPointCloudNormals<PointNormal>(floors, 20);
+    viewer.setPointCloudRenderingProperties(visualization::PCL_VISUALIZER_COLOR, 1,0,0,"Floors");
+    viewer.addPointCloud<PointNormal>(ceils, "Ceilings");
+    //viewer.addPointCloudNormals<PointNormal>(ceils, 20);
+    viewer.setPointCloudRenderingProperties(visualization::PCL_VISUALIZER_COLOR, 0,0,1,"Ceilings");
+    viewer.addPointCloud<PointNormal>(corners, "Corners");
+    //viewer.addPointCloudNormals<PointNormal>(ceils, 20);
+    viewer.setPointCloudRenderingProperties(visualization::PCL_VISUALIZER_COLOR, 1,0,1,"Corners");
+    viewer.addPointCloud<PointNormal>(other, "Other");
+    //viewer.addPointCloudNormals<PointNormal>(other, 20);
+    viewer.setPointCloudRenderingProperties(visualization::PCL_VISUALIZER_COLOR, 1,1,1,"Other");
+
     viewer.initCameraParameters();
     viewer.setCameraPosition(-1,-1,-1,0,0,1,0,-1,0);
     viewer.addCoordinateSystem();
