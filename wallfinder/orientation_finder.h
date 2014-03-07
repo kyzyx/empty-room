@@ -25,6 +25,8 @@ class OrientationFinder {
          */
         bool computeOrientation(int resolution=100, double anglethreshold=M_PI/40);
 
+        void normalize();
+
         // Accessors
         Eigen::Vector3f getAxis(int n) const { return axes[n]; }
         pcl::PointCloud<pcl::PointNormal>::ConstPtr getCloud() const {

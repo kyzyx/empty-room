@@ -1,4 +1,5 @@
 #include <pcl/conversions.h>
+#include <pcl/common/transforms.h>
 
 #include "orientation_finder.h"
 
@@ -155,4 +156,38 @@ bool OrientationFinder::computeOrientation(
         axes.push_back(axis);
     }
     return true;
+}
+
+void OrientationFinder::normalize()
+{
+    // Find axis closest to vertical
+    for (int i = 1; i < 3; ++i) {
+        if (axes[i](1) > axes[0](1)) swap(axes[i], axes[0]);
+    }
+    Eigen::Vector3f up = axes[0];
+    Eigen::Vector3f right = axes[1];
+    Eigen::Vector3f towards = right.cross(up);
+    towards = towards.normalized();
+    double d = M_PI/2 - acos(up.dot(right));
+    // Ensure axes are perpendicular
+    up = Eigen::AngleAxisf(d/2, towards)*up;
+    right = Eigen::AngleAxisf(-d/2, towards)*right;
+    // Rotate to align axes
+    Eigen::Affine3f transform = getTransformationFromTwoUnitVectors(up, right);
+    transformPointCloudWithNormals(*cloud, *cloud, transform);
+
+
+    // Translate so that bounding box has minimum at (0,0,0)
+    Eigen::Vector3f minimum(numeric_limits<float>::max(),
+                            numeric_limits<float>::max(),
+                            numeric_limits<float>::max());
+    for (int i = 0; i < cloud->size(); ++i) {
+        minimum(0) = min((*cloud)[i].x, minimum(0));
+        minimum(1) = min((*cloud)[i].y, minimum(1));
+        minimum(2) = min((*cloud)[i].z, minimum(2));
+    }
+    Eigen::Matrix4f trans;
+    trans.setIdentity();
+    trans.block<3,1>(0,3) = -minimum;
+    transformPointCloudWithNormals(*cloud, *cloud, trans);
 }

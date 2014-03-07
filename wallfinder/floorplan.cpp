@@ -46,6 +46,7 @@ int main(int argc, char* argv[]) {
     if (!of.computeOrientation()) {
         cout << "Error computing orientation! Non-triangle mesh!" << endl;
     }
+    of.normalize();
 
     for (int i = 0; i < 3; ++i) {
         cout << of.getAxis(i) << endl;
@@ -61,6 +62,7 @@ int main(int argc, char* argv[]) {
     viewer.addPointCloudNormals<PointNormal>(of.getCloud(), 20);
     viewer.initCameraParameters();
     viewer.setCameraPosition(0,0,0,0,0,1,0,-1,0);
+    viewer.addCoordinateSystem();
     PointXYZ yax(of.getAxis(0)(0), of.getAxis(0)(1), of.getAxis(0)(2));
     PointXYZ xax(of.getAxis(1)(0), of.getAxis(1)(1), of.getAxis(1)(2));
     PointXYZ zax(of.getAxis(2)(0), of.getAxis(2)(1), of.getAxis(2)(2));

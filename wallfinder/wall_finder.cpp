@@ -12,13 +12,6 @@
 using namespace pcl;
 using namespace std;
 
-void WallFinder::normalize(OrientationFinder& of)
-{
-    // Find axis closest to vertical and rotate to it
-    // Find rotations to other axes
-    // Translate so that bounding box has one vertex at 0,0,0
-}
-
 template <typename PointT>
 class DotComparison : public ComparisonBase<PointT> {
     using ComparisonBase<PointT>::field_name_;

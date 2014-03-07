@@ -18,7 +18,6 @@ class WallFinder {
             LABEL_CORNER
         };
         WallFinder() {;}
-        void normalize(OrientationFinder& of);
         /**
          * resolution denotes the threshold beyond which points are not
          * considered on the same plane
