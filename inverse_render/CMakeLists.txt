@@ -6,6 +6,7 @@ include_directories(${PCL_INCLUDE_DIRS} .)
 link_directories(${PCL_LIBRARY_DIRS} R3Graphics/ R3Shapes/ RNBasics/ R2Shapes/
     jpeg/)
 add_definitions(${PCL_DEFINITIONS})
-add_executable(invrender invrender.cpp colorhelper.h colorhelper.cpp)
+add_executable(invrender invrender.cpp colorhelper.h colorhelper.cpp reproject.h
+    reproject.cpp mesh.h mesh.cpp)
 target_link_libraries(invrender ${PCL_LIBRARIES} R3Graphics.a RNBasics.a
     R3Shapes.a R2Shapes.a jpeg.a GLU)
