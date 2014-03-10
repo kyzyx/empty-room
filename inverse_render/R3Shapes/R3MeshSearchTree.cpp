@@ -28,7 +28,7 @@ static const int max_depth = 64;
 
 class R3MeshSearchTreeFace {
 public:
-  R3MeshSearchTreeFace(R3Mesh *mesh, R3MeshFace *face) 
+  R3MeshSearchTreeFace(R3Mesh *mesh, R3MeshFace *face)
   : face(face), area(mesh->FaceArea(face)), reference_count(0), mark(0) {};
 
 public:
@@ -74,7 +74,7 @@ R3MeshSearchTree(R3Mesh *mesh)
     nnodes(1),
     mark(1)
 {
-  // Create root 
+  // Create root
   root = new R3MeshSearchTreeNode(NULL);
   assert(root);
 
@@ -166,8 +166,8 @@ R3Intersects(R3Mesh *mesh, R3MeshFace *face, const R3Box& box)
         }
       }
 
-      // Check number of points 
-      if (npoints == 0) return FALSE; 
+      // Check number of points
+      if (npoints == 0) return FALSE;
       assert(npoints < 16);
       assert(npoints > 0);
     }
@@ -196,7 +196,7 @@ InsertFace(R3MeshFace *face)
 
 
 void R3MeshSearchTree::
-InsertFace(R3MeshSearchTreeFace *face, R3MeshSearchTreeNode *node, const R3Box& node_box, int depth) 
+InsertFace(R3MeshSearchTreeFace *face, R3MeshSearchTreeNode *node, const R3Box& node_box, int depth)
 {
   // Check if face intersects box
   if (!R3Intersects(mesh, face->face, node_box)) return;
@@ -218,12 +218,12 @@ InsertFace(R3MeshSearchTreeFace *face, R3MeshSearchTreeNode *node, const R3Box& 
     }
   }
   else {
-    // Check face area 
+    // Check face area
     RNScalar node_diagonal = node_box.DiagonalLength();
     if (node_diagonal == 0) return;
     RNScalar node_area = node_diagonal * node_diagonal;
     RNScalar area_ratio = face->area / node_area;
-    if ((area_ratio >= max_area_ratio) || 
+    if ((area_ratio >= max_area_ratio) ||
         (depth >= max_depth)) {
       // Face is too big/deep to be sorted into children, insert into big faces list
       node->big_faces.Insert(face);
@@ -238,19 +238,19 @@ InsertFace(R3MeshSearchTreeFace *face, R3MeshSearchTreeNode *node, const R3Box& 
         face->reference_count++;
       }
       else {
-        // Create two children 
+        // Create two children
         node->children[0] = new R3MeshSearchTreeNode(node);
         node->children[1] = new R3MeshSearchTreeNode(node);
         node->split_dimension = node_box.LongestAxis();
         node->split_coordinate = node_box.AxisCenter(node->split_dimension);
         nnodes += 2;
-      
+
         // Re-insert faces into subtree
         InsertFace(face, node, node_box, depth+1);
         for (int i = 0; i < node->small_faces.NEntries(); i++) {
           InsertFace(node->small_faces[i], node, node_box, depth+1);
         }
-      
+
         // Clear out faces from node that is now interior
         for (int i = 0; i < node->small_faces.NEntries(); i++) {
           assert(node->small_faces[i]->reference_count > 0);
@@ -312,8 +312,8 @@ Empty(void)
 ////////////////////////////////////////////////////////////////////////
 
 void R3MeshSearchTree::
-FindClosest(const R3Point& query_position, const R3Vector& query_normal, R3MeshIntersection& closest, 
-  RNScalar min_distance_squared, RNScalar& max_distance_squared, 
+FindClosest(const R3Point& query_position, const R3Vector& query_normal, R3MeshIntersection& closest,
+  RNScalar min_distance_squared, RNScalar& max_distance_squared,
   int (*IsCompatible)(const R3Point&, const R3Vector&, R3Mesh *, R3MeshFace *, void *), void *compatible_data,
   R3MeshFace *face) const
 {
@@ -327,7 +327,7 @@ FindClosest(const R3Point& query_position, const R3Vector& query_normal, R3MeshI
   RNScalar bbox_distance_squared = DistanceSquared(query_position, mesh->FaceBBox(face), max_distance_squared);
   if (bbox_distance_squared >= max_distance_squared) return;
 
-  // Check compatibility 
+  // Check compatibility
   if (IsCompatible) {
     if (!(*IsCompatible)(query_position, query_normal, mesh, face, compatible_data)) return;
   }
@@ -495,8 +495,8 @@ FindClosest(const R3Point& query_position, const R3Vector& query_normal, R3MeshI
 
 
 void R3MeshSearchTree::
-FindClosest(const R3Point& query_position, const R3Vector& query_normal, R3MeshIntersection& closest, 
-  RNScalar min_distance_squared, RNScalar& max_distance_squared, 
+FindClosest(const R3Point& query_position, const R3Vector& query_normal, R3MeshIntersection& closest,
+  RNScalar min_distance_squared, RNScalar& max_distance_squared,
   int (*IsCompatible)(const R3Point&, const R3Vector&, R3Mesh *, R3MeshFace *, void *), void *compatible_data,
   R3MeshSearchTreeNode *node, const R3Box& node_box) const
 {
@@ -510,10 +510,10 @@ FindClosest(const R3Point& query_position, const R3Vector& query_normal, R3MeshI
     R3MeshSearchTreeFace *face_container = node->big_faces[i];
     if (face_container->mark == mark) continue;
     face_container->mark = mark;
-  
+
     // Find closest point in mesh face
-    FindClosest(query_position, query_normal, closest, 
-      min_distance_squared, max_distance_squared, 
+    FindClosest(query_position, query_normal, closest,
+      min_distance_squared, max_distance_squared,
       IsCompatible, compatible_data, face_container->face);
   }
 
@@ -530,13 +530,13 @@ FindClosest(const R3Point& query_position, const R3Vector& query_normal, R3MeshI
       // Search negative side first
       R3Box child_box(node_box);
       child_box[RN_HI][node->split_dimension] = node->split_coordinate;
-      FindClosest(query_position, query_normal, closest, 
+      FindClosest(query_position, query_normal, closest,
         min_distance_squared, max_distance_squared, IsCompatible, compatible_data,
         node->children[0], child_box);
       if (side*side < max_distance_squared) {
         R3Box child_box(node_box);
         child_box[RN_LO][node->split_dimension] = node->split_coordinate;
-        FindClosest(query_position, query_normal, closest, 
+        FindClosest(query_position, query_normal, closest,
           min_distance_squared, max_distance_squared, IsCompatible, compatible_data,
           node->children[1], child_box);
       }
@@ -545,13 +545,13 @@ FindClosest(const R3Point& query_position, const R3Vector& query_normal, R3MeshI
       // Search positive side first
       R3Box child_box(node_box);
       child_box[RN_LO][node->split_dimension] = node->split_coordinate;
-      FindClosest(query_position, query_normal, closest, 
+      FindClosest(query_position, query_normal, closest,
         min_distance_squared, max_distance_squared, IsCompatible, compatible_data,
         node->children[1], child_box);
       if (side*side < max_distance_squared) {
         R3Box child_box(node_box);
         child_box[RN_HI][node->split_dimension] = node->split_coordinate;
-        FindClosest(query_position, query_normal, closest, 
+        FindClosest(query_position, query_normal, closest,
           min_distance_squared, max_distance_squared, IsCompatible, compatible_data,
           node->children[0], child_box);
       }
@@ -566,8 +566,8 @@ FindClosest(const R3Point& query_position, const R3Vector& query_normal, R3MeshI
       face_container->mark = mark;
 
       // Find closest point in mesh face
-      FindClosest(query_position, query_normal, closest, 
-        min_distance_squared, max_distance_squared, 
+      FindClosest(query_position, query_normal, closest,
+        min_distance_squared, max_distance_squared,
         IsCompatible, compatible_data, face_container->face);
     }
   }
@@ -577,7 +577,7 @@ FindClosest(const R3Point& query_position, const R3Vector& query_normal, R3MeshI
 
 void R3MeshSearchTree::
 FindClosest(const R3Point& query_position, const R3Vector& query_normal, R3MeshIntersection& closest,
-  RNScalar min_distance, RNScalar max_distance, 
+  RNScalar min_distance, RNScalar max_distance,
   int (*IsCompatible)(const R3Point&, const R3Vector&, R3Mesh *, R3MeshFace *, void *), void *compatible_data)
 {
   // Initialize result
@@ -599,24 +599,24 @@ FindClosest(const R3Point& query_position, const R3Vector& query_normal, R3MeshI
   RNScalar closest_distance_squared = max_distance * max_distance;
 
   // Search nodes recursively
-  FindClosest(query_position, query_normal, closest, 
-    min_distance_squared, closest_distance_squared, 
-    IsCompatible, compatible_data, 
+  FindClosest(query_position, query_normal, closest,
+    min_distance_squared, closest_distance_squared,
+    IsCompatible, compatible_data,
     root, BBox());
 
   // Update result
   closest.t = sqrt(closest_distance_squared);
-  if (closest.type == R3_MESH_VERTEX_TYPE) { 
-    closest.edge = mesh->EdgeOnVertex(closest.vertex); 
+  if (closest.type == R3_MESH_VERTEX_TYPE) {
+    closest.edge = mesh->EdgeOnVertex(closest.vertex);
     closest.face = mesh->FaceOnEdge(closest.edge);
   }
-  else if (closest.type == R3_MESH_EDGE_TYPE) { 
-    closest.vertex = NULL; 
+  else if (closest.type == R3_MESH_EDGE_TYPE) {
+    closest.vertex = NULL;
     closest.face = mesh->FaceOnEdge(closest.edge);
   }
-  else if (closest.type == R3_MESH_FACE_TYPE) { 
-    closest.vertex = NULL; 
-    closest.edge = NULL; 
+  else if (closest.type == R3_MESH_FACE_TYPE) {
+    closest.vertex = NULL;
+    closest.edge = NULL;
   }
 }
 
@@ -634,12 +634,12 @@ FindClosest(const R3Point& query_position, R3MeshIntersection& closest,
 
 
 ////////////////////////////////////////////////////////////////////////
-// Find all search functions (up to distance cutoff) 
+// Find all search functions (up to distance cutoff)
 ////////////////////////////////////////////////////////////////////////
 
 void R3MeshSearchTree::
-FindAll(const R3Point& query_position, const R3Vector& query_normal, RNArray<R3MeshIntersection *>& hits, 
-  RNScalar min_distance_squared, RNScalar max_distance_squared, 
+FindAll(const R3Point& query_position, const R3Vector& query_normal, RNArray<R3MeshIntersection *>& hits,
+  RNScalar min_distance_squared, RNScalar max_distance_squared,
   int (*IsCompatible)(const R3Point&, const R3Vector&, R3Mesh *, R3MeshFace *, void *), void *compatible_data,
   R3MeshFace *face) const
 {
@@ -653,7 +653,7 @@ FindAll(const R3Point& query_position, const R3Vector& query_normal, RNArray<R3M
   RNScalar bbox_distance_squared = DistanceSquared(query_position, mesh->FaceBBox(face), max_distance_squared);
   if (bbox_distance_squared >= max_distance_squared) return;
 
-  // Check compatibility 
+  // Check compatibility
   if (IsCompatible) {
     if (!(*IsCompatible)(query_position, query_normal, mesh, face, compatible_data)) return;
   }
@@ -859,8 +859,8 @@ FindAll(const R3Point& query_position, const R3Vector& query_normal, RNArray<R3M
 
 
 void R3MeshSearchTree::
-FindAll(const R3Point& query_position, const R3Vector& query_normal, RNArray<R3MeshIntersection *>& hits, 
-  RNScalar min_distance_squared, RNScalar max_distance_squared, 
+FindAll(const R3Point& query_position, const R3Vector& query_normal, RNArray<R3MeshIntersection *>& hits,
+  RNScalar min_distance_squared, RNScalar max_distance_squared,
   int (*IsCompatible)(const R3Point&, const R3Vector&, R3Mesh *, R3MeshFace *, void *), void *compatible_data,
   R3MeshSearchTreeNode *node, const R3Box& node_box) const
 {
@@ -874,10 +874,10 @@ FindAll(const R3Point& query_position, const R3Vector& query_normal, RNArray<R3M
     R3MeshSearchTreeFace *face_container = node->big_faces[i];
     if (face_container->mark == mark) continue;
     face_container->mark = mark;
-  
+
     // Find point in mesh face
-    FindAll(query_position, query_normal, hits, 
-      min_distance_squared, max_distance_squared, 
+    FindAll(query_position, query_normal, hits,
+      min_distance_squared, max_distance_squared,
       IsCompatible, compatible_data, face_container->face);
   }
 
@@ -894,13 +894,13 @@ FindAll(const R3Point& query_position, const R3Vector& query_normal, RNArray<R3M
       // Search negative side first
       R3Box child_box(node_box);
       child_box[RN_HI][node->split_dimension] = node->split_coordinate;
-      FindAll(query_position, query_normal, hits, 
+      FindAll(query_position, query_normal, hits,
         min_distance_squared, max_distance_squared, IsCompatible, compatible_data,
         node->children[0], child_box);
       if (side*side < max_distance_squared) {
         R3Box child_box(node_box);
         child_box[RN_LO][node->split_dimension] = node->split_coordinate;
-        FindAll(query_position, query_normal, hits, 
+        FindAll(query_position, query_normal, hits,
           min_distance_squared, max_distance_squared, IsCompatible, compatible_data,
           node->children[1], child_box);
       }
@@ -909,13 +909,13 @@ FindAll(const R3Point& query_position, const R3Vector& query_normal, RNArray<R3M
       // Search positive side first
       R3Box child_box(node_box);
       child_box[RN_LO][node->split_dimension] = node->split_coordinate;
-      FindAll(query_position, query_normal, hits, 
+      FindAll(query_position, query_normal, hits,
         min_distance_squared, max_distance_squared, IsCompatible, compatible_data,
         node->children[1], child_box);
       if (side*side < max_distance_squared) {
         R3Box child_box(node_box);
         child_box[RN_HI][node->split_dimension] = node->split_coordinate;
-        FindAll(query_position, query_normal, hits, 
+        FindAll(query_position, query_normal, hits,
           min_distance_squared, max_distance_squared, IsCompatible, compatible_data,
           node->children[0], child_box);
       }
@@ -930,8 +930,8 @@ FindAll(const R3Point& query_position, const R3Vector& query_normal, RNArray<R3M
       face_container->mark = mark;
 
       // Find point in mesh face
-      FindAll(query_position, query_normal, hits, 
-        min_distance_squared, max_distance_squared, 
+      FindAll(query_position, query_normal, hits,
+        min_distance_squared, max_distance_squared,
         IsCompatible, compatible_data, face_container->face);
     }
   }
@@ -940,8 +940,8 @@ FindAll(const R3Point& query_position, const R3Vector& query_normal, RNArray<R3M
 
 
 void R3MeshSearchTree::
-FindAll(const R3Point& query_position, const R3Vector& query_normal, RNArray<R3MeshIntersection *>& hits, 
-  RNScalar min_distance, RNScalar max_distance, 
+FindAll(const R3Point& query_position, const R3Vector& query_normal, RNArray<R3MeshIntersection *>& hits,
+  RNScalar min_distance, RNScalar max_distance,
   int (*IsCompatible)(const R3Point&, const R3Vector&, R3Mesh *, R3MeshFace *, void *), void *compatible_data)
 {
   // Check root
@@ -956,15 +956,15 @@ FindAll(const R3Point& query_position, const R3Vector& query_normal, RNArray<R3M
 
   // Search nodes recursively
   FindAll(query_position, query_normal, hits,
-    min_distance_squared, max_distance_squared, 
-    IsCompatible, compatible_data, 
+    min_distance_squared, max_distance_squared,
+    IsCompatible, compatible_data,
     root, BBox());
 }
 
 
 
 void R3MeshSearchTree::
-FindAll(const R3Point& query_position, RNArray<R3MeshIntersection *>& hits, 
+FindAll(const R3Point& query_position, RNArray<R3MeshIntersection *>& hits,
   RNScalar min_distance, RNScalar max_distance,
   int (*IsCompatible)(const R3Point&, const R3Vector&, R3Mesh *, R3MeshFace *, void *), void *compatible_data)
 {
@@ -979,12 +979,12 @@ FindAll(const R3Point& query_position, RNArray<R3MeshIntersection *>& hits,
 ////////////////////////////////////////////////////////////////////////
 
 void R3MeshSearchTree::
-FindIntersection(const R3Ray& ray, R3MeshIntersection& closest, 
-  RNScalar min_t, RNScalar& max_t, 
+FindIntersection(const R3Ray& ray, R3MeshIntersection& closest,
+  RNScalar min_t, RNScalar& max_t,
   int (*IsCompatible)(const R3Point&, const R3Vector&, R3Mesh *, R3MeshFace *, void *), void *compatible_data,
   R3MeshFace *face) const
 {
-  // Check compatibility 
+  // Check compatibility
   if (IsCompatible) {
     if (!(*IsCompatible)(ray.Start(), ray.Vector(), mesh, face, compatible_data)) return;
   }
@@ -1012,15 +1012,15 @@ FindIntersection(const R3Ray& ray, R3MeshIntersection& closest,
 
 
 void R3MeshSearchTree::
-FindIntersection(const R3Ray& ray, R3MeshIntersection& closest, 
-  RNScalar min_t, RNScalar& max_t, 
+FindIntersection(const R3Ray& ray, R3MeshIntersection& closest,
+  RNScalar min_t, RNScalar& max_t,
   int (*IsCompatible)(const R3Point&, const R3Vector&, R3Mesh *, R3MeshFace *, void *), void *compatible_data,
   R3MeshSearchTreeNode *node, const R3Box& node_box) const
 {
   // Find intersection with bounding box
   RNScalar node_box_t;
   if (!R3Intersects(ray, node_box, NULL, NULL, &node_box_t)) return;
-  if (node_box_t > max_t) return;
+  if (node_box_t > max_t && !R3Contains(node_box, ray.Start())) return;
 
   // Update based on closest intersection to each big face
   for (int i = 0; i < node->big_faces.NEntries(); i++) {
@@ -1028,9 +1028,9 @@ FindIntersection(const R3Ray& ray, R3MeshIntersection& closest,
     R3MeshSearchTreeFace *face_container = node->big_faces[i];
     if (face_container->mark == mark) continue;
     face_container->mark = mark;
-  
+
     // Find closest point in mesh face
-    FindIntersection(ray, closest, min_t, max_t, 
+    FindIntersection(ray, closest, min_t, max_t,
       IsCompatible, compatible_data, face_container->face);
   }
 
@@ -1043,7 +1043,7 @@ FindIntersection(const R3Ray& ray, R3MeshIntersection& closest,
     RNScalar side = ray.Start()[node->split_dimension] - node->split_coordinate;
     RNScalar vec = ray.Vector()[node->split_dimension];
     RNScalar plane_t = (side*vec < 0) ? -side/vec : RN_INFINITY;
-    
+
     // Search children nodes
     if (side <= 0) {
       // Search negative side first
@@ -1056,7 +1056,7 @@ FindIntersection(const R3Ray& ray, R3MeshIntersection& closest,
       if (plane_t < max_t) {
         R3Box child_box(node_box);
         child_box[RN_LO][node->split_dimension] = node->split_coordinate;
-        FindIntersection(ray, closest, min_t, max_t, 
+        FindIntersection(ray, closest, min_t, max_t,
           IsCompatible, compatible_data, node->children[1], child_box);
       }
     }
@@ -1065,7 +1065,7 @@ FindIntersection(const R3Ray& ray, R3MeshIntersection& closest,
       if (plane_t >= min_t) {
         R3Box child_box(node_box);
         child_box[RN_LO][node->split_dimension] = node->split_coordinate;
-        FindIntersection(ray, closest, min_t, max_t, 
+        FindIntersection(ray, closest, min_t, max_t,
           IsCompatible, compatible_data, node->children[1], child_box);
       }
       if (plane_t < max_t) {
@@ -1095,7 +1095,7 @@ FindIntersection(const R3Ray& ray, R3MeshIntersection& closest,
 
 void R3MeshSearchTree::
 FindIntersection(const R3Ray& ray, R3MeshIntersection& closest,
-  RNScalar min_t, RNScalar max_t, 
+  RNScalar min_t, RNScalar max_t,
   int (*IsCompatible)(const R3Point&, const R3Vector&, R3Mesh *, R3MeshFace *, void *), void *compatible_data)
 {
   // Initialize result
@@ -1115,7 +1115,7 @@ FindIntersection(const R3Ray& ray, R3MeshIntersection& closest,
   // Search nodes recursively
   FindIntersection(ray, closest,
     min_t, max_t,
-    IsCompatible, compatible_data, 
+    IsCompatible, compatible_data,
     root, BBox());
 }
 
@@ -1243,7 +1243,7 @@ DistanceSquared(const R3Point& query_position, const R3Box& box, RNScalar max_di
   else dz = 0.0;
   RNScalar dz_squared = dz * dz;
   if (dz_squared >= max_distance_squared) return dz_squared;
-    
+
   // Find and check actual distance from face to node box
   RNScalar distance_squared = 0;
   if ((dy == 0.0) && (dz == 0.0)) distance_squared = dx_squared;
