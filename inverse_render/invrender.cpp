@@ -186,19 +186,21 @@ int main(int argc, char* argv[]) {
                 }
             } else {
                 if (m.samples[i].size()) {
-                    if (m.labels[i] == 1) {
+                    int lightness = 0;
+                    int r = 0;
+                    int g = 0;
+                    int b = 0;
+                    for (int j = 0; j < m.samples[i].size(); ++j) {
+                        r += m.samples[i][j].r;
+                        g += m.samples[i][j].g;
+                        b += m.samples[i][j].b;
+                        lightness += m.samples[i][j].label==1;
+                    }
+                    if (lightness > 0) {
                         cloud->at(i).r = 255;
-                        cloud->at(i).g = 255;
-                        cloud->at(i).b = 255;
+                        cloud->at(i).g = 0;
+                        cloud->at(i).b = 0;
                     } else {
-                        int r = 0;
-                        int g = 0;
-                        int b = 0;
-                        for (int j = 0; j < m.samples[i].size(); ++j) {
-                            r += m.samples[i][j].r;
-                            g += m.samples[i][j].g;
-                            b += m.samples[i][j].b;
-                        }
                         cloud->at(i).r = r/m.samples[i].size();
                         cloud->at(i).g = g/m.samples[i].size();
                         cloud->at(i).b = b/m.samples[i].size();

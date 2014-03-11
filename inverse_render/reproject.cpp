@@ -27,27 +27,28 @@ void reproject(const char* color, const char* light, const CameraParams* cam, Me
         // Check if vertex on the right side of the camera
         R3Point p;
         if (!R3Intersects(ray, imageplane, &p)) continue;
-        mesh.addLabel(j, 2);
+        mesh.labels[j] = 2;
         // Check if vertex is in camera field of view
         R3Vector proj = p - cam->pos;
         double vx = proj.Dot(cam->right);
         double vy = proj.Dot(cam->up);
         if (vx > maxx || vx < -maxx || vy > maxy || vy < -maxy) continue;
-        mesh.addLabel(j, 3);
+        mesh.labels[j] = 3;
         // Check if vertex intersects mesh
         R3MeshIntersection isect;
         mesh.getSearchTree()->FindIntersection(ray, isect, 0, d-0.000001);
         if (isect.t < d && isect.type != R3_MESH_NULL_TYPE) continue;
-        mesh.addLabel(j, 4);
+        mesh.labels[j] = 4;
 
         int xx = vx*cam->width/(2*maxx) + cam->width/2 + 0.5;
         int yy = vy*cam->height/(2*maxy) + cam->height/2 + 0.5;
         // If light, label light
-        if (!isBlack(xx, yy, cam->width, light)) {
-            mesh.addLabel(j, 1);
-        }
         // Compute direction, add sample
         Sample s;
+        s.label = 0;
+        if (!isBlack(xx, yy, cam->width, light)) {
+            s.label = 1;
+        }
         copyColorToSample(xx, yy, cam->width, color, s);
         R3Vector outgoing = -ray.Vector();
         copyVectorToSample(outgoing, s);

@@ -39,18 +39,17 @@ Mesh::Mesh(PolygonMesh::Ptr m) {
 void Mesh::addSample(int n, Sample s) {
     samples[n].push_back(s);
 }
-void Mesh::addLabel(int n, int label) {
-    labels[n] = label;
-}
 void Mesh::writeSamples(string filename) {
     ofstream out(filename.c_str(), ofstream::binary);
     uint32_t sz = samples.size();
     out.write((char*) &sz, 4);
     for (int i = 0; i < samples.size(); ++i) {
+        char c = labels[i];
+        out.write(&c, 1);
         sz = samples[i].size();
-        out.write((char*) &labels[i], 4);
         out.write((char*) &sz, 4);
         for (int j = 0; j < samples[i].size(); ++j) {
+            out.write((char*) &samples[i][j].label, 1);
             out.write((char*) &samples[i][j].r, 1);
             out.write((char*) &samples[i][j].g, 1);
             out.write((char*) &samples[i][j].b, 1);
@@ -66,12 +65,15 @@ void Mesh::readSamples(string filename) {
     uint32_t sz;
     in.read((char*) &sz, 4);
     samples.resize(sz);
+    labels.resize(sz);
     for (int i = 0; i < samples.size(); ++i) {
-        in.read((char*) &sz, 4);
-        labels.push_back(sz);
+        char c;
+        in.read(&c, 1);
+        labels[i] = c;
         in.read((char*) &sz, 4);
         for (int j = 0; j < sz; ++j) {
             Sample s;
+            in.read((char*) &s.label, 1);
             in.read((char*) &s.r, 1);
             in.read((char*) &s.g, 1);
             in.read((char*) &s.b, 1);

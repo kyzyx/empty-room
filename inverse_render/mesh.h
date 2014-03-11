@@ -13,6 +13,7 @@
  */
 class Sample {
     public:
+        unsigned char label;
         unsigned char r;
         unsigned char g;
         unsigned char b;
@@ -31,7 +32,6 @@ class Mesh {
         Mesh(pcl::PolygonMesh::Ptr mesh);
         ~Mesh();
         void addSample(int n, Sample s);
-        void addLabel(int n, int label);
 
         void writeSamples(std::string filename);
         void readSamples(std::string filename);
@@ -40,7 +40,7 @@ class Mesh {
         R3MeshSearchTree* getSearchTree() { return searchtree; }
 
         std::vector<std::vector<Sample> > samples;
-        std::vector<int> labels;
+        std::vector<char> labels;
     private:
         Mesh() {;}
 
