@@ -1,5 +1,6 @@
 #include <pcl/io/io.h>
 #include <pcl/io/vtk_lib_io.h>
+#include <pcl/filters/extract_indices.h>
 #include <pcl/point_types.h>
 #include <pcl/PolygonMesh.h>
 #include <pcl/visualization/pcl_visualizer.h>
@@ -83,6 +84,7 @@ int main(int argc, char* argv[]) {
                 "     -output f: output sample info to file f\n"
                 "     -readsamples f: read sample info from file f\n"
                 "     -nodisplay: exit immediately\n"
+                "     -prune_occluded: Do not display points for which there are no samples\n"
                 );
         return 0;
     }
@@ -98,9 +100,11 @@ int main(int argc, char* argv[]) {
     bool output = false;
     bool input = false;
     bool display = true;
+    bool prune = false;
     if (console::find_switch(argc, argv, "-show_frustrum")) show_frustrum = true;
     if (console::find_switch(argc, argv, "-project_status")) project_debug = true;
     if (console::find_switch(argc, argv, "-nodisplay")) display = false;
+    if (console::find_switch(argc, argv, "-prune_occluded")) prune = true;
     if (console::find_switch(argc, argv, "-no_cameras")) {
         all_cameras = false;
         camera = -1;
@@ -148,6 +152,7 @@ int main(int argc, char* argv[]) {
 
     if (input) {
         m.readSamples(infile);
+        cout << "Done loading samples" << endl;
     } else {
         if (all_project) {
             reproject(loader, lights, m);
@@ -159,6 +164,7 @@ int main(int argc, char* argv[]) {
     }
 
     if (display) {
+        PointIndices::Ptr nonnull(new PointIndices());
         for (int i = 0; i < cloud->size(); ++i) {
             if (project_debug) {
                 if (m.labels[i] == 3) {
@@ -197,12 +203,20 @@ int main(int argc, char* argv[]) {
                         cloud->at(i).g = g/m.samples[i].size();
                         cloud->at(i).b = b/m.samples[i].size();
                     }
+                    nonnull->indices.push_back(i);
                 } else {
                     cloud->at(i).r = 100;
                     cloud->at(i).g = 100;
                     cloud->at(i).b = 100;
                 }
             }
+        }
+        if (prune) {
+            ExtractIndices<PointXYZRGB> extract;
+            extract.setInputCloud(cloud);
+            extract.setIndices(nonnull);
+            extract.setNegative(false);
+            extract.filter(*cloud);
         }
         visualization::PCLVisualizer viewer("Cloud viewer");
         visualization::PointCloudColorHandlerRGBField<PointXYZRGB> rgb(cloud);
