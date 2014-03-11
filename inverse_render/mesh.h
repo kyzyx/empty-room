@@ -5,6 +5,7 @@
 #include "R3Shapes/R3Shapes.h"
 #include <pcl/PolygonMesh.h>
 #include <vector>
+#include <string>
 
 /**
  * Stores a single sample of the outgoing radiance from a surface
@@ -31,6 +32,9 @@ class Mesh {
         ~Mesh();
         void addSample(int n, Sample s);
         void addLabel(int n, int label);
+
+        void writeSamples(std::string filename);
+        void readSamples(std::string filename);
 
         R3Mesh* getMesh() { return mesh; }
         R3MeshSearchTree* getSearchTree() { return searchtree; }

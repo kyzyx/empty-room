@@ -75,11 +75,14 @@ int main(int argc, char* argv[]) {
     if (argc < 5) {
         printf("Usage: invrender mesh.ply imagelist.txt lightimagelist.txt camera.cam [args]\n" \
                 "   Arguments:\n" \
-                "     -no_cameras: draw only camera n axes (default draws all cameras)"
-                "     -show_camera n: draw only camera n axes (default draws all cameras)"
-                "     -show_frustrum: with show_camera, draw camera n frustrum (default off)"
-                "     -project n: project only camera n"
-                "     -project_status: with project, show reprojection debugging results"
+                "     -no_cameras: draw only camera n axes (default draws all cameras)\n"
+                "     -show_camera n: draw only camera n axes (default draws all cameras)\n"
+                "     -show_frustrum: with show_camera, draw camera n frustrum (default off)\n"
+                "     -project n: project only camera n\n"
+                "     -project_status: with project, show reprojection debugging results\n"
+                "     -output f: output sample info to file f\n"
+                "     -readsamples f: read sample info from file f\n"
+                "     -nodisplay: exit immediately\n"
                 );
         return 0;
     }
@@ -90,19 +93,34 @@ int main(int argc, char* argv[]) {
     bool show_frustrum = false;
     int project;
     int camera;
+    string outfile;
+    string infile;
+    bool output = false;
+    bool input = false;
+    bool display = true;
     if (console::find_switch(argc, argv, "-show_frustrum")) show_frustrum = true;
     if (console::find_switch(argc, argv, "-project_status")) project_debug = true;
+    if (console::find_switch(argc, argv, "-nodisplay")) display = false;
     if (console::find_switch(argc, argv, "-no_cameras")) {
         all_cameras = false;
         camera = -1;
+        cout << "c " << outfile << endl;
     }
-    if (console::find_argument(argc, argv, "-show_camera")) {
+    if (console::find_argument(argc, argv, "-show_camera") >= 0) {
         console::parse_argument(argc, argv, "-show_camera", camera);
         all_cameras = false;
     }
-    if (console::find_argument(argc, argv, "-project")) {
+    if (console::find_argument(argc, argv, "-project") >= 0) {
         console::parse_argument(argc, argv, "-project", project);
         all_project = false;
+    }
+    if (console::find_argument(argc, argv, "-output") >= 0) {
+        console::parse_argument(argc, argv, "-output", outfile);
+        output = true;
+    }
+    if (console::find_argument(argc, argv, "-samplefile") >= 0) {
+        console::parse_argument(argc, argv, "-samplefile", infile);
+        input = true;
     }
 
     PolygonMesh::Ptr mesh(new PolygonMesh());
@@ -127,74 +145,82 @@ int main(int argc, char* argv[]) {
     cout << "Done reading lighting images " << lights.size() << endl;
 
     Mesh m(mesh);
-    if (all_project) {
-        reproject(loader, lights, m);
-    } else {
-        reproject(loader.getImage(project), lights.getImage(project), loader.getCamera(project), m);
-    }
-    cout << "Done reprojecting" << endl;
 
-    for (int i = 0; i < cloud->size(); ++i) {
-        if (project_debug) {
-            if (m.labels[i] == 3) {
-                cloud->at(i).r = 255;
-                cloud->at(i).g = 0;
-                cloud->at(i).b = 255;
-            } else if (m.labels[i] == 2) {
-                cloud->at(i).r = 255;
-                cloud->at(i).g = 0;
-                cloud->at(i).b = 0;
-            } else if (m.labels[i] == 4) {
-                cloud->at(i).r = 255;
-                cloud->at(i).g = 255;
-                cloud->at(i).b = 255;
-            } else if (m.labels[i] == 1) {
-                cloud->at(i).r = 255;
-                cloud->at(i).g = 255;
-                cloud->at(i).b = 0;
-            }
+    if (input) {
+        m.readSamples(infile);
+    } else {
+        if (all_project) {
+            reproject(loader, lights, m);
         } else {
-            if (m.samples[i].size()) {
-                if (m.labels[i] == 1) {
+            reproject(loader.getImage(project), lights.getImage(project), loader.getCamera(project), m);
+        }
+        cout << "Done reprojecting" << endl;
+        if (output) m.writeSamples(outfile);
+    }
+
+    if (display) {
+        for (int i = 0; i < cloud->size(); ++i) {
+            if (project_debug) {
+                if (m.labels[i] == 3) {
+                    cloud->at(i).r = 255;
+                    cloud->at(i).g = 0;
+                    cloud->at(i).b = 255;
+                } else if (m.labels[i] == 2) {
+                    cloud->at(i).r = 255;
+                    cloud->at(i).g = 0;
+                    cloud->at(i).b = 0;
+                } else if (m.labels[i] == 4) {
                     cloud->at(i).r = 255;
                     cloud->at(i).g = 255;
                     cloud->at(i).b = 255;
-                } else {
-                    int r = 0;
-                    int g = 0;
-                    int b = 0;
-                    for (int j = 0; j < m.samples[i].size(); ++j) {
-                        r += m.samples[i][j].r;
-                        g += m.samples[i][j].g;
-                        b += m.samples[i][j].b;
-                    }
-                    cloud->at(i).r = r/m.samples[i].size();
-                    cloud->at(i).g = g/m.samples[i].size();
-                    cloud->at(i).b = b/m.samples[i].size();
+                } else if (m.labels[i] == 1) {
+                    cloud->at(i).r = 255;
+                    cloud->at(i).g = 255;
+                    cloud->at(i).b = 0;
                 }
             } else {
-                cloud->at(i).r = 100;
-                cloud->at(i).g = 100;
-                cloud->at(i).b = 100;
+                if (m.samples[i].size()) {
+                    if (m.labels[i] == 1) {
+                        cloud->at(i).r = 255;
+                        cloud->at(i).g = 255;
+                        cloud->at(i).b = 255;
+                    } else {
+                        int r = 0;
+                        int g = 0;
+                        int b = 0;
+                        for (int j = 0; j < m.samples[i].size(); ++j) {
+                            r += m.samples[i][j].r;
+                            g += m.samples[i][j].g;
+                            b += m.samples[i][j].b;
+                        }
+                        cloud->at(i).r = r/m.samples[i].size();
+                        cloud->at(i).g = g/m.samples[i].size();
+                        cloud->at(i).b = b/m.samples[i].size();
+                    }
+                } else {
+                    cloud->at(i).r = 100;
+                    cloud->at(i).g = 100;
+                    cloud->at(i).b = 100;
+                }
             }
         }
-    }
-    visualization::PCLVisualizer viewer("Cloud viewer");
-    visualization::PointCloudColorHandlerRGBField<PointXYZRGB> rgb(cloud);
-    viewer.addPointCloud<PointXYZRGB>(cloud, rgb, "Mesh");
-    if (all_cameras) {
-        char n[] = {'A', '0'};
-        for (int i = 0; i < loader.size(); i++) {
-            VisualizeCamera(loader.getCamera(i), viewer, n);
-            n[1]++;
+        visualization::PCLVisualizer viewer("Cloud viewer");
+        visualization::PointCloudColorHandlerRGBField<PointXYZRGB> rgb(cloud);
+        viewer.addPointCloud<PointXYZRGB>(cloud, rgb, "Mesh");
+        if (all_cameras) {
+            char n[] = {'A', '0'};
+            for (int i = 0; i < loader.size(); i++) {
+                VisualizeCamera(loader.getCamera(i), viewer, n);
+                n[1]++;
+            }
+        } else if (camera >= 0) {
+            VisualizeCamera(loader.getCamera(camera), viewer, "cam", show_frustrum?3:0);
         }
-    } else if (camera >= 0) {
-        VisualizeCamera(loader.getCamera(camera), viewer, "cam", show_frustrum?3:0);
-    }
 
-    while (!viewer.wasStopped()) {
-        viewer.spinOnce(100);
-        boost::this_thread::sleep(boost::posix_time::seconds(0.5));
+        while (!viewer.wasStopped()) {
+            viewer.spinOnce(100);
+            boost::this_thread::sleep(boost::posix_time::seconds(0.5));
+        }
     }
     return 0;
 }

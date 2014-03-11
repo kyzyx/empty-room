@@ -4,7 +4,10 @@
 #include <pcl/point_types.h>
 #include <pcl/common/transforms.h>
 
+#include <fstream>
+
 using namespace pcl;
+using namespace std;
 
 Mesh::~Mesh() {
     delete mesh;
@@ -38,4 +41,45 @@ void Mesh::addSample(int n, Sample s) {
 }
 void Mesh::addLabel(int n, int label) {
     labels[n] = label;
+}
+void Mesh::writeSamples(string filename) {
+    ofstream out(filename.c_str(), ofstream::binary);
+    uint32_t sz = samples.size();
+    out.write((char*) &sz, 4);
+    for (int i = 0; i < samples.size(); ++i) {
+        sz = samples[i].size();
+        out.write((char*) &labels[i], 4);
+        out.write((char*) &sz, 4);
+        for (int j = 0; j < samples[i].size(); ++j) {
+            out.write((char*) &samples[i][j].r, 1);
+            out.write((char*) &samples[i][j].g, 1);
+            out.write((char*) &samples[i][j].b, 1);
+            out.write((char*) &samples[i][j].x, sizeof(float));
+            out.write((char*) &samples[i][j].y, sizeof(float));
+            out.write((char*) &samples[i][j].z, sizeof(float));
+            out.write((char*) &samples[i][j].dA, sizeof(float));
+        }
+    }
+}
+void Mesh::readSamples(string filename) {
+    ifstream in(filename.c_str(), ifstream::binary);
+    uint32_t sz;
+    in.read((char*) &sz, 4);
+    samples.resize(sz);
+    for (int i = 0; i < samples.size(); ++i) {
+        in.read((char*) &sz, 4);
+        labels.push_back(sz);
+        in.read((char*) &sz, 4);
+        for (int j = 0; j < sz; ++j) {
+            Sample s;
+            in.read((char*) &s.r, 1);
+            in.read((char*) &s.g, 1);
+            in.read((char*) &s.b, 1);
+            in.read((char*) &s.x, sizeof(float));
+            in.read((char*) &s.y, sizeof(float));
+            in.read((char*) &s.z, sizeof(float));
+            in.read((char*) &s.dA, sizeof(float));
+            samples[i].push_back(s);
+        }
+    }
 }
