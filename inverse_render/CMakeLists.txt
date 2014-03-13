@@ -8,6 +8,7 @@ link_directories(${PCL_LIBRARY_DIRS} R3Graphics/ R3Shapes/ RNBasics/ R2Shapes/
 add_definitions(${PCL_DEFINITIONS})
 add_executable(invrender invrender.cpp colorhelper.h colorhelper.cpp reproject.h
     reproject.cpp mesh.h mesh.cpp wall_finder.cpp wall_finder.h
-    orientation_finder.cpp orientation_finder.h)
+    orientation_finder.cpp orientation_finder.h
+    display.cpp display.h parse_args.h)
 target_link_libraries(invrender ${PCL_LIBRARIES} R3Graphics.a RNBasics.a
     R3Shapes.a R2Shapes.a jpeg.a GLU)
