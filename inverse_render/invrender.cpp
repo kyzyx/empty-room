@@ -1,7 +1,11 @@
+#include <GL/glew.h>
+#include <GL/glut.h>
 #include <pcl/io/io.h>
 #include <pcl/io/vtk_lib_io.h>
 #include <pcl/point_types.h>
 #include <pcl/PolygonMesh.h>
+#include <pcl/visualization/image_viewer.h>
+#include <boost/thread/thread.hpp>
 #include <iostream>
 
 #include "colorhelper.h"
@@ -12,12 +16,23 @@
 
 #include "parse_args.h"
 #include "display.h"
+#include "solver.h"
 
 
 using namespace std;
 using namespace pcl;
 
 int main(int argc, char* argv[]) {
+    glutInit(&argc, argv);
+    glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB | GLUT_DEPTH);
+    glutInitWindowSize(1,1);
+    glutCreateWindow("");
+    glutHideWindow();
+    GLenum err = glewInit();
+    if (err != GLEW_OK) {
+        cerr << "Error:" << glewGetErrorString(err) << endl;
+        return 1;
+    }
     parseargs(argc, argv);
     PolygonMesh::Ptr mesh(new PolygonMesh());
     io::loadPolygonFile(argv[1], *mesh);
@@ -34,6 +49,7 @@ int main(int argc, char* argv[]) {
     }
     cout << "Done loading mesh geometry" << endl;
 
+    vector<int> wallindices;
     if (do_wallfinding) {
         PlaneOrientationFinder of(mesh,0.01);
         of.computeNormals(ccw);
@@ -49,10 +65,13 @@ int main(int argc, char* argv[]) {
         wf.findWalls(of, labels, minlength, resolution, anglethreshold);
         // FIXME: if (output_wall) ;
         cout << "Done finding walls" << endl;
+        for (int i = 0; i < labels.size(); ++i) {
+            if (labels[i] == WallFinder::LABEL_WALL) wallindices.push_back(i);
+        }
     }
 
     ColorHelper loader;
-    Mesh m(mesh);
+    Mesh m(mesh,true);
 
     if (input) {
         cout << "Loading input files..." << endl;
@@ -75,6 +94,17 @@ int main(int argc, char* argv[]) {
         cout << "Done reprojecting" << endl;
         if (output_reprojection) m.writeSamples(outfile);
     }
+    m.computeColorsOGL();
+
+    InverseRender ir(&m);
+
+    unsigned char img[3*100*100];
+    ir.calculate(wallindices, 1);
+    R3Point p(1.04, 0.79, 5.35);
+    R3Vector v(0.41, 0, -0.91);
+    ir.renderFace(p, v, R3yaxis_vector, img, true);
+    visualization::ImageViewer imv("Hi");
+    imv.showRGBImage(img, 100, 100);
 
     if (display) {
         visualize(m, cloud, loader, show_frustrum, prune, all_cameras, project_debug, camera);

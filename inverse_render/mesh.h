@@ -1,6 +1,7 @@
 #ifndef _MESH_H
 #define _MESH_H
 
+#include <GL/gl.h>
 #include "RNBasics/RNBasics.h"
 #include "R3Shapes/R3Shapes.h"
 #include <pcl/PolygonMesh.h>
@@ -29,7 +30,7 @@ class Sample {
 
 class Mesh {
     public:
-        Mesh(pcl::PolygonMesh::Ptr mesh);
+        Mesh(pcl::PolygonMesh::Ptr mesh, bool initOGL=false);
         ~Mesh();
         void addSample(int n, Sample s);
 
@@ -38,11 +39,15 @@ class Mesh {
 
         R3Mesh* getMesh() { return mesh; }
         R3MeshSearchTree* getSearchTree() { return searchtree; }
+        void renderOGL(bool light=false);
+        void computeColorsOGL();
 
         std::vector<std::vector<Sample> > samples;
         std::vector<char> labels;
     private:
         Mesh() {;}
+
+        GLuint vbo, ibo, cbo;
 
         R3Mesh* mesh;
         R3MeshSearchTree* searchtree;
