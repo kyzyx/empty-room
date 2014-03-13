@@ -150,26 +150,32 @@ void Mesh::computeColorsOGL() {
         for (int j = 0; j < 6; ++j) vertices[6*i + j] = 0;
         float total = 0;
         float ltotal = 0;
-        for (int j = 0; j < samples[i].size(); ++j) {
-            float s = abs(samples[i][j].dA);
-            if (samples[i][j].label > 0) {
-                vertices[6*i+0] += samples[i][j].r*s;
-                vertices[6*i+1] += samples[i][j].g*s;
-                vertices[6*i+2] += samples[i][j].b*s;
-                ltotal += s;
-            } else {
-                vertices[6*i+3] += samples[i][j].r*s;
-                vertices[6*i+4] += samples[i][j].g*s;
-                vertices[6*i+5] += samples[i][j].b*s;
-                total += s;
+        if (samples[i].size() == 0) {
+            vertices[6*i+0] = 0;
+            vertices[6*i+1] = 0;
+            vertices[6*i+2] = 1;
+        } else {
+            for (int j = 0; j < samples[i].size(); ++j) {
+                float s = abs(samples[i][j].dA);
+                if (samples[i][j].label > 0) {
+                    vertices[6*i+0] += samples[i][j].r*s;
+                    vertices[6*i+1] += samples[i][j].g*s;
+                    vertices[6*i+2] += samples[i][j].b*s;
+                    ltotal += s;
+                } else {
+                    vertices[6*i+3] += samples[i][j].r*s;
+                    vertices[6*i+4] += samples[i][j].g*s;
+                    vertices[6*i+5] += samples[i][j].b*s;
+                    total += s;
+                }
             }
+            vertices[6*i+0] /= ltotal*255;
+            vertices[6*i+1] /= ltotal*255;
+            vertices[6*i+2] /= ltotal*255;
+            vertices[6*i+3] /= total*255;
+            vertices[6*i+4] /= total*255;
+            vertices[6*i+5] /= total*255;
         }
-        vertices[6*i+0] /= ltotal*255;
-        vertices[6*i+1] /= ltotal*255;
-        vertices[6*i+2] /= ltotal*255;
-        vertices[6*i+3] /= total*255;
-        vertices[6*i+4] /= total*255;
-        vertices[6*i+5] /= total*255;
     }
     glBufferData(GL_ARRAY_BUFFER, 6*mesh->NVertices()*sizeof(float),
             vertices, GL_STATIC_DRAW);

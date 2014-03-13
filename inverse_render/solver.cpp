@@ -85,14 +85,95 @@ bool InverseRender::solveMaterials() {
     return true;
 }
 void InverseRender::computeHemicubeFF() {
-    // FIXME
+    // Some redundancy, but storage is cheap
+    topHemicubeFF = new float*[res];
+    sideHemicubeFF = new float*[res];
+    for (int i = 0; i < res; ++i) {
+        topHemicubeFF[i] = new float[res];
+        sideHemicubeFF[i] = new float[res];
+    }
+    for (int i = 0; i < res/2; ++i) {
+        for (int j = 0; j <= i; ++j) {
+            float x = res-i-0.5;
+            float y = res-j-0.5;
+            x /= res/2;
+            y /= res/2;
+            float denom = x*x + y*y + 1;
+            topHemicubeFF[i][j] = 1./(M_PI*denom*denom*255);
+            topHemicubeFF[i][res-j-1]       = topHemicubeFF[i][j];
+            topHemicubeFF[res-i-1][j]       = topHemicubeFF[i][j];
+            topHemicubeFF[res-i-1][res-j-1] = topHemicubeFF[i][j];
+            topHemicubeFF[j][i]             = topHemicubeFF[i][j];
+            topHemicubeFF[res-j-1][i]       = topHemicubeFF[i][j];
+            topHemicubeFF[j][res-i-1]       = topHemicubeFF[i][j];
+            topHemicubeFF[res-j-1][res-i-1] = topHemicubeFF[i][j];
+        }
+        for (int j = 0; j < res/2; ++j) {
+            float x = res-i-0.5;
+            float z = res-j-0.5;
+            x /= res/2;
+            z /= res/2;
+            float denom = z*z + x*x + 1;
+            sideHemicubeFF[i][j] = z/(M_PI*denom*denom*255);
+            sideHemicubeFF[i][res-j-1]       = sideHemicubeFF[i][j];
+            sideHemicubeFF[res-i-1][j]       = sideHemicubeFF[i][j];
+            sideHemicubeFF[res-i-1][res-j-1] = sideHemicubeFF[i][j];
+        }
+    }
 }
-void InverseRender::renderHemicube(
+float InverseRender::renderHemicube(
         const R3Point& p,
         const R3Vector& n,
         Material& m,
         vector<float>& lightareas)
 {
+    float blank = 0;
+    unsigned char* image = new unsigned char[3*res*res];
+    unsigned char* light = new unsigned char[3*res*res];
+    R3Vector x = n[0]>n[1]?R3yaxis_vector:R3xaxis_vector;
+    x.Cross(n);
+    R3Vector y = x%n;
+    renderFace(p,  n, x, image, true);
+    renderFace(p,  n, x, light, false);
+    for (int i = 0; i < res; ++i) {
+        for (int j = 0; j < res; ++j) {
+            if (light[3*(i*res+j)] != 0 &&
+                    light[3*(i*res+j)+1] == 0 &&
+                    light[3*(i*res+j)+2] == 0)
+            {
+                lightareas[light[3*(i*res+j)]] += topHemicubeFF[i][j];
+            }  else if (light[3*(i*res+j)] == 0 &&
+                    light[3*(i*res+j)+1] == 0 &&
+                    light[3*(i*res+j)+2] != 0)
+            {
+                blank += topHemicubeFF[i][j];
+            } else {
+                m.r += topHemicubeFF[i][j]*image[3*(i*res+j)];
+                m.g += topHemicubeFF[i][j]*image[3*(i*res+j)+1];
+                m.b += topHemicubeFF[i][j]*image[3*(i*res+j)+2];
+            }
+        }
+    }
+    R3Vector orientations[] = {x,-x,y,-y};
+    for (int o = 0; o < 4; ++o) {
+        renderFace(p, orientations[o], n, image, true);
+        renderFace(p, orientations[o], n, light, false);
+        for (int i = res/2; i < res; ++i) {
+            for (int j = 0; j < res; ++j) {
+                if (light[3*(i*res+j)] == 0 &&
+                    light[3*(i*res+j)+1] == 0 &&
+                    light[3*(i*res+j)+2] == 0)
+                {
+                    lightareas[light[3*(i*res+j)]] += sideHemicubeFF[i][j];
+                    continue;
+                }
+                m.r += sideHemicubeFF[i][j]*image[3*(i*res+j)];
+                m.g += sideHemicubeFF[i][j]*image[3*(i*res+j)+1];
+                m.b += sideHemicubeFF[i][j]*image[3*(i*res+j)+2];
+            }
+        }
+    }
+    return blank;
 }
 void InverseRender::renderFace(const R3Point& p,
         const R3Vector& towards, const R3Vector& up,

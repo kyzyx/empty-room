@@ -29,7 +29,7 @@ class InverseRender {
                 const R3Vector& towards, const R3Vector& up,
                 unsigned char* image, bool colorimage);
     private:
-        void renderHemicube(const R3Point& p, const R3Vector& n,
+        float renderHemicube(const R3Point& p, const R3Vector& n,
                 Material& m, std::vector<float>& lightareas);
         void computeHemicubeFF();
         bool solveLights();
