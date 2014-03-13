@@ -15,6 +15,8 @@
 #include "colorhelper.h"
 #include "mesh.h"
 #include "reproject.h"
+#include "orientation_finder.h"
+#include "wall_finder.h"
 
 
 using namespace std;
@@ -76,6 +78,7 @@ int main(int argc, char* argv[]) {
     if (argc < 5) {
         printf("Usage: invrender mesh.ply imagelist.txt lightimagelist.txt camera.cam [args]\n" \
                 "   Arguments:\n" \
+                "     -ccw: Faces in counterclockwise direction (flip normals)\n" \
                 "     -no_cameras: draw only camera n axes (default draws all cameras)\n"
                 "     -show_camera n: draw only camera n axes (default draws all cameras)\n"
                 "     -show_frustrum: with show_camera, draw camera n frustrum (default off)\n"
@@ -85,6 +88,9 @@ int main(int argc, char* argv[]) {
                 "     -readsamples f: read sample info from file f\n"
                 "     -nodisplay: exit immediately\n"
                 "     -prune_occluded: Do not display points for which there are no samples\n"
+                "     -wallfinder_anglethreshold float: Angle between normals to be considered equal, for wallfinding(default PI/40)\n" \
+                "     -wallfinder_min_wall_length float: Minimum length of a wall (default 0.2)\n" \
+                "     -wallfinder_resolution float: maximum distance for a point to be considered on a plane for wallfinder (default 0.01)\n" \
                 );
         return 0;
     }
@@ -101,6 +107,11 @@ int main(int argc, char* argv[]) {
     bool input = false;
     bool display = true;
     bool prune = false;
+    bool ccw = false;
+    double anglethreshold = M_PI/40;
+    double resolution = 0.01;
+    double minlength = 0.2;
+    if (console::find_switch(argc, argv, "-ccw")) ccw = true;
     if (console::find_switch(argc, argv, "-show_frustrum")) show_frustrum = true;
     if (console::find_switch(argc, argv, "-project_status")) project_debug = true;
     if (console::find_switch(argc, argv, "-nodisplay")) display = false;
@@ -126,6 +137,15 @@ int main(int argc, char* argv[]) {
         console::parse_argument(argc, argv, "-samplefile", infile);
         input = true;
     }
+    if (console::find_argument(argc, argv, "-wallfinder_anglethreshold")) {
+        console::parse_argument(argc, argv, "-wallfinder_anglethreshold", anglethreshold);
+    }
+    if (console::find_argument(argc, argv, "-wallfinder_resolution")) {
+        console::parse_argument(argc, argv, "-wallfinder_resolution", resolution);
+    }
+    if (console::find_argument(argc, argv, "-wallfinder_min_wall_length")) {
+        console::parse_argument(argc, argv, "-wallfinder_min_wall_length", minlength);
+    }
 
     PolygonMesh::Ptr mesh(new PolygonMesh());
     io::loadPolygonFile(argv[1], *mesh);
@@ -140,6 +160,20 @@ int main(int argc, char* argv[]) {
             cloud->points[i].z = tmp[i].z;
         }
     }
+    cout << "Done loading data" << endl;
+
+    PlaneOrientationFinder of(mesh,0.01);
+    of.computeNormals(ccw);
+    if (!of.computeOrientation()) {
+        cout << "Error computing orientation! Non-triangle mesh!" << endl;
+    }
+    // FIXME: Transform camera positions from normalize
+    //of.normalize();
+    WallFinder wf;
+    vector<int> labels(of.getCloud()->size(), WallFinder::LABEL_NONE);
+    wf.findFloorAndCeiling(of, labels, resolution, anglethreshold);
+    wf.findWalls(of, labels, minlength, resolution, anglethreshold);
+    cout << "Done finding walls" << endl;
 
     ColorHelper loader;
     loader.load(argv[2], argv[4]);
