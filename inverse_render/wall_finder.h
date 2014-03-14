@@ -9,6 +9,7 @@
 class Segment {
     public:
     Segment(int d, int s, int e, int c) : direction(d), start(s), end(e), coord(c) {;}
+    Segment() {;}
     std::pair<int,int> getCoords(int s) {
         if (direction) return std::make_pair(s, coord);
         else           return std::make_pair(coord, s);
@@ -51,11 +52,15 @@ class WallFinder {
         void findWalls(
                 OrientationFinder& of,
                 std::vector<int>& labels,
+                int wallthreshold=200,
                 double minlength=0.2,
                 double resolution=0.01,
                 double anglethreshold=M_PI/40);
-        std::vector<Segment> wallsegments;
 
+        void loadWalls(std::string filename, std::vector<int>& labels);
+        void saveWalls(std::string filename, std::vector<int>& labels);
+
+        std::vector<Segment> wallsegments;
     private:
         double findExtremal(
             pcl::PointCloud<pcl::PointNormal>::ConstPtr cloud,

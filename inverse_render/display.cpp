@@ -1,4 +1,5 @@
 #include "display.h"
+#include "parse_args.h"
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/visualization/point_cloud_color_handlers.h>
 #include <pcl/filters/extract_indices.h>
@@ -9,8 +10,11 @@ using namespace pcl;
 void VisualizeCamera(const CameraParams* cam, visualization::PCLVisualizer& viewer,
         string name, double f=0, bool axes=true);
 
+void VisualizeSamplePoint(Mesh& m, InverseRender::SampleData& s,
+        visualization::PCLVisualizer& viewer);
+
 void visualize(Mesh& m, PointCloud<PointXYZRGB>::Ptr cloud, ColorHelper& loader,
-        bool show_frustrum, bool prune, bool all_cameras,
+        InverseRender& ir, WallFinder& wf,
         int labeltype, int cameraid) {
     PointIndices::Ptr nonnull(new PointIndices());
     for (int i = 0; i < cloud->size(); ++i) {
@@ -81,11 +85,55 @@ void visualize(Mesh& m, PointCloud<PointXYZRGB>::Ptr cloud, ColorHelper& loader,
     } else if (cameraid >= 0) {
         VisualizeCamera(loader.getCamera(cameraid), viewer, "cam", show_frustrum?3:0);
     }
+    char n[] = {'L', 'i', '0'};
+    for (int i = 0; i < wf.wallsegments.size(); ++i) {
+        if (wf.wallsegments[i].direction == 0) {
+            PointXYZ start(wf.wallsegments[i].coord*resolution, 0, wf.wallsegments[i].start*resolution);
+            PointXYZ end(wf.wallsegments[i].coord*resolution, 0, wf.wallsegments[i].end*resolution);
+            viewer.addLine(start, end, 1, 0, i/(double)wf.wallsegments.size(), n);
+            n[2]++;
+        } else {
+            PointXYZ start(wf.wallsegments[i].start*resolution, 0, wf.wallsegments[i].coord*resolution);
+            PointXYZ end(wf.wallsegments[i].end*resolution, 0, wf.wallsegments[i].coord*resolution);
+            viewer.addLine(start, end, 1, 0, i/(double)wf.wallsegments.size(), n);
+            n[2]++;
+        }
+    }
+    for (int i = 0; i < ir.data.size(); ++i)
+        VisualizeSamplePoint(m, ir.data[i], viewer);
 
     while (!viewer.wasStopped()) {
         viewer.spinOnce(100);
         boost::this_thread::sleep(boost::posix_time::seconds(0.5));
     }
+}
+
+char cubename[] = {'C', '0'};
+void VisualizeSamplePoint(Mesh& m, InverseRender::SampleData& s,
+        visualization::PCLVisualizer& viewer) {
+    double boxsize = 0.1;
+    R3Point p = m.getMesh()->VertexPosition(m.getMesh()->Vertex(s.vertexid));
+    R3Vector v = m.getMesh()->VertexNormal(m.getMesh()->Vertex(s.vertexid));
+    R3Point pp = p+0.1*v;
+    R3Vector n = v[0]>v[1]?R3xaxis_vector:R3yaxis_vector;
+    double amt = acos(v.Dot(n));
+    v.Cross(n);
+    Eigen::Vector3f pos(p[0],p[1],p[2]);
+    Eigen::Vector3f ax(v[0],v[1],v[2]);
+    Eigen::Quaternionf rot = Eigen::AngleAxisf(0,ax) *
+                             Eigen::AngleAxisf(0,Eigen::Vector3f::UnitY());
+
+    viewer.addCube(pos, rot, boxsize, boxsize, boxsize, cubename);
+    if (s.fractionUnknown == 0) {
+        cout << "x" << endl;
+        viewer.setShapeRenderingProperties(visualization::PCL_VISUALIZER_COLOR, 0,1,0,cubename);
+    }
+    PointXYZ p1(p[0],p[1],p[2]);
+    PointXYZ p2(pp[0],pp[1],pp[2]);
+    cubename[1]++;
+    viewer.addLine(p1,p2,0,1,0,cubename);
+
+    cubename[1]++;
 }
 
 void VisualizeCamera(const CameraParams* cam, visualization::PCLVisualizer& viewer,

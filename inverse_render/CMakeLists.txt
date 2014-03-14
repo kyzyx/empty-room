@@ -10,7 +10,7 @@ add_executable(invrender invrender.cpp colorhelper.h colorhelper.cpp reproject.h
     reproject.cpp mesh.h mesh.cpp wall_finder.cpp wall_finder.h
     orientation_finder.cpp orientation_finder.h
     solver.cpp solver.h clusterlights.cpp clusterlights.h
-    display.cpp display.h parse_args.h)
+    display.cpp display.h parse_args.cpp parse_args.h)
 target_link_libraries(invrender ${PCL_LIBRARIES} R3Graphics.a RNBasics.a
     R3Shapes.a R2Shapes.a jpeg.a GL glut GLU GLEW)
 set(CMAKE_CXX_FLAGS "-Wno-deprecated -std=c++0x")

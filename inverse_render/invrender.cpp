@@ -34,7 +34,7 @@ int main(int argc, char* argv[]) {
         cerr << "Error:" << glewGetErrorString(err) << endl;
         return 1;
     }
-    parseargs(argc, argv);
+    if (!parseargs(argc, argv)) return 1;
     PolygonMesh::Ptr mesh(new PolygonMesh());
     io::loadPolygonFile(argv[1], *mesh);
     PointCloud<PointXYZRGB>::Ptr cloud(new PointCloud<PointXYZRGB>());
@@ -51,7 +51,15 @@ int main(int argc, char* argv[]) {
     cout << "Done loading mesh geometry" << endl;
 
     vector<int> wallindices;
-    if (do_wallfinding) {
+    vector<int> labels(cloud->size(), WallFinder::LABEL_NONE);
+    WallFinder wf;
+    if (wallinput) {
+        cout << "Loading wall files..." << endl;
+        wf.loadWalls(wallfile, labels);
+        for (int i = 0; i < labels.size(); ++i) {
+            if (labels[i] == WallFinder::LABEL_WALL) wallindices.push_back(i);
+        }
+    } else if (do_wallfinding) {
         PlaneOrientationFinder of(mesh,0.01);
         of.computeNormals(ccw);
         if (!of.computeOrientation()) {
@@ -60,22 +68,21 @@ int main(int argc, char* argv[]) {
         cout << "Done analyzing geometry" << endl;
         // FIXME: Transform camera positions from normalize
         //of.normalize();
-        WallFinder wf;
-        vector<int> labels(of.getCloud()->size(), WallFinder::LABEL_NONE);
         wf.findFloorAndCeiling(of, labels, resolution, anglethreshold);
-        wf.findWalls(of, labels, minlength, resolution, anglethreshold);
+        wf.findWalls(of, labels, wallthreshold, minlength, resolution, anglethreshold);
         // FIXME: if (output_wall) ;
         cout << "Done finding walls" << endl;
         for (int i = 0; i < labels.size(); ++i) {
             if (labels[i] == WallFinder::LABEL_WALL) wallindices.push_back(i);
         }
+        if (output_wall) wf.saveWalls(walloutfile, labels);
     }
 
     ColorHelper loader;
     Mesh m(mesh,true);
 
     if (input) {
-        cout << "Loading input files..." << endl;
+        cout << "Loading reprojection input files..." << endl;
         loader.readMayaCameraFile(camfile);
         m.readSamples(infile);
         cout << "Done loading samples" << endl;
@@ -93,26 +100,26 @@ int main(int argc, char* argv[]) {
             reproject(loader.getImage(project), lights.getImage(project), loader.getCamera(project), m);
         }
         cout << "Done reprojecting" << endl;
+        clusterLights(m);
+        cout << "Done clustering lights" << endl;
         if (output_reprojection) m.writeSamples(outfile);
     }
-    clusterLights(m);
-    cout << "Done clustering lights" << endl;
     m.computeColorsOGL();
 
     InverseRender ir(&m);
 
     unsigned char img[3*100*100];
-    ir.calculate(wallindices, 1);
+    ir.calculate(wallindices, 20);
     R3Point p(1.04, 0.79, 5.35);
     R3Vector v(0.41, 0, -0.91);
-    ir.renderFace(p, v, R3yaxis_vector, img, true);
+    ir.renderFace(p, v, R3yaxis_vector, img, false);
     visualization::ImageViewer imv("Hi");
     imv.showRGBImage(img, 100, 100);
 
     if (display) {
         int labeltype = LABEL_LIGHTS;
         if (project_debug) labeltype = LABEL_REPROJECT_DEBUG;
-        visualize(m, cloud, loader, show_frustrum, prune, all_cameras, labeltype, camera);
+        visualize(m, cloud, loader, ir, wf, labeltype, camera);
     }
     return 0;
 }

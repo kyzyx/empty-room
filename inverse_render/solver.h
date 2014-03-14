@@ -14,6 +14,8 @@ class Material {
         float g;
         float b;
         char* texture;
+
+        void print();
 };
 
 class InverseRender {
@@ -28,6 +30,7 @@ class InverseRender {
         void renderFace(const R3Point& p,
                 const R3Vector& towards, const R3Vector& up,
                 unsigned char* image, bool colorimage);
+        bool setupRasterizer();
     private:
         float renderHemicube(const R3Point& p, const R3Vector& n,
                 Material& m, std::vector<float>& lightareas);
@@ -35,19 +38,12 @@ class InverseRender {
         bool solveLights();
         bool solveMaterials();
 
-        bool setupRasterizer();
 
         Mesh* mesh;
         Material wallMaterial;
         Material floorMaterial;
         std::vector<Material> lights;
 
-        class SampleData {
-            public:
-                Material radiosity;
-                Material netIncoming;
-                std::vector<float> lightamount;
-        };
 
         GLuint fbo, fbo_rgb, fbo_z;
 
@@ -55,6 +51,16 @@ class InverseRender {
 
         float** topHemicubeFF;
         float** sideHemicubeFF;
+
+    public:
+        class SampleData {
+            public:
+                Material radiosity;
+                Material netIncoming;
+                float fractionUnknown;
+                std::vector<float> lightamount;
+                int vertexid;
+        };
 
         std::vector<SampleData> data;
 };

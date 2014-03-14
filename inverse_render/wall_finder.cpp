@@ -8,6 +8,7 @@
 #include <pcl/segmentation/sac_segmentation.h>
 
 #include <limits>
+#include <fstream>
 
 using namespace pcl;
 using namespace std;
@@ -168,7 +169,7 @@ class Grid {
         void insert(const PointNormal& p, int idx) {
             int r = p.x/resolution;
             int c = p.z/resolution;
-            if (r < 0 || c < 0 || r >= width || c >= width) {
+            if (r < 0 || c < 0 || r >= width || c >= height) {
                 return;
             }
             grid[r][c].add(p, idx);
@@ -207,6 +208,7 @@ class Grid {
 void WallFinder::findWalls(
         OrientationFinder& of,
         vector<int>& labels,
+        int wallthreshold,
         double minlength,
         double resolution,
         double anglethreshold)
@@ -228,7 +230,7 @@ void WallFinder::findWalls(
 
     // Scan grid and extract line segments
     int overlapthreshold = 6;
-    int wallthreshold = 10;
+    int steepness = 10;
     int skipsallowed = 2;
     vector<Segment> segments;
     // Check vertical walls
@@ -239,8 +241,8 @@ void WallFinder::findWalls(
         skipped = 0;
         for (int j = 0; j < height; ++j) {
             if (grid.getCount(i,j) > wallthreshold &&
-                grid.getCount(i-1,j) < grid.getCount(i,j) &&
-                grid.getCount(i+1,j) < grid.getCount(i,j))
+                grid.getCount(i,j) - grid.getCount(i-1,j) > steepness &&
+                grid.getCount(i,j) - grid.getCount(i+1,j) > steepness)
             {
                 numsegs += skipped + 1;
                 skipped = 0;
@@ -360,12 +362,12 @@ void WallFinder::findWalls(
     }
     int curridx = maxidx;
     vector<int> wall;
-    vector<bool> inwall(candidatewalls.size());
+    vector<bool> inwall(candidatewalls.size(), false);
     do {
         double mindist = numeric_limits<double>::max();
         int besti;
         for (int i = 0; i < candidatewalls.size(); ++i) {
-            if (wall.size() && i == wall.back()) continue;
+            if (i == curridx || wall.size() && i == wall.back()) continue;
             double d;
             if (curridx < i) {
                 d = edges[i][curridx];
@@ -415,5 +417,41 @@ void WallFinder::findWalls(
                 break;
             }
         }
+    }
+}
+
+void WallFinder::loadWalls(string filename, vector<int>& labels) {
+    ifstream in(filename.c_str(), ifstream::binary);
+    uint32_t sz;
+    in.read((char*) &sz, 4);
+    labels.resize(sz);
+    in.read((char*) &sz, 4);
+    wallsegments.resize(sz);
+    for (int i = 0; i < labels.size(); ++i) {
+        in.read((char*) &(labels[i]), 4);
+    }
+    for (int i = 0; i < sz; ++i) {
+        in.read((char*) &(wallsegments[i].direction), 4);
+        in.read((char*) &(wallsegments[i].start), 4);
+        in.read((char*) &(wallsegments[i].end), 4);
+        in.read((char*) &(wallsegments[i].norm), 4);
+        in.read((char*) &(wallsegments[i].coord), 4);
+    }
+}
+void WallFinder::saveWalls(string filename, vector<int>& labels) {
+    ofstream out(filename.c_str(), ofstream::binary);
+    uint32_t sz = labels.size();
+    out.write((char*) &sz, 4);
+    sz = wallsegments.size();
+    out.write((char*) &sz, 4);
+    for (int i = 0; i < labels.size(); ++i) {
+        out.write((char*) &(labels[i]), 4);
+    }
+    for (int i = 0; i < wallsegments.size(); ++i) {
+        out.write((char*) &(wallsegments[i].direction), 4);
+        out.write((char*) &(wallsegments[i].start), 4);
+        out.write((char*) &(wallsegments[i].end), 4);
+        out.write((char*) &(wallsegments[i].norm), 4);
+        out.write((char*) &(wallsegments[i].coord), 4);
     }
 }

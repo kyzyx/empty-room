@@ -1,9 +1,13 @@
 #include <GL/glew.h>
 #include "solver.h"
 #include <random>
+#define MAX_LIGHTS 10
 
 using namespace std;
 
+void Material::print() {
+    printf("(%.3f,%.3f,%.3f)",r, g, b);
+}
 void InverseRender::calculate(vector<int> indices, int numsamples) {
     if (!setupRasterizer()) {
         return;
@@ -12,6 +16,7 @@ void InverseRender::calculate(vector<int> indices, int numsamples) {
     // Initial wall material guess - average all
     wallMaterial = Material(0,0,0);
     float total = 0;
+    int numlights = MAX_LIGHTS;
     for (int i = 0; i < indices.size(); ++i) {
         for (int j = 0; j < mesh->samples[indices[i]].size(); ++j) {
             float s = abs(mesh->samples[indices[i]][j].dA);
@@ -26,16 +31,25 @@ void InverseRender::calculate(vector<int> indices, int numsamples) {
         wallMaterial.g /= total*255;
         wallMaterial.b /= total*255;
     }
+    cout << "Calculated average wall material: ";
+    wallMaterial.print();
+    cout << endl;
 
     default_random_engine generator;
     uniform_int_distribution<int> dist(0, indices.size());
     for (int i = 0; i < numsamples; ++i) {
-        int n = dist(generator);
+        int n;
+        do {
+            n = dist(generator);
+        } while (mesh->samples[indices[n]].size() == 0);
+
         SampleData sd;
+        sd.lightamount.resize(numlights);
+        sd.vertexid = indices[n];
         sd.radiosity = Material(0,0,0);
         total = 0;
-        for (int j = 0; j < mesh->samples[indices[i]].size(); ++j) {
-            float s = abs(mesh->samples[indices[i]][j].dA);
+        for (int j = 0; j < mesh->samples[indices[n]].size(); ++j) {
+            float s =     abs(mesh->samples[indices[n]][j].dA);
             sd.radiosity.r += mesh->samples[indices[n]][j].r*s;
             sd.radiosity.g += mesh->samples[indices[n]][j].g*s;
             sd.radiosity.b += mesh->samples[indices[n]][j].b*s;
@@ -45,14 +59,23 @@ void InverseRender::calculate(vector<int> indices, int numsamples) {
         sd.radiosity.g /= total*255;
         sd.radiosity.b /= total*255;
 
-        renderHemicube(
-                mesh->getMesh()->VertexPosition(mesh->getMesh()->Vertex(n)),
-                mesh->getMesh()->VertexNormal(mesh->getMesh()->Vertex(n)),
+        sd.fractionUnknown = renderHemicube(
+                mesh->getMesh()->VertexPosition(mesh->getMesh()->Vertex(indices[n])),
+                mesh->getMesh()->VertexNormal(mesh->getMesh()->Vertex(indices[n])),
                 sd.netIncoming, sd.lightamount
         );
+        data.push_back(sd);
+
+        cout << n << "(" << sd.fractionUnknown << "): ";
+        sd.radiosity.print();
+        cout << " = p*";
+        sd.netIncoming.print();
+        for (int k = 0; k < sd.lightamount.size(); ++k) {
+            if (sd.lightamount[k] > 0) cout << " + p*L_" << k << "*" << sd.lightamount[k];
+        }
+        cout << endl;
     }
 
-    return;
     bool converged = false;
     while (!converged) {
         converged = solveLights();
@@ -72,8 +95,12 @@ bool InverseRender::setupRasterizer() {
     glFramebufferRenderbuffer(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER_EXT, fbo_rgb);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, fbo_z);
     GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER_EXT);
-    if (status != GL_FRAMEBUFFER_COMPLETE_EXT) cout << "Error creating frame buffer" << endl;
+    if (status != GL_FRAMEBUFFER_COMPLETE_EXT) {
+        cout << "Error creating frame buffer" << endl;
+        return false;
+    }
     glBindFramebuffer(GL_FRAMEBUFFER_EXT, 0);
+    return true;
 }
 
 bool InverseRender::solveLights() {
@@ -160,16 +187,21 @@ float InverseRender::renderHemicube(
         renderFace(p, orientations[o], n, light, false);
         for (int i = res/2; i < res; ++i) {
             for (int j = 0; j < res; ++j) {
-                if (light[3*(i*res+j)] == 0 &&
-                    light[3*(i*res+j)+1] == 0 &&
-                    light[3*(i*res+j)+2] == 0)
+                if (light[3*(i*res+j)] != 0 &&
+                        light[3*(i*res+j)+1] == 0 &&
+                        light[3*(i*res+j)+2] == 0)
                 {
                     lightareas[light[3*(i*res+j)]] += sideHemicubeFF[i][j];
-                    continue;
+                }  else if (light[3*(i*res+j)] == 0 &&
+                        light[3*(i*res+j)+1] == 0 &&
+                        light[3*(i*res+j)+2] != 0)
+                {
+                    blank += sideHemicubeFF[i][j];
+                } else {
+                    m.r += sideHemicubeFF[i][j]*image[3*(i*res+j)];
+                    m.g += sideHemicubeFF[i][j]*image[3*(i*res+j)+1];
+                    m.b += sideHemicubeFF[i][j]*image[3*(i*res+j)+2];
                 }
-                m.r += sideHemicubeFF[i][j]*image[3*(i*res+j)];
-                m.g += sideHemicubeFF[i][j]*image[3*(i*res+j)+1];
-                m.b += sideHemicubeFF[i][j]*image[3*(i*res+j)+2];
             }
         }
     }

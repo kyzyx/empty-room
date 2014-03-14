@@ -20,51 +20,44 @@ Mesh::Mesh(PolygonMesh::Ptr m, bool initOGL) {
 
     mesh = new R3Mesh();
 
-    GLuint* indices;
     float* vertices;
     if (initOGL) {
-        indices = new GLuint[3*m->polygons.size()];
-        vertices = new float[3*cloud->size()];
-        cout << "Finished allocating memory..." << endl;
+        vertices = new float[3*3*m->polygons.size()];
         glGenBuffers(1, &vbo);
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glGenBuffers(1, &ibo);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-        cout << "Finished allocating graphics memory..." << endl;
     }
 
     // Copy all vertices
-    int z = 0;
     PointCloud<PointXYZ>::iterator it;
     for (it = cloud->begin(); it != cloud->end(); ++it) {
         mesh->CreateVertex(R3Point((*it).x, (*it).y, (*it).z));
-        if (initOGL) {
-            vertices[z++] = it->x;
-            vertices[z++] = it->y;
-            vertices[z++] = it->z;
-        }
     }
 
-
-    z = 0;
+    int z = 0;
+    int v = 0;
     // Copy all faces, assuming triangular
     for (int i = 0; i < m->polygons.size(); ++i) {
         if (m->polygons[i].vertices.size() != 3) break;
         mesh->CreateFace(mesh->Vertex(m->polygons[i].vertices[0]), mesh->Vertex(m->polygons[i].vertices[1]), mesh->Vertex(m->polygons[i].vertices[2]));
         if (initOGL) {
-            indices[z++] = m->polygons[i].vertices[0];
-            indices[z++] = m->polygons[i].vertices[1];
-            indices[z++] = m->polygons[i].vertices[2];
+            R3Point p = mesh->VertexPosition(mesh->Vertex(m->polygons[i].vertices[0]));
+            vertices[v++] = p[0];
+            vertices[v++] = p[1];
+            vertices[v++] = p[2];
+            p = mesh->VertexPosition(mesh->Vertex(m->polygons[i].vertices[1]));
+            vertices[v++] = p[0];
+            vertices[v++] = p[1];
+            vertices[v++] = p[2];
+            p = mesh->VertexPosition(mesh->Vertex(m->polygons[i].vertices[2]));
+            vertices[v++] = p[0];
+            vertices[v++] = p[1];
+            vertices[v++] = p[2];
         }
     }
     if (initOGL) {
         glBufferData(GL_ARRAY_BUFFER,
-                3*cloud->size()*sizeof(float),
+                3*3*m->polygons.size()*sizeof(float),
                 vertices, GL_STATIC_DRAW);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                3*m->polygons.size()*sizeof(GLuint),
-                indices, GL_STATIC_DRAW);
-        delete [] indices;
         delete [] vertices;
     }
 
@@ -136,48 +129,56 @@ void Mesh::renderOGL(bool light) {
     glEnableClientState(GL_VERTEX_ARRAY);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glVertexPointer(3, GL_FLOAT, 3*sizeof(float), 0);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-    glDrawElements(GL_TRIANGLES, mesh->NFaces()*3, GL_UNSIGNED_INT,(void*)0);
+    glDrawArrays(GL_TRIANGLES, 0, mesh->NFaces()*3);
     glDisableClientState(GL_VERTEX_ARRAY);
     glDisableClientState(GL_COLOR_ARRAY);
 }
 void Mesh::computeColorsOGL() {
     glGenBuffers(1, &cbo);
     glBindBuffer(GL_ARRAY_BUFFER, cbo);
-    float* vertices = new float[6*mesh->NVertices()];
-    for (int i = 0; i < mesh->NVertices(); ++i) {
-        const R3Point& p = mesh->VertexPosition(mesh->Vertex(i));
-        for (int j = 0; j < 6; ++j) vertices[6*i + j] = 0;
-        float total = 0;
-        float ltotal = 0;
-        if (samples[i].size() == 0) {
-            vertices[6*i+0] = 0;
-            vertices[6*i+1] = 0;
-            vertices[6*i+2] = 1;
-        } else {
-            for (int j = 0; j < samples[i].size(); ++j) {
-                float s = abs(samples[i][j].dA);
-                if (samples[i][j].label > 0) {
-                    vertices[6*i+0] += samples[i][j].r*s;
-                    vertices[6*i+1] += samples[i][j].g*s;
-                    vertices[6*i+2] += samples[i][j].b*s;
-                    ltotal += s;
-                } else {
-                    vertices[6*i+3] += samples[i][j].r*s;
-                    vertices[6*i+4] += samples[i][j].g*s;
-                    vertices[6*i+5] += samples[i][j].b*s;
+    float* vertices = new float[6*3*mesh->NFaces()];
+    for (int i = 0; i < mesh->NFaces(); ++i) {
+        // If any vertex has no samples, discard this face
+        bool valid = true;
+        // If all vertices are the same light vertices, this is a light face
+        int light = 0;
+        for (int j = 0; j < 3; ++j) {
+            int n = mesh->VertexID(mesh->VertexOnFace(mesh->Face(i), j));
+            int ind = 6*(3*i + j);
+            for (int k = 0; k < 6; ++k) vertices[ind + k] = 0;
+            vertices[ind+2] = 1;
+            if (samples[n].size() == 0) {
+                valid = false;
+            }
+            if (light == 0 && labels[n] > 0) light = labels[n];
+            else if (light > 0 && labels[n] != light) light = -1;
+            else if (light > 0 && labels[n] == 0) light = -1;
+        }
+        if (!valid) continue;
+        for (int j = 0; j < 3; ++j) {
+            int ind = 6*(3*i + j);
+            if (light > 0) {
+                vertices[ind+0] = light/255.;
+                vertices[ind+1] = 0;
+                vertices[ind+2] = 0;
+            } else {
+                vertices[ind+2] = 0;
+                float total = 0;
+                int n = mesh->VertexID(mesh->VertexOnFace(mesh->Face(i), j));
+                for (int k = 0; k < samples[n].size(); ++k) {
+                    float s = abs(samples[n][k].dA);
+                    vertices[ind+3] += samples[n][k].r*s;
+                    vertices[ind+4] += samples[n][k].g*s;
+                    vertices[ind+5] += samples[n][k].b*s;
                     total += s;
                 }
+                vertices[ind+3] /= total*255;
+                vertices[ind+4] /= total*255;
+                vertices[ind+5] /= total*255;
             }
-            vertices[6*i+0] /= ltotal*255;
-            vertices[6*i+1] /= ltotal*255;
-            vertices[6*i+2] /= ltotal*255;
-            vertices[6*i+3] /= total*255;
-            vertices[6*i+4] /= total*255;
-            vertices[6*i+5] /= total*255;
         }
     }
-    glBufferData(GL_ARRAY_BUFFER, 6*mesh->NVertices()*sizeof(float),
+    glBufferData(GL_ARRAY_BUFFER, 6*3*mesh->NFaces()*sizeof(float),
             vertices, GL_STATIC_DRAW);
     delete [] vertices;
 }
