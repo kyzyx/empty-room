@@ -131,16 +131,15 @@ int main(int argc, char* argv[]) {
         PointXYZ xax(of.getAxis(1)(0), of.getAxis(1)(1), of.getAxis(1)(2));
         PointXYZ zax(of.getAxis(2)(0), of.getAxis(2)(1), of.getAxis(2)(2));
         char n[] = {'L', 'i', '0'};
-        double res = 0.01;
         for (int i = 0; i < wf.wallsegments.size(); ++i) {
             if (wf.wallsegments[i].direction == 0) {
-                PointXYZ start(wf.wallsegments[i].coord*res, 0, wf.wallsegments[i].start*res);
-                PointXYZ end(wf.wallsegments[i].coord*res, 0, wf.wallsegments[i].end*res);
+                PointXYZ start(wf.wallsegments[i].coord*resolution, 0, wf.wallsegments[i].start*resolution);
+                PointXYZ end(wf.wallsegments[i].coord*resolution, 0, wf.wallsegments[i].end*resolution);
                 viewer.addLine(start, end, 1, 0, i/(double)wf.wallsegments.size(), n);
                 n[2]++;
             } else {
-                PointXYZ start(wf.wallsegments[i].start*res, 0, wf.wallsegments[i].coord*res);
-                PointXYZ end(wf.wallsegments[i].end*res, 0, wf.wallsegments[i].coord*res);
+                PointXYZ start(wf.wallsegments[i].start*resolution, 0, wf.wallsegments[i].coord*resolution);
+                PointXYZ end(wf.wallsegments[i].end*resolution, 0, wf.wallsegments[i].coord*resolution);
                 viewer.addLine(start, end, 1, 0, i/(double)wf.wallsegments.size(), n);
                 n[2]++;
             }

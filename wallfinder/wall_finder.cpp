@@ -168,7 +168,7 @@ class Grid {
         void insert(const PointNormal& p, int idx) {
             int r = p.x/resolution;
             int c = p.z/resolution;
-            if (r < 0 || c < 0 || r >= width || c >= width) {
+            if (r < 0 || c < 0 || r >= width || c >= height) {
                 return;
             }
             grid[r][c].add(p, idx);
@@ -216,8 +216,8 @@ void WallFinder::findWalls(
     float maxz = -numeric_limits<float>::max();
     PointCloud<PointNormal>::const_iterator it;
     for (it = of.getCloud()->begin(); it != of.getCloud()->end(); ++it) {
-        maxx = max(it->x, maxx);
-        maxz = max(it->z, maxz);
+        if (it->x > maxx) maxx = it->x;
+        if (it->z > maxz) maxz = it->z;
     }
     int width = maxx/resolution + 1;
     int height = maxz/resolution + 1;
@@ -228,7 +228,8 @@ void WallFinder::findWalls(
 
     // Scan grid and extract line segments
     int overlapthreshold = 6;
-    int wallthreshold = 10;
+    int wallthreshold = 200;
+    int steepness = 10;
     int skipsallowed = 2;
     vector<Segment> segments;
     // Check vertical walls
@@ -267,8 +268,8 @@ void WallFinder::findWalls(
         skipped = 0;
         for (int j = 0; j < width; ++j) {
             if (grid.getCount(j,i) > wallthreshold &&
-                grid.getCount(j,i-1) < grid.getCount(j,i) &&
-                grid.getCount(j,i+1) < grid.getCount(j,i))
+                grid.getCount(j,i) - grid.getCount(j,i-1) > steepness &&
+                grid.getCount(j,i) - grid.getCount(j,i+1) > steepness)
             {
                 numsegs += skipped + 1;
                 skipped = 0;
@@ -360,12 +361,12 @@ void WallFinder::findWalls(
     }
     int curridx = maxidx;
     vector<int> wall;
-    vector<bool> inwall(candidatewalls.size());
+    vector<bool> inwall(candidatewalls.size(), false);
     do {
         double mindist = numeric_limits<double>::max();
         int besti;
         for (int i = 0; i < candidatewalls.size(); ++i) {
-            if (wall.size() && i == wall.back()) continue;
+            if (i == curridx || wall.size() && i == wall.back()) continue;
             double d;
             if (curridx < i) {
                 d = edges[i][curridx];
