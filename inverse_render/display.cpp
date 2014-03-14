@@ -11,10 +11,10 @@ void VisualizeCamera(const CameraParams* cam, visualization::PCLVisualizer& view
 
 void visualize(Mesh& m, PointCloud<PointXYZRGB>::Ptr cloud, ColorHelper& loader,
         bool show_frustrum, bool prune, bool all_cameras,
-        bool project_debug, int cameraid) {
+        int labeltype, int cameraid) {
     PointIndices::Ptr nonnull(new PointIndices());
     for (int i = 0; i < cloud->size(); ++i) {
-        if (project_debug) {
+        if (labeltype == LABEL_REPROJECT_DEBUG) {
             if (m.labels[i] == 3) {
                 cloud->at(i).r = 255;
                 cloud->at(i).g = 0;
@@ -34,21 +34,22 @@ void visualize(Mesh& m, PointCloud<PointXYZRGB>::Ptr cloud, ColorHelper& loader,
             }
         } else {
             if (m.samples[i].size()) {
-                int lightness = 0;
-                int r = 0;
-                int g = 0;
-                int b = 0;
-                for (int j = 0; j < m.samples[i].size(); ++j) {
-                    r += m.samples[i][j].r;
-                    g += m.samples[i][j].g;
-                    b += m.samples[i][j].b;
-                    lightness += m.samples[i][j].label==1;
-                }
-                if (lightness > 0) {
-                    cloud->at(i).r = 255;
+                if (labeltype == LABEL_LIGHTS && m.labels[i] > 0) {
+                    cloud->at(i).r = 0;
                     cloud->at(i).g = 0;
                     cloud->at(i).b = 0;
+                    if (m.labels[i]&1) cloud->at(i).r = 255;
+                    if (m.labels[i]&2) cloud->at(i).g = 255;
+                    if (m.labels[i]&4) cloud->at(i).b = 255;
                 } else {
+                    int r = 0;
+                    int g = 0;
+                    int b = 0;
+                    for (int j = 0; j < m.samples[i].size(); ++j) {
+                        r += m.samples[i][j].r;
+                        g += m.samples[i][j].g;
+                        b += m.samples[i][j].b;
+                    }
                     cloud->at(i).r = r/m.samples[i].size();
                     cloud->at(i).g = g/m.samples[i].size();
                     cloud->at(i).b = b/m.samples[i].size();

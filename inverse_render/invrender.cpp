@@ -13,6 +13,7 @@
 #include "reproject.h"
 #include "orientation_finder.h"
 #include "wall_finder.h"
+#include "clusterlights.h"
 
 #include "parse_args.h"
 #include "display.h"
@@ -94,6 +95,8 @@ int main(int argc, char* argv[]) {
         cout << "Done reprojecting" << endl;
         if (output_reprojection) m.writeSamples(outfile);
     }
+    clusterLights(m);
+    cout << "Done clustering lights" << endl;
     m.computeColorsOGL();
 
     InverseRender ir(&m);
@@ -107,7 +110,9 @@ int main(int argc, char* argv[]) {
     imv.showRGBImage(img, 100, 100);
 
     if (display) {
-        visualize(m, cloud, loader, show_frustrum, prune, all_cameras, project_debug, camera);
+        int labeltype = LABEL_LIGHTS;
+        if (project_debug) labeltype = LABEL_REPROJECT_DEBUG;
+        visualize(m, cloud, loader, show_frustrum, prune, all_cameras, labeltype, camera);
     }
     return 0;
 }
