@@ -26,6 +26,7 @@ int main(int argc, char* argv[]) {
                 "     -visualize: Show visualization (default on)\n" \
                 "     -print_wall: Print out wall segments (default off)\n" \
                 "     -novisualize: Exit immediately\n" \
+                "     -visualize_grid: show histogram of points instead of 3d model\n" \
                 "     -anglethreshold float: Angle between normals to be considered equal (default PI/40)\n" \
                 "     -min_wall_length float: Minimum length of a wall (default 0.2)\n" \
                 "     -resolution float: maximum distance for a point to be considered on a plane (default 0.01)\n" \
@@ -41,10 +42,12 @@ int main(int argc, char* argv[]) {
     double anglethreshold = M_PI/40;
     double resolution = 0.01;
     double minlength = 0.2;
+    bool show_grid = false;
     if (console::find_switch(argc, argv, "-ccw")) ccw = true;
     if (console::find_switch(argc, argv, "-visualize")) visualize = true;
     if (console::find_switch(argc, argv, "-print_wall")) print_wall = true;
     if (console::find_switch(argc, argv, "-novisualize")) visualize = false;
+    if (console::find_switch(argc, argv, "-visualize_grid")) show_grid = true;
     if (console::find_argument(argc, argv, "-anglethreshold")) {
         console::parse_argument(argc, argv, "-anglethreshold", anglethreshold);
     }
@@ -107,22 +110,33 @@ int main(int argc, char* argv[]) {
 
         visualization::PCLVisualizer viewer("Room");
         viewer.setBackgroundColor(0,0,0);
-
-        viewer.addPointCloud<PointNormal>(walls, "Walls");
-        //viewer.addPointCloudNormals<PointNormal>(walls, 20);
-        viewer.setPointCloudRenderingProperties(visualization::PCL_VISUALIZER_COLOR, 0,1,0,"Walls");
-        viewer.addPointCloud<PointNormal>(floors, "Floors");
-        //viewer.addPointCloudNormals<PointNormal>(floors, 20);
-        viewer.setPointCloudRenderingProperties(visualization::PCL_VISUALIZER_COLOR, 1,0,0,"Floors");
-        viewer.addPointCloud<PointNormal>(ceils, "Ceilings");
-        //viewer.addPointCloudNormals<PointNormal>(ceils, 20);
-        viewer.setPointCloudRenderingProperties(visualization::PCL_VISUALIZER_COLOR, 0,0,1,"Ceilings");
-        viewer.addPointCloud<PointNormal>(corners, "Corners");
-        //viewer.addPointCloudNormals<PointNormal>(ceils, 20);
-        viewer.setPointCloudRenderingProperties(visualization::PCL_VISUALIZER_COLOR, 1,0,1,"Corners");
-        viewer.addPointCloud<PointNormal>(other, "Other");
-        viewer.addPointCloudNormals<PointNormal>(other, 20);
-        viewer.setPointCloudRenderingProperties(visualization::PCL_VISUALIZER_COLOR, 1,1,1,"Other");
+        if (show_grid) {
+            PointCloud<PointXYZ>::Ptr grid(wf.getHistogram(of, resolution));
+            viewer.addPointCloud<PointXYZ>(grid, "Grid");
+            ModelCoefficients mc;
+            mc.values.resize(4);
+            mc.values[0] = 0;
+            mc.values[1] = 1;
+            mc.values[2] = 0;
+            mc.values[3] = -sqrt(2);
+            viewer.addPlane(mc);
+        } else {
+            viewer.addPointCloud<PointNormal>(walls, "Walls");
+            //viewer.addPointCloudNormals<PointNormal>(walls, 20);
+            viewer.setPointCloudRenderingProperties(visualization::PCL_VISUALIZER_COLOR, 0,1,0,"Walls");
+            viewer.addPointCloud<PointNormal>(floors, "Floors");
+            //viewer.addPointCloudNormals<PointNormal>(floors, 20);
+            viewer.setPointCloudRenderingProperties(visualization::PCL_VISUALIZER_COLOR, 0,0,1,"Floors");
+            viewer.addPointCloud<PointNormal>(ceils, "Ceilings");
+            //viewer.addPointCloudNormals<PointNormal>(ceils, 20);
+            viewer.setPointCloudRenderingProperties(visualization::PCL_VISUALIZER_COLOR, 1,0,0,"Ceilings");
+            viewer.addPointCloud<PointNormal>(corners, "Corners");
+            //viewer.addPointCloudNormals<PointNormal>(ceils, 20);
+            viewer.setPointCloudRenderingProperties(visualization::PCL_VISUALIZER_COLOR, 1,0,1,"Corners");
+            viewer.addPointCloud<PointNormal>(other, "Other");
+            //viewer.addPointCloudNormals<PointNormal>(other, 20);
+            viewer.setPointCloudRenderingProperties(visualization::PCL_VISUALIZER_COLOR, 1,1,1,"Other");
+        }
 
         viewer.initCameraParameters();
         viewer.setCameraPosition(-1,-1,-1,0,0,1,0,-1,0);

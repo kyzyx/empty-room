@@ -203,7 +203,33 @@ class Grid {
         int height;
         double resolution;
 };
+pcl::PointCloud<PointXYZ>::Ptr getHistogram(
+        OrientationFinder& of,
+        double resolution)
+{
+    // Create grid
+    float maxx = -numeric_limits<float>::max();
+    float maxz = -numeric_limits<float>::max();
+    PointCloud<PointNormal>::const_iterator it;
+    for (it = of.getCloud()->begin(); it != of.getCloud()->end(); ++it) {
+        if (it->x > maxx) maxx = it->x;
+        if (it->z > maxz) maxz = it->z;
+    }
+    int width = maxx/resolution + 1;
+    int height = maxz/resolution + 1;
+    Grid grid(width, height, resolution);
+    for (int i = 0; i < of.getCloud()->size(); ++i) {
+        grid.insert(of.getCloud()->at(i), i);
+    }
 
+    pcl::PointCloud<PointXYZ>::Ptr ret(new PointCloud<PointXYZ>());
+    for (int i = 0; i < width; ++i) {
+        for (int j = 0; j < height; ++j) {
+            ret->push_back(PointXYZ(i*resolution, sqrt(grid.getCount(i,j)/100.),j*resolution));
+        }
+    }
+    return ret;
+}
 void WallFinder::findWalls(
         OrientationFinder& of,
         vector<int>& labels,

@@ -54,6 +54,11 @@ class WallFinder {
                 double minlength=0.2,
                 double resolution=0.01,
                 double anglethreshold=M_PI/40);
+
+        pcl::PointCloud<pcl::PointXYZ>::Ptr getHistogram(
+                OrientationFinder& of,
+                double resolution=0.01);
+
         std::vector<Segment> wallsegments;
 
     private:
