@@ -107,7 +107,7 @@ int main(int argc, char* argv[]) {
 
     InverseRender ir(&m);
 
-    ir.calculate(wallindices, 20);
+    ir.calculate(wallindices, 40, 2);
 
     if (display) {
         int labeltype = LABEL_LIGHTS;

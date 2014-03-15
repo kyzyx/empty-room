@@ -10,6 +10,11 @@ class Material {
             : r(red), g(green), b(blue), texture(NULL) {;}
         Material()
             : r(0), g(0), b(0), texture(NULL) {;}
+        float& operator()(int n) {
+            if (n == 0) return r;
+            else if (n == 1) return g;
+            else if (n == 2) return b;
+        }
         float r;
         float g;
         float b;
@@ -25,7 +30,7 @@ class InverseRender {
             computeHemicubeFF();
         }
 
-        void calculate(std::vector<int> indices, int numsamples);
+        void calculate(std::vector<int> indices, int numsamples, int numlights);
 
         void renderFace(const R3Point& p,
                 const R3Vector& towards, const R3Vector& up,

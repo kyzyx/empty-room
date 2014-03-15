@@ -1,14 +1,16 @@
 #include <GL/glew.h>
 #include "solver.h"
 #include <random>
+#include <Eigen/Dense>
 #define MAX_LIGHTS 10
 
 using namespace std;
+using namespace Eigen;
 
 void Material::print() {
     printf("(%.3f,%.3f,%.3f)",r, g, b);
 }
-void InverseRender::calculate(vector<int> indices, int numsamples) {
+void InverseRender::calculate(vector<int> indices, int numsamples, int numlights) {
     if (!setupRasterizer()) {
         return;
     }
@@ -16,7 +18,6 @@ void InverseRender::calculate(vector<int> indices, int numsamples) {
     // Initial wall material guess - average all
     wallMaterial = Material(0,0,0);
     float total = 0;
-    int numlights = MAX_LIGHTS;
     for (int i = 0; i < indices.size(); ++i) {
         for (int j = 0; j < mesh->samples[indices[i]].size(); ++j) {
             float s = abs(mesh->samples[indices[i]][j].dA);
@@ -67,6 +68,12 @@ void InverseRender::calculate(vector<int> indices, int numsamples) {
                 mesh->getMesh()->VertexNormal(mesh->getMesh()->Vertex(indices[n])),
                 sd.netIncoming, sd.lightamount, images[2*i], images[2*i+1]
         );
+        if (sd.fractionUnknown > 0.25) {
+            --i;
+            delete [] images[2*i];
+            delete [] images[2*i+1];
+            continue;
+        }
         data.push_back(sd);
 
         cout << n << "(" << sd.fractionUnknown << "): ";
@@ -78,11 +85,19 @@ void InverseRender::calculate(vector<int> indices, int numsamples) {
         }
         cout << endl;
     }
+    lights.resize(numlights);
 
     bool converged = false;
     while (!converged) {
-        converged = solveLights();
-        converged = converged && solveMaterials();
+        bool lightsconverged = solveLights();
+        bool materialsconverged = solveMaterials();
+        converged = lightsconverged && materialsconverged;
+        cout << "Material estimate: (" << wallMaterial(0) << "," << wallMaterial(1) << "," << wallMaterial(2) << ")" << endl;
+        for (int i = 0; i < numlights; ++i) {
+            cout << "Light estimate " << i << ": (" << lights[i](0) << "," << lights[i](1) << "," << lights[i](2) << ")" << endl;
+        }
+        cout << "-------------------------" << endl;
+        cin.get();
     }
 }
 
@@ -106,13 +121,54 @@ bool InverseRender::setupRasterizer() {
     return true;
 }
 
+const double threshold = 0.01; // % change above which we are not converged
 bool InverseRender::solveLights() {
-    // FIXME
-    return true;
+    // Weighted linear least squares for each channel
+    double maxchange = 0.;
+    int numlights = data[0].lightamount.size();
+    for (int ch = 0; ch < 3; ++ch) {
+        VectorXd b(data.size());
+        MatrixXd A(data.size(), numlights);
+        for (int i = 0; i < data.size(); ++i) {
+            b[i] = (1-data[i].fractionUnknown)*data[i].radiosity(ch) - wallMaterial(ch)*data[i].netIncoming(ch);
+            for (int j = 0; j < numlights; ++j) {
+                A(i,j) = (1-data[i].fractionUnknown)*wallMaterial(ch)*data[i].lightamount[j];
+            }
+        }
+        VectorXd x = A.jacobiSvd(ComputeThinU | ComputeThinV).solve(b);
+        for (int i = 0; i < numlights; ++i) {
+            if (lights[i](ch) > 0) {
+                double delta = abs(lights[i](ch) - x[i]);
+                double percent = delta/lights[i](ch);
+                if (percent > maxchange) maxchange = percent;
+            }
+            lights[i](ch) = x[i];
+        }
+    }
+    return maxchange < threshold;
 }
+
 bool InverseRender::solveMaterials() {
-    // FIXME
-    return true;
+    // Weighted average over sample points
+    bool converged = true;
+    int numlights = data[0].lightamount.size();
+    for (int ch = 0; ch < 3; ++ch) {
+        double prev = wallMaterial(ch);
+        wallMaterial(ch) = 0;
+        double tot = 0;
+        for (int i = 0; i < data.size(); ++i) {
+            double totalin = data[i].netIncoming(ch);
+            for (int j = 0; j < numlights; ++j) {
+                totalin += lights[j](ch)*data[i].lightamount[j]*(1-data[i].fractionUnknown);
+            }
+            double p = data[i].radiosity(ch)*(1-data[i].fractionUnknown)/totalin;
+            wallMaterial(ch) += p;
+            tot += 1-data[i].fractionUnknown;
+        }
+        wallMaterial(ch) /= tot;
+        if (abs(prev - wallMaterial(ch)) > threshold) converged = false;
+    }
+    return converged;
 }
 void InverseRender::computeHemicubeFF() {
     // Some redundancy, but storage is cheap
