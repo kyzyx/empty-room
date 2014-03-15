@@ -69,16 +69,6 @@ void InverseRender::calculate(vector<int> indices, int numsamples) {
         );
         data.push_back(sd);
 
-        for (int r = 0; r < res/2; ++r) {
-            for (int c = 0; c < res; ++c) {
-                for (int j = 0; j < 3; ++j) {
-                    swap(images[2*i][3*(res*r+c)+j],
-                         images[2*i][3*(res*(res-r-1)+c)+j]);
-                    swap(images[2*i+1][3*(res*r+c)+j],
-                         images[2*i+1][3*(res*(res-r-1)+c)+j]);
-                }
-            }
-        }
         cout << n << "(" << sd.fractionUnknown << "): ";
         sd.radiosity.print();
         cout << " = p*";
@@ -132,32 +122,30 @@ void InverseRender::computeHemicubeFF() {
         topHemicubeFF[i] = new float[res];
         sideHemicubeFF[i] = new float[res];
     }
-    for (int i = 0; i < res/2; ++i) {
-        for (int j = 0; j <= i; ++j) {
-            float x = res-i-0.5;
-            float y = res-j-0.5;
-            x /= res/2;
-            y /= res/2;
+    float x = 1./res;
+    float d = 2./res;
+    int o = res/2;
+    float tot = 0;
+    for (int i = 1; i <= res/2; ++i, x += d) {
+        float y = 1./res;
+        for (int j = 1; j <= i; ++j, y += d) {
             float denom = x*x + y*y + 1;
-            topHemicubeFF[i][j] = 1./(M_PI*denom*denom*255);
-            topHemicubeFF[i][res-j-1]       = topHemicubeFF[i][j];
-            topHemicubeFF[res-i-1][j]       = topHemicubeFF[i][j];
-            topHemicubeFF[res-i-1][res-j-1] = topHemicubeFF[i][j];
-            topHemicubeFF[j][i]             = topHemicubeFF[i][j];
-            topHemicubeFF[res-j-1][i]       = topHemicubeFF[i][j];
-            topHemicubeFF[j][res-i-1]       = topHemicubeFF[i][j];
-            topHemicubeFF[res-j-1][res-i-1] = topHemicubeFF[i][j];
+            topHemicubeFF[o+i-1][o+j-1] = d*d/(M_PI*denom*denom);
+            topHemicubeFF[o+i-1][o-j]   = topHemicubeFF[o+i-1][o+j-1];
+            topHemicubeFF[o-i][o-j]     = topHemicubeFF[o+i-1][o+j-1];
+            topHemicubeFF[o-i][o+j-1]   = topHemicubeFF[o+i-1][o+j-1];
+            topHemicubeFF[o+j-1][o+i-1] = topHemicubeFF[o+i-1][o+j-1];
+            topHemicubeFF[o+j-1][o-i]   = topHemicubeFF[o+i-1][o+j-1];
+            topHemicubeFF[o-j][o-i]     = topHemicubeFF[o+i-1][o+j-1];
+            topHemicubeFF[o-j][o+i-1]   = topHemicubeFF[o+i-1][o+j-1];
         }
-        for (int j = 0; j < res/2; ++j) {
-            float x = res-i-0.5;
-            float z = res-j-0.5;
-            x /= res/2;
-            z /= res/2;
+        float z = 1./res;
+        for (int j = 1; j <= res/2; ++j, z += d) {
             float denom = z*z + x*x + 1;
-            sideHemicubeFF[i][j] = z/(M_PI*denom*denom*255);
-            sideHemicubeFF[i][res-j-1]       = sideHemicubeFF[i][j];
-            sideHemicubeFF[res-i-1][j]       = sideHemicubeFF[i][j];
-            sideHemicubeFF[res-i-1][res-j-1] = sideHemicubeFF[i][j];
+            sideHemicubeFF[o+i-1][o+j-1] = d*d*z/(M_PI*denom*denom);
+            sideHemicubeFF[o+i-1][o-j] = sideHemicubeFF[o+i-1][o+j-1];
+            sideHemicubeFF[o-i][o-j]   = sideHemicubeFF[o+i-1][o+j-1];
+            sideHemicubeFF[o-i][o+j-1] = sideHemicubeFF[o+i-1][o+j-1];
         }
     }
 }
@@ -171,51 +159,52 @@ float InverseRender::renderHemicube(
     float blank = 0;
     if (image == NULL) image = new unsigned char[3*res*res];
     if (light == NULL) light = new unsigned char[3*res*res];
-    R3Vector x = n[0]>n[1]?R3yaxis_vector:R3xaxis_vector;
+    R3Point pp = p + 0.0001*n;
+    R3Vector x = R3yaxis_vector;
     x.Cross(n);
     R3Vector y = x%n;
     R3Vector orientations[] = {x,-x,y,-y};
     for (int o = 0; o < 4; ++o) {
-        renderFace(p, orientations[o], n, image, true);
-        renderFace(p, orientations[o], n, light, false);
+        renderFace(pp, orientations[o], n, image, true);
+        renderFace(pp, orientations[o], n, light, false);
         for (int i = res/2; i < res; ++i) {
             for (int j = 0; j < res; ++j) {
                 if (light[3*(i*res+j)] != 0 &&
                         light[3*(i*res+j)+1] == 0 &&
                         light[3*(i*res+j)+2] == 0)
                 {
-                    lightareas[light[3*(i*res+j)]] += sideHemicubeFF[i][j];
+                    lightareas[light[3*(i*res+j)]-1] += sideHemicubeFF[i][j];
                 }  else if (light[3*(i*res+j)] == 0 &&
                         light[3*(i*res+j)+1] == 0 &&
                         light[3*(i*res+j)+2] != 0)
                 {
                     blank += sideHemicubeFF[i][j];
                 } else {
-                    m.r += sideHemicubeFF[i][j]*image[3*(i*res+j)];
-                    m.g += sideHemicubeFF[i][j]*image[3*(i*res+j)+1];
-                    m.b += sideHemicubeFF[i][j]*image[3*(i*res+j)+2];
+                    m.r += sideHemicubeFF[i][j]*image[3*(i*res+j)]/255.;
+                    m.g += sideHemicubeFF[i][j]*image[3*(i*res+j)+1]/255.;
+                    m.b += sideHemicubeFF[i][j]*image[3*(i*res+j)+2]/255.;
                 }
             }
         }
     }
-    renderFace(p,  n, x, image, true);
-    renderFace(p,  n, x, light, false);
+    renderFace(pp, n, y, image, true);
+    renderFace(pp, n, y, light, false);
     for (int i = 0; i < res; ++i) {
         for (int j = 0; j < res; ++j) {
             if (light[3*(i*res+j)] != 0 &&
                     light[3*(i*res+j)+1] == 0 &&
                     light[3*(i*res+j)+2] == 0)
             {
-                lightareas[light[3*(i*res+j)]] += topHemicubeFF[i][j];
+                lightareas[light[3*(i*res+j)]-1] += topHemicubeFF[i][j];
             }  else if (light[3*(i*res+j)] == 0 &&
                     light[3*(i*res+j)+1] == 0 &&
                     light[3*(i*res+j)+2] != 0)
             {
                 blank += topHemicubeFF[i][j];
             } else {
-                m.r += topHemicubeFF[i][j]*image[3*(i*res+j)];
-                m.g += topHemicubeFF[i][j]*image[3*(i*res+j)+1];
-                m.b += topHemicubeFF[i][j]*image[3*(i*res+j)+2];
+                m.r += topHemicubeFF[i][j]*image[3*(i*res+j)]/255.;
+                m.g += topHemicubeFF[i][j]*image[3*(i*res+j)+1]/255.;
+                m.b += topHemicubeFF[i][j]*image[3*(i*res+j)+2]/255.;
             }
         }
     }
