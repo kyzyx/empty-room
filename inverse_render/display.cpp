@@ -1,5 +1,6 @@
 #include "display.h"
 #include "parse_args.h"
+#include <pcl/visualization/image_viewer.h>
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/visualization/point_cloud_color_handlers.h>
 #include <pcl/filters/extract_indices.h>
@@ -13,9 +14,38 @@ void VisualizeCamera(const CameraParams* cam, visualization::PCLVisualizer& view
 void VisualizeSamplePoint(Mesh& m, InverseRender::SampleData& s,
         visualization::PCLVisualizer& viewer);
 
+char previouscube = 0;
+char currcube = 0;
+int x = 0;
+bool change = true;
+visualization::ImageViewer* imvu;
+void kbd_cb_(const visualization::KeyboardEvent& event, void* ir) {
+    InverseRender* ivr = (InverseRender*) ir;
+    if (event.keyDown()) {
+        if (event.getKeyCode() == ',') {
+            currcube--;
+            if (currcube < 0) currcube += ivr->data.size();
+            change = true;
+        } else if (event.getKeyCode() == '.') {
+            currcube++;
+            if (currcube >= ivr->data.size()) currcube = 0;
+            change = true;
+        }
+        if (event.getKeyCode() == 'm') {
+            x = 1-x;
+        }
+        cout << "Displaying " << (x?"light":"image") <<" " << (int) currcube<<endl;
+        imvu->showRGBImage(ivr->images[2*currcube+x],100,100);
+    }
+}
 void visualize(Mesh& m, PointCloud<PointXYZRGB>::Ptr cloud, ColorHelper& loader,
         InverseRender& ir, WallFinder& wf,
         int labeltype, int cameraid) {
+
+    imvu = new visualization::ImageViewer("Hi");
+    imvu->registerKeyboardCallback(&kbd_cb_, (void*) &ir);
+    imvu->showRGBImage(ir.images[0], 100, 100);
+
     PointIndices::Ptr nonnull(new PointIndices());
     for (int i = 0; i < cloud->size(); ++i) {
         if (labeltype == LABEL_REPROJECT_DEBUG) {
@@ -105,10 +135,19 @@ void visualize(Mesh& m, PointCloud<PointXYZRGB>::Ptr cloud, ColorHelper& loader,
     while (!viewer.wasStopped()) {
         viewer.spinOnce(100);
         boost::this_thread::sleep(boost::posix_time::seconds(0.5));
+        if (change) {
+            char tmp[] = {'C', '0', '\0'};
+            tmp[1] = '0' + previouscube;
+            previouscube = currcube;
+            viewer.setShapeRenderingProperties(visualization::PCL_VISUALIZER_COLOR, 1,1,1,tmp);
+            tmp[1] = '0' + currcube;
+            viewer.setShapeRenderingProperties(visualization::PCL_VISUALIZER_COLOR, 1,0,1,tmp);
+            change = false;
+        }
     }
 }
 
-char cubename[] = {'C', '0'};
+char cubename[] = {'C', '0', '\0'};
 void VisualizeSamplePoint(Mesh& m, InverseRender::SampleData& s,
         visualization::PCLVisualizer& viewer) {
     double boxsize = 0.1;
@@ -125,13 +164,12 @@ void VisualizeSamplePoint(Mesh& m, InverseRender::SampleData& s,
 
     viewer.addCube(pos, rot, boxsize, boxsize, boxsize, cubename);
     if (s.fractionUnknown == 0) {
-        cout << "x" << endl;
         viewer.setShapeRenderingProperties(visualization::PCL_VISUALIZER_COLOR, 0,1,0,cubename);
     }
-    PointXYZ p1(p[0],p[1],p[2]);
-    PointXYZ p2(pp[0],pp[1],pp[2]);
-    cubename[1]++;
-    viewer.addLine(p1,p2,0,1,0,cubename);
+    //PointXYZ p1(p[0],p[1],p[2]);
+    //PointXYZ p2(pp[0],pp[1],pp[2]);
+    //cubename[1]++;
+    //viewer.addLine(p1,p2,0,1,0,cubename);
 
     cubename[1]++;
 }

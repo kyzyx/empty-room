@@ -33,7 +33,8 @@ class InverseRender {
         bool setupRasterizer();
     private:
         float renderHemicube(const R3Point& p, const R3Vector& n,
-                Material& m, std::vector<float>& lightareas);
+                Material& m, std::vector<float>& lightareas, unsigned char* color,
+                unsigned char* light);
         void computeHemicubeFF();
         bool solveLights();
         bool solveMaterials();
@@ -62,6 +63,7 @@ class InverseRender {
                 int vertexid;
         };
 
+        unsigned char** images;
         std::vector<SampleData> data;
 };
 

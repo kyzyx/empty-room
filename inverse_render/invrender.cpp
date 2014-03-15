@@ -4,7 +4,6 @@
 #include <pcl/io/vtk_lib_io.h>
 #include <pcl/point_types.h>
 #include <pcl/PolygonMesh.h>
-#include <pcl/visualization/image_viewer.h>
 #include <boost/thread/thread.hpp>
 #include <iostream>
 
@@ -108,13 +107,7 @@ int main(int argc, char* argv[]) {
 
     InverseRender ir(&m);
 
-    unsigned char img[3*100*100];
     ir.calculate(wallindices, 20);
-    R3Point p(1.04, 0.79, 5.35);
-    R3Vector v(0.41, 0, -0.91);
-    ir.renderFace(p, v, R3yaxis_vector, img, false);
-    visualization::ImageViewer imv("Hi");
-    imv.showRGBImage(img, 100, 100);
 
     if (display) {
         int labeltype = LABEL_LIGHTS;
