@@ -31,7 +31,7 @@ class WallFinder {
             LABEL_FLOOR,
             LABEL_CORNER
         };
-        WallFinder() {;}
+        WallFinder(double gridsize=0.01) : resolution(gridsize){;}
         /**
          * resolution denotes the threshold beyond which points are not
          * considered on the same plane
@@ -41,7 +41,6 @@ class WallFinder {
         double findFloorAndCeiling(
                 OrientationFinder& of,
                 std::vector<int>& labels,
-                double resolution=0.01,
                 double anglethreshold=M_PI/40);
         /**
          * Label the point cloud with wall points
@@ -54,19 +53,19 @@ class WallFinder {
                 std::vector<int>& labels,
                 int wallthreshold=200,
                 double minlength=0.2,
-                double resolution=0.01,
                 double anglethreshold=M_PI/40);
 
         void loadWalls(std::string filename, std::vector<int>& labels);
         void saveWalls(std::string filename, std::vector<int>& labels);
+        double getResolution() const { return resolution; }
 
         std::vector<Segment> wallsegments;
     private:
+        double resolution;
         double findExtremal(
             pcl::PointCloud<pcl::PointNormal>::ConstPtr cloud,
             Eigen::Vector3f dir,
             double anglethreshold,
-            double resolution,
             pcl::PointCloud<pcl::PointNormal>::Ptr outcloud);
 };
 #endif

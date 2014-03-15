@@ -84,7 +84,6 @@ double WallFinder::findExtremal(
         PointCloud<PointNormal>::ConstPtr cloud,
         Eigen::Vector3f dir,
         double anglethreshold,
-        double resolution,
         PointCloud<PointNormal>::Ptr outcloud)
 {
     ConditionOr<PointNormal>::Ptr cond(new ConditionOr<PointNormal>());
@@ -137,16 +136,15 @@ double WallFinder::findExtremal(
 double WallFinder::findFloorAndCeiling(
         OrientationFinder& of,
         vector<int>& labels,
-        double resolution,
         double anglethreshold)
 {
     double floor, ceiling;
 
     PointCloud<PointNormal>::Ptr floorcandidates(new PointCloud<PointNormal>());
     PointCloud<PointNormal>::ConstPtr cloud = of.getCloud();
-    floor = findExtremal(cloud, Eigen::Vector3f(0.,1.,0.), anglethreshold, resolution, floorcandidates);
+    floor = findExtremal(cloud, Eigen::Vector3f(0.,1.,0.), anglethreshold, floorcandidates);
     PointCloud<PointNormal>::Ptr ceilcandidates(new PointCloud<PointNormal>());
-    ceiling = -findExtremal(cloud, Eigen::Vector3f(0.,-1.,0.), anglethreshold, resolution, ceilcandidates);
+    ceiling = -findExtremal(cloud, Eigen::Vector3f(0.,-1.,0.), anglethreshold, ceilcandidates);
     double t = cos(anglethreshold);
     for (int i = 0; i < cloud->size(); ++i) {
         if (abs((*cloud)[i].y - floor) < resolution &&
@@ -210,7 +208,6 @@ void WallFinder::findWalls(
         vector<int>& labels,
         int wallthreshold,
         double minlength,
-        double resolution,
         double anglethreshold)
 {
     // Create grid
@@ -427,6 +424,7 @@ void WallFinder::loadWalls(string filename, vector<int>& labels) {
     labels.resize(sz);
     in.read((char*) &sz, 4);
     wallsegments.resize(sz);
+    in.read((char*) &resolution, sizeof(double));
     for (int i = 0; i < labels.size(); ++i) {
         in.read((char*) &(labels[i]), 4);
     }
@@ -444,6 +442,7 @@ void WallFinder::saveWalls(string filename, vector<int>& labels) {
     out.write((char*) &sz, 4);
     sz = wallsegments.size();
     out.write((char*) &sz, 4);
+    out.write((char*) &resolution, sizeof(double));
     for (int i = 0; i < labels.size(); ++i) {
         out.write((char*) &(labels[i]), 4);
     }

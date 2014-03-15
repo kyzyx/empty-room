@@ -51,7 +51,7 @@ int main(int argc, char* argv[]) {
 
     vector<int> wallindices;
     vector<int> labels(cloud->size(), WallFinder::LABEL_NONE);
-    WallFinder wf;
+    WallFinder wf(resolution);
     if (wallinput) {
         cout << "Loading wall files..." << endl;
         wf.loadWalls(wallfile, labels);
@@ -67,8 +67,8 @@ int main(int argc, char* argv[]) {
         cout << "Done analyzing geometry" << endl;
         // FIXME: Transform camera positions from normalize
         //of.normalize();
-        wf.findFloorAndCeiling(of, labels, resolution, anglethreshold);
-        wf.findWalls(of, labels, wallthreshold, minlength, resolution, anglethreshold);
+        wf.findFloorAndCeiling(of, labels, anglethreshold);
+        wf.findWalls(of, labels, wallthreshold, minlength, anglethreshold);
         // FIXME: if (output_wall) ;
         cout << "Done finding walls" << endl;
         for (int i = 0; i < labels.size(); ++i) {
