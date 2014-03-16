@@ -10,6 +10,7 @@
 #include "colorhelper.h"
 #include "mesh.h"
 #include "reproject.h"
+#include "rerender.h"
 #include "orientation_finder.h"
 #include "wall_finder.h"
 #include "clusterlights.h"
@@ -118,6 +119,7 @@ int main(int argc, char* argv[]) {
         }
         ir.solve();
     }
+    outputRadianceFile(radfile, wf, m, ir);
 
     if (display) {
         int labeltype = LABEL_LIGHTS;

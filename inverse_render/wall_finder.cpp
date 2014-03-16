@@ -138,24 +138,22 @@ double WallFinder::findFloorAndCeiling(
         vector<int>& labels,
         double anglethreshold)
 {
-    double floor, ceiling;
-
     PointCloud<PointNormal>::Ptr floorcandidates(new PointCloud<PointNormal>());
     PointCloud<PointNormal>::ConstPtr cloud = of.getCloud();
-    floor = findExtremal(cloud, Eigen::Vector3f(0.,1.,0.), anglethreshold, floorcandidates);
+    floorplane = findExtremal(cloud, Eigen::Vector3f(0.,1.,0.), anglethreshold, floorcandidates);
     PointCloud<PointNormal>::Ptr ceilcandidates(new PointCloud<PointNormal>());
-    ceiling = -findExtremal(cloud, Eigen::Vector3f(0.,-1.,0.), anglethreshold, ceilcandidates);
+    ceilplane = -findExtremal(cloud, Eigen::Vector3f(0.,-1.,0.), anglethreshold, ceilcandidates);
     double t = cos(anglethreshold);
     for (int i = 0; i < cloud->size(); ++i) {
-        if (abs((*cloud)[i].y - floor) < resolution &&
+        if (abs((*cloud)[i].y - floorplane) < resolution &&
                 (*cloud)[i].normal_y > t) {
             labels[i] = LABEL_FLOOR;
-        } else if (abs((*cloud)[i].y - ceiling) < resolution &&
+        } else if (abs((*cloud)[i].y - ceilplane) < resolution &&
                 (*cloud)[i].normal_y < -t) {
             labels[i] = LABEL_CEILING;
         }
     }
-    return floor;
+    return floorplane;
 }
 
 class Grid {
@@ -472,6 +470,8 @@ void WallFinder::loadWalls(string filename, vector<int>& labels) {
         in.read((char*) &(wallsegments[i].norm), 4);
         in.read((char*) &(wallsegments[i].coord), sizeof(double));
     }
+    in.read((char*) &floorplane, sizeof(double));
+    in.read((char*) &ceilplane, sizeof(double));
 }
 void WallFinder::saveWalls(string filename, vector<int>& labels) {
     ofstream out(filename.c_str(), ofstream::binary);
@@ -490,4 +490,6 @@ void WallFinder::saveWalls(string filename, vector<int>& labels) {
         out.write((char*) &(wallsegments[i].norm), 4);
         out.write((char*) &(wallsegments[i].coord), sizeof(double));
     }
+    out.write((char*) &floorplane, sizeof(double));
+    out.write((char*) &ceilplane, sizeof(double));
 }

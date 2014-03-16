@@ -10,7 +10,7 @@ extern bool wallinput;
 extern bool read_eq, write_eq;
 extern int project;
 extern int camera;
-extern std::string outfile, infile, camfile, walloutfile, wallfile, imagelist, lightimagelist, sampleoutfile, samplefile;
+extern std::string outfile, infile, camfile, walloutfile, wallfile, imagelist, lightimagelist, sampleoutfile, samplefile, radfile;
 extern int numImageListFiles;
 extern int wallthreshold;
 extern int numsamples;

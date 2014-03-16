@@ -80,6 +80,8 @@ class WallFinder {
         void saveWalls(std::string filename, std::vector<int>& labels);
         double getResolution() const { return resolution; }
 
+        double floorplane;
+        double ceilplane;
         std::vector<Segment> wallsegments;
     private:
         double resolution;

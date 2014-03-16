@@ -51,10 +51,6 @@ class InverseRender {
 
 
         Mesh* mesh;
-        Material wallMaterial;
-        Material floorMaterial;
-        std::vector<Material> lights;
-
 
         GLuint fbo, fbo_rgb, fbo_z;
 
@@ -75,6 +71,10 @@ class InverseRender {
 
         unsigned char** images;
         std::vector<SampleData> data;
+        Material wallMaterial;
+        Material floorMaterial;
+        std::vector<Material> lights;
+
 };
 
 #endif
