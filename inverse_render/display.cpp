@@ -130,13 +130,13 @@ void visualize(Mesh& m, PointCloud<PointXYZRGB>::Ptr cloud, ColorHelper& loader,
     char n[] = {'L', 'i', '0'};
     for (int i = 0; i < wf.wallsegments.size(); ++i) {
         if (wf.wallsegments[i].direction == 0) {
-            PointXYZ start(wf.wallsegments[i].coord*wf.getResolution(), 0, wf.wallsegments[i].start*wf.getResolution());
-            PointXYZ end(wf.wallsegments[i].coord*wf.getResolution(), 0, wf.wallsegments[i].end*wf.getResolution());
+            PointXYZ start(wf.wallsegments[i].coord, 0, wf.wallsegments[i].start);
+            PointXYZ end(wf.wallsegments[i].coord, 0, wf.wallsegments[i].end);
             viewer.addLine(start, end, 1, 0, i/(double)wf.wallsegments.size(), n);
             n[2]++;
         } else {
-            PointXYZ start(wf.wallsegments[i].start*wf.getResolution(), 0, wf.wallsegments[i].coord*wf.getResolution());
-            PointXYZ end(wf.wallsegments[i].end*wf.getResolution(), 0, wf.wallsegments[i].coord*wf.getResolution());
+            PointXYZ start(wf.wallsegments[i].start, 0, wf.wallsegments[i].coord);
+            PointXYZ end(wf.wallsegments[i].end, 0, wf.wallsegments[i].coord);
             viewer.addLine(start, end, 1, 0, i/(double)wf.wallsegments.size(), n);
             n[2]++;
         }

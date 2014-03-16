@@ -6,10 +6,10 @@
 
 #include <vector>
 
-class Segment {
+class GridSegment {
     public:
-    Segment(int d, int s, int e, int c) : direction(d), start(s), end(e), coord(c) {;}
-    Segment() {;}
+    GridSegment(int d, int s, int e, int c) : direction(d), start(s), end(e), coord(c) {;}
+    GridSegment() {;}
     std::pair<int,int> getCoords(int s) {
         if (direction) return std::make_pair(s, coord);
         else           return std::make_pair(coord, s);
@@ -19,6 +19,27 @@ class Segment {
     int end;
     int norm;
     int coord;
+};
+class Segment {
+    public:
+    Segment(const GridSegment& g, double resolution) {
+        direction = g.direction;
+        norm = g.norm;
+        start = g.start*resolution;
+        end = g.end*resolution;
+        coord = g.coord*resolution;
+    }
+    Segment() {;}
+    std::pair<double,double> getCoords(double s) {
+        if (direction) return std::make_pair(s, coord);
+        else           return std::make_pair(coord, s);
+    }
+
+    int direction;
+    double start;
+    double end;
+    int norm;
+    double coord;
 };
 /**
  */

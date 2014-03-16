@@ -229,7 +229,7 @@ void WallFinder::findWalls(
     int overlapthreshold = 6;
     int steepness = 10;
     int skipsallowed = 2;
-    vector<Segment> segments;
+    vector<GridSegment> segments;
     // Check vertical walls
     int numsegs = 0;
     int skipped = 0;
@@ -249,7 +249,7 @@ void WallFinder::findWalls(
                 }
                 else {
                     if (numsegs*resolution > minlength) {
-                        segments.push_back(Segment(0,j-numsegs,j,i));
+                        segments.push_back(GridSegment(0,j-numsegs,j,i));
                     }
                     numsegs = 0;
                     skipped = 0;
@@ -257,7 +257,7 @@ void WallFinder::findWalls(
             }
         }
         if (numsegs*resolution > minlength) {
-            segments.push_back(Segment(0,height-numsegs,height,i));
+            segments.push_back(GridSegment(0,height-numsegs,height,i));
         }
     }
     // Check horizontal walls
@@ -277,7 +277,7 @@ void WallFinder::findWalls(
                 }
                 else {
                     if (numsegs*resolution > minlength) {
-                        segments.push_back(Segment(1,j-numsegs,j,i));
+                        segments.push_back(GridSegment(1,j-numsegs,j,i));
                     }
                     numsegs = 0;
                     skipped = 0;
@@ -285,12 +285,12 @@ void WallFinder::findWalls(
             }
         }
         if (numsegs*resolution > minlength) {
-            segments.push_back(Segment(1,width-numsegs,width,i));
+            segments.push_back(GridSegment(1,width-numsegs,width,i));
         }
     }
     // Filter out segments with no empty space
-    vector<Segment> candidatewalls;
-    vector<Segment> walls;
+    vector<GridSegment> candidatewalls;
+    vector<GridSegment> walls;
     int maxidx = -1;
     double maxlength = 0;
     for (int i = 0; i < segments.size(); ++i) {
@@ -312,7 +312,6 @@ void WallFinder::findWalls(
         }
         candidatewalls.push_back(segments[i]);
     }
-    // Find discontinuities and fill them in
     // Create edge cost matrix based on compatibility
     // Two segments are compatible if:
     //     Perpendicular: endpoints are close together and normals are compatible
@@ -334,8 +333,8 @@ void WallFinder::findWalls(
                 }
             } else {
                 // HACK: Uses fact that vertical edges are always before horizontal ones
-                Segment& a = candidatewalls[i];
-                Segment& b = candidatewalls[j];
+                GridSegment& a = candidatewalls[i];
+                GridSegment& b = candidatewalls[j];
                 int n = a.norm*b.norm;
                 if (b.coord >= a.end - overlapthreshold && a.coord >= b.end - overlapthreshold && n >= 0) {
                     edges[i][j] = b.coord - a.end + a.coord - b.end;
@@ -377,7 +376,7 @@ void WallFinder::findWalls(
             }
         }
         wall.push_back(curridx);
-        wallsegments.push_back(candidatewalls[curridx]);
+        wallsegments.push_back(Segment(candidatewalls[curridx], resolution));
         inwall[curridx] = true;
         curridx = besti;
         if (inwall[curridx]) {
@@ -387,20 +386,22 @@ void WallFinder::findWalls(
     if (curridx != maxidx) {
         cerr << "Error determining floor plan!" << endl;
     }
-    // TODO: Extend walls to meet to obtain accurate floor plan
-    // Add labels to all compatible pixels regardless of bin
+    // Add labels to all compatible pixels regardless of bin and compute more accurate
+    // coords
     int i;
+    vector<double> segmentcoords(wallsegments.size(), 0);
+    vector<int> segmentcounts(wallsegments.size(), 0);
     for (it = of.getCloud()->begin(), i=0; it != of.getCloud()->end(); ++it, ++i) {
         for (int j = 0; j < wallsegments.size(); ++j) {
             bool horiz = wallsegments[j].direction;
             // Check if on same plane
             double coord = horiz?it->z:it->x;
-            if (abs(resolution*wallsegments[j].coord - coord) > 2*resolution) {
+            if (abs(wallsegments[j].coord - coord) > 2*resolution) {
                 continue;
             }
             // Check if within bounds
             coord = horiz?it->x:it->z;
-            if (coord > resolution*(wallsegments[j].end + 2) || coord < resolution*(wallsegments[j].start - 2)) {
+            if (coord > 2*resolution + wallsegments[j].end || coord < wallsegments[j].start - 2*resolution) {
                 continue;
             }
             // Check if compatible normal
@@ -411,8 +412,44 @@ void WallFinder::findWalls(
             axis *= -wallsegments[j].norm;
             if (acos(normal.dot(axis)) < anglethreshold) {
                 labels[i] = LABEL_WALL;
+                segmentcoords[j] += horiz?it->z:it->x;
+                segmentcounts[j]++;
                 break;
             }
+        }
+    }
+    for (int i = 0; i < wallsegments.size(); ++i) {
+        wallsegments[i].coord = segmentcoords[i]/segmentcounts[i];
+    }
+    // Make edges meet
+    for (int i = 0; i < wallsegments.size(); ++i) {
+        int j = (i+1)%wallsegments.size();
+        if (wallsegments[i].direction != wallsegments[j].direction) {
+            if (abs(wallsegments[i].start - wallsegments[j].coord) <
+                abs(wallsegments[i].end - wallsegments[j].coord))
+            {
+                wallsegments[i].start = wallsegments[j].coord;
+            } else {
+                wallsegments[i].end = wallsegments[j].coord;
+            }
+            if (abs(wallsegments[j].start - wallsegments[i].coord) <
+                abs(wallsegments[j].end - wallsegments[i].coord))
+            {
+                wallsegments[j].start = wallsegments[i].coord;
+            } else {
+                wallsegments[j].end = wallsegments[i].coord;
+            }
+        } else {
+            // Merge parallel segments
+            if (wallsegments[i].start > wallsegments[j].start) {
+                wallsegments[i].start = wallsegments[j].start;
+            }
+            if (wallsegments[i].end < wallsegments[j].end) {
+                wallsegments[i].end = wallsegments[j].end;
+            }
+            wallsegments[i].coord += wallsegments[j].coord;
+            wallsegments[i].coord /= 2;
+            wallsegments.erase(wallsegments.begin()+j);
         }
     }
 }
@@ -430,10 +467,10 @@ void WallFinder::loadWalls(string filename, vector<int>& labels) {
     }
     for (int i = 0; i < sz; ++i) {
         in.read((char*) &(wallsegments[i].direction), 4);
-        in.read((char*) &(wallsegments[i].start), 4);
-        in.read((char*) &(wallsegments[i].end), 4);
+        in.read((char*) &(wallsegments[i].start), sizeof(double));
+        in.read((char*) &(wallsegments[i].end), sizeof(double));
         in.read((char*) &(wallsegments[i].norm), 4);
-        in.read((char*) &(wallsegments[i].coord), 4);
+        in.read((char*) &(wallsegments[i].coord), sizeof(double));
     }
 }
 void WallFinder::saveWalls(string filename, vector<int>& labels) {
@@ -448,9 +485,9 @@ void WallFinder::saveWalls(string filename, vector<int>& labels) {
     }
     for (int i = 0; i < wallsegments.size(); ++i) {
         out.write((char*) &(wallsegments[i].direction), 4);
-        out.write((char*) &(wallsegments[i].start), 4);
-        out.write((char*) &(wallsegments[i].end), 4);
+        out.write((char*) &(wallsegments[i].start), sizeof(double));
+        out.write((char*) &(wallsegments[i].end), sizeof(double));
         out.write((char*) &(wallsegments[i].norm), 4);
-        out.write((char*) &(wallsegments[i].coord), 4);
+        out.write((char*) &(wallsegments[i].coord), sizeof(double));
     }
 }
