@@ -72,38 +72,62 @@ void InverseRender::solve() {
 
 bool InverseRender::calculateWallMaterialFromUnlit() {
     cout << data.size() << endl;
-    for (int ch = 0; ch < 3; ++ch) {
-        vector<double> estimates;
-        for (int i = 0; i < data.size(); ++i) {
-            bool unlit = true;
-            for (int j = 0; j < data[i].lightamount.size(); ++j) {
-                if (data[i].lightamount[j] > 0) {
-                    unlit = false;
-                    break;
-                }
-            }
-            if (unlit) {
-                estimates.push_back(data[i].radiosity(ch)*(1-data[i].fractionUnknown)/data[i].netIncoming(ch));
+    vector<double> estimates[3];
+    vector<double> weights;
+    for (int i = 0; i < data.size(); ++i) {
+        bool unlit = true;
+        for (int j = 0; j < data[i].lightamount.size(); ++j) {
+            if (data[i].lightamount[j] > 0) {
+                unlit = false;
+                break;
             }
         }
-        if (estimates.size() == 0) return false;
+        if (unlit) {
+            double w = 1 - data[i].fractionUnknown;
+            for (int ch = 0; ch < 3; ++ch) {
+                estimates[ch].push_back(data[i].radiosity(ch)*w*w/data[i].netIncoming(ch));
+            }
+            weights.push_back(w);
+        }
+    }
+    if (estimates[0].size() == 0) return false;
+    cout << "Unlit estimates: " << estimates[0].size() << endl;
 
-        sort(estimates.begin(), estimates.end());
-        double mean = accumulate(estimates.begin(), estimates.end(), 0.)/estimates.size();
-        double stddev = 0;
-        for (int i = 0; i < estimates.size(); ++i) {
-            stddev += (estimates[i]-mean)*(estimates[i]-mean);
+    double totweight = accumulate(weights.begin(), weights.end(), 0.);
+    double mean[3];
+    double stddev[3];
+    double newmean[3];
+    double count = 0;
+    for (int ch = 0; ch < 3; ++ch) {
+        mean[ch] = accumulate(estimates[ch].begin(), estimates[ch].end(), 0.);
+        mean[ch] /= totweight;
+        stddev[ch] = 0;
+        newmean[ch] = 0;
+    }
+    for (int i = 0; i < estimates[0].size(); ++i) {
+        for (int ch = 0; ch < 3; ++ch) {
+        stddev[ch] += (estimates[ch][i]-weights[i]*mean[ch])*(estimates[ch][i]-weights[i]*mean[ch]);
         }
-        stddev = sqrt(stddev/estimates.size());
-        double newmean = 0;
-        int count = 0;
-        for (int i = 0; i < estimates.size(); ++i) {
-            if (estimates[i] < mean - stddev) continue;
-            if (estimates[i] > mean + stddev) break;
-            newmean += estimates[i];
-            count++;
+    }
+    for (int ch = 0; ch < 3; ++ch) {
+        stddev[ch] = sqrt(stddev[ch]/totweight);
+    }
+    for (int i = 0; i < estimates[0].size(); ++i) {
+        int bound = 0;
+        for (int ch = 0; ch < 3; ++ch) {
+            if (estimates[ch][i] < mean[ch] - stddev[ch]) bound = -1;
+            else if (estimates[ch][i] > mean[ch] + stddev[ch]) bound = 1;
         }
-        wallMaterial(ch) = newmean/count;
+
+        if (bound < 0) continue;
+        if (bound > 0) break;
+        count += weights[i];
+        for (int ch = 0; ch < 3; ++ch) {
+            newmean[ch] += estimates[ch][i];
+        }
+    }
+    for (int ch = 0; ch < 3; ++ch) {
+        wallMaterial(ch) = newmean[ch]/count;
     }
     return true;
 }
