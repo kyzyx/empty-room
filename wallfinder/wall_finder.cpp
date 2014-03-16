@@ -203,7 +203,7 @@ class Grid {
         int height;
         double resolution;
 };
-pcl::PointCloud<PointXYZ>::Ptr getHistogram(
+pcl::PointCloud<PointXYZ>::Ptr WallFinder::getHistogram(
         OrientationFinder& of,
         double resolution)
 {
