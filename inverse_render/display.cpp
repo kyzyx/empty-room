@@ -18,7 +18,7 @@ int previouscube = 0;
 int currcube = 0;
 int x = 0;
 bool change = true;
-visualization::ImageViewer* imvu;
+visualization::ImageViewer* imvu = NULL;
 void kbd_cb_(const visualization::KeyboardEvent& event, void* ir) {
     InverseRender* ivr = (InverseRender*) ir;
     if (event.keyDown()) {
@@ -52,7 +52,7 @@ void visualize(Mesh& m, PointCloud<PointXYZRGB>::Ptr cloud, ColorHelper& loader,
         InverseRender& ir, WallFinder& wf,
         int labeltype, int cameraid) {
 
-    if (ir.data.size() > 0) {
+    if (ir.data.size() > 0 && ir.images) {
         imvu = new visualization::ImageViewer("Hi");
         imvu->registerKeyboardCallback(&kbd_cb_, (void*) &ir);
         imvu->showRGBImage(ir.images[0], 100, 100);
@@ -141,7 +141,7 @@ void visualize(Mesh& m, PointCloud<PointXYZRGB>::Ptr cloud, ColorHelper& loader,
             n[2]++;
         }
     }
-    for (int i = 0; i < ir.data.size(); ++i)
+    for (int i = 0; i < ir.data.size() && i < 100; ++i)
         VisualizeSamplePoint(m, ir.data[i], viewer);
 
     while (!viewer.wasStopped()) {

@@ -26,7 +26,7 @@ class Material {
 class InverseRender {
     public:
         InverseRender(Mesh* m, int hemicubeResolution=100)
-            : mesh(m), res(hemicubeResolution) {
+            : mesh(m), res(hemicubeResolution), images(NULL) {
             computeHemicubeFF();
         }
 
