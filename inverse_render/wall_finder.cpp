@@ -448,6 +448,7 @@ void WallFinder::findWalls(
             wallsegments[i].coord += wallsegments[j].coord;
             wallsegments[i].coord /= 2;
             wallsegments.erase(wallsegments.begin()+j);
+            --i;
         }
     }
 }
