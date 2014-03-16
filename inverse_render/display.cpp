@@ -14,8 +14,8 @@ void VisualizeCamera(const CameraParams* cam, visualization::PCLVisualizer& view
 void VisualizeSamplePoint(Mesh& m, InverseRender::SampleData& s,
         visualization::PCLVisualizer& viewer);
 
-char previouscube = 0;
-char currcube = 0;
+int previouscube = 0;
+int currcube = 0;
 int x = 0;
 bool change = true;
 visualization::ImageViewer* imvu;
@@ -34,10 +34,20 @@ void kbd_cb_(const visualization::KeyboardEvent& event, void* ir) {
         if (event.getKeyCode() == 'm') {
             x = 1-x;
         }
-        cout << "Displaying " << (x?"light":"image") <<" " << (int) currcube<<endl;
+        cout << "Displaying " << (x?"light":"image") <<" " << currcube<<endl;
         imvu->showRGBImage(ivr->images[2*currcube+x],100,100);
     }
 }
+
+void intToCube(char c[5], int n) {
+    c[4] = '\0';
+    // Convert to base 255;
+    for (int i = 0; i < 4; ++i) {
+        c[3-i] = (n%255)+1;
+        n /= 255;
+    }
+}
+
 void visualize(Mesh& m, PointCloud<PointXYZRGB>::Ptr cloud, ColorHelper& loader,
         InverseRender& ir, WallFinder& wf,
         int labeltype, int cameraid) {
@@ -136,18 +146,18 @@ void visualize(Mesh& m, PointCloud<PointXYZRGB>::Ptr cloud, ColorHelper& loader,
         viewer.spinOnce(100);
         boost::this_thread::sleep(boost::posix_time::seconds(0.5));
         if (change) {
-            char tmp[] = {'C', '0', '\0'};
-            tmp[1] = '0' + previouscube;
+            char tmp[5];
+            intToCube(tmp,previouscube);
             previouscube = currcube;
             viewer.setShapeRenderingProperties(visualization::PCL_VISUALIZER_COLOR, 1,1,1,tmp);
-            tmp[1] = '0' + currcube;
+            intToCube(tmp,currcube);
             viewer.setShapeRenderingProperties(visualization::PCL_VISUALIZER_COLOR, 1,0,1,tmp);
             change = false;
         }
     }
 }
 
-char cubename[] = {'C', '0', '\0'};
+int nextcubename = 0;
 void VisualizeSamplePoint(Mesh& m, InverseRender::SampleData& s,
         visualization::PCLVisualizer& viewer) {
     double boxsize = 0.1;
@@ -162,16 +172,12 @@ void VisualizeSamplePoint(Mesh& m, InverseRender::SampleData& s,
     Eigen::Quaternionf rot = Eigen::AngleAxisf(0,ax) *
                              Eigen::AngleAxisf(0,Eigen::Vector3f::UnitY());
 
+    char cubename[5];
+    intToCube(cubename, nextcubename++);
     viewer.addCube(pos, rot, boxsize, boxsize, boxsize, cubename);
     if (s.fractionUnknown == 0) {
         viewer.setShapeRenderingProperties(visualization::PCL_VISUALIZER_COLOR, 0,1,0,cubename);
     }
-    //PointXYZ p1(p[0],p[1],p[2]);
-    //PointXYZ p2(pp[0],pp[1],pp[2]);
-    //cubename[1]++;
-    //viewer.addLine(p1,p2,0,1,0,cubename);
-
-    cubename[1]++;
 }
 
 void VisualizeCamera(const CameraParams* cam, visualization::PCLVisualizer& viewer,
