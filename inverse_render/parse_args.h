@@ -7,11 +7,14 @@ extern bool all_project;
 extern bool project_debug;
 extern bool show_frustrum;
 extern bool wallinput;
+extern bool read_eq, write_eq;
 extern int project;
 extern int camera;
-extern std::string outfile, infile, camfile, walloutfile, wallfile, imagelist, lightimagelist;
+extern std::string outfile, infile, camfile, walloutfile, wallfile, imagelist, lightimagelist, sampleoutfile, samplefile;
 extern int numImageListFiles;
 extern int wallthreshold;
+extern int numsamples;
+extern double discardthreshold;
 extern bool output_reprojection;
 extern bool output_wall;
 extern bool input;
@@ -23,6 +26,7 @@ extern double resolution;
 extern double minlength;
 extern bool do_wallfinding;
 extern bool do_reprojection;
+extern bool do_sampling;
 
 bool parseargs(int argc, char** argv);
 #endif

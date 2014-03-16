@@ -9,11 +9,15 @@ bool all_project = true;
 bool project_debug = false;
 bool show_frustrum = false;
 bool wallinput = false;
+bool write_eq = false;
+bool read_eq = false;
 int project;
 int camera;
-string outfile, infile, camfile, walloutfile, wallfile, imagelist, lightimagelist;
+string outfile, infile, camfile, walloutfile, wallfile, imagelist, lightimagelist, samplefile, sampleoutfile;
 int numImageListFiles = 0;
 int wallthreshold = 200;
+int numsamples = 100;
+double discardthreshold = 0.25;
 bool output_reprojection = false;
 bool output_wall = false;
 bool input = false;
@@ -25,6 +29,7 @@ double resolution = 0.01;
 double minlength = 0.2;
 bool do_wallfinding = true;
 bool do_reprojection = true;
+bool do_sampling = true;
 
 bool parseargs(int argc, char** argv) {
     if (argc < 3) {
@@ -32,22 +37,27 @@ bool parseargs(int argc, char** argv) {
              "Usage: invrender mesh.ply -camfile camera.cam [args]\n" \
              "  Must have (imagelist and lightimagelist) OR samplefile\n" \
              "  Argument types: file=filename (string), n=int, f=float\n" \
-             "  Arguments:\n" \
+             "  File Arguments:\n" \
              "      -imagelist file: name of file specifying a list of color\n"\
              "           images taken from the camera positions in camfile\n" \
              "           Must be specified with lightimagelist\n" \
              "      -lightimagelist file: name of file specifying a list of light\n"\
              "           images taken from the camera positions in camfile\n" \
              "           Must be specified with imagelist\n" \
-             "      -samplefile file: read sample info from file f\n" \
+             "      -samplefile file: read sampled wall point equations from file\n"\
+             "      -reprojectfile file: read sample info from file f\n" \
              "      -wallfile file: read wall info from file f\n" \
-             "      -project n: project only camera n\n"
              "      -outputwallfile file: output wall labels and segments to\n" \
              "           the specified file f\n"
-             "      -outputsamplefile file: output sample info from reprojection to\n" \
+             "      -outputreprojectfile file: output sample info from reprojection to\n" \
              "           the specified file f\n"
-             "      -wallfind_only: only perform wallfinding\n"
-             "      -reproject_only: only perform reprojection\n"
+             "      -outputsamplefile file: output sampled wall point\n" \
+             "           equations to the specified file f\n"
+             "  Partial Execution Arguments:\n" \
+             "      -wallfind_only: only perform wallfinding\n" \
+             "      -reproject_only: only perform reprojection\n" \
+             "      -solve_only: only perform solving; requires -samplefile\n" \
+             "      -nosolve: do not perform solving (default off)\n" \
              "  Display Arguments:\n" \
              "      -nodisplay: exit immediately\n"
              "      -prune_occluded: Do not display points for which there\n" \
@@ -58,6 +68,8 @@ bool parseargs(int argc, char** argv) {
              "           (default off)\n"
              "      -project_status: with project, show reprojection debugging\n" \
              "           results, e.g occluded vertices and those not in view\n"
+             "  Reprojection Arguments:\n" \
+             "      -project n: project only camera n\n"
              "  Wallfinder Arguments:\n" \
              "      -ccw: Faces in counterclockwise direction (flip normals)\n" \
              "      -wallfinder_anglethreshold f: Angle between normals to be\n" \
@@ -69,6 +81,11 @@ bool parseargs(int argc, char** argv) {
              "      -wallfinder_wallthreshold n: Minimum bucket count in\n" \
              "           histogram to count as a wall; dependent on resolution!\n" \
              "           (default 200)\n" \
+             "  Solver Arguments:\n" \
+             "      -solver_numsamples n: number of wall points to sample for\n" \
+             "           final solution (default 100) \n" \
+             "      -solver_threshold f: maximum unsampled proportion of\n" \
+             "           hemisphere (default 0.25) \n" \
                 );
         return 0;
     }
@@ -78,6 +95,7 @@ bool parseargs(int argc, char** argv) {
     if (console::find_switch(argc, argv, "-project_status")) project_debug = true;
     if (console::find_switch(argc, argv, "-nodisplay")) display = false;
     if (console::find_switch(argc, argv, "-prune_occluded")) prune = true;
+    if (console::find_switch(argc, argv, "-nosolve")) do_sampling = false;
     if (console::find_switch(argc, argv, "-wallfind_only")) {
         do_reprojection = false;
         do_wallfinding = true;
@@ -115,12 +133,12 @@ bool parseargs(int argc, char** argv) {
         console::parse_argument(argc, argv, "-wallfile", wallfile);
         wallinput = true;
     }
-    if (console::find_argument(argc, argv, "-samplefile") >= 0) {
-        console::parse_argument(argc, argv, "-samplefile", infile);
+    if (console::find_argument(argc, argv, "-reprojectfile") >= 0) {
+        console::parse_argument(argc, argv, "-reprojectfile", infile);
         input = true;
     }
-    if (console::find_argument(argc, argv, "-outputsamplefile") >= 0) {
-        console::parse_argument(argc, argv, "-outputsamplefile", outfile);
+    if (console::find_argument(argc, argv, "-outputreprojectfile") >= 0) {
+        console::parse_argument(argc, argv, "-outputreprojectfile", outfile);
         if (input) cerr << "Warning: output file specified with sample input; ignoring output file" << endl;
         else if (!do_reprojection) cerr << "Error: Reprojection output file specified but reprojection not being performed!" << endl;
         else output_reprojection = true;
@@ -130,26 +148,46 @@ bool parseargs(int argc, char** argv) {
         if (!do_wallfinding) cerr << "Error: Wall output file specified but wallfinding not being performed!" << endl;
         else output_wall = true;
     }
+    if (console::find_argument(argc, argv, "-outputsamplefile") >= 0) {
+        console::parse_argument(argc, argv, "-outputsamplefile", sampleoutfile);
+        write_eq = true;
+    }
+    if (console::find_argument(argc, argv, "-samplefile") >= 0) {
+        console::parse_argument(argc, argv, "-samplefile", samplefile);
+        read_eq = true;
+    }
     if (console::find_argument(argc, argv, "-camfile") >= 0) {
         console::parse_argument(argc, argv, "-camfile", camfile);
     } else {
         cerr << "Error: No camera file specified" << endl;
         return false;
     }
-    if (console::find_argument(argc, argv, "-wallfinder_anglethreshold")) {
+    if (console::find_argument(argc, argv, "-wallfinder_anglethreshold") >= 0) {
+        if (!do_wallfinding) cerr << "Warning: ignoring wallfinder parameters" << endl;
         console::parse_argument(argc, argv, "-wallfinder_anglethreshold", anglethreshold);
     }
-    if (console::find_argument(argc, argv, "-wallfinder_resolution")) {
+    if (console::find_argument(argc, argv, "-wallfinder_resolution") >= 0) {
+        if (!do_wallfinding) cerr << "Warning: ignoring wallfinder parameters" << endl;
         console::parse_argument(argc, argv, "-wallfinder_resolution", resolution);
     }
-    if (console::find_argument(argc, argv, "-wallfinder_min_wall_length")) {
+    if (console::find_argument(argc, argv, "-wallfinder_min_wall_length") >= 0) {
+        if (!do_wallfinding) cerr << "Warning: ignoring wallfinder parameters" << endl;
         console::parse_argument(argc, argv, "-wallfinder_min_wall_length", minlength);
     }
-    if (console::find_argument(argc, argv, "-wallfinder_wallthreshold")) {
+    if (console::find_argument(argc, argv, "-wallfinder_wallthreshold") >= 0) {
+        if (!do_wallfinding) cerr << "Warning: ignoring wallfinder parameters" << endl;
         console::parse_argument(argc, argv, "-wallfinder_wallthreshold", wallthreshold);
     }
+    if (console::find_argument(argc, argv, "-solver_numsamples") >= 0) {
+        if (!do_sampling) cerr << "Warning: ignoring solver parameters" << endl;
+        console::parse_argument(argc, argv, "-solver_numsamples", numsamples);
+    }
+    if (console::find_argument(argc, argv, "-solver_threshold") >= 0) {
+        if (!do_sampling) cerr << "Warning: ignoring solver parameters" << endl;
+        console::parse_argument(argc, argv, "-solver_threshold", discardthreshold);
+    }
     if (!input && numImageListFiles != 2) {
-        cerr << "Error: Must specify either a samplefile or two image lists!" << endl;
+        cerr << "Error: Must specify either a reprojectfile or two image lists!" << endl;
         return false;
     }
     return true;

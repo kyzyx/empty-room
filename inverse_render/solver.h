@@ -30,13 +30,18 @@ class InverseRender {
             computeHemicubeFF();
         }
 
-        void calculate(std::vector<int> indices, int numsamples, int numlights);
+        void calculate(std::vector<int> indices, int numsamples, double discardthreshold, int numlights);
+        void solve();
 
         void renderFace(const R3Point& p,
                 const R3Vector& towards, const R3Vector& up,
                 unsigned char* image, bool colorimage);
         bool setupRasterizer();
+        void writeVariablesMatlab(std::string filename);
+        void writeVariablesBinary(std::string filename);
+        void loadVariablesBinary(std::string filename);
     private:
+        bool calculateWallMaterialFromUnlit();
         float renderHemicube(const R3Point& p, const R3Vector& n,
                 Material& m, std::vector<float>& lightareas, unsigned char* color,
                 unsigned char* light);

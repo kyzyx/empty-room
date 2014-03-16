@@ -106,8 +106,18 @@ int main(int argc, char* argv[]) {
     m.computeColorsOGL();
 
     InverseRender ir(&m);
-
-    ir.calculate(wallindices, 40, 2);
+    if (do_sampling) {
+        if (read_eq) {
+            ir.loadVariablesBinary(samplefile);
+        } else {
+            ir.calculate(wallindices, numsamples, discardthreshold, 2);
+            if (write_eq) {
+                ir.writeVariablesMatlab("eq.m");
+                ir.writeVariablesBinary(sampleoutfile);
+            }
+        }
+        ir.solve();
+    }
 
     if (display) {
         int labeltype = LABEL_LIGHTS;

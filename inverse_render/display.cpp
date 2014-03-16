@@ -52,9 +52,11 @@ void visualize(Mesh& m, PointCloud<PointXYZRGB>::Ptr cloud, ColorHelper& loader,
         InverseRender& ir, WallFinder& wf,
         int labeltype, int cameraid) {
 
-    imvu = new visualization::ImageViewer("Hi");
-    imvu->registerKeyboardCallback(&kbd_cb_, (void*) &ir);
-    imvu->showRGBImage(ir.images[0], 100, 100);
+    if (ir.data.size() > 0) {
+        imvu = new visualization::ImageViewer("Hi");
+        imvu->registerKeyboardCallback(&kbd_cb_, (void*) &ir);
+        imvu->showRGBImage(ir.images[0], 100, 100);
+    }
 
     PointIndices::Ptr nonnull(new PointIndices());
     for (int i = 0; i < cloud->size(); ++i) {
@@ -145,7 +147,7 @@ void visualize(Mesh& m, PointCloud<PointXYZRGB>::Ptr cloud, ColorHelper& loader,
     while (!viewer.wasStopped()) {
         viewer.spinOnce(100);
         boost::this_thread::sleep(boost::posix_time::seconds(0.5));
-        if (change) {
+        if (imvu && change) {
             char tmp[5];
             intToCube(tmp,previouscube);
             previouscube = currcube;

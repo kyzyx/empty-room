@@ -2,7 +2,7 @@
 #include "solver.h"
 #include <random>
 #include <Eigen/Dense>
-#define MAX_LIGHTS 10
+#include <fstream>
 
 using namespace std;
 using namespace Eigen;
@@ -10,46 +10,30 @@ using namespace Eigen;
 void Material::print() {
     printf("(%.3f,%.3f,%.3f)",r, g, b);
 }
-void InverseRender::calculate(vector<int> indices, int numsamples, int numlights) {
+void InverseRender::calculate(vector<int> indices, int numsamples, double discardthreshold, int numlights) {
     if (!setupRasterizer()) {
         return;
     }
-
-    // Initial wall material guess - average all
-    wallMaterial = Material(0,0,0);
-    float total = 0;
-    for (int i = 0; i < indices.size(); ++i) {
-        for (int j = 0; j < mesh->samples[indices[i]].size(); ++j) {
-            float s = abs(mesh->samples[indices[i]][j].dA);
-            wallMaterial.r += mesh->samples[indices[i]][j].r*s;
-            wallMaterial.g += mesh->samples[indices[i]][j].g*s;
-            wallMaterial.b += mesh->samples[indices[i]][j].b*s;
-            total += s;
-        }
-    }
-    if (total > 0) {
-        wallMaterial.r /= total*255;
-        wallMaterial.g /= total*255;
-        wallMaterial.b /= total*255;
-    }
-    cout << "Calculated average wall material: ";
-    wallMaterial.print();
-    cout << endl;
 
     images = new unsigned char*[2*numsamples];
     default_random_engine generator;
     uniform_int_distribution<int> dist(0, indices.size());
     for (int i = 0; i < numsamples; ++i) {
+        images[2*i] = new unsigned char[3*res*res];
+        images[2*i+1] = new unsigned char[3*res*res];
+    }
+    cout << "Inverse rendering..." << endl;
+    for (int i = 0; i < numsamples; ++i) {
         int n;
         do {
             n = dist(generator);
-        } while (mesh->samples[indices[n]].size() == 0);
+        } while (mesh->labels[indices[n]] > 0 || mesh->samples[indices[n]].size() == 0);
 
         SampleData sd;
         sd.lightamount.resize(numlights);
         sd.vertexid = indices[n];
         sd.radiosity = Material(0,0,0);
-        total = 0;
+        double total = 0;
         for (int j = 0; j < mesh->samples[indices[n]].size(); ++j) {
             float s =     abs(mesh->samples[indices[n]][j].dA);
             sd.radiosity.r += mesh->samples[indices[n]][j].r*s;
@@ -61,43 +45,142 @@ void InverseRender::calculate(vector<int> indices, int numsamples, int numlights
         sd.radiosity.g /= total*255;
         sd.radiosity.b /= total*255;
 
-        images[2*i] = new unsigned char[3*res*res];
-        images[2*i+1] = new unsigned char[3*res*res];
         sd.fractionUnknown = renderHemicube(
                 mesh->getMesh()->VertexPosition(mesh->getMesh()->Vertex(indices[n])),
                 mesh->getMesh()->VertexNormal(mesh->getMesh()->Vertex(indices[n])),
                 sd.netIncoming, sd.lightamount, images[2*i], images[2*i+1]
         );
-        if (sd.fractionUnknown > 0.25) {
+        if (sd.fractionUnknown > discardthreshold) {
             --i;
-            delete [] images[2*i];
-            delete [] images[2*i+1];
             continue;
         }
         data.push_back(sd);
-
-        cout << n << "(" << sd.fractionUnknown << "): ";
-        sd.radiosity.print();
-        cout << " = p*";
-        sd.netIncoming.print();
-        for (int k = 0; k < sd.lightamount.size(); ++k) {
-            if (sd.lightamount[k] > 0) cout << " + p*L_" << k << "*" << sd.lightamount[k];
-        }
-        cout << endl;
+        cout << "Rendered " << i+1 << "/" << numsamples << endl;
     }
     lights.resize(numlights);
-
-    bool converged = false;
-    while (!converged) {
-        bool lightsconverged = solveLights();
-        bool materialsconverged = solveMaterials();
-        converged = lightsconverged && materialsconverged;
+}
+void InverseRender::solve() {
+    if (calculateWallMaterialFromUnlit()) {
         cout << "Material estimate: (" << wallMaterial(0) << "," << wallMaterial(1) << "," << wallMaterial(2) << ")" << endl;
-        for (int i = 0; i < numlights; ++i) {
-            cout << "Light estimate " << i << ": (" << lights[i](0) << "," << lights[i](1) << "," << lights[i](2) << ")" << endl;
+    }
+    lights.resize(data[0].lightamount.size());
+    solveLights();
+    for (int i = 0; i < lights.size(); ++i) {
+        cout << "Light estimate " << i << ": (" << lights[i](0) << "," << lights[i](1) << "," << lights[i](2) << ")" << endl;
+    }
+}
+
+bool InverseRender::calculateWallMaterialFromUnlit() {
+    cout << data.size() << endl;
+    for (int ch = 0; ch < 3; ++ch) {
+        vector<double> estimates;
+        for (int i = 0; i < data.size(); ++i) {
+            bool unlit = true;
+            for (int j = 0; j < data[i].lightamount.size(); ++j) {
+                if (data[i].lightamount[j] > 0) {
+                    unlit = false;
+                    break;
+                }
+            }
+            if (unlit) {
+                estimates.push_back(data[i].radiosity(ch)*(1-data[i].fractionUnknown)/data[i].netIncoming(ch));
+            }
         }
-        cout << "-------------------------" << endl;
-        cin.get();
+        if (estimates.size() == 0) return false;
+
+        sort(estimates.begin(), estimates.end());
+        double mean = accumulate(estimates.begin(), estimates.end(), 0.)/estimates.size();
+        double stddev = 0;
+        for (int i = 0; i < estimates.size(); ++i) {
+            stddev += (estimates[i]-mean)*(estimates[i]-mean);
+        }
+        stddev = sqrt(stddev/estimates.size());
+        double newmean = 0;
+        int count = 0;
+        for (int i = 0; i < estimates.size(); ++i) {
+            if (estimates[i] < mean - stddev) continue;
+            if (estimates[i] > mean + stddev) break;
+            newmean += estimates[i];
+            count++;
+        }
+        wallMaterial(ch) = newmean/count;
+    }
+    return true;
+}
+
+void InverseRender::writeVariablesMatlab(string filename) {
+    ofstream out(filename);
+    out << "A = [";
+    for (int i = 0; i < data.size(); ++i) {
+        for (int j = 0; j < data[i].lightamount.size(); ++j) {
+            out << data[i].lightamount[j];
+            if (j != data[i].lightamount.size()-1) out << ",";
+        }
+        if (i != data.size()-1) out << ";" << endl;
+    }
+    out << "];" << endl;
+    out << "weights = [";
+    for (int i = 0; i < data.size(); ++i) {
+        out << data[i].fractionUnknown;
+        if (i != data.size()-1) out << ";";
+    }
+    out << "];" << endl;
+    for (int ch = 0; ch < 3; ++ch) {
+        out << "% Channel " << ch << endl;
+        out << "B" << ch << " = [";
+        for (int i = 0; i < data.size(); ++i) {
+            out << data[i].radiosity(ch);
+            if (i != data.size()-1) out << ";";
+        }
+        out << "];" << endl;
+        out << "C" << ch << " = [";
+        for (int i = 0; i < data.size(); ++i) {
+            out << data[i].netIncoming(ch);
+            if (i != data.size()-1) out << ";";
+        }
+        out << "];" << endl;
+    }
+}
+void InverseRender::writeVariablesBinary(string filename) {
+    ofstream out(filename, ofstream::binary);
+    uint32_t sz = data.size();
+    out.write((char*) &sz, 4);
+    sz = data[0].lightamount.size();
+    out.write((char*) &sz, 4);
+    for (int i = 0; i < data.size(); ++i) {
+        out.write((char*)&(data[i].fractionUnknown), sizeof(float));
+        out.write((char*)&(data[i].vertexid), sizeof(int));
+        out.write((char*)&(data[i].radiosity(0)), sizeof(float));
+        out.write((char*)&(data[i].radiosity(1)), sizeof(float));
+        out.write((char*)&(data[i].radiosity(2)), sizeof(float));
+        out.write((char*)&(data[i].netIncoming(0)), sizeof(float));
+        out.write((char*)&(data[i].netIncoming(1)), sizeof(float));
+        out.write((char*)&(data[i].netIncoming(2)), sizeof(float));
+        for (int j = 0; j < data[i].lightamount.size(); ++j) {
+            out.write((char*)&(data[i].lightamount[j]), sizeof(float));
+        }
+    }
+}
+
+void InverseRender::loadVariablesBinary(string filename) {
+    ifstream in(filename, ifstream::binary);
+    uint32_t sz;
+    in.read((char*) &sz, 4);
+    data.resize(sz);
+    in.read((char*) &sz, 4);
+    for (int i = 0; i < data.size(); ++i) {
+        data[i].lightamount.resize(sz);
+        in.read((char*)&(data[i].fractionUnknown), sizeof(float));
+        in.read((char*)&(data[i].vertexid), sizeof(int));
+        in.read((char*)&(data[i].radiosity(0)), sizeof(float));
+        in.read((char*)&(data[i].radiosity(1)), sizeof(float));
+        in.read((char*)&(data[i].radiosity(2)), sizeof(float));
+        in.read((char*)&(data[i].netIncoming(0)), sizeof(float));
+        in.read((char*)&(data[i].netIncoming(1)), sizeof(float));
+        in.read((char*)&(data[i].netIncoming(2)), sizeof(float));
+        for (int j = 0; j < data[i].lightamount.size(); ++j) {
+            in.read((char*)&(data[i].lightamount[j]), sizeof(float));
+        }
     }
 }
 
