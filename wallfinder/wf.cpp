@@ -8,7 +8,6 @@
 #include <pcl/segmentation/sac_segmentation.h>
 
 #include <limits>
-#include <fstream>
 
 using namespace pcl;
 using namespace std;
@@ -84,6 +83,7 @@ double WallFinder::findExtremal(
         PointCloud<PointNormal>::ConstPtr cloud,
         Eigen::Vector3f dir,
         double anglethreshold,
+        double resolution,
         PointCloud<PointNormal>::Ptr outcloud)
 {
     ConditionOr<PointNormal>::Ptr cond(new ConditionOr<PointNormal>());
@@ -136,24 +136,27 @@ double WallFinder::findExtremal(
 double WallFinder::findFloorAndCeiling(
         OrientationFinder& of,
         vector<int>& labels,
+        double resolution,
         double anglethreshold)
 {
+    double floor, ceiling;
+
     PointCloud<PointNormal>::Ptr floorcandidates(new PointCloud<PointNormal>());
     PointCloud<PointNormal>::ConstPtr cloud = of.getCloud();
-    floorplane = findExtremal(cloud, Eigen::Vector3f(0.,1.,0.), anglethreshold, floorcandidates);
+    floor = findExtremal(cloud, Eigen::Vector3f(0.,1.,0.), anglethreshold, resolution, floorcandidates);
     PointCloud<PointNormal>::Ptr ceilcandidates(new PointCloud<PointNormal>());
-    ceilplane = -findExtremal(cloud, Eigen::Vector3f(0.,-1.,0.), anglethreshold, ceilcandidates);
+    ceiling = -findExtremal(cloud, Eigen::Vector3f(0.,-1.,0.), anglethreshold, resolution, ceilcandidates);
     double t = cos(anglethreshold);
     for (int i = 0; i < cloud->size(); ++i) {
-        if (abs((*cloud)[i].y - floorplane) < resolution &&
+        if (abs((*cloud)[i].y - floor) < resolution &&
                 (*cloud)[i].normal_y > t) {
             labels[i] = LABEL_FLOOR;
-        } else if (abs((*cloud)[i].y - ceilplane) < resolution &&
+        } else if (abs((*cloud)[i].y - ceiling) < resolution &&
                 (*cloud)[i].normal_y < -t) {
             labels[i] = LABEL_CEILING;
         }
     }
-    return floorplane;
+    return floor;
 }
 
 class Grid {
@@ -200,8 +203,9 @@ class Grid {
         int height;
         double resolution;
 };
-
-pcl::PointCloud<PointXYZ>::Ptr WallFinder::getHistogram(OrientationFinder& of)
+pcl::PointCloud<PointXYZ>::Ptr WallFinder::getHistogram(
+        OrientationFinder& of,
+        double resolution)
 {
     // Create grid
     float maxx = -numeric_limits<float>::max();
@@ -229,8 +233,8 @@ pcl::PointCloud<PointXYZ>::Ptr WallFinder::getHistogram(OrientationFinder& of)
 void WallFinder::findWalls(
         OrientationFinder& of,
         vector<int>& labels,
-        int wallthreshold,
         double minlength,
+        double resolution,
         double anglethreshold)
 {
     // Create grid
@@ -238,8 +242,8 @@ void WallFinder::findWalls(
     float maxz = -numeric_limits<float>::max();
     PointCloud<PointNormal>::const_iterator it;
     for (it = of.getCloud()->begin(); it != of.getCloud()->end(); ++it) {
-        maxx = max(it->x, maxx);
-        maxz = max(it->z, maxz);
+        if (it->x > maxx) maxx = it->x;
+        if (it->z > maxz) maxz = it->z;
     }
     int width = maxx/resolution + 1;
     int height = maxz/resolution + 1;
@@ -250,9 +254,10 @@ void WallFinder::findWalls(
 
     // Scan grid and extract line segments
     int overlapthreshold = 6;
+    int wallthreshold = 200;
     int steepness = 10;
     int skipsallowed = 2;
-    vector<GridSegment> segments;
+    vector<Segment> segments;
     // Check vertical walls
     int numsegs = 0;
     int skipped = 0;
@@ -261,8 +266,8 @@ void WallFinder::findWalls(
         skipped = 0;
         for (int j = 0; j < height; ++j) {
             if (grid.getCount(i,j) > wallthreshold &&
-                grid.getCount(i,j) - grid.getCount(i-1,j) > steepness &&
-                grid.getCount(i,j) - grid.getCount(i+1,j) > steepness)
+                grid.getCount(i-1,j) < grid.getCount(i,j) &&
+                grid.getCount(i+1,j) < grid.getCount(i,j))
             {
                 numsegs += skipped + 1;
                 skipped = 0;
@@ -272,7 +277,7 @@ void WallFinder::findWalls(
                 }
                 else {
                     if (numsegs*resolution > minlength) {
-                        segments.push_back(GridSegment(0,j-numsegs,j,i));
+                        segments.push_back(Segment(0,j-numsegs,j,i));
                     }
                     numsegs = 0;
                     skipped = 0;
@@ -280,7 +285,7 @@ void WallFinder::findWalls(
             }
         }
         if (numsegs*resolution > minlength) {
-            segments.push_back(GridSegment(0,height-numsegs,height,i));
+            segments.push_back(Segment(0,height-numsegs,height,i));
         }
     }
     // Check horizontal walls
@@ -289,8 +294,8 @@ void WallFinder::findWalls(
         skipped = 0;
         for (int j = 0; j < width; ++j) {
             if (grid.getCount(j,i) > wallthreshold &&
-                grid.getCount(j,i-1) < grid.getCount(j,i) &&
-                grid.getCount(j,i+1) < grid.getCount(j,i))
+                grid.getCount(j,i) - grid.getCount(j,i-1) > steepness &&
+                grid.getCount(j,i) - grid.getCount(j,i+1) > steepness)
             {
                 numsegs += skipped + 1;
                 skipped = 0;
@@ -300,7 +305,7 @@ void WallFinder::findWalls(
                 }
                 else {
                     if (numsegs*resolution > minlength) {
-                        segments.push_back(GridSegment(1,j-numsegs,j,i));
+                        segments.push_back(Segment(1,j-numsegs,j,i));
                     }
                     numsegs = 0;
                     skipped = 0;
@@ -308,12 +313,12 @@ void WallFinder::findWalls(
             }
         }
         if (numsegs*resolution > minlength) {
-            segments.push_back(GridSegment(1,width-numsegs,width,i));
+            segments.push_back(Segment(1,width-numsegs,width,i));
         }
     }
     // Filter out segments with no empty space
-    vector<GridSegment> candidatewalls;
-    vector<GridSegment> walls;
+    vector<Segment> candidatewalls;
+    vector<Segment> walls;
     int maxidx = -1;
     double maxlength = 0;
     for (int i = 0; i < segments.size(); ++i) {
@@ -335,10 +340,7 @@ void WallFinder::findWalls(
         }
         candidatewalls.push_back(segments[i]);
     }
-    for (int i = 0; i < candidatewalls.size(); ++i) {
-        wallsegments.push_back(Segment(candidatewalls[i], resolution));
-    }
-    return;
+    // Find discontinuities and fill them in
     // Create edge cost matrix based on compatibility
     // Two segments are compatible if:
     //     Perpendicular: endpoints are close together and normals are compatible
@@ -360,8 +362,8 @@ void WallFinder::findWalls(
                 }
             } else {
                 // HACK: Uses fact that vertical edges are always before horizontal ones
-                GridSegment& a = candidatewalls[i];
-                GridSegment& b = candidatewalls[j];
+                Segment& a = candidatewalls[i];
+                Segment& b = candidatewalls[j];
                 int n = a.norm*b.norm;
                 if (b.coord >= a.end - overlapthreshold && a.coord >= b.end - overlapthreshold && n >= 0) {
                     edges[i][j] = b.coord - a.end + a.coord - b.end;
@@ -403,7 +405,7 @@ void WallFinder::findWalls(
             }
         }
         wall.push_back(curridx);
-        wallsegments.push_back(Segment(candidatewalls[curridx], resolution));
+        wallsegments.push_back(candidatewalls[curridx]);
         inwall[curridx] = true;
         curridx = besti;
         if (inwall[curridx]) {
@@ -413,22 +415,20 @@ void WallFinder::findWalls(
     if (curridx != maxidx) {
         cerr << "Error determining floor plan!" << endl;
     }
-    // Add labels to all compatible pixels regardless of bin and compute more accurate
-    // coords
+    // TODO: Extend walls to meet to obtain accurate floor plan
+    // Add labels to all compatible pixels regardless of bin
     int i;
-    vector<double> segmentcoords(wallsegments.size(), 0);
-    vector<int> segmentcounts(wallsegments.size(), 0);
     for (it = of.getCloud()->begin(), i=0; it != of.getCloud()->end(); ++it, ++i) {
         for (int j = 0; j < wallsegments.size(); ++j) {
             bool horiz = wallsegments[j].direction;
             // Check if on same plane
             double coord = horiz?it->z:it->x;
-            if (abs(wallsegments[j].coord - coord) > 2*resolution) {
+            if (abs(resolution*wallsegments[j].coord - coord) > 2*resolution) {
                 continue;
             }
             // Check if within bounds
             coord = horiz?it->x:it->z;
-            if (coord > 2*resolution + wallsegments[j].end || coord < wallsegments[j].start - 2*resolution) {
+            if (coord > resolution*(wallsegments[j].end + 2) || coord < resolution*(wallsegments[j].start - 2)) {
                 continue;
             }
             // Check if compatible normal
@@ -439,87 +439,8 @@ void WallFinder::findWalls(
             axis *= -wallsegments[j].norm;
             if (acos(normal.dot(axis)) < anglethreshold) {
                 labels[i] = LABEL_WALL;
-                segmentcoords[j] += horiz?it->z:it->x;
-                segmentcounts[j]++;
                 break;
             }
         }
     }
-    for (int i = 0; i < wallsegments.size(); ++i) {
-        wallsegments[i].coord = segmentcoords[i]/segmentcounts[i];
-    }
-    // Make edges meet
-    for (int i = 0; i < wallsegments.size(); ++i) {
-        int j = (i+1)%wallsegments.size();
-        if (wallsegments[i].direction != wallsegments[j].direction) {
-            if (abs(wallsegments[i].start - wallsegments[j].coord) <
-                abs(wallsegments[i].end - wallsegments[j].coord))
-            {
-                wallsegments[i].start = wallsegments[j].coord;
-            } else {
-                wallsegments[i].end = wallsegments[j].coord;
-            }
-            if (abs(wallsegments[j].start - wallsegments[i].coord) <
-                abs(wallsegments[j].end - wallsegments[i].coord))
-            {
-                wallsegments[j].start = wallsegments[i].coord;
-            } else {
-                wallsegments[j].end = wallsegments[i].coord;
-            }
-        } else {
-            // Merge parallel segments
-            if (wallsegments[i].start > wallsegments[j].start) {
-                wallsegments[i].start = wallsegments[j].start;
-            }
-            if (wallsegments[i].end < wallsegments[j].end) {
-                wallsegments[i].end = wallsegments[j].end;
-            }
-            wallsegments[i].coord += wallsegments[j].coord;
-            wallsegments[i].coord /= 2;
-            wallsegments.erase(wallsegments.begin()+j);
-            --i;
-        }
-    }
-}
-
-void WallFinder::loadWalls(string filename, vector<int>& labels) {
-    ifstream in(filename.c_str(), ifstream::binary);
-    uint32_t sz;
-    in.read((char*) &sz, 4);
-    labels.resize(sz);
-    in.read((char*) &sz, 4);
-    wallsegments.resize(sz);
-    in.read((char*) &resolution, sizeof(double));
-    for (int i = 0; i < labels.size(); ++i) {
-        in.read((char*) &(labels[i]), 4);
-    }
-    for (int i = 0; i < sz; ++i) {
-        in.read((char*) &(wallsegments[i].direction), 4);
-        in.read((char*) &(wallsegments[i].start), sizeof(double));
-        in.read((char*) &(wallsegments[i].end), sizeof(double));
-        in.read((char*) &(wallsegments[i].norm), 4);
-        in.read((char*) &(wallsegments[i].coord), sizeof(double));
-    }
-    in.read((char*) &floorplane, sizeof(double));
-    in.read((char*) &ceilplane, sizeof(double));
-}
-void WallFinder::saveWalls(string filename, vector<int>& labels) {
-    ofstream out(filename.c_str(), ofstream::binary);
-    uint32_t sz = labels.size();
-    out.write((char*) &sz, 4);
-    sz = wallsegments.size();
-    out.write((char*) &sz, 4);
-    out.write((char*) &resolution, sizeof(double));
-    for (int i = 0; i < labels.size(); ++i) {
-        out.write((char*) &(labels[i]), 4);
-    }
-    for (int i = 0; i < wallsegments.size(); ++i) {
-        out.write((char*) &(wallsegments[i].direction), 4);
-        out.write((char*) &(wallsegments[i].start), sizeof(double));
-        out.write((char*) &(wallsegments[i].end), sizeof(double));
-        out.write((char*) &(wallsegments[i].norm), 4);
-        out.write((char*) &(wallsegments[i].coord), sizeof(double));
-    }
-    out.write((char*) &floorplane, sizeof(double));
-    out.write((char*) &ceilplane, sizeof(double));
 }

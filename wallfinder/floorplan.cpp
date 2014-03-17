@@ -27,6 +27,7 @@ int main(int argc, char* argv[]) {
                 "     -print_wall: Print out wall segments (default off)\n" \
                 "     -novisualize: Exit immediately\n" \
                 "     -visualize_grid: show histogram of points instead of 3d model\n" \
+                "     -wallthreshold int: number of points in a bin to be considered a possible wall\n" \
                 "     -anglethreshold float: Angle between normals to be considered equal (default PI/40)\n" \
                 "     -min_wall_length float: Minimum length of a wall (default 0.2)\n" \
                 "     -resolution float: maximum distance for a point to be considered on a plane (default 0.01)\n" \
@@ -43,6 +44,7 @@ int main(int argc, char* argv[]) {
     double resolution = 0.01;
     double minlength = 0.2;
     bool show_grid = false;
+    int wallthreshold = 200;
     if (console::find_switch(argc, argv, "-ccw")) ccw = true;
     if (console::find_switch(argc, argv, "-visualize")) visualize = true;
     if (console::find_switch(argc, argv, "-print_wall")) print_wall = true;
@@ -53,6 +55,9 @@ int main(int argc, char* argv[]) {
     }
     if (console::find_argument(argc, argv, "-resolution")) {
         console::parse_argument(argc, argv, "-resolution", resolution);
+    }
+    if (console::find_argument(argc, argv, "-wallthreshold")) {
+        console::parse_argument(argc, argv, "-wallthreshold", wallthreshold);
     }
     if (console::find_argument(argc, argv, "-min_wall_length")) {
         console::parse_argument(argc, argv, "-min_wall_length", minlength);
@@ -66,22 +71,22 @@ int main(int argc, char* argv[]) {
     if (!of.computeOrientation()) {
         cout << "Error computing orientation! Non-triangle mesh!" << endl;
     }
-    of.normalize();
+    //of.normalize();
 
     for (int i = 0; i < 3; ++i) {
         //cout << of.getAxis(i) << endl;
         cout << 180*acos(of.getAxis(i).dot(of.getAxis((i+1)%3)))/M_PI - 90 << " degrees from perpendicular" << endl;
     }
-    WallFinder wf;
+    WallFinder wf(resolution);
     vector<int> labels(of.getCloud()->size(), WallFinder::LABEL_NONE);
-    wf.findFloorAndCeiling(of, labels, resolution, anglethreshold);
-    wf.findWalls(of, labels, minlength, resolution, anglethreshold);
+    wf.findFloorAndCeiling(of, labels, anglethreshold);
+    wf.findWalls(of, labels, wallthreshold, minlength, anglethreshold);
     if (print_wall) {
         for (int i = 0; i < wf.wallsegments.size(); ++i) {
             pair<int,int> x = wf.wallsegments[i].getCoords(wf.wallsegments[i].start);
             pair<int,int> y = wf.wallsegments[i].getCoords(wf.wallsegments[i].end);
-            cout << "(" << resolution*x.first << "," << resolution*x.second << ") - ";
-            cout << "(" << resolution*y.first << "," << resolution*y.second << ")";
+            cout << "(" << x.first << "," << x.second << ") - ";
+            cout << "(" << y.first << "," << y.second << ")";
             cout << endl;
         }
     }
@@ -111,15 +116,29 @@ int main(int argc, char* argv[]) {
         visualization::PCLVisualizer viewer("Room");
         viewer.setBackgroundColor(0,0,0);
         if (show_grid) {
-            PointCloud<PointXYZ>::Ptr grid(wf.getHistogram(of, resolution));
-            viewer.addPointCloud<PointXYZ>(grid, "Grid");
-            ModelCoefficients mc;
-            mc.values.resize(4);
-            mc.values[0] = 0;
-            mc.values[1] = 1;
-            mc.values[2] = 0;
-            mc.values[3] = -sqrt(2);
-            viewer.addPlane(mc);
+            PointCloud<PointXYZ>::Ptr grid(wf.getHistogram(of));
+            PointCloud<PointXYZRGB>::Ptr colorgrid(new PointCloud<PointXYZRGB>());
+            colorgrid->resize(grid->size());
+            for (int i = 0; i < grid->size(); ++i) {
+                colorgrid->at(i).x = grid->at(i).x;
+                colorgrid->at(i).y = grid->at(i).y;
+                colorgrid->at(i).z = grid->at(i).z;
+                colorgrid->at(i).r = 0;
+                colorgrid->at(i).g = colorgrid->at(i).y/2*255;
+                colorgrid->at(i).b = 255-colorgrid->at(i).y/2*255;
+
+            }
+
+            visualization::PointCloudColorHandlerRGBField<PointXYZRGB> rgb(colorgrid);
+            viewer.addPointCloud<PointXYZRGB>(colorgrid, rgb, "Grid");
+
+            //ModelCoefficients mc;
+            //mc.values.resize(4);
+            //mc.values[0] = 0;
+            //mc.values[1] = 1;
+            //mc.values[2] = 0;
+            //mc.values[3] = -sqrt(2);
+            //viewer.addPlane(mc);
         } else {
             viewer.addPointCloud<PointNormal>(walls, "Walls");
             //viewer.addPointCloudNormals<PointNormal>(walls, 20);
@@ -147,13 +166,13 @@ int main(int argc, char* argv[]) {
         char n[] = {'L', 'i', '0'};
         for (int i = 0; i < wf.wallsegments.size(); ++i) {
             if (wf.wallsegments[i].direction == 0) {
-                PointXYZ start(wf.wallsegments[i].coord*resolution, 0, wf.wallsegments[i].start*resolution);
-                PointXYZ end(wf.wallsegments[i].coord*resolution, 0, wf.wallsegments[i].end*resolution);
+                PointXYZ start(wf.wallsegments[i].coord, 0, wf.wallsegments[i].start);
+                PointXYZ end(wf.wallsegments[i].coord, 0, wf.wallsegments[i].end);
                 viewer.addLine(start, end, 1, 0, i/(double)wf.wallsegments.size(), n);
                 n[2]++;
             } else {
-                PointXYZ start(wf.wallsegments[i].start*resolution, 0, wf.wallsegments[i].coord*resolution);
-                PointXYZ end(wf.wallsegments[i].end*resolution, 0, wf.wallsegments[i].coord*resolution);
+                PointXYZ start(wf.wallsegments[i].start, 0, wf.wallsegments[i].coord);
+                PointXYZ end(wf.wallsegments[i].end, 0, wf.wallsegments[i].coord);
                 viewer.addLine(start, end, 1, 0, i/(double)wf.wallsegments.size(), n);
                 n[2]++;
             }
