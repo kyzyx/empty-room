@@ -30,8 +30,5 @@ R2Shapes/libR2Shapes.a:
 RNBasics/libRNBasics.a: 
 	    cd RNBasics; make
 
-fglut/libfglut.a: 
-	    cd fglut; make
-
 jpeg/libjpeg.a: 
 	    cd jpeg; make
