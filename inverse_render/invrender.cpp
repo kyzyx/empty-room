@@ -100,8 +100,8 @@ int main(int argc, char* argv[]) {
             reproject(loader.getImage(project), lights.getImage(project), loader.getCamera(project), m);
         }
         cout << "Done reprojecting" << endl;
-        clusterLights(m);
-        cout << "Done clustering lights" << endl;
+        int numlights = clusterLights(m);
+        cout << "Done clustering " << numlights << " lights" << endl;
         if (output_reprojection) m.writeSamples(outfile);
     }
     m.computeColorsOGL();
