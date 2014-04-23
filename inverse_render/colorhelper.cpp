@@ -4,22 +4,62 @@
 #include <fstream>
 #include <cstdio>
 
+#include "rgbe.h"
 #include <png.h>
+
+//#define OUTPUT_RADIANCE_CAMERAS
 
 using namespace std;
 
 bool ColorHelper::load(std::string imageListFile, std::string cameraFile) {
     if (!readImageNames(imageListFile)) return false;
     for (int i = 0; i < filenames.size(); ++i) {
-        if (!readImage(i)) {
+        if (!readImage(filenames[i])) {
             cerr << "Error reading image " << filenames[i] << endl;
             return false;
         }
     }
     return readMayaCameraFile(cameraFile);
 }
+bool endswith(const string& s, string e) {
+    if (s.length() > e.length())
+        return s.compare(s.length()-e.length(), e.length(), e) == 0;
+    else
+        return false;
+}
+bool ColorHelper::readImage(const string& filename) {
+    if (endswith(filename, ".png"))
+        return readPngImage(filename);
+    else if (endswith(filename, ".hdr") || endswith(filename, ".pic"))
+        return readHdrImage(filename);
+    else
+        return false;
+}
+bool ColorHelper::readHdrImage(const string& filename) {
+    int width, height;
+    rgbe_header_info info;
+    FILE* file = fopen(filename.c_str(), "rb");
+
+    RGBE_ReadHeader(file, &width, &height, &info);
+    float* image = new float[3*width*height];
+    RGBE_ReadPixels_RLE(file, image, width, height);
+    float expadj = info.exposure;
+    for (int i = 0; i < width*height*3; ++i) {
+        image[i] /= expadj;
+    }
+    // Flip y-coordinate (standard is 0,0 at top)
+    float* row = new float[3*width];
+    for (int i = 0; i < height/2; ++i) {
+        memcpy(row, image+3*(i*width), 3*width*sizeof(float));
+        memcpy(image+3*(i*width), image+3*((height-i-1)*width), 3*width*sizeof(float));
+        memcpy(image+3*((height-i-1)*width), row, 3*width*sizeof(float));
+    }
+    data.push_back((char*)image);
+    fclose(file);
+    return true;
+}
 // From http://blog.nobel-joergensen.com/2010/11/07/loading-a-png-as-texture-in-opengl-using-libpng/
-bool ColorHelper::readImage(int n)
+bool ColorHelper::readPngImage(const string& filename)
 {
     png_structp png_ptr;
     png_infop info_ptr;
@@ -27,7 +67,7 @@ bool ColorHelper::readImage(int n)
     int color_type, interlace_type;
     FILE *fp;
 
-    if ((fp = fopen(filenames[n].c_str(), "rb")) == NULL)
+    if ((fp = fopen(filename.c_str(), "rb")) == NULL)
         return false;
 
     png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
@@ -72,7 +112,7 @@ bool ColorHelper::readImage(int n)
     return true;
 }
 
-bool ColorHelper::readImageNames(string filename)
+bool ColorHelper::readImageNames(const string& filename)
 {
     try {
         ifstream in(filename.c_str());
@@ -88,7 +128,7 @@ bool ColorHelper::readImageNames(string filename)
     return true;
 }
 
-bool ColorHelper::readMayaCameraFile(string filename)
+bool ColorHelper::readMayaCameraFile(const string& filename)
 {
     // Format:
     //    FrameCount Width Height FocalLength Aperture
@@ -107,6 +147,9 @@ bool ColorHelper::readMayaCameraFile(string filename)
         for (int i = 0; i < frames; ++i) {
             CameraParams* curr = new CameraParams;
             in >> a >> b >> c;
+#ifdef OUTPUT_RADIANCE_CAMERAS
+            printf("view= pos%d rvu -vtv -vp %f %f %f", i, a, b, c);
+#endif
             curr->pos.Reset(a,b,c);
             in >> a >> b >> c;
             a *= M_PI/180;
@@ -116,14 +159,25 @@ bool ColorHelper::readMayaCameraFile(string filename)
             curr->up.Rotate(R3posz_vector, c);
             curr->up.Rotate(R3posx_vector, a);
             curr->up.Rotate(R3posy_vector, b);
+#ifdef OUTPUT_RADIANCE_CAMERAS
+            printf(" -vu %f %f %f", curr->up[0], curr->up[1], curr->up[2]);
+#endif
             curr->towards.Reset(0,0,-1);
             curr->towards.Rotate(R3posz_vector, c);
             curr->towards.Rotate(R3posx_vector, a);
             curr->towards.Rotate(R3posy_vector, b);
+#ifdef OUTPUT_RADIANCE_CAMERAS
+            printf(" -vd %f %f %f", curr->towards[0], curr->towards[1], curr->towards[2]);
+#endif
             curr->right = curr->towards%curr->up;
             curr->width = w;
             curr->height = h;
             curr->focal_length = foc;
+            double hfov = 2*atan(curr->width/(2*foc))*180/M_PI;
+            double vfov = 2*atan(curr->height/(2*foc))*180/M_PI;
+#ifdef OUTPUT_RADIANCE_CAMERAS
+            printf(" -vh %f -vv %f -vo 0 -va 0 -vs 0 -vl 0\n", hfov, vfov);
+#endif
             cameras.push_back(curr);
         }
     } catch (...) {

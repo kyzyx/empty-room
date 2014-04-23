@@ -81,9 +81,9 @@ void Mesh::writeSamples(string filename) {
         out.write((char*) &sz, 4);
         for (int j = 0; j < samples[i].size(); ++j) {
             out.write((char*) &samples[i][j].label, 1);
-            out.write((char*) &samples[i][j].r, 1);
-            out.write((char*) &samples[i][j].g, 1);
-            out.write((char*) &samples[i][j].b, 1);
+            out.write((char*) &samples[i][j].r, sizeof(float));
+            out.write((char*) &samples[i][j].g, sizeof(float));
+            out.write((char*) &samples[i][j].b, sizeof(float));
             out.write((char*) &samples[i][j].x, sizeof(float));
             out.write((char*) &samples[i][j].y, sizeof(float));
             out.write((char*) &samples[i][j].z, sizeof(float));
@@ -105,9 +105,9 @@ void Mesh::readSamples(string filename) {
         for (int j = 0; j < sz; ++j) {
             Sample s;
             in.read((char*) &s.label, 1);
-            in.read((char*) &s.r, 1);
-            in.read((char*) &s.g, 1);
-            in.read((char*) &s.b, 1);
+            in.read((char*) &s.r, sizeof(float));
+            in.read((char*) &s.g, sizeof(float));
+            in.read((char*) &s.b, sizeof(float));
             in.read((char*) &s.x, sizeof(float));
             in.read((char*) &s.y, sizeof(float));
             in.read((char*) &s.z, sizeof(float));
@@ -158,7 +158,7 @@ void Mesh::computeColorsOGL() {
         for (int j = 0; j < 3; ++j) {
             int ind = 6*(3*i + j);
             if (light > 0) {
-                vertices[ind+0] = light/255.;
+                vertices[ind+0] = light;
                 vertices[ind+1] = 0;
                 vertices[ind+2] = 0;
             } else {
@@ -172,9 +172,9 @@ void Mesh::computeColorsOGL() {
                     vertices[ind+5] += samples[n][k].b*s;
                     total += s;
                 }
-                vertices[ind+3] /= total*255;
-                vertices[ind+4] /= total*255;
-                vertices[ind+5] /= total*255;
+                vertices[ind+3] /= total;
+                vertices[ind+4] /= total;
+                vertices[ind+5] /= total;
             }
         }
     }

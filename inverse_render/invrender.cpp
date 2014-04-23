@@ -90,14 +90,24 @@ int main(int argc, char* argv[]) {
         cout << "Reading input files..." << endl;
         loader.load(imagelist, camfile);
         cout << "Done reading color images " << loader.size() << endl;
-        ColorHelper lights;
-        lights.load(lightimagelist, camfile);
-        cout << "Done reading lighting images " << lights.size() << endl;
-
-        if (all_project) {
-            reproject(loader, lights, m);
+        if (hdr) {
+            if (all_project) {
+                reproject(loader, m, hdr_threshold);
+            } else {
+                //const float* hdrimg = (const float*) loader.getImage(project);
+                reproject((float*) loader.getImage(project), loader.getCamera(project), m, hdr_threshold);
+            }
         } else {
-            reproject(loader.getImage(project), lights.getImage(project), loader.getCamera(project), m);
+            ColorHelper lights;
+            lights.load(lightimagelist, camfile);
+            cout << "Done reading lighting images " << lights.size() << endl;
+
+
+            if (all_project) {
+                reproject(loader, lights, m);
+            } else {
+                reproject(loader.getImage(project), lights.getImage(project), loader.getCamera(project), m);
+            }
         }
         cout << "Done reprojecting" << endl;
         int numlights = clusterLights(m);
@@ -107,19 +117,22 @@ int main(int argc, char* argv[]) {
     m.computeColorsOGL();
 
     InverseRender ir(&m);
-    if (do_sampling) {
-        if (read_eq) {
-            ir.loadVariablesBinary(samplefile);
-        } else {
-            ir.calculate(wallindices, numsamples, discardthreshold, 2);
-            if (write_eq) {
-                ir.writeVariablesMatlab("eq.m");
-                ir.writeVariablesBinary(sampleoutfile);
+    // Only do inverse rendering with full reprojection and wall labels
+    if ((input || all_project) && (wallinput || do_wallfinding)) {
+        if (do_sampling) {
+            if (read_eq) {
+                ir.loadVariablesBinary(samplefile);
+            } else {
+                ir.calculate(wallindices, numsamples, discardthreshold, 2);
+                if (write_eq) {
+                    ir.writeVariablesMatlab("eq.m");
+                    ir.writeVariablesBinary(sampleoutfile);
+                }
             }
+            ir.solve();
         }
-        ir.solve();
+        outputRadianceFile(radfile, wf, m, ir);
     }
-    outputRadianceFile(radfile, wf, m, ir);
 
     if (display) {
         int labeltype = LABEL_LIGHTS;

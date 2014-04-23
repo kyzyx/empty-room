@@ -15,9 +15,9 @@
 class Sample {
     public:
         unsigned char label;
-        unsigned char r;
-        unsigned char g;
-        unsigned char b;
+        float r;
+        float g;
+        float b;
         float x;
         float y;
         float z;

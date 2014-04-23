@@ -28,11 +28,13 @@ class ColorHelper {
 
         bool load(std::string imageListFile, std::string cameraFile);
 
-        bool readImageNames(std::string filename);
-        bool readImage(int n);
-        bool readMayaCameraFile(std::string filename);
+        bool readImageNames(const std::string& filename);
+        bool readImage(const std::string& filename);
+        bool readPngImage(const std::string& filename);
+        bool readHdrImage(const std::string& filename);
+        bool readMayaCameraFile(const std::string& filename);
 
-        int size() const { return cameras.size(); }
+        int size() const { return data.size(); }
         const char* getImage(int n) { return data[n]; }
         const CameraParams* getCamera(int n) { return cameras[n]; }
     protected:
