@@ -25,7 +25,7 @@ class Material {
 
 class InverseRender {
     public:
-        InverseRender(Mesh* m, int hemicubeResolution=100)
+        InverseRender(Mesh* m, int hemicubeResolution=150)
             : mesh(m), res(hemicubeResolution), images(NULL) {
             computeHemicubeFF();
         }
@@ -35,7 +35,7 @@ class InverseRender {
 
         void renderFace(const R3Point& p,
                 const R3Vector& towards, const R3Vector& up,
-                unsigned char* image, bool colorimage);
+                float* image, bool colorimage);
         bool setupRasterizer();
         void writeVariablesMatlab(std::string filename);
         void writeVariablesBinary(std::string filename);
@@ -43,16 +43,13 @@ class InverseRender {
     private:
         bool calculateWallMaterialFromUnlit();
         float renderHemicube(const R3Point& p, const R3Vector& n,
-                Material& m, std::vector<float>& lightareas, unsigned char* color,
-                unsigned char* light);
+                Material& m, std::vector<float>& lightareas, float* color,
+                float* light);
         void computeHemicubeFF();
         bool solveLights();
         bool solveMaterials();
 
-
-        Mesh* mesh;
-
-        GLuint fbo, fbo_rgb, fbo_z;
+        GLuint fbo, tex, fbo_rgb, fbo_z;
 
         int res;
 
@@ -60,6 +57,7 @@ class InverseRender {
         float** sideHemicubeFF;
 
     public:
+        Mesh* mesh;
         class SampleData {
             public:
                 Material radiosity;

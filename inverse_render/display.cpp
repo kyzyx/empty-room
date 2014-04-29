@@ -19,6 +19,25 @@ int currcube = 0;
 int x = 0;
 bool change = true;
 visualization::ImageViewer* imvu = NULL;
+
+void showimage(InverseRender* ivr, int n, int x) {
+    int res = 150;
+    unsigned char* im = new unsigned char[res*res*3];
+    float* currimage = (float*) ivr->images[2*n+x];
+    for (int i = 0; i < res; ++i) {
+        for (int j = 0; j < res; ++j) {
+            for (int k = 0; k < 3; ++k) {
+                int idx = k + 3*(j + res*i);
+                im[idx] = (unsigned char)(255*displayscale*currimage[idx]*ivr->mesh->maxintensity);
+                //cout << currimage[idx] << ",";
+            }
+            //cout << endl;
+        }
+        //cout << endl;
+    }
+    imvu->showRGBImage(im,res,res);
+}
+
 void kbd_cb_(const visualization::KeyboardEvent& event, void* ir) {
     InverseRender* ivr = (InverseRender*) ir;
     if (event.keyDown()) {
@@ -35,7 +54,7 @@ void kbd_cb_(const visualization::KeyboardEvent& event, void* ir) {
             x = 1-x;
         }
         cout << "Displaying " << (x?"light":"image") <<" " << currcube<<endl;
-        imvu->showRGBImage(ivr->images[2*currcube+x],100,100);
+        showimage(ivr, currcube, x);
     }
 }
 
@@ -55,10 +74,11 @@ void visualize(Mesh& m, PointCloud<PointXYZRGB>::Ptr cloud, ColorHelper& loader,
     if (ir.data.size() > 0 && ir.images) {
         imvu = new visualization::ImageViewer("Hi");
         imvu->registerKeyboardCallback(&kbd_cb_, (void*) &ir);
-        imvu->showRGBImage(ir.images[0], 100, 100);
+        showimage(&ir, 0, 0);
     }
 
     PointIndices::Ptr nonnull(new PointIndices());
+    cloud->is_dense = false;
     for (int i = 0; i < cloud->size(); ++i) {
         if (labeltype == LABEL_REPROJECT_DEBUG) {
             if (m.labels[i] == 3) {

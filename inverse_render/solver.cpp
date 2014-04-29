@@ -19,8 +19,8 @@ void InverseRender::calculate(vector<int> indices, int numsamples, double discar
     default_random_engine generator;
     uniform_int_distribution<int> dist(0, indices.size());
     for (int i = 0; i < numsamples; ++i) {
-        images[2*i] = new unsigned char[3*res*res];
-        images[2*i+1] = new unsigned char[3*res*res];
+        images[2*i] = new unsigned char[3*res*res*sizeof(float)];
+        images[2*i+1] = new unsigned char[3*res*res*sizeof(float)];
     }
     cout << "Inverse rendering..." << endl;
     for (int i = 0; i < numsamples; ++i) {
@@ -41,14 +41,14 @@ void InverseRender::calculate(vector<int> indices, int numsamples, double discar
             sd.radiosity.b += mesh->samples[indices[n]][j].b*s;
             total += s;
         }
-        sd.radiosity.r /= total*255;
-        sd.radiosity.g /= total*255;
-        sd.radiosity.b /= total*255;
+        sd.radiosity.r /= total;
+        sd.radiosity.g /= total;
+        sd.radiosity.b /= total;
 
         sd.fractionUnknown = renderHemicube(
                 mesh->getMesh()->VertexPosition(mesh->getMesh()->Vertex(indices[n])),
                 mesh->getMesh()->VertexNormal(mesh->getMesh()->Vertex(indices[n])),
-                sd.netIncoming, sd.lightamount, images[2*i], images[2*i+1]
+                sd.netIncoming, sd.lightamount, (float*)images[2*i], (float*)images[2*i+1]
         );
         if (sd.fractionUnknown > discardthreshold) {
             --i;
@@ -71,7 +71,6 @@ void InverseRender::solve() {
 }
 
 bool InverseRender::calculateWallMaterialFromUnlit() {
-    cout << data.size() << endl;
     vector<double> estimates[3];
     vector<double> weights;
     for (int i = 0; i < data.size(); ++i) {
@@ -209,15 +208,22 @@ void InverseRender::loadVariablesBinary(string filename) {
 }
 
 bool InverseRender::setupRasterizer() {
-    glGenRenderbuffers(1, &fbo_rgb);
-    glBindRenderbuffer(GL_RENDERBUFFER_EXT, fbo_rgb);
-    glRenderbufferStorage(GL_RENDERBUFFER_EXT, GL_RGBA8, res, res);
+    glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, res, res, 0, GL_RGBA, GL_FLOAT, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
     glGenRenderbuffers(1, &fbo_z);
     glBindRenderbuffer(GL_RENDERBUFFER_EXT, fbo_z);
     glRenderbufferStorage(GL_RENDERBUFFER_EXT, GL_DEPTH_COMPONENT, res, res);
+    glBindRenderbuffer(GL_RENDERBUFFER_EXT, 0);
+
     glGenFramebuffers(1, &fbo);
     glBindFramebuffer(GL_FRAMEBUFFER_EXT, fbo);
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER_EXT, fbo_rgb);
+    glFramebufferTexture2D(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
+    //glFramebufferRenderbuffer(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER_EXT, fbo_rgb);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, fbo_z);
     GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER_EXT);
     if (status != GL_FRAMEBUFFER_COMPLETE_EXT) {
@@ -317,11 +323,11 @@ float InverseRender::renderHemicube(
         const R3Vector& n,
         Material& m,
         vector<float>& lightareas,
-        unsigned char* image, unsigned char* light)
+        float* image, float* light)
 {
     float blank = 0;
-    if (image == NULL) image = new unsigned char[3*res*res];
-    if (light == NULL) light = new unsigned char[3*res*res];
+    if (image == NULL) image = new float[3*res*res];
+    if (light == NULL) light = new float[3*res*res];
     R3Point pp = p + 0.0001*n;
     R3Vector x = R3yaxis_vector;
     x.Cross(n);
@@ -336,16 +342,17 @@ float InverseRender::renderHemicube(
                         light[3*(i*res+j)+1] == 0 &&
                         light[3*(i*res+j)+2] == 0)
                 {
-                    lightareas[light[3*(i*res+j)]-1] += sideHemicubeFF[i][j];
+                    int lightid = light[3*(i*res+j)]*MAX_LIGHTS;
+                    lightareas[lightid] += sideHemicubeFF[i][j];
                 }  else if (light[3*(i*res+j)] == 0 &&
                         light[3*(i*res+j)+1] == 0 &&
                         light[3*(i*res+j)+2] != 0)
                 {
                     blank += sideHemicubeFF[i][j];
                 } else {
-                    m.r += sideHemicubeFF[i][j]*image[3*(i*res+j)]/255.;
-                    m.g += sideHemicubeFF[i][j]*image[3*(i*res+j)+1]/255.;
-                    m.b += sideHemicubeFF[i][j]*image[3*(i*res+j)+2]/255.;
+                    m.r += sideHemicubeFF[i][j]*image[3*(i*res+j)]*mesh->maxintensity;
+                    m.g += sideHemicubeFF[i][j]*image[3*(i*res+j)+1]*mesh->maxintensity;
+                    m.b += sideHemicubeFF[i][j]*image[3*(i*res+j)+2]*mesh->maxintensity;
                 }
             }
         }
@@ -365,9 +372,9 @@ float InverseRender::renderHemicube(
             {
                 blank += topHemicubeFF[i][j];
             } else {
-                m.r += topHemicubeFF[i][j]*image[3*(i*res+j)]/255.;
-                m.g += topHemicubeFF[i][j]*image[3*(i*res+j)+1]/255.;
-                m.b += topHemicubeFF[i][j]*image[3*(i*res+j)+2]/255.;
+                m.r += topHemicubeFF[i][j]*image[3*(i*res+j)]*mesh->maxintensity;
+                m.g += topHemicubeFF[i][j]*image[3*(i*res+j)+1]*mesh->maxintensity;
+                m.b += topHemicubeFF[i][j]*image[3*(i*res+j)+2]*mesh->maxintensity;
             }
         }
     }
@@ -375,9 +382,10 @@ float InverseRender::renderHemicube(
 }
 void InverseRender::renderFace(const R3Point& p,
         const R3Vector& towards, const R3Vector& up,
-        unsigned char* image, bool colorimage)
+        float* image, bool colorimage)
 {
     glDisable(GL_CULL_FACE);
+    glClampColor(GL_CLAMP_READ_COLOR, GL_FALSE);
     glViewport(0,0,res,res);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -388,6 +396,6 @@ void InverseRender::renderFace(const R3Point& p,
     gluLookAt(p[0], p[1], p[2], at[0], at[1], at[2], up[0], up[1], up[2]);
     glBindFramebuffer(GL_FRAMEBUFFER_EXT, fbo);
     mesh->renderOGL(colorimage);
-    glReadPixels(0,0,res,res,GL_RGB,GL_UNSIGNED_BYTE,(void*)image);
+    glReadPixels(0,0,res,res,GL_RGB,GL_FLOAT,(void*)image);
     glBindFramebuffer(GL_FRAMEBUFFER_EXT, 0);
 }

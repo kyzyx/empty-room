@@ -7,6 +7,7 @@
 #include <pcl/PolygonMesh.h>
 #include <vector>
 #include <string>
+#define MAX_LIGHTS 128
 
 /**
  * Stores a single sample of the outgoing radiance from a surface
@@ -44,6 +45,7 @@ class Mesh {
 
         std::vector<std::vector<Sample> > samples;
         std::vector<char> labels;
+        float maxintensity;
     private:
         Mesh() {;}
 
