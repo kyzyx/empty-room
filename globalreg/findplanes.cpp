@@ -12,12 +12,13 @@
 const double ANGLETHRESHOLD = M_PI/9;
 const double NOISETHRESHOLD = 0.01;
 const double MININLIERPROPORTION = 0.07;
+const double MAXEDGEPROPORTION = 0.04;
 
 using namespace std;
 using namespace Eigen;
 using namespace pcl;
 
-double calculateEdgeProportion(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, vector<int> indices)
+double calculateEdgeProportion(pcl::PointCloud<pcl::PointXYZ>::ConstPtr cloud, vector<int> indices)
 {
     vector<uint8_t> labels(cloud->size(), -1);
     for (int i = 0; i < indices.size(); ++i) {
@@ -41,7 +42,7 @@ double calculateEdgeProportion(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, vector
     return count/(double) indices.size();
 }
 void findPlanesRANSAC(
-        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
+        pcl::PointCloud<pcl::PointXYZ>::ConstPtr cloud,
         std::vector<Eigen::Vector4d>& planes, std::vector<int>& ids)
 {
     ModelCoefficients::Ptr coef(new ModelCoefficients);
@@ -77,7 +78,7 @@ void findPlanesRANSAC(
                 originalindices.push_back(filtered->at(inliers->indices[i]).label);
             }
             double edgeprop = calculateEdgeProportion(cloud, originalindices);
-            if (edgeprop < 0.04) {
+            if (edgeprop < MAXEDGEPROPORTION) {
                 // Add plane to list
                 for (int i = 0; i < originalindices.size(); ++i) {
                     ids[originalindices[i]] = n;
@@ -96,7 +97,7 @@ void findPlanesRANSAC(
 }
 
 void findPlanesWithNormals(
-        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
+        pcl::PointCloud<pcl::PointXYZ>::ConstPtr cloud,
         std::vector<Eigen::Vector4d>& planes, std::vector<int>& ids)
 {
     ModelCoefficients::Ptr coef(new ModelCoefficients);
@@ -153,13 +154,13 @@ void findPlanesWithNormals(
 }
 
 void findPlanesManhattan(
-        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
+        pcl::PointCloud<pcl::PointXYZ>::ConstPtr cloud,
         std::vector<Eigen::Vector4d>& planes, std::vector<int>& ids)
 {
 }
 
 void findPlanes(
-        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
+        pcl::PointCloud<pcl::PointXYZ>::ConstPtr cloud,
         std::vector<Eigen::Vector4d>& planes, std::vector<int>& ids)
 {
     ids.resize(cloud->size());

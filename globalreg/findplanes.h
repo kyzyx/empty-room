@@ -12,7 +12,7 @@
  * corresponding index into planes, or -1 if it is not on a plane
  */
 void findPlanes(
-        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
+        pcl::PointCloud<pcl::PointXYZ>::ConstPtr cloud,
         std::vector<Eigen::Vector4d>& planes, std::vector<int>& ids);
 
 #endif
