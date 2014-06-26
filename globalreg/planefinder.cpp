@@ -1,4 +1,3 @@
-#include "pairwise.h"
 #include "findplanes.h"
 #include <pcl/io/io.h>
 #include <pcl/io/grabber.h>
