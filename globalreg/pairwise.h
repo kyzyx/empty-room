@@ -11,8 +11,8 @@
  * number of correspondences found
  */
 int findPlaneCorrespondences(
-        pcl::PointCloud<pcl::PointXYZ>::Ptr src,
-        pcl::PointCloud<pcl::PointXYZ>::Ptr tgt,
+        pcl::PointCloud<pcl::PointXYZ>::ConstPtr src,
+        pcl::PointCloud<pcl::PointXYZ>::ConstPtr tgt,
         std::vector<Eigen::Vector4d>& srcplanes, std::vector<int>& srcids,
         std::vector<Eigen::Vector4d>& tgtplanes, std::vector<int>& tgtids,
         std::vector<int>& planecorrespondences);
@@ -25,8 +25,8 @@ int findPlaneCorrespondences(
  * Does NOT transform src or srcplanes into tgt's coordinate system.
  */
 Eigen::Matrix4d align(
-        pcl::PointCloud<pcl::PointXYZ>::Ptr src,
-        pcl::PointCloud<pcl::PointXYZ>::Ptr tgt,
+        pcl::PointCloud<pcl::PointXYZ>::ConstPtr src,
+        pcl::PointCloud<pcl::PointXYZ>::ConstPtr tgt,
         std::vector<Eigen::Vector4d>& srcplanes, std::vector<int>& srcids,
         std::vector<Eigen::Vector4d>& tgtplanes, std::vector<int>& tgtids);
 

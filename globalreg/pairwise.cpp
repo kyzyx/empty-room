@@ -8,8 +8,8 @@ using namespace std;
 const double ANGLETHRESHOLD = cos(M_PI/9);
 
 Matrix4d alignPlaneToPlane(
-        PointCloud<PointXYZ>::Ptr src,
-        PointCloud<PointXYZ>::Ptr tgt,
+        PointCloud<PointXYZ>::ConstPtr src,
+        PointCloud<PointXYZ>::ConstPtr tgt,
         vector<Vector4d>& srcplanes, vector<int>& srcids,
         vector<Vector4d>& tgtplanes, vector<int>& tgtids,
         vector<int>& planecorrespondences)
@@ -18,8 +18,8 @@ Matrix4d alignPlaneToPlane(
 }
 
 Matrix4d alignEdgeToEdge(
-        PointCloud<PointXYZ>::Ptr src,
-        PointCloud<PointXYZ>::Ptr tgt,
+        PointCloud<PointXYZ>::ConstPtr src,
+        PointCloud<PointXYZ>::ConstPtr tgt,
         vector<Vector4d>& srcplanes, vector<int>& srcids,
         vector<Vector4d>& tgtplanes, vector<int>& tgtids,
         vector<int>& planecorrespondences)
@@ -28,8 +28,8 @@ Matrix4d alignEdgeToEdge(
 }
 
 Matrix4d alignCornerToCorner(
-        PointCloud<PointXYZ>::Ptr src,
-        PointCloud<PointXYZ>::Ptr tgt,
+        PointCloud<PointXYZ>::ConstPtr src,
+        PointCloud<PointXYZ>::ConstPtr tgt,
         vector<Vector4d>& srcplanes, vector<int>& srcids,
         vector<Vector4d>& tgtplanes, vector<int>& tgtids,
         vector<int>& planecorrespondences)
@@ -38,8 +38,8 @@ Matrix4d alignCornerToCorner(
 }
 
 Matrix4d alignICP(
-        PointCloud<PointXYZ>::Ptr src,
-        PointCloud<PointXYZ>::Ptr tgt,
+        PointCloud<PointXYZ>::ConstPtr src,
+        PointCloud<PointXYZ>::ConstPtr tgt,
         vector<Vector4d>& srcplanes, vector<int>& srcids,
         vector<Vector4d>& tgtplanes, vector<int>& tgtids,
         vector<int>& planecorrespondences)
@@ -48,8 +48,8 @@ Matrix4d alignICP(
 }
 
 int findPlaneCorrespondences(
-        PointCloud<PointXYZ>::Ptr src,
-        PointCloud<PointXYZ>::Ptr tgt,
+        PointCloud<PointXYZ>::ConstPtr src,
+        PointCloud<PointXYZ>::ConstPtr tgt,
         vector<Vector4d>& srcplanes, vector<int>& srcids,
         vector<Vector4d>& tgtplanes, vector<int>& tgtids,
         vector<int>& planecorrespondences)
@@ -77,8 +77,8 @@ int findPlaneCorrespondences(
 }
 
 Matrix4d align(
-        PointCloud<PointXYZ>::Ptr src,
-        PointCloud<PointXYZ>::Ptr tgt,
+        PointCloud<PointXYZ>::ConstPtr src,
+        PointCloud<PointXYZ>::ConstPtr tgt,
         vector<Vector4d>& srcplanes, vector<int>& srcids,
         vector<Vector4d>& tgtplanes, vector<int>& tgtids)
 {
