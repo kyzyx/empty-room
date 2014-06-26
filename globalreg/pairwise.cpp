@@ -7,6 +7,20 @@ using namespace std;
 
 const double ANGLETHRESHOLD = cos(M_PI/9);
 
+Matrix4d overlapPlanes(Vector4d src, Vector4d tgt) {
+    // Construct rotation
+    Quaterniond q;
+    q.setFromTwoVectors(src.head(3), tgt.head(3));
+    // Construct points on src and tgt
+    Vector3d psrc = -src.head(3)*src(3);
+    Vector3d ptgt = -tgt.head(3)*tgt(3);
+
+    double d = (q*psrc - ptgt).dot(tgt.head(3));
+
+    Translation3d trans(-d*tgt.head(3));
+    return (trans*q).matrix();
+}
+
 Matrix4d alignPlaneToPlane(
         PointCloud<PointXYZ>::ConstPtr src,
         PointCloud<PointXYZ>::ConstPtr tgt,

@@ -7,6 +7,11 @@
 #include <vector>
 
 /**
+ * Calculates the transformation bringing plane src coplanar to plane tgt
+ */
+Eigen::Matrix4d overlapPlanes(Eigen::Vector4d src, Eigen::Vector4d tgt);
+
+/**
  * Calculates which planes in source map to which planes in tgt. Returns the
  * number of correspondences found
  */
