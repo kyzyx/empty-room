@@ -21,16 +21,6 @@ Matrix4d overlapPlanes(Vector4d src, Vector4d tgt) {
     return (trans*q).matrix();
 }
 
-Matrix4d alignPlaneToPlane(
-        PointCloud<PointXYZ>::ConstPtr src,
-        PointCloud<PointXYZ>::ConstPtr tgt,
-        vector<Vector4d>& srcplanes, vector<int>& srcids,
-        vector<Vector4d>& tgtplanes, vector<int>& tgtids,
-        vector<int>& planecorrespondences)
-{
-    return Matrix4d::Identity();
-}
-
 Matrix4d alignEdgeToEdge(
         PointCloud<PointXYZ>::ConstPtr src,
         PointCloud<PointXYZ>::ConstPtr tgt,

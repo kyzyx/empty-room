@@ -36,6 +36,15 @@ Eigen::Matrix4d align(
         std::vector<Eigen::Vector4d>& tgtplanes, std::vector<int>& tgtids);
 
 /**
+ * As align(...), but specifically forces the first planes in correspondence to be coplanar.
+ */
+Eigen::Matrix4d alignPlaneToPlane(
+        pcl::PointCloud<pcl::PointXYZ>::ConstPtr src,
+        pcl::PointCloud<pcl::PointXYZ>::ConstPtr tgt,
+        std::vector<Eigen::Vector4d>& srcplanes, std::vector<int>& srcids,
+        std::vector<Eigen::Vector4d>& tgtplanes, std::vector<int>& tgtids,
+        std::vector<int>& planecorrespondences);
+/**
  * Applies the transform to the plane in Ax + By + Cz + D = 0 form. Assumes the
  * normal (A,B,C) is normalized.
  */
