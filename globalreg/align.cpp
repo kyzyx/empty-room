@@ -29,9 +29,50 @@ int main(int argc, char** argv) {
     cout << "Done finding frame 1 planes" << endl;
     findPlanes(cloud2, tgtplanes, tgtids);
     cout << "Done finding planes" << endl;
+    vector<int> planecorrespondences;
+
+    int numcorrespondences = findPlaneCorrespondences(cloud1, cloud2, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences);
+    cout << numcorrespondences << endl;
 
     PointCloud<PointXYZRGB>::Ptr colored1(new PointCloud<PointXYZRGB>);
+    copyPointCloud(*cloud1, *colored1);
+    for (int i = 0; i < srcids.size(); ++i) {
+        if (srcids[i] == -1) {
+            colored1->at(i).r = 255;
+            colored1->at(i).g = 255;
+            colored1->at(i).b = 255;
+        } else {
+            colored1->at(i).r = 0;
+            colored1->at(i).g = 0;
+            colored1->at(i).b = 0;
+            if (planecorrespondences[srcids[i]] == -1) {
+                colored1->at(i).b = 255;
+                if ((srcids[i]+1)&1) colored1->at(i).r = 127;
+                if ((srcids[i]+1)&2) colored1->at(i).g = 127;
+            } else {
+                if ((planecorrespondences[srcids[i]]+1)&1) colored1->at(i).r = 255;
+                if ((planecorrespondences[srcids[i]]+1)&2) colored1->at(i).g = 255;
+                if ((planecorrespondences[srcids[i]]+1)&4) colored1->at(i).b = 255;
+            }
+        }
+    }
     PointCloud<PointXYZRGB>::Ptr colored2(new PointCloud<PointXYZRGB>);
+    copyPointCloud(*cloud2, *colored2);
+    for (int i = 0; i < tgtids.size(); ++i) {
+        if (tgtids[i] == -1) {
+            colored2->at(i).r = 127;
+            colored2->at(i).g = 127;
+            colored2->at(i).b = 127;
+        } else {
+            if ((tgtids[i]+1)&1) colored2->at(i).r = 127;
+            if ((tgtids[i]+1)&2) colored2->at(i).g = 127;
+            colored2->at(i).b = 0;
+        }
+    }
+    visualization::PointCloudColorHandlerRGBField<PointXYZRGB> rgb1(colored1);
+    visualization::PointCloudColorHandlerRGBField<PointXYZRGB> rgb2(colored2);
+    viewer.addPointCloud<PointXYZRGB>(colored1, rgb1, "Mesh1");
+    viewer.addPointCloud<PointXYZRGB>(colored2, rgb2, "Mesh2");
 
     while (!viewer.wasStopped()) {
         viewer.spinOnce(100);
