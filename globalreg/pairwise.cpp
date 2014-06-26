@@ -12,7 +12,7 @@ Matrix4d alignPlaneToPlane(
         PointCloud<PointXYZ>::Ptr tgt,
         vector<Vector4d>& srcplanes, vector<int>& srcids,
         vector<Vector4d>& tgtplanes, vector<int>& tgtids,
-        vector<int> planecorrespondences)
+        vector<int>& planecorrespondences)
 {
     return Matrix4d::Identity();
 }
@@ -22,7 +22,7 @@ Matrix4d alignEdgeToEdge(
         PointCloud<PointXYZ>::Ptr tgt,
         vector<Vector4d>& srcplanes, vector<int>& srcids,
         vector<Vector4d>& tgtplanes, vector<int>& tgtids,
-        vector<int> planecorrespondences)
+        vector<int>& planecorrespondences)
 {
     return Matrix4d::Identity();
 }
@@ -32,7 +32,7 @@ Matrix4d alignCornerToCorner(
         PointCloud<PointXYZ>::Ptr tgt,
         vector<Vector4d>& srcplanes, vector<int>& srcids,
         vector<Vector4d>& tgtplanes, vector<int>& tgtids,
-        vector<int> planecorrespondences)
+        vector<int>& planecorrespondences)
 {
     return Matrix4d::Identity();
 }
@@ -42,28 +42,19 @@ Matrix4d alignICP(
         PointCloud<PointXYZ>::Ptr tgt,
         vector<Vector4d>& srcplanes, vector<int>& srcids,
         vector<Vector4d>& tgtplanes, vector<int>& tgtids,
-        vector<int> planecorrespondences)
+        vector<int>& planecorrespondences)
 {
     return Matrix4d::Identity();
 }
 
-Matrix4d align(
+int findPlaneCorrespondences(
         PointCloud<PointXYZ>::Ptr src,
         PointCloud<PointXYZ>::Ptr tgt,
         vector<Vector4d>& srcplanes, vector<int>& srcids,
-        vector<Vector4d>& tgtplanes, vector<int>& tgtids)
+        vector<Vector4d>& tgtplanes, vector<int>& tgtids,
+        vector<int>& planecorrespondences)
 {
-    // Detect planes
-    if (tgtids.size() != tgt->size()) {
-        findPlanes(tgt, tgtplanes, tgtids);
-    }
-    if (srcids.size() != src->size()) {
-        findPlanes(src, srcplanes, srcids);
-    }
-
-    // Find plane correspondences
-    // TODO: What if multiple compatible planes?
-    vector<int> planecorrespondences(srcplanes.size(), -1);
+    planecorrespondences.resize(srcplanes.size(), -1);
     int numcorrespondences = 0;
     for (int i = 0; i < srcplanes.size(); ++i) {
         for (int j = 0; j < tgtplanes.size(); ++j) {
@@ -82,6 +73,27 @@ Matrix4d align(
         }
         if (planecorrespondences[i] != -1) numcorrespondences++;
     }
+    return numcorrespondences;
+}
+
+Matrix4d align(
+        PointCloud<PointXYZ>::Ptr src,
+        PointCloud<PointXYZ>::Ptr tgt,
+        vector<Vector4d>& srcplanes, vector<int>& srcids,
+        vector<Vector4d>& tgtplanes, vector<int>& tgtids)
+{
+    // Detect planes
+    if (tgtids.size() != tgt->size()) {
+        findPlanes(tgt, tgtplanes, tgtids);
+    }
+    if (srcids.size() != src->size()) {
+        findPlanes(src, srcplanes, srcids);
+    }
+
+    // Find plane correspondences
+    // TODO: What if multiple compatible planes?
+    vector<int> planecorrespondences;
+    int numcorrespondences = findPlaneCorrespondences(src, tgt, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences);
     // Call appropriate alignment function
     switch (numcorrespondences) {
         case 0:
