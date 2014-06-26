@@ -7,7 +7,7 @@ link_directories(${PCL_LIBRARY_DIRS} ../GAPS/R3Graphics/ ../GAPS/R3Shapes/
     ../GAPS/RNBasics/ ../GAPS/R2Shapes/
     ../GAPS/jpeg/)
 add_definitions(${PCL_DEFINITIONS})
-add_library(pairwise pairwise.cpp pairwise.h plane2plane.cpp findplanes.cpp
+add_library(pairwise pairwise.cpp pairwise.h plane2plane.h plane2plane.cpp findplanes.cpp
     findplanes.h)
 add_executable(globalreg globalreg.cpp)
 add_executable(planefinder planefinder.cpp)
