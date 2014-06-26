@@ -159,6 +159,87 @@ void findPlanesManhattan(
 {
 }
 
+void findPlanesGradient(
+        pcl::PointCloud<pcl::PointXYZ>::ConstPtr cloud,
+        std::vector<Eigen::Vector4d>& planes, std::vector<int>& ids)
+{
+    if (cloud->height == 1) {
+        cerr << "Error: findPlanesGradient expects a range image" << endl;
+        return;
+    }
+    // Calculate gradients
+    double** dx = new double*[cloud->height];
+    double** dy = new double*[cloud->height];
+    for (int i = 0; i < cloud->height; ++i) {
+        dx[i] = new double[cloud->width];
+        dy[i] = new double[cloud->width];
+
+        for (int j = 0; j < cloud->width; ++j) {
+            if (j < cloud->width-1) dx[i][j] = cloud->at(j+1,i).z - cloud->at(j,i).z;
+            if (i < cloud->height-1) dy[i][j] = cloud->at(j,i+1).z - cloud->at(j,i).z;
+        }
+    }
+    // BFS to find components in image
+    int n = 0;
+    vector<int> sizes;
+    PointRepresentation<PointXYZ> pr;
+    for (int i = 0; i < cloud->height-1; ++i) {
+        for (int j = 0; j < cloud->width-1; ++j) {
+            if (ids[i*cloud->width + j] >= 0) continue;
+            queue<int> nx; queue<int> ny;
+            nx.push(j); ny.push(i);
+            double adx = 0;
+            double ady = 0;
+            int cnt = 0;
+            while (!nx.empty()) {
+                int x = nx.top(); nx.pop();
+                int y = ny.top(); ny.pop();
+                if (!pr.isValid(cloud->at(x,y))) continue;
+                ids[y*cloud->width + x] = n;
+                adx = (adx*cnt + dx[x][y])/(cnt+1);
+                ady = (ady*cnt + dy[x][y])/(cnt+1);
+                ++cnt;
+                for (int xx = x-1; xx <= x+1; ++xx) {
+                    if (xx < 0 || xx >= cloud->width-1) continue;
+                    int t = xx?0:1;
+                    for (int yy = y-t; yy <= y+t; ++yy) {
+                        if (yy < 0 || yy >= cloud->height-1) continue;
+                        if (t) { // Check y gradients
+                            if (abs(dy[xx][yy] - ady) > DGRAD) continue;
+                        } else { // Check x gradients
+                            if (!yy) continue;
+                            if (abs(dx[xx][yy] - adx) > DGRAD) continue;
+                        }
+                        nx.push(xx); ny.push(yy);
+                    }
+                }
+            }
+            if (cnt) {
+                size.push_back(cnt);
+                n++;
+            }
+        }
+    }
+
+    // Global consistency
+    for (int i = 0; i < n; ++i) {
+
+    }
+
+    // Filter out small components
+    int nremoved = 0;
+    for (int i = 0; i < n; ++i) {
+        if (sizes[i+nremoved]/(double) cloud->size() < MININLIERPROPORTION) {
+            nremoved++;
+            for (int j = 0; j < ids.size(); ++j) {
+                if (ids[j] == i) ids[j] = -1;
+                else if (ids[j] > i) ids[j]--;
+            }
+            --i;
+        }
+    }
+}
+
 void findPlanes(
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr cloud,
         std::vector<Eigen::Vector4d>& planes, std::vector<int>& ids)
