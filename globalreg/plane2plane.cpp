@@ -81,6 +81,74 @@ void computeCorrespondences(
     }
 }
 
+Matrix4d computeOptimalRigidXYTransform(vector<PointXYZ>& src, vector<PointXYZ>& tgt)
+{
+    // Compute centroids
+    Vector2d cs(0,0);
+    Vector2d ct(0,0);
+    for (int i = 0; i < src.size(); ++i) {
+        cs += Vector2d(src[i].x, src[i].y);
+        ct += Vector2d(tgt[i].x, tgt[i].y);
+    }
+    cs *= 1./src.size();
+    ct *= 1./src.size();
+
+    // Compute centered matrices
+    MatrixXd ms,mt;
+    ms.resize(2,src.size());
+    mt.resize(2,src.size());
+    for (int i = 0; i < src.size(); ++i) {
+        ms(0,i) = src[i].x - cs(0);
+        ms(1,i) = src[i].y - cs(1);
+        mt(0,i) = tgt[i].x - ct(0);
+        mt(1,i) = tgt[i].y - ct(1);
+    }
+
+    MatrixXd S = ms*mt.transpose();
+    // Get SVD of covariance matrix to solve for rotation
+    JacobiSVD<MatrixXd> svd(S, ComputeFullU | ComputeFullV);
+    Matrix2d rot = svd.matrixV()*svd.matrixU().transpose();
+    if (rot.determinant() < 0) {
+        rot(0,1) *= -1;
+        rot(1,1) *= -1;
+    }
+
+    // Compute translation
+    Vector2d trans = ct - rot*cs;
+
+    // Convert back to 3d
+    Matrix4d ret;
+    ret.setIdentity();
+    ret.topLeftCorner(2,2) = rot;
+    ret.topRightCorner(2,1) = trans;
+    return ret;
+}
+
+void filterCorrespondences(
+        PointCloud<PointXYZ>::ConstPtr src,
+        vector<PointXYZ>& corrs,
+        vector<PointXYZ>& ptsrc,
+        vector<PointXYZ>& pttgt,
+        int targetnumber=0)
+{
+    double outlierprop = 0.01;   // Throw away this proportion of the furthest correspondences
+    vector<pair<double, int> > dists;
+    for (int i = 0; i < src->size(); ++i) {
+        if (pr.isValid(corrs[i])) {
+            dists.push_back(make_pair(dist2(src->at(i),corrs[i]),i));
+        }
+    }
+    sort(dists.begin(), dists.end());
+    int sz = dists.size()*(1-outlierprop);
+    if (!targetnumber) targetnumber = sz;
+    int inc = sz/targetnumber;
+    if (!inc) inc = 1;
+    for (int i = 0; i < sz; i += inc) {
+        ptsrc.push_back(src->at(dists[i].second));
+        pttgt.push_back(corrs[dists[i].second]);
+    }
+}
+
 Matrix4d alignPlaneToPlane(
         PointCloud<PointXYZ>::ConstPtr src,
         PointCloud<PointXYZ>::ConstPtr tgt,
@@ -110,10 +178,18 @@ Matrix4d alignPlaneToPlane(
     // Construct layered kdtrees for all non-plane points in tgt
     LayeredKdTrees lkdt(ttgt, 0.01);
 
-    // FIXME: Find correspondences
-    // TODO: Consider outlier rejection
-    // FIXME: Construct LSQ matrix for minimization and transform
-    // Iterate
+    // Compute correspondences
+    vector<PointXYZ> ptsrc;
+    vector<PointXYZ> pttgt;
+    vector<PointXYZ> corrs;
+    computeCorrespondences(tsrc, lkdt, corrs);
+    filterCorrespondences(tsrc, corrs, ptsrc, pttgt);
+
+    // Compute rigid transform
+    Matrix4d opt = computeOptimalRigidXYTransform(ptsrc, pttgt);
+    transform = opt*transform;
+
+    // FIXME: Iterate
     transform = coordtransform.inverse()*transform;
     return transform;
 }
@@ -149,21 +225,19 @@ Matrix4d partialAlignPlaneToPlane(
     // Construct layered kdtrees for all non-plane points in tgt
     LayeredKdTrees lkdt(ttgt, 0.01);
 
-    vector<PointXYZ> ptcorrs;
-    computeCorrespondences(tsrc, lkdt, ptcorrs);
-    for (int i = 0; i < tsrc->size(); i += 1+tsrc->size()/ncorrs) {
-        while (i < tsrc->size() && !pr.isValid(ptcorrs[i])) ++i;
-        if (i == tsrc->size()) break;
-        Vector4d pt(tsrc->at(i).x, tsrc->at(i).y, tsrc->at(i).z, 1);
-        Vector4d corr(ptcorrs[i].x, ptcorrs[i].y, ptcorrs[i].z, 1);
+    vector<PointXYZ> ptsrc;
+    vector<PointXYZ> pttgt;
+    vector<PointXYZ> corrs;
+    computeCorrespondences(tsrc, lkdt, corrs);
+    filterCorrespondences(tsrc, corrs, ptsrc, pttgt, ncorrs);
+    for (int i = 0; i < ptsrc.size(); ++i) {
+        Vector4d pt(ptsrc[i].x, ptsrc[i].y, ptsrc[i].z, 1);
+        Vector4d corr(pttgt[i].x, pttgt[i].y, pttgt[i].z, 1);
         pt = coordtransform.inverse()*pt;
         corr = coordtransform.inverse()*corr;
         pointcorrespondences.push_back(PointXYZ(pt(0), pt(1), pt(2)));
         pointcorrespondences.push_back(PointXYZ(corr(0), corr(1), corr(2)));
     }
-    // TODO: Consider outlier rejection
-    // FIXME: Construct LSQ matrix for minimization and transform
-    // Iterate
     transform = coordtransform.inverse()*transform;
     return transform;
 }

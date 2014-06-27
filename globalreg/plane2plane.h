@@ -104,6 +104,10 @@ void computeCorrespondences(
         LayeredKdTrees& tree,
         std::vector<pcl::PointXYZ>& correspondences);
 
+Eigen::Matrix4d computeOptimalRigidXYTransform(
+        std::vector<pcl::PointXYZ>& src,
+        std::vector<pcl::PointXYZ>& tgt);
+
 Eigen::Matrix4d partialAlignPlaneToPlane(
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr src,
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr tgt,
@@ -112,4 +116,5 @@ Eigen::Matrix4d partialAlignPlaneToPlane(
         std::vector<int>& planecorrespondences,
         std::vector<pcl::PointXYZ>& pointcorrespondences,
         int ncorrs);
+
 #endif
