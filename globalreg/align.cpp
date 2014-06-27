@@ -232,6 +232,16 @@ void kbd_cb(const visualization::KeyboardEvent& event, void*) {
                 }
                 ++step;
             } else if (step == 1) {
+                vector<int> planecorrespondences;
+                findPlaneCorrespondences(cloud1, cloud2, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences);
+                vector<PointXYZ> pointcorrespondences;
+                partialAlignPlaneToPlane(cloud1, cloud2, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences, pointcorrespondences, 100);
+                char linename[30];
+                for (int i = 0; i < pointcorrespondences.size(); i+=2) {
+                    sprintf(linename, "line%03d", i/2);
+                    cout << pointcorrespondences[i] << " corresponding to " << pointcorrespondences[i+1] << endl;
+                    viewer->addLine(pointcorrespondences[i], pointcorrespondences[i+1],linename);
+                }
                 cout << "Computed correspondences" << endl;
                 ++step;
             }
