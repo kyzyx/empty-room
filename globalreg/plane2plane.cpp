@@ -23,7 +23,7 @@ void filterLabelled(PointCloud<PointXYZ>::Ptr cloud, vector<int>& labels, int la
     removeNaNFromPointCloud(*cloud, *cloud, tmp);
 }
 
-DefaultPointRepresentation<PointXYZ> pr;
+static DefaultPointRepresentation<PointXYZ> pr;
 inline double dist2(PointXYZ a, PointXYZ b) {
     if (!pr.isValid(a) || !pr.isValid(b)) return numeric_limits<double>::infinity();
     return (Vector3f(a.x,a.y,a.z)-Vector3f(b.x,b.y,b.z)).squaredNorm();
@@ -63,14 +63,13 @@ void markDepthDiscontinuities(
     }
     for (int i = radius; i < cloud->height-radius; ++i) {
         for (int j = radius; j < cloud->width-radius; ++j) {
-            if (dist2(cloud->at(j,i), cloud->at(j+1,i)) > threshold*threshold) {
-                for (int k = -radius; k < radius; ++k) {
-                    labels[i*cloud->width+j+k+1] = label;
-                }
-            }
-            if (dist2(cloud->at(j,i), cloud->at(j,i+1)) > threshold*threshold) {
-                for (int k = -radius; k < radius; ++k) {
-                    labels[(i+k+1)*cloud->width+j] = label;
+            if (dist2(cloud->at(j,i), cloud->at(j+1,i)) > threshold*threshold ||
+                dist2(cloud->at(j,i), cloud->at(j,i+1)) > threshold*threshold)
+            {
+                for (int x = -radius; x < radius; ++x) {
+                    for (int y = -radius; y < radius; ++y) {
+                        labels[(i+y+1)*cloud->width+j+x+1] = label;
+                    }
                 }
             }
         }
@@ -89,7 +88,7 @@ void preprocessCloud(
     // Remove boundary points and wall points
     vector<int> prune(ids);
     if (removedepthdiscontinuities) {
-        markDepthDiscontinuities(outputcloud, 0.1, prune, id, 4);
+        markDepthDiscontinuities(outputcloud, 0.1, prune, id, 2);
     }
     filterLabelled(outputcloud, prune, id);
 }
@@ -100,7 +99,7 @@ void computeCorrespondences(
         vector<PointXYZ>& correspondences)
 {
     for (int i = 0; i < cloud->size(); ++i) {
-        correspondences.push_back(tree.nearest(cloud->at(i),2.0));
+        correspondences.push_back(tree.nearest(cloud->at(i),0.1));
     }
 }
 
@@ -209,7 +208,7 @@ Matrix4d alignPlaneToPlane(
 
     // Filter clouds
     preprocessCloud(tgt, ttgt, coordtransform, tgtids, tgtid, false);
-    preprocessCloud(tsrc, tsrc, coordtransform, srcids, srcid);
+    preprocessCloud(tsrc, tsrc, coordtransform, srcids, srcid, false);
 
     // Construct layered kdtrees for all non-plane points in tgt
     LayeredKdTrees lkdt(ttgt, 0.01);

@@ -75,8 +75,7 @@ int findPlaneCorrespondences(
     int numcorrespondences = 0;
     for (int i = 0; i < srcplanes.size(); ++i) {
         for (int j = 0; j < tgtplanes.size(); ++j) {
-            double cosa = 0;
-            for (int k = 0; k < 3; ++k) cosa += srcplanes[i](k)*tgtplanes[j](k);
+            double cosa = srcplanes[i].head(3).dot(tgtplanes[j].head(3));
             if (cosa > ANGLETHRESHOLD) {
                 if (planecorrespondences[i] != -1) {
                     cerr << "WARNING: Multiple correspondences possible!" << endl;
