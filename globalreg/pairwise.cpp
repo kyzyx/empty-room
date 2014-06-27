@@ -1,5 +1,7 @@
 #include "pairwise.h"
 #include "findplanes.h"
+#include <pcl/registration/icp.h>
+#include <pcl/filters/filter.h>
 
 using namespace pcl;
 using namespace Eigen;
@@ -48,7 +50,18 @@ Matrix4d alignICP(
         vector<Vector4d>& tgtplanes, vector<int>& tgtids,
         vector<int>& planecorrespondences)
 {
-    return Matrix4d::Identity();
+    PointCloud<PointXYZ>::Ptr s(new PointCloud<PointXYZ>);
+    PointCloud<PointXYZ>::Ptr t(new PointCloud<PointXYZ>);
+    vector<int> tmp;
+    removeNaNFromPointCloud(*src, *s, tmp);
+    removeNaNFromPointCloud(*tgt, *t, tmp);
+
+    IterativeClosestPoint<PointXYZ, PointXYZ> icp;
+    icp.setInputSource(s);
+    icp.setInputTarget(t);
+    icp.setMaximumIterations(1);
+    icp.align(*s);
+    return icp.getFinalTransformation().cast<double>();
 }
 
 int findPlaneCorrespondences(
