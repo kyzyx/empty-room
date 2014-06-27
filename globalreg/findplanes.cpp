@@ -10,14 +10,18 @@
 #include <pcl/segmentation/sac_segmentation.h>
 
 const double ANGLETHRESHOLD = M_PI/9;
+const double DISTTHRESHOLD = 0.03;
 const double NOISETHRESHOLD = 0.01;
-const double MININLIERPROPORTION = 0.07;
+const double MININLIERPROPORTION = 0.05;
 const double MAXEDGEPROPORTION = 0.04;
 
 using namespace std;
 using namespace Eigen;
 using namespace pcl;
 
+inline bool onPlane(Vector4d plane, PointXYZ p) {
+    return abs(p.x*plane(0) + p.y*plane(1) + p.z*plane(2) + plane(3)) < NOISETHRESHOLD;
+}
 double calculateEdgeProportion(pcl::PointCloud<pcl::PointXYZ>::ConstPtr cloud, vector<int> indices)
 {
     vector<uint8_t> labels(cloud->size(), -1);
@@ -96,7 +100,7 @@ void findPlanesRANSAC(
     }
 }
 
-void findPlanesWithNormals(
+void findPlanesRANSACWithNormals(
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr cloud,
         std::vector<Eigen::Vector4d>& planes, std::vector<int>& ids)
 {
@@ -153,6 +157,130 @@ void findPlanesWithNormals(
     }
 }
 
+inline Vector3d getNormal(PointNormal p) {
+    return Vector3d(p.normal_x, p.normal_y, p.normal_z);
+}
+
+static DefaultPointRepresentation<PointXYZ> pr;
+inline double dist2(PointXYZ a, PointXYZ b) {
+    if (!pr.isValid(a) || !pr.isValid(b)) return numeric_limits<double>::infinity();
+    return (Vector3f(a.x,a.y,a.z)-Vector3f(b.x,b.y,b.z)).squaredNorm();
+}
+
+void findPlanesWithNormals(
+        pcl::PointCloud<pcl::PointXYZ>::ConstPtr cloud,
+        std::vector<Eigen::Vector4d>& planes, std::vector<int>& ids)
+{
+    if (cloud->height == 1) {
+        cerr << "Error: findPlanesWithNormals expects a range image" << endl;
+        return;
+    }
+    PointCloud<PointNormal>::Ptr filtered(new PointCloud<PointNormal>);
+    copyPointCloud(*cloud, *filtered);
+    IntegralImageNormalEstimation<PointXYZ, PointNormal> ne;
+    ne.setNormalEstimationMethod (ne.AVERAGE_3D_GRADIENT);
+    ne.setMaxDepthChangeFactor(0.05f);
+    ne.setNormalSmoothingSize(10.0f);
+    ne.setInputCloud(cloud);
+    ne.compute(*filtered);
+
+    // BFS to find components in image
+    int n = 0;
+    vector<Vector4d> candidates;
+    vector<int> candidateids;
+    vector<int> visited(ids);
+    vector<pair<int,int> > sizes;
+    for (int i = 0; i < cloud->height-1; ++i) {
+        for (int j = 0; j < cloud->width-1; ++j) {
+            if (visited[i*cloud->width + j] >= 0) continue;
+            queue<int> nx; queue<int> ny;
+            nx.push(j); ny.push(i);
+            Vector3d avgv(0,0,0);
+            int cnt = 0;
+            while (!nx.empty()) {
+                int x = nx.front(); nx.pop();
+                int y = ny.front(); ny.pop();
+                if (!pr.isValid(cloud->at(x,y)) || isnan(filtered->at(x,y).normal_x)) continue;
+                visited[y*cloud->width + x] = n;
+                avgv = (avgv*cnt + getNormal(filtered->at(x,y)))/(cnt+1);
+                ++cnt;
+                for (int xx = x-1; xx <= x+1; ++xx) {
+                    if (xx < 0 || xx >= cloud->width-1) continue;
+                    int t = xx==x?1:0;
+                    for (int yy = y-t; yy <= y+t; ++yy) {
+                        if (yy < 0 || yy >= cloud->height-1) continue;
+                        if (visited[yy*cloud->width+xx] != -1) continue;
+                        // Normal matching check
+                        if (getNormal(filtered->at(xx,yy)).dot(avgv) > cos(ANGLETHRESHOLD)) {
+                            // Close together check
+                            // if (dist2(cloud->at(x,y), cloud->at(xx,yy)) < DISTTHRESHOLD)
+                            // Coplanar check
+                            Vector3d v(
+                                    cloud->at(x,y).x - cloud->at(xx,yy).x,
+                                    cloud->at(x,y).y - cloud->at(xx,yy).y,
+                                    cloud->at(x,y).z - cloud->at(xx,yy).z);
+                            v /= v.norm();
+                            if (v.dot(avgv) < sin(ANGLETHRESHOLD)) {
+                                nx.push(xx); ny.push(yy);
+                                visited[yy*cloud->width+xx] = -2;
+                            }
+                        }
+                    }
+                }
+            }
+            //if (cnt/(double) cloud->size() > MININLIERPROPORTION)
+            if (cnt > 10000) {
+                candidates.push_back(Vector4d(avgv(0), avgv(1), avgv(2), 0));
+                candidateids.push_back(n);
+                sizes.push_back(make_pair(cnt, sizes.size()));
+            }
+            n++;
+        }
+    }
+
+    for (int i = 0; i < cloud->size(); ++i) {
+        for (int j = 0; j < candidates.size(); ++j) {
+            if (visited[i] == candidateids[j]) {
+                candidates[j](3) -= candidates[j](0)*cloud->at(i).x
+                              + candidates[j](1)*cloud->at(i).y
+                              + candidates[j](2)*cloud->at(i).z;
+            }
+        }
+    }
+    for (int i = 0; i < candidates.size(); ++i) {
+        candidates[i](3) /= sizes[i].first;
+    }
+    sort(sizes.begin(), sizes.end(), greater<pair<int, int> >());
+    vector<int> tmpids(candidateids);
+    for (int i = 0; i < sizes.size(); ++i) {
+        planes.push_back(candidates[sizes[i].second]);
+        candidateids[i] = tmpids[sizes[i].second];
+    }
+
+    for (int i = 0; i < cloud->size(); ++i) {
+        for (int j = 0; j < planes.size(); ++j) {
+            if (visited[i] == candidateids[j]) {
+                ids[i] = j;
+                break;
+            }
+        }
+        if (ids[i] == -1) {
+            for (int j = 0; j < planes.size(); ++j) {
+                if (!pr.isValid(cloud->at(i)) || !onPlane(planes[j], cloud->at(i))) continue;
+                if (pr.isValid(cloud->at(i)) && isnan(filtered->at(i).normal_x)) {
+                    // If null normal, it's good enough to just be on the plane
+                    ids[i] = j;
+                } else {
+                    Vector3d norm = planes[j].head(3);
+                    if (getNormal(filtered->at(i)).dot(norm) > cos(2*ANGLETHRESHOLD)) {
+                        ids[i] = j;
+                    }
+                }
+            }
+        }
+    }
+}
+
 void findPlanesManhattan(
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr cloud,
         std::vector<Eigen::Vector4d>& planes, std::vector<int>& ids)
@@ -182,8 +310,8 @@ void findPlanesGradient(
     // BFS to find components in image
     int n = 0;
     vector<int> sizes;
-    PointRepresentation<PointXYZ> pr;
-    for (int i = 0; i < cloud->height-1; ++i) {
+    DefaultPointRepresentation<PointXYZ> pr;
+    /*for (int i = 0; i < cloud->height-1; ++i) {
         for (int j = 0; j < cloud->width-1; ++j) {
             if (ids[i*cloud->width + j] >= 0) continue;
             queue<int> nx; queue<int> ny;
@@ -215,11 +343,11 @@ void findPlanesGradient(
                 }
             }
             if (cnt) {
-                size.push_back(cnt);
+                sizes.push_back(cnt);
                 n++;
             }
         }
-    }
+    }*/
 
     // Global consistency
     for (int i = 0; i < n; ++i) {
@@ -246,5 +374,5 @@ void findPlanes(
 {
     ids.resize(cloud->size());
     for (int i = 0; i < ids.size(); ++i) ids[i] = -1;
-    return findPlanesRANSAC(cloud, planes, ids);
+    return findPlanesWithNormals(cloud, planes, ids);
 }
