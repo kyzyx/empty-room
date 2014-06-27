@@ -148,8 +148,8 @@ void colorUnfilteredPoints() {
     vector<int> prunesrc(srcids);
     vector<int> prunetgt(tgtids);
     int MAGIC = 42;
-    markDepthDiscontinuities(cloud1, 0.1, prunesrc, MAGIC);
-    markDepthDiscontinuities(cloud2, 0.1, prunetgt, MAGIC);
+    markDepthDiscontinuities(cloud1, 0.1, prunesrc, MAGIC, 8);
+    //markDepthDiscontinuities(cloud2, 0.1, prunetgt, MAGIC);
     for (int i = 0; i < cloud1->size(); ++i) {
         if (prunesrc[i] == srcid) {
             colored1->at(i).r = 0;
@@ -175,9 +175,9 @@ void colorUnfilteredPoints() {
             colored2->at(i).g = 0;
             colored2->at(i).b = 0;
         } else {
-            colored2->at(i).r = 255;
-            colored2->at(i).g = 255;
-            colored2->at(i).b = 255;
+            colored2->at(i).r = 127;
+            colored2->at(i).g = 127;
+            colored2->at(i).b = 127;
         }
     }
 }
@@ -243,7 +243,9 @@ void kbd_cb(const visualization::KeyboardEvent& event, void*) {
                 findPlaneCorrespondences(aligned, cloud2, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences);
                 updateColormode();
                 pointcorrespondences.clear();
-                partialAlignPlaneToPlane(aligned, cloud2, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences, pointcorrespondences, 400);
+                double pprop = 3 - (step+1)*0.05;
+                if (pprop < 0.5) pprop = 0.5;
+                partialAlignPlaneToPlane(aligned, cloud2, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences, pointcorrespondences, 2000, pprop);
                 char linename[30];
                 for (int i = 0; i < pointcorrespondences.size(); i+=2) {
                     sprintf(linename, "line%03d", i/2);
@@ -260,7 +262,11 @@ void kbd_cb(const visualization::KeyboardEvent& event, void*) {
 
                 vector<int> planecorrespondences;
                 findPlaneCorrespondences(aligned, cloud2, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences);
-                Matrix4d t = alignPlaneToPlane(aligned, cloud2, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences);
+                double pprop = 3 - step*0.05;
+                if (pprop < 0.5) pprop = 0.5;
+                pointcorrespondences.clear();
+                Matrix4d t = partialAlignPlaneToPlane(aligned, cloud2, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences, pointcorrespondences, 6000, pprop);
+                pointcorrespondences.clear();
                 copyPointCloud(*colored1, *prevcolored);
                 viewer->updatePointCloud<PointXYZRGB>(prevcolored, prevrgb, "prev");
                 viewer->setPointCloudRenderingProperties(visualization::PCL_VISUALIZER_OPACITY, 0, "prev");
@@ -268,8 +274,9 @@ void kbd_cb(const visualization::KeyboardEvent& event, void*) {
                 copyPointCloud(*aligned, *colored1);
                 viewer->updatePointCloud<PointXYZRGB>(colored1, rgb1, "Mesh1");
                 cout << "Computed best transform" << endl;
-                srcplanes.clear(); srcids.clear();
-                findPlanes(aligned, srcplanes, srcids);
+                for (int i = 0; i < srcplanes.size(); ++i) {
+                    srcplanes[i] = transformPlane(srcplanes[i], t);
+                }
                 ++step;
             }
         }

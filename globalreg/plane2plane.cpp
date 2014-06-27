@@ -28,29 +28,50 @@ inline double dist2(PointXYZ a, PointXYZ b) {
     if (!pr.isValid(a) || !pr.isValid(b)) return numeric_limits<double>::infinity();
     return (Vector3f(a.x,a.y,a.z)-Vector3f(b.x,b.y,b.z)).squaredNorm();
 }
+PointXYZ LayeredKdTrees::nearest(PointXYZ p, double radius=0.1)
+{
+    std::vector<Tree*>& trees = p.z>0?postrees:negtrees;
+    int ind = abs(p.z/thickness);
+    if (ind >= trees.size()) return NaNPt;
+    pcl::PointXYZ p1 = nearestInTree(trees, ind, p, radius);
+    if (abs(p.z/thickness) - ind < 0.5) --ind;
+    else ++ind;
+    if (ind >= 0 && ind < trees.size()) {
+        pcl::PointXYZ p2 = nearestInTree(trees, ind, p, radius);
+        return dist2(p,p1)<dist2(p,p2)?p1:p2;
+    }
+    return p1;
+}
+
 void markDepthDiscontinuities(
         PointCloud<PointXYZ>::ConstPtr cloud,
         double threshold,
         vector<int>& labels,
-        int label=1)
+        int label, int radius)
 {
     for (int i = 0; i < cloud->height; ++i) {
-        labels[i*cloud->width] = label;
-        labels[(i+1)*cloud->width - 1] = label;
+        for (int j = 0; j < radius; ++j) {
+            labels[i*cloud->width+j] = label;
+            labels[(i+1)*cloud->width - 1 - j] = label;
+        }
     }
-    for (int i = 0; i < cloud->width; ++i) {
-        labels[i] = label;
-        labels[(cloud->height-1)*cloud->width+i] = label;
+    for (int j = 0; j < radius; ++j) {
+        for (int i = 0; i < cloud->width; ++i) {
+            labels[i + j*cloud->width] = label;
+            labels[(cloud->height-1-j)*cloud->width+i] = label;
+        }
     }
-    for (int i = 1; i < cloud->height-1; ++i) {
-        for (int j = 1; j < cloud->width-1; ++j) {
+    for (int i = radius; i < cloud->height-radius; ++i) {
+        for (int j = radius; j < cloud->width-radius; ++j) {
             if (dist2(cloud->at(j,i), cloud->at(j+1,i)) > threshold*threshold) {
-                labels[i*cloud->width+j] = label;
-                labels[i*cloud->width+j+1] = label;
+                for (int k = -radius; k < radius; ++k) {
+                    labels[i*cloud->width+j+k+1] = label;
+                }
             }
             if (dist2(cloud->at(j,i), cloud->at(j,i+1)) > threshold*threshold) {
-                labels[i*cloud->width+j] = label;
-                labels[(i+1)*cloud->width+j] = label;
+                for (int k = -radius; k < radius; ++k) {
+                    labels[(i+k+1)*cloud->width+j] = label;
+                }
             }
         }
     }
@@ -61,13 +82,15 @@ void preprocessCloud(
         PointCloud<PointXYZ>::Ptr outputcloud,
         Matrix4d transform,
         vector<int>& ids,
-        int id)
+        int id, bool removedepthdiscontinuities=true)
 {
     transformPointCloud(*inputcloud, *outputcloud, transform);
 
     // Remove boundary points and wall points
     vector<int> prune(ids);
-    markDepthDiscontinuities(outputcloud, 0.1, prune, id);
+    if (removedepthdiscontinuities) {
+        markDepthDiscontinuities(outputcloud, 0.1, prune, id, 4);
+    }
     filterLabelled(outputcloud, prune, id);
 }
 
@@ -129,17 +152,30 @@ void filterCorrespondences(
         vector<PointXYZ>& corrs,
         vector<PointXYZ>& ptsrc,
         vector<PointXYZ>& pttgt,
-        int targetnumber=0)
+        int targetnumber=0,
+        double stddevthreshold=3)
 {
-    double outlierprop = 0.01;   // Throw away this proportion of the furthest correspondences
+    //double outlierprop = 0.05;   // Throw away this proportion of the furthest correspondences
     vector<pair<double, int> > dists;
+    double meandist = 0;
     for (int i = 0; i < src->size(); ++i) {
         if (pr.isValid(corrs[i])) {
-            dists.push_back(make_pair(dist2(src->at(i),corrs[i]),i));
+            double d = dist2(src->at(i),corrs[i]);
+            dists.push_back(make_pair(d,i));
+            meandist += d;
         }
     }
+    meandist /= dists.size();
+    double stdist = 0;
+    for (int i = 0; i < dists.size(); ++i) {
+        stdist += (dists[i].first-meandist)*(dists[i].first - meandist);
+    }
+    stdist /= dists.size();
+    stdist = sqrt(stdist);
+
     sort(dists.begin(), dists.end());
-    int sz = dists.size()*(1-outlierprop);
+    //int sz = dists.size()*(1-outlierprop);
+    int sz = lower_bound(dists.begin(), dists.end(), make_pair(meandist + stddevthreshold*stdist,0)) - dists.begin();
     if (!targetnumber) targetnumber = sz;
     int inc = sz/targetnumber;
     if (!inc) inc = 1;
@@ -172,7 +208,7 @@ Matrix4d alignPlaneToPlane(
     transform = coordtransform*transform;
 
     // Filter clouds
-    preprocessCloud(tgt, ttgt, coordtransform, tgtids, tgtid);
+    preprocessCloud(tgt, ttgt, coordtransform, tgtids, tgtid, false);
     preprocessCloud(tsrc, tsrc, coordtransform, srcids, srcid);
 
     // Construct layered kdtrees for all non-plane points in tgt
@@ -201,7 +237,7 @@ Matrix4d partialAlignPlaneToPlane(
         vector<Vector4d>& tgtplanes, vector<int>& tgtids,
         vector<int>& planecorrespondences,
         vector<PointXYZ>& pointcorrespondences,
-        int ncorrs)
+        int ncorrs, double t)
 {
     // Put planes into correspondence
     int srcid;
@@ -229,7 +265,7 @@ Matrix4d partialAlignPlaneToPlane(
     vector<PointXYZ> pttgt;
     vector<PointXYZ> corrs;
     computeCorrespondences(tsrc, lkdt, corrs);
-    filterCorrespondences(tsrc, corrs, ptsrc, pttgt, ncorrs);
+    filterCorrespondences(tsrc, corrs, ptsrc, pttgt, ncorrs, t);
     for (int i = 0; i < ptsrc.size(); ++i) {
         Vector4d pt(ptsrc[i].x, ptsrc[i].y, ptsrc[i].z, 1);
         Vector4d corr(pttgt[i].x, pttgt[i].y, pttgt[i].z, 1);
@@ -238,6 +274,10 @@ Matrix4d partialAlignPlaneToPlane(
         pointcorrespondences.push_back(PointXYZ(pt(0), pt(1), pt(2)));
         pointcorrespondences.push_back(PointXYZ(corr(0), corr(1), corr(2)));
     }
+
+    Matrix4d opt = computeOptimalRigidXYTransform(ptsrc, pttgt);
+    transform = opt*transform;
+
     transform = coordtransform.inverse()*transform;
     return transform;
 }

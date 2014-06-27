@@ -55,22 +55,10 @@ class LayeredKdTrees {
         }
         ~LayeredKdTrees() { if (data) delete [] data; }
 
-        pcl::PointXYZ nearest(pcl::PointXYZ p, double radius=0.1) {
-            std::vector<Tree*>& trees = p.z>0?postrees:negtrees;
-            int ind = abs(p.z/thickness);
-            if (ind >= trees.size() || trees[ind]->size() == 0) return NaNPt;
-            pcl::PointXYZ p1 = nearestInTree(trees, ind, p, radius);
-            /*if (abs(p.z/thickness) - ind < 0.5) --ind;
-            else ++ind;
-            if (ind >= 0 && ind < trees.size()) {
-                PointXYZ p2 = nearestInTree(trees, ind, p, radius);
-                return dist2(p,p1)<dist2(p,p2)?p1:p2;
-            }*/
-            return p1;
-        }
-
+        pcl::PointXYZ nearest(pcl::PointXYZ p, double radius);
     private:
         pcl::PointXYZ nearestInTree(std::vector<Tree*>& trees, int ind, pcl::PointXYZ p, double radius) {
+            if (trees[ind]->size() == 0) return NaNPt;
             double query[2];
             query[0] = p.x; query[1] = p.y;
             FMat m(query, 1, 2);
@@ -79,7 +67,6 @@ class LayeredKdTrees {
             flann::SearchParams params(-1);
             params.max_neighbors = 1;
             int n = trees[ind]->radiusSearch(m, indices, dists, radius, params);
-            // FIXME: Search both neighboring slices, not just one
             if (n) {
                 return pcl::PointXYZ(trees[ind]->getPoint(indices[0][0])[0], trees[ind]->getPoint(indices[0][0])[1], p.z);
             }
@@ -97,7 +84,7 @@ void markDepthDiscontinuities(
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr cloud,
         double threshold,
         std::vector<int>& labels,
-        int label);
+        int label=1, int radius=4);
 
 void computeCorrespondences(
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr cloud,
@@ -115,6 +102,6 @@ Eigen::Matrix4d partialAlignPlaneToPlane(
         std::vector<Eigen::Vector4d>& tgtplanes, std::vector<int>& tgtids,
         std::vector<int>& planecorrespondences,
         std::vector<pcl::PointXYZ>& pointcorrespondences,
-        int ncorrs);
+        int ncorrs, double t);
 
 #endif
