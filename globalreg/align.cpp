@@ -182,24 +182,30 @@ void colorUnfilteredPoints() {
     }
 }
 
+void updateColormode() {
+    if (colormode == 0) {           // Planes only
+        cout << "Coloring detected planes" << endl;
+        colorPlanes();
+    } else if (colormode == 1) {    // Plane Correspondences
+        cout << "Coloring detected plane correspondences" << endl;
+        colorPlaneCorrespondences();
+    } else if (colormode == 2) {    // Show points to align
+        cout << "Coloring relevant points for constrained ICP" << endl;
+        colorUnfilteredPoints();
+    } else if (colormode == 3) {
+    }
+    viewer->updatePointCloud<PointXYZRGB>(colored1, rgb1, "Mesh1");
+    viewer->updatePointCloud<PointXYZRGB>(colored2, rgb2, "Mesh2");
+}
+
+vector<PointXYZ> pointcorrespondences;
 void kbd_cb(const visualization::KeyboardEvent& event, void*) {
     static int step = 0;
+    static PointCloud<PointXYZ>::Ptr aligned(new PointCloud<PointXYZ>);
     if (event.keyDown()) {
         if (event.getKeyCode() == ' ') {
             colormode = (colormode+1)%4;
-            if (colormode == 0) {           // Planes only
-                cout << "Coloring detected planes" << endl;
-                colorPlanes();
-            } else if (colormode == 1) {    // Plane Correspondences
-                cout << "Coloring detected plane correspondences" << endl;
-                colorPlaneCorrespondences();
-            } else if (colormode == 2) {    // Show points to align
-                cout << "Coloring relevant points for constrained ICP" << endl;
-                colorUnfilteredPoints();
-            } else if (colormode == 3) {
-            }
-            viewer->updatePointCloud<PointXYZRGB>(colored1, rgb1, "Mesh1");
-            viewer->updatePointCloud<PointXYZRGB>(colored2, rgb2, "Mesh2");
+            updateColormode();
         } else if (event.getKeyCode() == ',') {
             static bool view1 = true;
             view1 = !view1;
@@ -227,22 +233,43 @@ void kbd_cb(const visualization::KeyboardEvent& event, void*) {
                         transformPointCloud(*colored1, *colored1, t);
                         viewer->updatePointCloud<PointXYZRGB>(colored1, rgb1, "Mesh1");
                         cout << "Moved clouds to overlap planes" << endl;
+                        copyPointCloud(*cloud1, *aligned);
+                        ++step;
                         break;
                     }
                 }
-                ++step;
-            } else if (step == 1) {
+            } else if (step&1) {
                 vector<int> planecorrespondences;
-                findPlaneCorrespondences(cloud1, cloud2, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences);
-                vector<PointXYZ> pointcorrespondences;
-                partialAlignPlaneToPlane(cloud1, cloud2, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences, pointcorrespondences, 100);
+                findPlaneCorrespondences(aligned, cloud2, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences);
+                updateColormode();
+                pointcorrespondences.clear();
+                partialAlignPlaneToPlane(aligned, cloud2, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences, pointcorrespondences, 400);
                 char linename[30];
                 for (int i = 0; i < pointcorrespondences.size(); i+=2) {
                     sprintf(linename, "line%03d", i/2);
-                    cout << pointcorrespondences[i] << " corresponding to " << pointcorrespondences[i+1] << endl;
                     viewer->addLine(pointcorrespondences[i], pointcorrespondences[i+1],linename);
                 }
                 cout << "Computed correspondences" << endl;
+                ++step;
+            } else {
+                char linename[30];
+                for (int i = 0; i < pointcorrespondences.size(); i+=2) {
+                    sprintf(linename, "line%03d", i/2);
+                    viewer->removeShape(linename);
+                }
+
+                vector<int> planecorrespondences;
+                findPlaneCorrespondences(aligned, cloud2, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences);
+                Matrix4d t = alignPlaneToPlane(aligned, cloud2, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences);
+                copyPointCloud(*colored1, *prevcolored);
+                viewer->updatePointCloud<PointXYZRGB>(prevcolored, prevrgb, "prev");
+                viewer->setPointCloudRenderingProperties(visualization::PCL_VISUALIZER_OPACITY, 0, "prev");
+                transformPointCloud(*aligned, *aligned, t);
+                copyPointCloud(*aligned, *colored1);
+                viewer->updatePointCloud<PointXYZRGB>(colored1, rgb1, "Mesh1");
+                cout << "Computed best transform" << endl;
+                srcplanes.clear(); srcids.clear();
+                findPlanes(aligned, srcplanes, srcids);
                 ++step;
             }
         }
@@ -256,6 +283,7 @@ int main(int argc, char** argv) {
     }
     io::loadPCDFile<PointXYZ>(argv[1], *cloud1);
     io::loadPCDFile<PointXYZ>(argv[2], *cloud2);
+    transformPointCloud(*cloud1, *cloud1, Transform<double,3,Affine>::Identity()*Translation3d(Vector3d(0.3,0.2,0)));
     cout << "Finding planes... ";
     findPlanes(cloud1, srcplanes, srcids);
     cout << "Found frame 1 planes... ";
