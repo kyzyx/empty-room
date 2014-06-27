@@ -6,6 +6,7 @@
 #include <pcl/io/vtk_lib_io.h>
 #include <pcl/point_types.h>
 #include <pcl/visualization/pcl_visualizer.h>
+#include <pcl/filters/fast_bilateral.h>
 
 using namespace pcl;
 using namespace std;
@@ -100,8 +101,24 @@ int main(int argc, char** argv) {
     if (argc > 1) {
         cout << "Loading..." << endl;
         io::loadPCDFile<PointXYZ>(argv[1], *cloud1);
+
+        FastBilateralFilter<PointXYZ> fbf;
+        PointCloud<PointXYZ>::Ptr tmp(new PointCloud<PointXYZ>);
+        fbf.setSigmaS(9);
+        fbf.setSigmaR(0.02);
+        fbf.setInputCloud(cloud1);
+        fbf.applyFilter(*cloud1);
+        for (int i = 0; i < cloud1->size(); ++i) {
+            if (isnan(cloud1->at(i).x)) cloud1->at(i).z = cloud1->at(i).x;
+        }
+
         if (argc > 2) {
             io::loadPCDFile<PointXYZ>(argv[2], *cloud2);
+            fbf.setInputCloud(cloud2);
+            fbf.applyFilter(*cloud2);
+            for (int i = 0; i < cloud2->size(); ++i) {
+                if (isnan(cloud2->at(i).x)) cloud2->at(i).z = cloud2->at(i).x;
+            }
         }
         cout << "Done loading" << endl;
 
