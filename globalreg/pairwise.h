@@ -11,6 +11,9 @@
  */
 Eigen::Matrix4d overlapPlanes(Eigen::Vector4d src, Eigen::Vector4d tgt);
 Eigen::Matrix4d overlapEdge(Eigen::Vector4d src1, Eigen::Vector4d src2, Eigen::Vector4d tgt1, Eigen::Vector4d tgt2);
+Eigen::Matrix4d overlapCorner(
+        Eigen::Vector4d src1, Eigen::Vector4d src2, Eigen::Vector4d src3,
+        Eigen::Vector4d tgt1, Eigen::Vector4d tgt2, Eigen::Vector4d tgt3);
 
 /**
  * Calculates which planes in source map to which planes in tgt. Returns the
@@ -47,6 +50,13 @@ Eigen::Matrix4d alignPlaneToPlane(
         std::vector<int>& planecorrespondences);
 
 Eigen::Matrix4d alignEdgeToEdge(
+        pcl::PointCloud<pcl::PointXYZ>::ConstPtr src,
+        pcl::PointCloud<pcl::PointXYZ>::ConstPtr tgt,
+        std::vector<Eigen::Vector4d>& srcplanes, std::vector<int>& srcids,
+        std::vector<Eigen::Vector4d>& tgtplanes, std::vector<int>& tgtids,
+        std::vector<int>& planecorrespondences);
+
+Eigen::Matrix4d alignCornerToCorner(
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr src,
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr tgt,
         std::vector<Eigen::Vector4d>& srcplanes, std::vector<int>& srcids,

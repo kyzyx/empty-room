@@ -43,6 +43,18 @@ Matrix4d overlapEdge(Vector4d src1, Vector4d src2, Vector4d tgt1, Vector4d tgt2)
     return t3*t2*t1;
 }
 
+Matrix4d overlapCorner(
+        Vector4d src1, Vector4d src2, Vector4d src3,
+        Vector4d tgt1, Vector4d tgt2, Vector4d tgt3)
+{
+    Matrix4d t1 = overlapEdge(src1, src2, tgt1, tgt2);
+    Vector4d ts3 = transformPlane(src3, t1);
+    Vector3d x = (ts3(3) - tgt3(3))*ts3.head(3);
+    Matrix4d t2 = Matrix4d::Identity();
+    t2.topRightCorner(3,1) = x;
+    return t2*t1;
+}
+
 Matrix4d alignEdgeToEdge(
         PointCloud<PointXYZ>::ConstPtr src,
         PointCloud<PointXYZ>::ConstPtr tgt,
@@ -65,7 +77,17 @@ Matrix4d alignCornerToCorner(
         vector<int>& planecorrespondences)
 {
 
-    return Matrix4d::Identity();
+    vector<int> ids;
+    for (int i = 0; i < planecorrespondences.size(); ++i) {
+        if (planecorrespondences[i] > -1) ids.push_back(i);
+    }
+    return overlapCorner(
+            srcplanes[ids[0]],
+            srcplanes[ids[1]],
+            srcplanes[ids[2]],
+            tgtplanes[planecorrespondences[ids[0]]],
+            tgtplanes[planecorrespondences[ids[1]]],
+            tgtplanes[planecorrespondences[ids[2]]]);
 }
 
 Matrix4d alignICP(
