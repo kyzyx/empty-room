@@ -10,6 +10,7 @@
  * Calculates the transformation bringing plane src coplanar to plane tgt
  */
 Eigen::Matrix4d overlapPlanes(Eigen::Vector4d src, Eigen::Vector4d tgt);
+Eigen::Matrix4d overlapEdge(Eigen::Vector4d src1, Eigen::Vector4d src2, Eigen::Vector4d tgt1, Eigen::Vector4d tgt2);
 
 /**
  * Calculates which planes in source map to which planes in tgt. Returns the
@@ -39,6 +40,13 @@ Eigen::Matrix4d align(
  * As align(...), but specifically forces the first planes in correspondence to be coplanar.
  */
 Eigen::Matrix4d alignPlaneToPlane(
+        pcl::PointCloud<pcl::PointXYZ>::ConstPtr src,
+        pcl::PointCloud<pcl::PointXYZ>::ConstPtr tgt,
+        std::vector<Eigen::Vector4d>& srcplanes, std::vector<int>& srcids,
+        std::vector<Eigen::Vector4d>& tgtplanes, std::vector<int>& tgtids,
+        std::vector<int>& planecorrespondences);
+
+Eigen::Matrix4d alignEdgeToEdge(
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr src,
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr tgt,
         std::vector<Eigen::Vector4d>& srcplanes, std::vector<int>& srcids,

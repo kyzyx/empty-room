@@ -23,6 +23,26 @@ Matrix4d overlapPlanes(Vector4d src, Vector4d tgt) {
     return (trans*q).matrix();
 }
 
+Matrix4d overlapEdge(Vector4d src1, Vector4d src2, Vector4d tgt1, Vector4d tgt2) {
+    // Assumes that src1, src2, tgt1, tgt2 are in correspondence and perpendicular
+    // First determine common plane
+    Matrix4d t1 = overlapPlanes(src1, tgt1);
+    // Determine in-plane angle to rotate
+    Vector4d tsrc2 = transformPlane(src2, t1);
+    Vector3d vs2 = src2.head(3);
+    Vector3d vt2 = tgt2.head(3);
+    Vector3d cross = vs2.cross(vt2);
+    double angle = acos(tsrc2.head(3).dot(tgt2.head(3)));
+    if (cross.dot(tgt1.head(3)) < 0) angle = -angle;
+    Matrix4d t2 = Matrix4d::Identity();//AngleAxisd(angle, tgt1).matrix();
+    t2.topLeftCorner(3,3) = AngleAxisd(angle, tgt1.head(3)).matrix();
+    Vector4d ttsrc2 = transformPlane(src2, t2*t1);
+    Vector3d x = (ttsrc2(3) - tgt2(3))*ttsrc2.head(3);
+    Matrix4d t3 = Matrix4d::Identity();
+    t3.topRightCorner(3,1) = x;
+    return t3*t2*t1;
+}
+
 Matrix4d alignEdgeToEdge(
         PointCloud<PointXYZ>::ConstPtr src,
         PointCloud<PointXYZ>::ConstPtr tgt,
@@ -30,7 +50,11 @@ Matrix4d alignEdgeToEdge(
         vector<Vector4d>& tgtplanes, vector<int>& tgtids,
         vector<int>& planecorrespondences)
 {
-    return Matrix4d::Identity();
+    vector<int> ids;
+    for (int i = 0; i < planecorrespondences.size(); ++i) {
+        if (planecorrespondences[i] > -1) ids.push_back(i);
+    }
+    return overlapEdge(srcplanes[ids[0]], srcplanes[ids[1]], tgtplanes[planecorrespondences[ids[0]]], tgtplanes[planecorrespondences[ids[1]]]);
 }
 
 Matrix4d alignCornerToCorner(
@@ -40,6 +64,7 @@ Matrix4d alignCornerToCorner(
         vector<Vector4d>& tgtplanes, vector<int>& tgtids,
         vector<int>& planecorrespondences)
 {
+
     return Matrix4d::Identity();
 }
 
