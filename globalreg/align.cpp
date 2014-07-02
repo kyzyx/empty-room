@@ -27,6 +27,7 @@ visualization::PointCloudColorHandlerRGBField<PointXYZRGB> rgb1(colored1);
 visualization::PointCloudColorHandlerRGBField<PointXYZRGB> rgb2(colored2);
 visualization::PointCloudColorHandlerRGBField<PointXYZRGB> prevrgb(prevcolored);
 vector<int> planecorrespondences;
+int numcorrespondences;
 
 void colorPlaneCorrespondences() {
     for (int i = 0; i < srcids.size(); ++i) {
@@ -42,6 +43,9 @@ void colorPlaneCorrespondences() {
                 colored1->at(i).b = 255;
                 if ((srcids[i]+1)&1) colored1->at(i).r = 127;
                 if ((srcids[i]+1)&2) colored1->at(i).g = 127;
+                colored2->at(i).r = 200;
+                colored2->at(i).g = 200;
+                colored2->at(i).b = 200;
             } else {
                 if ((planecorrespondences[srcids[i]]+1)&1) colored1->at(i).r = 255;
                 if ((planecorrespondences[srcids[i]]+1)&2) colored1->at(i).g = 255;
@@ -50,6 +54,9 @@ void colorPlaneCorrespondences() {
         }
     }
     for (int i = 0; i < tgtids.size(); ++i) {
+        colored2->at(i).r = 0;
+        colored2->at(i).g = 0;
+        colored2->at(i).b = 0;
         if (tgtids[i] == -1) {
             colored2->at(i).r = 127;
             colored2->at(i).g = 127;
@@ -57,7 +64,7 @@ void colorPlaneCorrespondences() {
         } else {
             if ((tgtids[i]+1)&1) colored2->at(i).r = 127;
             if ((tgtids[i]+1)&2) colored2->at(i).g = 127;
-            colored2->at(i).b = 0;
+            if ((tgtids[i]+1)&4) colored2->at(i).b = 127;
         }
     }
 }
@@ -218,19 +225,31 @@ void kbd_cb(const visualization::KeyboardEvent& event, void*) {
             }
         } else if (event.getKeyCode() == 'z') {
             if (step == 0) {
-                for (int i = 0; i < planecorrespondences.size(); ++i) {
-                    if (planecorrespondences[i] > -1) {
-                        Matrix4d t = overlapPlanes(srcplanes[i], tgtplanes[planecorrespondences[i]]);
-                        copyPointCloud(*colored1, *prevcolored);
-                        viewer->addPointCloud<PointXYZRGB>(prevcolored, prevrgb, "prev");
-                        viewer->setPointCloudRenderingProperties(visualization::PCL_VISUALIZER_OPACITY, 0, "prev");
-                        transformPointCloud(*colored1, *colored1, t);
-                        viewer->updatePointCloud<PointXYZRGB>(colored1, rgb1, "Mesh1");
-                        cout << "Moved clouds to overlap planes" << endl;
-                        copyPointCloud(*cloud1, *aligned);
-                        ++step;
-                        break;
+                if (numcorrespondences == 1) {
+                    for (int i = 0; i < planecorrespondences.size(); ++i) {
+                        if (planecorrespondences[i] > -1) {
+                            Matrix4d t = overlapPlanes(srcplanes[i], tgtplanes[planecorrespondences[i]]);
+                            copyPointCloud(*colored1, *prevcolored);
+                            viewer->addPointCloud<PointXYZRGB>(prevcolored, prevrgb, "prev");
+                            viewer->setPointCloudRenderingProperties(visualization::PCL_VISUALIZER_OPACITY, 0, "prev");
+                            transformPointCloud(*colored1, *colored1, t);
+                            viewer->updatePointCloud<PointXYZRGB>(colored1, rgb1, "Mesh1");
+                            cout << "Moved clouds to overlap planes" << endl;
+                            copyPointCloud(*cloud1, *aligned);
+                            ++step;
+                            break;
+                        }
                     }
+                } else if (numcorrespondences >= 2) {
+                    Matrix4d t = alignEdgeToEdge(cloud1, cloud2, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences);
+                    copyPointCloud(*colored1, *prevcolored);
+                    viewer->addPointCloud<PointXYZRGB>(prevcolored, prevrgb, "prev");
+                    viewer->setPointCloudRenderingProperties(visualization::PCL_VISUALIZER_OPACITY, 0, "prev");
+                    transformPointCloud(*colored1, *colored1, t);
+                    viewer->updatePointCloud<PointXYZRGB>(colored1, rgb1, "Mesh1");
+                    cout << "Moved clouds to overlap 2 planes" << endl;
+                    copyPointCloud(*cloud1, *aligned);
+                    ++step;
                 }
             } else if (step&1) {
                 updateColormode();
@@ -298,7 +317,7 @@ int main(int argc, char** argv) {
     cout << "Found frame 1 planes... ";
     findPlanes(cloud2, tgtplanes, tgtids);
     cout << "Foud frame 2 planes" << endl;
-    findPlaneCorrespondences(cloud1, cloud2, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences);
+    numcorrespondences = findPlaneCorrespondences(cloud1, cloud2, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences);
 
     copyPointCloud(*cloud1, *colored1);
     copyPointCloud(*cloud2, *colored2);
