@@ -9,7 +9,19 @@
 inline bool _PointXYZ_zcmp(pcl::PointXYZ a, pcl::PointXYZ b) {
     return a.z < b.z;
 }
-class LayeredKdTrees {
+
+class SearchStructure {
+    public:
+        SearchStructure() {
+            float nan = std::numeric_limits<float>::quiet_NaN();
+            NaNPt = pcl::PointXYZ(nan, nan, nan);
+        }
+        virtual pcl::PointXYZ nearest(pcl::PointXYZ p, double radius) const = 0;
+    protected:
+        pcl::PointXYZ NaNPt;
+};
+
+class LayeredKdTrees : public SearchStructure {
     public:
         typedef flann::Matrix<double> FMat;
         typedef flann::Index<flann::L2<double> > Tree;
@@ -49,15 +61,12 @@ class LayeredKdTrees {
             for (int i = 0; i < negtrees.size(); ++i) {
                 if (negtrees[i]->size()) negtrees[i]->buildIndex();
             }
-
-            float nan = std::numeric_limits<float>::quiet_NaN();
-            NaNPt = pcl::PointXYZ(nan, nan, nan);
         }
         ~LayeredKdTrees() { if (data) delete [] data; }
 
-        pcl::PointXYZ nearest(pcl::PointXYZ p, double radius);
+        virtual pcl::PointXYZ nearest(pcl::PointXYZ p, double radius) const;
     private:
-        pcl::PointXYZ nearestInTree(std::vector<Tree*>& trees, int ind, pcl::PointXYZ p, double radius) {
+        pcl::PointXYZ nearestInTree(const std::vector<Tree*>& trees, int ind, pcl::PointXYZ p, double radius) const {
             if (trees[ind]->size() == 0) return NaNPt;
             double query[2];
             query[0] = p.x; query[1] = p.y;
@@ -72,12 +81,49 @@ class LayeredKdTrees {
             }
             else return NaNPt;
         }
-        pcl::PointXYZ NaNPt;
         int len;
         double* data;
         double thickness;
         std::vector<Tree*> postrees;
         std::vector<Tree*> negtrees;
+};
+
+class ArrayMatrix : public SearchStructure{
+    public:
+        ArrayMatrix(pcl::PointCloud<pcl::PointXYZ>::ConstPtr cloud, double res=0.01)
+            : resolution(res)
+        {
+            for (int i = 0; i < cloud->size(); ++i) {
+                insert(cloud->at(i));
+            }
+        }
+
+        void insert(pcl::PointXYZ p) {
+            int qx = p.x>0?1:0;
+            int qy = p.y>0?1:0;
+            int xx = abs(p.x/resolution);
+            int yy = abs(p.y/resolution);
+            if (xx == 0 || yy == 0) return;
+            if (xx >= data[qx][qy].size()) data[qx][qy].resize(xx+1);
+            if (yy >= data[qx][qy][xx].size()) data[qx][qy][xx].resize(yy+1);
+            data[qx][qy][xx][yy].insert(p.z);
+        }
+        virtual pcl::PointXYZ nearest(pcl::PointXYZ p, double radius) const;
+    private:
+        pcl::PointXYZ nearestInCell(int qx, int qy, int xx, int yy, pcl::PointXYZ p, double radius) const {
+            if (xx < 0 || xx >= data[qx][qy].size()) return NaNPt;
+            if (yy < 0 || yy >= data[qx][qy][xx].size()) return NaNPt;
+            if (data[qx][qy][xx][yy].size() == 0) return NaNPt;
+            std::set<double>::iterator lb, ub;
+            lb = data[qx][qy][xx][yy].lower_bound(p.z);
+            ub = data[qx][qy][xx][yy].upper_bound(p.z);
+            if (lb != data[qx][qy][xx][yy].begin() && *lb > p.z) --lb;
+            if (ub == data[qx][qy][xx][yy].end()) --ub;
+            if (p.z - *lb < *ub - p.z) return pcl::PointXYZ(p.x, p.y, *lb);
+            else return pcl::PointXYZ(p.x, p.y, *ub);
+        }
+        double resolution;
+        std::vector<std::vector<std::set<double> > > data[2][2];
 };
 
 void markDepthDiscontinuities(
@@ -88,7 +134,7 @@ void markDepthDiscontinuities(
 
 void computeCorrespondences(
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr cloud,
-        LayeredKdTrees& tree,
+        SearchStructure* tree,
         std::vector<pcl::PointXYZ>& correspondences);
 
 Eigen::Matrix4d computeOptimalRigidXYTransform(
@@ -96,6 +142,14 @@ Eigen::Matrix4d computeOptimalRigidXYTransform(
         std::vector<pcl::PointXYZ>& tgt);
 
 Eigen::Matrix4d partialAlignPlaneToPlane(
+        pcl::PointCloud<pcl::PointXYZ>::ConstPtr src,
+        pcl::PointCloud<pcl::PointXYZ>::ConstPtr tgt,
+        std::vector<Eigen::Vector4d>& srcplanes, std::vector<int>& srcids,
+        std::vector<Eigen::Vector4d>& tgtplanes, std::vector<int>& tgtids,
+        std::vector<int>& planecorrespondences,
+        std::vector<pcl::PointXYZ>& pointcorrespondences,
+        int ncorrs, double t);
+Eigen::Matrix4d partialAlignEdgeToEdge(
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr src,
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr tgt,
         std::vector<Eigen::Vector4d>& srcplanes, std::vector<int>& srcids,

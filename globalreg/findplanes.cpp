@@ -368,11 +368,60 @@ void findPlanesGradient(
     }
 }
 
+void combineLikePlanes(PointCloud<PointXYZ>::ConstPtr cloud, vector<Vector4d>& planes, vector<int>& ids)
+{
+    vector<int> relabel(planes.size(),-1);
+    vector<Vector4d> origplanes(planes);
+    planes.clear();
+    int n = 0;
+    for (int i = 0; i < origplanes.size(); ++i) {
+        if (relabel[i] == -1) {
+            relabel[i] = n;
+            planes.push_back(origplanes[i]);
+            for (int j = i+1; j < origplanes.size(); ++j) {
+                if (origplanes[i].head(3).dot(origplanes[j].head(3)) > cos(ANGLETHRESHOLD)) {
+                    if (abs(origplanes[i](3) - origplanes[j](3)) < NOISETHRESHOLD) {
+                        relabel[j] = n;
+                    }
+                }
+            }
+            ++n;
+        }
+    }
+    vector<int> origcounts(origplanes.size(),0);
+    vector<int> counts(planes.size(),0);
+    vector<Vector3d> norms(planes.size(), Vector3d::Zero());
+    for (int i = 0; i < ids.size(); ++i) {
+        if (ids[i] >= 0) {
+            origcounts[ids[i]]++;
+            ids[i] = relabel[ids[i]];
+            counts[ids[i]]++;
+        }
+    }
+    for (int i = 0; i < relabel.size(); ++i) {
+        if (relabel[i] >= 0)  {
+            norms[relabel[i]] += origcounts[i]*origplanes[i].head(3);
+        }
+    }
+    for (int i = 0; i < planes.size(); ++i) {
+        planes[i].head(3) = norms[i].normalized();
+        planes[i](3) = 0;
+    }
+    for (int i = 0; i < ids.size(); ++i) {
+        if (ids[i] >= 0) planes[ids[i]](3) -= Vector3d(cloud->at(i).x, cloud->at(i).y, cloud->at(i).z).dot(planes[ids[i]].head(3));
+    }
+    for (int i = 0; i < planes.size(); ++i) {
+        planes[i](3) /= counts[i];
+    }
+}
+
 void findPlanes(
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr cloud,
         std::vector<Eigen::Vector4d>& planes, std::vector<int>& ids)
 {
     ids.resize(cloud->size());
     for (int i = 0; i < ids.size(); ++i) ids[i] = -1;
-    return findPlanesWithNormals(cloud, planes, ids);
+    findPlanesWithNormals(cloud, planes, ids);
+    combineLikePlanes(cloud, planes, ids);
+    combineLikePlanes(cloud, planes, ids);
 }

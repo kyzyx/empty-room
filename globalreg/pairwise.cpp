@@ -7,7 +7,7 @@ using namespace pcl;
 using namespace Eigen;
 using namespace std;
 
-const double ANGLETHRESHOLD = cos(M_PI/9);
+const double ANGLETHRESHOLD = M_PI/9;
 
 Matrix4d overlapPlanes(Vector4d src, Vector4d tgt) {
     // Construct rotation
@@ -29,7 +29,7 @@ Matrix4d overlapEdge(Vector4d src1, Vector4d src2, Vector4d tgt1, Vector4d tgt2)
     Matrix4d t1 = overlapPlanes(src1, tgt1);
     // Determine in-plane angle to rotate
     Vector4d tsrc2 = transformPlane(src2, t1);
-    Vector3d vs2 = src2.head(3);
+    Vector3d vs2 = tsrc2.head(3);
     Vector3d vt2 = tgt2.head(3);
     Vector3d cross = vs2.cross(vt2);
     double angle = acos(tsrc2.head(3).dot(tgt2.head(3)));
@@ -53,20 +53,6 @@ Matrix4d overlapCorner(
     Matrix4d t2 = Matrix4d::Identity();
     t2.topRightCorner(3,1) = x;
     return t2*t1;
-}
-
-Matrix4d alignEdgeToEdge(
-        PointCloud<PointXYZ>::ConstPtr src,
-        PointCloud<PointXYZ>::ConstPtr tgt,
-        vector<Vector4d>& srcplanes, vector<int>& srcids,
-        vector<Vector4d>& tgtplanes, vector<int>& tgtids,
-        vector<int>& planecorrespondences)
-{
-    vector<int> ids;
-    for (int i = 0; i < planecorrespondences.size(); ++i) {
-        if (planecorrespondences[i] > -1) ids.push_back(i);
-    }
-    return overlapEdge(srcplanes[ids[0]], srcplanes[ids[1]], tgtplanes[planecorrespondences[ids[0]]], tgtplanes[planecorrespondences[ids[1]]]);
 }
 
 Matrix4d alignCornerToCorner(
@@ -123,7 +109,7 @@ int findPlaneCorrespondences(
     for (int i = 0; i < srcplanes.size(); ++i) {
         for (int j = 0; j < tgtplanes.size(); ++j) {
             double cosa = srcplanes[i].head(3).dot(tgtplanes[j].head(3));
-            if (cosa > ANGLETHRESHOLD) {
+            if (cosa > cos(ANGLETHRESHOLD)) {
                 if (planecorrespondences[i] != -1) {
                     cerr << "WARNING: Multiple correspondences possible!" << endl;
                     if (abs(srcplanes[i](3) - tgtplanes[j](3)) < abs(srcplanes[i](3) - tgtplanes[planecorrespondences[i]](3))) {
@@ -135,6 +121,33 @@ int findPlaneCorrespondences(
             }
         }
         if (planecorrespondences[i] != -1) numcorrespondences++;
+    }
+    vector<int> compatible(planecorrespondences.size(), -1);
+    vector<int> compatiblecounts;
+    int n = 0;
+    for (int i = 0; i < planecorrespondences.size(); ++i) {
+        if (compatible[i] == -1) {
+            compatible[i] = n;
+            compatiblecounts.push_back(1);
+            for (int j = i+1; j < planecorrespondences.size(); ++j) {
+                if (compatible[j] == -1 && srcplanes[i].head(3).dot(srcplanes[j].head(3)) < sin(ANGLETHRESHOLD)) {
+                    compatible[j] = n;
+                    ++compatiblecounts.back();
+                }
+            }
+            ++n;
+        }
+    }
+    int maxcount = 0;
+    n = -1;
+    for (int i = 0; i < compatiblecounts.size(); ++i) {
+        if (compatiblecounts[i] > maxcount) {
+            n = i;
+            maxcount = compatiblecounts[i];
+        }
+    }
+    for (int i = 0; i < planecorrespondences.size(); ++i) {
+        if (compatible[i] != n) planecorrespondences[i] = -1;
     }
     return numcorrespondences;
 }
