@@ -92,7 +92,7 @@ Matrix4d alignICP(
     IterativeClosestPoint<PointXYZ, PointXYZ> icp;
     icp.setInputSource(s);
     icp.setInputTarget(t);
-    icp.setMaximumIterations(1);
+    icp.setMaximumIterations(50);
     icp.align(*s);
     return icp.getFinalTransformation().cast<double>();
 }
@@ -111,7 +111,6 @@ int findPlaneCorrespondences(
             double cosa = srcplanes[i].head(3).dot(tgtplanes[j].head(3));
             if (cosa > cos(ANGLETHRESHOLD)) {
                 if (planecorrespondences[i] != -1) {
-                    cerr << "WARNING: Multiple correspondences possible!" << endl;
                     if (abs(srcplanes[i](3) - tgtplanes[j](3)) < abs(srcplanes[i](3) - tgtplanes[planecorrespondences[i]](3))) {
                         planecorrespondences[i] = j;
                     }
@@ -146,8 +145,10 @@ int findPlaneCorrespondences(
             maxcount = compatiblecounts[i];
         }
     }
+    numcorrespondences = 0;
     for (int i = 0; i < planecorrespondences.size(); ++i) {
         if (compatible[i] != n) planecorrespondences[i] = -1;
+        else if (planecorrespondences[i] >= 0) numcorrespondences++;
     }
     return numcorrespondences;
 }

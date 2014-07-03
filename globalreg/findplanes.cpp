@@ -9,7 +9,7 @@
 #include <pcl/sample_consensus/sac_model_plane.h>
 #include <pcl/segmentation/sac_segmentation.h>
 
-const double ANGLETHRESHOLD = M_PI/9;
+const double ANGLETHRESHOLD = M_PI/8;
 const double DISTTHRESHOLD = 0.03;
 const double NOISETHRESHOLD = 0.01;
 const double MININLIERPROPORTION = 0.05;
@@ -415,6 +415,35 @@ void combineLikePlanes(PointCloud<PointXYZ>::ConstPtr cloud, vector<Vector4d>& p
     }
 }
 
+void filterParallelPlanes(vector<Vector4d>& planes, vector<int>& ids) {
+    vector<Vector4d> origplanes(planes);
+    planes.clear();
+    vector<int> relabel(origplanes.size(),-1);
+    int n = 0;
+    for (int i = 0; i < origplanes.size(); ++i) {
+        if (relabel[i] == -1) {
+            relabel[i] = -2;
+            Vector4d best = origplanes[i];
+            int bi = i;
+            for (int j = i+1; j < origplanes.size(); ++j) {
+                if (origplanes[i].head(3).dot(origplanes[j].head(3)) > cos(ANGLETHRESHOLD)) {
+                    if (best(3) < origplanes[j](3)) {
+                        best = origplanes[j];
+                        bi = j;
+                    }
+                    relabel[j] = -2;
+                }
+            }
+            relabel[bi] = n++;
+            planes.push_back(best);
+        }
+    }
+    for (int i = 0; i < ids.size(); ++i) {
+        if (ids[i] >= 0 && relabel[ids[i]] >= 0) ids[i] = relabel[ids[i]];
+        else ids[i] = -1;
+    }
+}
+
 void findPlanes(
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr cloud,
         std::vector<Eigen::Vector4d>& planes, std::vector<int>& ids)
@@ -424,4 +453,5 @@ void findPlanes(
     findPlanesWithNormals(cloud, planes, ids);
     combineLikePlanes(cloud, planes, ids);
     combineLikePlanes(cloud, planes, ids);
+    filterParallelPlanes(planes, ids);
 }

@@ -163,7 +163,7 @@ Matrix4d computeOptimalRigidXYTransform(vector<PointXYZ>& src, vector<PointXYZ>&
     return ret;
 }
 
-void filterCorrespondences(
+double filterCorrespondences(
         PointCloud<PointXYZ>::ConstPtr src,
         vector<PointXYZ>& corrs,
         vector<PointXYZ>& ptsrc,
@@ -177,7 +177,7 @@ void filterCorrespondences(
     for (int i = 0; i < src->size(); ++i) {
         if (pr.isValid(corrs[i])) {
             double d = dist2(src->at(i),corrs[i]);
-            dists.push_back(make_pair(d,i));
+            dists.push_back(make_pair(sqrt(d),i));
             meandist += d;
         }
     }
@@ -199,6 +199,7 @@ void filterCorrespondences(
         ptsrc.push_back(src->at(dists[i].second));
         pttgt.push_back(corrs[dists[i].second]);
     }
+    return meandist;
 }
 
 Matrix4d alignPlaneToPlane(
@@ -228,20 +229,27 @@ Matrix4d alignPlaneToPlane(
     preprocessCloud(tsrc, tsrc, coordtransform, srcids, srcid, false);
 
     // Construct layered kdtrees for all non-plane points in tgt
-    LayeredKdTrees lkdt(ttgt, 0.01);
+    LayeredKdTrees lkdt(ttgt, 0.02);
 
-    // Compute correspondences
-    vector<PointXYZ> ptsrc;
-    vector<PointXYZ> pttgt;
-    vector<PointXYZ> corrs;
-    computeCorrespondences(tsrc, &lkdt, corrs);
-    filterCorrespondences(tsrc, corrs, ptsrc, pttgt);
+    double error = numeric_limits<double>::infinity();
+    double errthreshold = 0.0005;
+    int maxiterations = 20;
+    for (int i = 0; i < maxiterations; ++i) {
+        // Compute correspondences
+        vector<PointXYZ> ptsrc;
+        vector<PointXYZ> pttgt;
+        vector<PointXYZ> corrs;
+        computeCorrespondences(tsrc, &lkdt, corrs);
+        double newerror = filterCorrespondences(tsrc, corrs, ptsrc, pttgt);
+        cout << "Iteration " << i << ": " << newerror << endl;
+        if (abs(error-newerror) < errthreshold) break;
+        error = newerror;
 
-    // Compute rigid transform
-    Matrix4d opt = computeOptimalRigidXYTransform(ptsrc, pttgt);
-    transform = opt*transform;
-
-    // FIXME: Iterate
+        // Compute rigid transform
+        Matrix4d opt = computeOptimalRigidXYTransform(ptsrc, pttgt);
+        transform = opt*transform;
+        transformPointCloud(*tsrc, *tsrc, opt);
+    }
     transform = coordtransform.inverse()*transform;
     return transform;
 }
@@ -281,7 +289,8 @@ Matrix4d partialAlignPlaneToPlane(
     vector<PointXYZ> pttgt;
     vector<PointXYZ> corrs;
     computeCorrespondences(tsrc, &lkdt, corrs);
-    filterCorrespondences(tsrc, corrs, ptsrc, pttgt, ncorrs, t);
+    double error = filterCorrespondences(tsrc, corrs, ptsrc, pttgt, ncorrs, t);
+    cout << "Error: " << error << endl;
     for (int i = 0; i < ptsrc.size(); ++i) {
         Vector4d pt(ptsrc[i].x, ptsrc[i].y, ptsrc[i].z, 1);
         Vector4d corr(pttgt[i].x, pttgt[i].y, pttgt[i].z, 1);
@@ -315,35 +324,56 @@ Matrix4d alignEdgeToEdge(
     transformPointCloud(*src, *tsrc, transform);
 
     // Convert to common coordinate system
+    PointCloud<PointXYZ>::Ptr ttgt(new PointCloud<PointXYZ>);
     Matrix4d coordtransform = overlapEdge(tgtplanes[planecorrespondences[ids[0]]],
                                           tgtplanes[planecorrespondences[ids[1]]],
                                           Vector4d(1,0,0,0),
                                           Vector4d(0,1,0,0));
-    PointCloud<PointXYZ>::Ptr ttgt(new PointCloud<PointXYZ>);
     transform = coordtransform*transform;
 
     // Filter clouds
+    for (int i = 0; i < tgtids.size(); ++i) {
+        if (tgtids[i] == planecorrespondences[ids[1]]) {
+            tgtids[i] = planecorrespondences[ids[0]];
+        }
+    }
+    for (int i = 0; i < srcids.size(); ++i) {
+        if (srcids[i] == ids[1]) {
+            srcids[i] = ids[0];
+        }
+    }
     preprocessCloud(tgt, ttgt, coordtransform, tgtids, planecorrespondences[ids[0]], false);
-    filterLabelled(ttgt, tgtids, planecorrespondences[ids[1]]);
     preprocessCloud(tsrc, tsrc, coordtransform, srcids, ids[0], false);
-    filterLabelled(tsrc, srcids, ids[1]);
 
     // Construct search structure
-    ArrayMatrix am(ttgt, 0.01);
-    // Compute correspondences
-    vector<PointXYZ> corrs;
-    vector<PointXYZ> ptsrc;
-    vector<PointXYZ> pttgt;
-    computeCorrespondences(tsrc, &am, corrs);
-    filterCorrespondences(tsrc, corrs, ptsrc, pttgt);
-    double translation = 0;
-    for (int i = 0; i < ptsrc.size(); ++i) {
-        translation -= ptsrc[i].z - pttgt[i].z;
+    ArrayMatrix am(ttgt, 0.02);
+
+    double error = numeric_limits<double>::infinity();
+    double errthreshold = 0.0001;
+    int maxiterations = 20;
+    for (int i = 0; i < maxiterations; ++i) {
+        // Compute correspondences
+        vector<PointXYZ> ptsrc;
+        vector<PointXYZ> pttgt;
+        vector<PointXYZ> corrs;
+        computeCorrespondences(tsrc, &am, corrs);
+        double newerror = filterCorrespondences(tsrc, corrs, ptsrc, pttgt);
+        cout << "Iteration " << i << ": " << newerror << endl;
+        if (abs(error-newerror) < errthreshold) break;
+        error = newerror;
+
+        // Compute rigid translation
+        double translation = 0;
+        for (int i = 0; i < ptsrc.size(); ++i) {
+            translation -= ptsrc[i].z - pttgt[i].z;
+        }
+        Matrix4d transl;
+        transl.setIdentity();
+        transl(2,3) = translation/ptsrc.size();
+        transform = transl*transform;
+        transformPointCloud(*tsrc, *tsrc, transl);
     }
-    Matrix4d transl;
-    transl.setIdentity();
-    transl(3,4) = translation/ptsrc.size();
-    transform = coordtransform.inverse()*transl*transform;
+    transform = coordtransform.inverse()*transform;
     return transform;
 }
 Matrix4d partialAlignEdgeToEdge(
@@ -373,19 +403,28 @@ Matrix4d partialAlignEdgeToEdge(
     transform = coordtransform*transform;
 
     // Filter clouds
-    preprocessCloud(tgt, ttgt, coordtransform, tgtids, planecorrespondences[ids[0]], false);
-    filterLabelled(ttgt, tgtids, planecorrespondences[ids[1]]);
-    preprocessCloud(tsrc, tsrc, coordtransform, srcids, ids[0], false);
-    filterLabelled(tsrc, srcids, ids[1]);
+    for (int i = 0; i < tgtids.size(); ++i) {
+        if (tgtids[i] == planecorrespondences[ids[1]]) {
+            tgtids[i] = planecorrespondences[ids[0]];
+        }
+    }
+    for (int i = 0; i < srcids.size(); ++i) {
+        if (srcids[i] == ids[1]) {
+            srcids[i] = ids[0];
+        }
+    }
+    preprocessCloud(tgt, ttgt, coordtransform, tgtids, planecorrespondences[ids[0]]);
+    preprocessCloud(tsrc, tsrc, coordtransform, srcids, ids[0]);
 
     // Construct search structure
-    ArrayMatrix am(ttgt, 0.01);
+    ArrayMatrix am(ttgt, 0.02);
     // Compute correspondences
     vector<PointXYZ> ptsrc;
     vector<PointXYZ> pttgt;
     vector<PointXYZ> corrs;
     computeCorrespondences(tsrc, &am, corrs);
-    filterCorrespondences(tsrc, corrs, ptsrc, pttgt, ncorrs, t);
+    double error = filterCorrespondences(tsrc, corrs, ptsrc, pttgt, ncorrs, t);
+    cout << "Error: " << error << endl;
     for (int i = 0; i < ptsrc.size(); ++i) {
         Vector4d pt(ptsrc[i].x, ptsrc[i].y, ptsrc[i].z, 1);
         Vector4d corr(pttgt[i].x, pttgt[i].y, pttgt[i].z, 1);

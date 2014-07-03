@@ -223,6 +223,24 @@ void kbd_cb(const visualization::KeyboardEvent& event, void*) {
                 viewprev = !viewprev;
                 viewer->setPointCloudRenderingProperties(visualization::PCL_VISUALIZER_OPACITY, viewprev?1:0, "prev");
             }
+        } else if (event.getKeyCode() == 'n') {
+            copyPointCloud(*cloud1, *aligned);
+            char linename[30];
+            for (int i = 0; i < pointcorrespondences.size(); i+=2) {
+                sprintf(linename, "line%03d", i/2);
+                viewer->removeShape(linename);
+            }
+            Matrix4d t = align(aligned, cloud2, srcplanes, srcids, tgtplanes, tgtids);
+            copyPointCloud(*colored1, *prevcolored);
+            viewer->addPointCloud<PointXYZRGB>(prevcolored, prevrgb, "prev");
+            viewer->setPointCloudRenderingProperties(visualization::PCL_VISUALIZER_OPACITY, 0, "prev");
+            transformPointCloud(*aligned, *aligned, t);
+            copyPointCloud(*aligned, *colored1);
+            viewer->updatePointCloud<PointXYZRGB>(colored1, rgb1, "Mesh1");
+            cout << "Computed best transform" << endl;
+            srcplanes.clear();
+            srcids.clear();
+            findPlanes(aligned, srcplanes, srcids);
         } else if (event.getKeyCode() == 'z') {
             if (step == 0) {
                 if (numcorrespondences == 1) {
@@ -245,7 +263,7 @@ void kbd_cb(const visualization::KeyboardEvent& event, void*) {
                     for (int i = 0; i < planecorrespondences.size(); ++i) {
                         if (planecorrespondences[i] > -1) ids.push_back(i);
                     }
-                    Matrix4d t= overlapEdge(srcplanes[ids[0]], srcplanes[ids[1]], tgtplanes[planecorrespondences[ids[0]]], tgtplanes[planecorrespondences[ids[1]]]);
+                    Matrix4d t = overlapEdge(srcplanes[ids[0]], srcplanes[ids[1]], tgtplanes[planecorrespondences[ids[0]]], tgtplanes[planecorrespondences[ids[1]]]);
                     copyPointCloud(*colored1, *prevcolored);
                     viewer->addPointCloud<PointXYZRGB>(prevcolored, prevrgb, "prev");
                     viewer->setPointCloudRenderingProperties(visualization::PCL_VISUALIZER_OPACITY, 0, "prev");
@@ -296,9 +314,9 @@ void kbd_cb(const visualization::KeyboardEvent& event, void*) {
                 copyPointCloud(*aligned, *colored1);
                 viewer->updatePointCloud<PointXYZRGB>(colored1, rgb1, "Mesh1");
                 cout << "Computed best transform" << endl;
-                srcplanes.clear();
-                srcids.clear();
-                findPlanes(aligned, srcplanes, srcids);
+                for (int i = 0; i < srcplanes.size(); ++i) {
+                    srcplanes[i] = transformPlane(srcplanes[i], t);
+                }
                 ++step;
             }
         }
@@ -309,7 +327,7 @@ void loadFile(string fname, PointCloud<PointXYZ>::Ptr cloud) {
     io::loadPCDFile<PointXYZ>(fname, *cloud);
     FastBilateralFilter<PointXYZ> fbf;
     fbf.setSigmaS(9);
-    fbf.setSigmaR(0.02);
+    fbf.setSigmaR(0.05);
     fbf.setInputCloud(cloud);
     fbf.applyFilter(*cloud);
     for (int i = 0; i < cloud->size(); ++i) {
@@ -324,13 +342,15 @@ int main(int argc, char** argv) {
     }
     loadFile(argv[1], cloud1);
     loadFile(argv[2], cloud2);
-    transformPointCloud(*cloud1, *cloud1, Transform<double,3,Affine>::Identity()*Translation3d(Vector3d(0.3,0.2,0)));
     cout << "Finding planes... ";
     findPlanes(cloud1, srcplanes, srcids);
     cout << "Found frame 1 planes... ";
     findPlanes(cloud2, tgtplanes, tgtids);
-    cout << "Foud frame 2 planes" << endl;
+    cout << "Found frame 2 planes" << endl;
     numcorrespondences = findPlaneCorrespondences(cloud1, cloud2, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences);
+    for (int i = 0; i < planecorrespondences.size(); ++i) {
+        cout << i << ": " << planecorrespondences[i] << endl;
+    }
 
     copyPointCloud(*cloud1, *colored1);
     copyPointCloud(*cloud2, *colored2);
