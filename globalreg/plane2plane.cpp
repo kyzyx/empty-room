@@ -30,6 +30,7 @@ inline double dist2(PointXYZ a, PointXYZ b) {
 }
 PointXYZ LayeredKdTrees::nearest(PointXYZ p, double radius) const
 {
+    if (!pr.isValid(p)) return NaNPt;
     const std::vector<Tree*>& trees = p.z>0?postrees:negtrees;
     int ind = abs(p.z/thickness);
     if (ind >= trees.size()) return NaNPt;
@@ -44,6 +45,7 @@ PointXYZ LayeredKdTrees::nearest(PointXYZ p, double radius) const
 }
 PointXYZ ArrayMatrix::nearest(PointXYZ p, double radius) const
 {
+    if (!pr.isValid(p)) return NaNPt;
     int qx = p.x>0?1:0;
     int qy = p.y>0?1:0;
     int xx = (abs(p.x/resolution) - 0.5);
@@ -60,9 +62,8 @@ PointXYZ ArrayMatrix::nearest(PointXYZ p, double radius) const
     return p1;
 }
 
-void markDepthDiscontinuities(
+void markEdges(
         PointCloud<PointXYZ>::ConstPtr cloud,
-        double threshold,
         vector<int>& labels,
         int label, int radius)
 {
@@ -78,6 +79,13 @@ void markDepthDiscontinuities(
             labels[(cloud->height-1-j)*cloud->width+i] = label;
         }
     }
+}
+void markDepthDiscontinuities(
+        PointCloud<PointXYZ>::ConstPtr cloud,
+        double threshold,
+        vector<int>& labels,
+        int label, int radius)
+{
     for (int i = radius; i < cloud->height-radius; ++i) {
         for (int j = radius; j < cloud->width-radius; ++j) {
             if (dist2(cloud->at(j,i), cloud->at(j+1,i)) > threshold*threshold ||
@@ -105,7 +113,8 @@ void preprocessCloud(
     // Remove boundary points and wall points
     vector<int> prune(ids);
     if (removedepthdiscontinuities) {
-        markDepthDiscontinuities(outputcloud, 0.1, prune, id, 2);
+        markEdges(outputcloud, prune, id, 9);
+        //markDepthDiscontinuities(outputcloud, 0.1, prune, id, 3);
     }
     filterLabelled(outputcloud, prune, id);
 }
@@ -225,8 +234,10 @@ Matrix4d alignPlaneToPlane(
     transform = coordtransform*transform;
 
     // Filter clouds
-    preprocessCloud(tgt, ttgt, coordtransform, tgtids, tgtid, false);
-    preprocessCloud(tsrc, tsrc, coordtransform, srcids, srcid, false);
+    vector<int> fsrcids(srcids);
+    vector<int> ftgtids(tgtids);
+    preprocessCloud(tgt, ttgt, coordtransform, ftgtids, tgtid, false);
+    preprocessCloud(tsrc, tsrc, coordtransform, fsrcids, srcid);
 
     // Construct layered kdtrees for all non-plane points in tgt
     LayeredKdTrees lkdt(ttgt, 0.02);
@@ -279,8 +290,10 @@ Matrix4d partialAlignPlaneToPlane(
     transform = coordtransform*transform;
 
     // Filter clouds
-    preprocessCloud(tgt, ttgt, coordtransform, tgtids, tgtid);
-    preprocessCloud(tsrc, tsrc, coordtransform, srcids, srcid);
+    vector<int> fsrcids(srcids);
+    vector<int> ftgtids(tgtids);
+    preprocessCloud(tgt, ttgt, coordtransform, ftgtids, tgtid, false);
+    preprocessCloud(tsrc, tsrc, coordtransform, fsrcids, srcid);
 
     // Construct layered kdtrees for all non-plane points in tgt
     LayeredKdTrees lkdt(ttgt, 0.01);
@@ -332,18 +345,20 @@ Matrix4d alignEdgeToEdge(
     transform = coordtransform*transform;
 
     // Filter clouds
-    for (int i = 0; i < tgtids.size(); ++i) {
-        if (tgtids[i] == planecorrespondences[ids[1]]) {
-            tgtids[i] = planecorrespondences[ids[0]];
+    vector<int> fsrcids(srcids);
+    vector<int> ftgtids(tgtids);
+    for (int i = 0; i < ftgtids.size(); ++i) {
+        if (ftgtids[i] == planecorrespondences[ids[1]]) {
+            ftgtids[i] = planecorrespondences[ids[0]];
         }
     }
-    for (int i = 0; i < srcids.size(); ++i) {
-        if (srcids[i] == ids[1]) {
-            srcids[i] = ids[0];
+    for (int i = 0; i < fsrcids.size(); ++i) {
+        if (fsrcids[i] == ids[1]) {
+            fsrcids[i] = ids[0];
         }
     }
-    preprocessCloud(tgt, ttgt, coordtransform, tgtids, planecorrespondences[ids[0]], false);
-    preprocessCloud(tsrc, tsrc, coordtransform, srcids, ids[0], false);
+    preprocessCloud(tgt, ttgt, coordtransform, ftgtids, planecorrespondences[ids[0]], false);
+    preprocessCloud(tsrc, tsrc, coordtransform, fsrcids, ids[0]);
 
     // Construct search structure
     ArrayMatrix am(ttgt, 0.02);
@@ -403,18 +418,20 @@ Matrix4d partialAlignEdgeToEdge(
     transform = coordtransform*transform;
 
     // Filter clouds
-    for (int i = 0; i < tgtids.size(); ++i) {
-        if (tgtids[i] == planecorrespondences[ids[1]]) {
-            tgtids[i] = planecorrespondences[ids[0]];
+    vector<int> fsrcids(srcids);
+    vector<int> ftgtids(tgtids);
+    for (int i = 0; i < ftgtids.size(); ++i) {
+        if (ftgtids[i] == planecorrespondences[ids[1]]) {
+            ftgtids[i] = planecorrespondences[ids[0]];
         }
     }
-    for (int i = 0; i < srcids.size(); ++i) {
-        if (srcids[i] == ids[1]) {
-            srcids[i] = ids[0];
+    for (int i = 0; i < fsrcids.size(); ++i) {
+        if (fsrcids[i] == ids[1]) {
+            fsrcids[i] = ids[0];
         }
     }
-    preprocessCloud(tgt, ttgt, coordtransform, tgtids, planecorrespondences[ids[0]]);
-    preprocessCloud(tsrc, tsrc, coordtransform, srcids, ids[0]);
+    preprocessCloud(tgt, ttgt, coordtransform, ftgtids, planecorrespondences[ids[0]], false);
+    preprocessCloud(tsrc, tsrc, coordtransform, fsrcids, ids[0]);
 
     // Construct search structure
     ArrayMatrix am(ttgt, 0.02);

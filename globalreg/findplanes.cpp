@@ -445,8 +445,9 @@ void filterParallelPlanes(vector<Vector4d>& planes, vector<int>& ids) {
 }
 
 void findPlanes(
-        pcl::PointCloud<pcl::PointXYZ>::ConstPtr cloud,
-        std::vector<Eigen::Vector4d>& planes, std::vector<int>& ids)
+        PointCloud<PointXYZ>::ConstPtr cloud,
+        vector<Vector4d>& planes,
+        vector<int>& ids)
 {
     ids.resize(cloud->size());
     for (int i = 0; i < ids.size(); ++i) ids[i] = -1;
