@@ -174,15 +174,19 @@ Matrix4d align(
     // Call appropriate alignment function
     switch (numcorrespondences) {
         case 0:
+            cout << "Aligning ICP" << endl;
             return alignICP(src, tgt, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences);
             break;
         case 1:
+            cout << "Aligning plane to plane" << endl;
             return alignPlaneToPlane(src, tgt, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences);
             break;
         case 2:
+            cout << "Aligning edge to edge" << endl;
             return alignEdgeToEdge(src, tgt, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences);
             break;
         case 3:
+            cout << "Aligning corner to corner" << endl;
             return alignCornerToCorner(src, tgt, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences);
             break;
         default:
