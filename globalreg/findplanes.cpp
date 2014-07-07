@@ -203,6 +203,7 @@ void findPlanesWithNormals(
                 if (!pr.isValid(cloud->at(x,y)) || isnan(filtered->at(x,y).normal_x)) continue;
                 visited[y*cloud->width + x] = n;
                 avgv = (avgv*cnt + getNormal(filtered->at(x,y)))/(cnt+1);
+                avgv.normalize();
                 ++cnt;
                 for (int xx = x-1; xx <= x+1; ++xx) {
                     if (xx < 0 || xx >= cloud->width-1) continue;
@@ -219,7 +220,7 @@ void findPlanesWithNormals(
                                     cloud->at(x,y).x - cloud->at(xx,yy).x,
                                     cloud->at(x,y).y - cloud->at(xx,yy).y,
                                     cloud->at(x,y).z - cloud->at(xx,yy).z);
-                            v /= v.norm();
+                            v.normalize();
                             if (v.dot(avgv) < sin(ANGLETHRESHOLD)) {
                                 nx.push(xx); ny.push(yy);
                                 visited[yy*cloud->width+xx] = -2;
