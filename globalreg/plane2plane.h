@@ -115,10 +115,10 @@ class ArrayMatrix : public SearchStructure{
             if (yy < 0 || yy >= data[qx][qy][xx].size()) return NaNPt;
             if (data[qx][qy][xx][yy].size() == 0) return NaNPt;
             std::set<double>::iterator lb, ub;
-            lb = data[qx][qy][xx][yy].lower_bound(p.z);
-            ub = data[qx][qy][xx][yy].upper_bound(p.z);
-            if (lb != data[qx][qy][xx][yy].begin() && *lb > p.z) --lb;
-            if (ub == data[qx][qy][xx][yy].end()) --ub;
+            ub = data[qx][qy][xx][yy].lower_bound(p.z);
+            if (ub == data[qx][qy][xx][yy].begin()) return pcl::PointXYZ(p.x, p.y, *ub);
+            lb = ub; lb--;
+            if (ub == data[qx][qy][xx][yy].end()) return pcl::PointXYZ(p.x, p.y, *lb);
             if (p.z - *lb < *ub - p.z) return pcl::PointXYZ(p.x, p.y, *lb);
             else return pcl::PointXYZ(p.x, p.y, *ub);
         }

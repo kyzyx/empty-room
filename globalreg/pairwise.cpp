@@ -97,6 +97,42 @@ Matrix4d alignICP(
     return icp.getFinalTransformation().cast<double>();
 }
 
+void filterManhattan(
+        Vector3d p1, Vector3d p2,
+        PointCloud<PointXYZ>::ConstPtr cloud,
+        vector<Vector4d>& planes,
+        vector<int>& ids)
+{
+    vector<Vector3d> axes;
+    axes.push_back(p1);
+    axes.push_back(p2);
+    axes.push_back(p1.cross(p2));
+    for (int i = 0; i < planes.size(); ++i) {
+        for (int j = 0; j < 3; ++j) {
+            if (abs(planes[i].head(3).dot(axes[j])) > cos(ANGLETHRESHOLD)) {
+                if (planes[i].head(3).dot(axes[j]) > 0) {
+                    planes[i].head(3) = axes[j];
+                } else {
+                    planes[i].head(3) = -axes[j];
+                }
+                break;
+            }
+        }
+    }
+    vector<double> offsets(planes.size(), 0);
+    vector<int> counts(planes.size(), 0);
+    for (int i = 0; i < cloud->size(); ++i) {
+        if (ids[i] >= 0) {
+            counts[ids[i]]++;
+            offsets[ids[i]] -= Vector3d(cloud->at(i).x, cloud->at(i).y, cloud->at(i).z).dot(planes[ids[i]].head(3));
+        }
+    }
+    for (int i = 0; i < planes.size(); ++i) {
+        planes[i](3) = offsets[i]/counts[i];
+    }
+}
+
+
 int findPlaneCorrespondences(
         PointCloud<PointXYZ>::ConstPtr src,
         PointCloud<PointXYZ>::ConstPtr tgt,
@@ -146,9 +182,25 @@ int findPlaneCorrespondences(
         }
     }
     numcorrespondences = 0;
+    vector<int> planeids;
     for (int i = 0; i < planecorrespondences.size(); ++i) {
         if (compatible[i] != n) planecorrespondences[i] = -1;
-        else if (planecorrespondences[i] >= 0) numcorrespondences++;
+        else if (planecorrespondences[i] >= 0) {
+            planeids.push_back(i);
+            numcorrespondences++;
+        }
+    }
+    if (numcorrespondences > 1) {
+        Vector3d p1 = srcplanes[planeids[0]].head(3);
+        Vector3d pp = srcplanes[planeids[1]].head(3);
+        Vector3d p2 = p1.cross(pp);
+        p2.normalize();
+        filterManhattan(p1, p2, src, srcplanes, srcids);
+        p1 = tgtplanes[planecorrespondences[planeids[0]]].head(3);
+        pp = tgtplanes[planecorrespondences[planeids[1]]].head(3);
+        p2 = p1.cross(pp);
+        p2.normalize();
+        filterManhattan(p1, p2, tgt, tgtplanes, tgtids);
     }
     return numcorrespondences;
 }
