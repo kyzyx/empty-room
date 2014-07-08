@@ -9,6 +9,7 @@ using namespace Eigen;
 using namespace std;
 
 const double MAXCORRESPONDENCEDISTANCE = 0.2;
+const double ANGLETHRESHOLD = M_PI/8;
 
 void filterLabelled(PointCloud<PointXYZ>::Ptr cloud, vector<int>& labels, int label, bool negative=true)
 {
@@ -62,6 +63,44 @@ PointXYZ ArrayMatrix::nearest(PointXYZ p, double radius) const
         }
     }
     return p1;
+}
+
+void markParallelPlanes(
+        Vector3d v,
+        PointCloud<PointXYZ>::ConstPtr cloud,
+        vector<Vector4d>& planes,
+        vector<int>& labels,
+        int label)
+{
+    const double EDGE = -3;
+    vector<bool> keep(planes.size(), true);
+    for (int i = 0; i < planes.size(); ++i) {
+        if (planes[i].head(3).dot(v) < sin(ANGLETHRESHOLD)) keep[i] = false;
+    }
+    vector<int> tmp(labels);
+    markDepthDiscontinuities(cloud, 0.1, tmp, EDGE, 2);
+    for (int i = 0; i < labels.size(); ++i) {
+        if (labels[i] > -1 && !keep[labels[i]] && tmp[i] != EDGE) labels[i] = label;
+    }
+}
+
+void markPerpendicularPlanes(
+        Vector3d v,
+        PointCloud<PointXYZ>::ConstPtr cloud,
+        vector<Vector4d>& planes,
+        vector<int>& labels,
+        int label)
+{
+    const double EDGE = -3;
+    vector<bool> keep(planes.size(), true);
+    for (int i = 0; i < planes.size(); ++i) {
+        if (planes[i].head(3).dot(v) > cos(ANGLETHRESHOLD)) keep[i] = false;
+    }
+    vector<int> tmp(labels);
+    markDepthDiscontinuities(cloud, 0.1, tmp, EDGE, 2);
+    for (int i = 0; i < labels.size(); ++i) {
+        if (labels[i] > -1 && !keep[labels[i]] && tmp[i] != EDGE) labels[i] = label;
+    }
 }
 
 void markEdges(
@@ -240,6 +279,8 @@ Matrix4d alignPlaneToPlane(
     // Filter clouds
     vector<int> fsrcids(srcids);
     vector<int> ftgtids(tgtids);
+    markPerpendicularPlanes(srcplanes[srcid].head(3), tsrc, srcplanes, fsrcids, srcid);
+    markPerpendicularPlanes(tgtplanes[tgtid].head(3), tgt, tgtplanes, ftgtids, tgtid);
     preprocessCloud(tgt, ttgt, coordtransform, ftgtids, tgtid, false);
     preprocessCloud(tsrc, tsrc, coordtransform, fsrcids, srcid);
 
@@ -296,6 +337,8 @@ Matrix4d partialAlignPlaneToPlane(
     // Filter clouds
     fsrcids = srcids;
     ftgtids = tgtids;
+    markPerpendicularPlanes(srcplanes[srcid].head(3), tsrc, srcplanes, fsrcids, srcid);
+    markPerpendicularPlanes(tgtplanes[tgtid].head(3), tgt, tgtplanes, ftgtids, tgtid);
     preprocessCloud(tgt, ttgt, coordtransform, ftgtids, tgtid, false);
     preprocessCloud(tsrc, tsrc, coordtransform, fsrcids, srcid);
 
@@ -393,6 +436,12 @@ Matrix4d alignEdgeToEdge(
             fsrcids[i] = ids[0];
         }
     }
+    Vector3d srcax = srcplanes[ids[0]].head(3);
+    srcax = srcax.cross((Vector3d) (srcplanes[ids[1]].head(3)));
+    Vector3d tgtax = tgtplanes[planecorrespondences[ids[0]]].head(3);
+    tgtax = tgtax.cross((Vector3d) (tgtplanes[planecorrespondences[ids[1]]].head(3)));
+    markParallelPlanes(srcax, tsrc, srcplanes, fsrcids, ids[0]);
+    markParallelPlanes(tgtax, tgt, tgtplanes, ftgtids, planecorrespondences[ids[0]]);
     preprocessCloud(tgt, ttgt, coordtransform, ftgtids, planecorrespondences[ids[0]], false);
     preprocessCloud(tsrc, tsrc, coordtransform, fsrcids, ids[0]);
 
@@ -466,6 +515,12 @@ Matrix4d partialAlignEdgeToEdge(
             fsrcids[i] = ids[0];
         }
     }
+    Vector3d srcax = srcplanes[ids[0]].head(3);
+    srcax = srcax.cross((Vector3d) (srcplanes[ids[1]].head(3)));
+    Vector3d tgtax = tgtplanes[planecorrespondences[ids[0]]].head(3);
+    tgtax = tgtax.cross((Vector3d) (tgtplanes[planecorrespondences[ids[1]]].head(3)));
+    markParallelPlanes(srcax, tsrc, srcplanes, fsrcids, ids[0]);
+    markParallelPlanes(tgtax, tgt, tgtplanes, ftgtids, planecorrespondences[ids[0]]);
     preprocessCloud(tgt, ttgt, coordtransform, ftgtids, planecorrespondences[ids[0]], false);
     preprocessCloud(tsrc, tsrc, coordtransform, fsrcids, ids[0]);
 
