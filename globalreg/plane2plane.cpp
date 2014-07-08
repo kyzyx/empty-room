@@ -325,6 +325,38 @@ Matrix4d partialAlignPlaneToPlane(
     return transform;
 }
 
+double computeOptimal1d(vector<double>& x) {
+    sort(x.begin(), x.end());
+    double t = 0.01;
+    double best = 0;
+    int bestcount = 0;
+
+    for (double d = 0; d < 2*t; d += t) {
+        double lo = x[0] + d;
+        int c = 0;
+        for (int i = 0; i < x.size(); ++i) {
+            while (lo + 2*t < x[i]) {
+                if (c > bestcount) {
+                    bestcount = c;
+                    best = lo;
+                }
+                lo += 2*t;
+                c = 0;
+            }
+            ++c;
+        }
+    }
+    double tot = 0;
+    int n = 0;
+    vector<double>::iterator it = lower_bound(x.begin(), x.end(), best);
+    for (;it != x.end(); ++it) {
+        if (*it >= best+2*t) break;
+        tot += *it;
+        ++n;
+    }
+    return tot/n;
+}
+
 Matrix4d alignEdgeToEdge(
         PointCloud<PointXYZ>::ConstPtr src,
         PointCloud<PointXYZ>::ConstPtr tgt,
@@ -383,13 +415,13 @@ Matrix4d alignEdgeToEdge(
         error = newerror;
 
         // Compute rigid translation
-        double translation = 0;
+        vector<double> dists;
         for (int i = 0; i < ptsrc.size(); ++i) {
-            translation -= ptsrc[i].z - pttgt[i].z;
+            dists.push_back(ptsrc[i].z - pttgt[i].z);
         }
         Matrix4d transl;
         transl.setIdentity();
-        transl(2,3) = translation/ptsrc.size();
+        transl(2,3) = -computeOptimal1d(dists);
         transform = transl*transform;
         transformPointCloud(*tsrc, *tsrc, transl);
     }
@@ -455,13 +487,13 @@ Matrix4d partialAlignEdgeToEdge(
         pointcorrespondences.push_back(PointXYZ(pt(0), pt(1), pt(2)));
         pointcorrespondences.push_back(PointXYZ(corr(0), corr(1), corr(2)));
     }
-    double translation = 0;
+    vector<double> dists;
     for (int i = 0; i < ptsrc.size(); ++i) {
-        translation -= ptsrc[i].z - pttgt[i].z;
+        dists.push_back(ptsrc[i].z - pttgt[i].z);
     }
     Matrix4d transl;
     transl.setIdentity();
-    transl(2,3) = translation/ptsrc.size();
+    transl(2,3) = -computeOptimal1d(dists);
     transform = coordtransform.inverse()*transl*transform;
     return transform;
 }
