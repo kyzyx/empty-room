@@ -286,7 +286,12 @@ void kbd_cb(const visualization::KeyboardEvent& event, void*) {
                 char linename[30];
                 for (int i = 0; i < pointcorrespondences.size(); i+=2) {
                     sprintf(linename, "line%03d", i/2);
-                    viewer->addLine(pointcorrespondences[i], pointcorrespondences[i+1],linename);
+                    int dx = pointcorrespondences[i].x - pointcorrespondences[i+1].x>0?255:80;
+                    int dy = pointcorrespondences[i].y - pointcorrespondences[i+1].y>0?255:80;
+                    int dz = pointcorrespondences[i].z - pointcorrespondences[i+1].z>0?255:80;
+                    viewer->addArrow(pointcorrespondences[i+1],
+                                     pointcorrespondences[i],
+                                     dx, dy, dz, false, linename);
                 }
                 cout << "Computed correspondences" << endl;
                 ++step;
