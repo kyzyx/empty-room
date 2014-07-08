@@ -136,7 +136,7 @@ int main(int argc, char** argv) {
         srcplanes.clear(); tgtplanes.clear();
         srcids.clear(); tgtids.clear();
         Matrix4d t = align(clouds[i], clouds[i-1], srcplanes, srcids, tgtplanes, tgtids);
-        xforms.push_back(t*xforms.back());
+        xforms.push_back(xforms.back()*t);
         cout << "Done alignment " << i << endl;
     }
 
