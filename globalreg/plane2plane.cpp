@@ -8,6 +8,8 @@ using namespace pcl;
 using namespace Eigen;
 using namespace std;
 
+const double MAXCORRESPONDENCEDISTANCE = 0.2;
+
 void filterLabelled(PointCloud<PointXYZ>::Ptr cloud, vector<int>& labels, int label, bool negative=true)
 {
     PointIndices::Ptr inds(new PointIndices());
@@ -113,7 +115,7 @@ void preprocessCloud(
     // Remove boundary points and wall points
     vector<int> prune(ids);
     if (removedepthdiscontinuities) {
-        markEdges(outputcloud, prune, id, 9);
+        markEdges(outputcloud, prune, id, 30);
         //markDepthDiscontinuities(outputcloud, 0.1, prune, id, 3);
     }
     filterLabelled(outputcloud, prune, id);
@@ -181,6 +183,7 @@ double filterCorrespondences(
         double stddevthreshold=3)
 {
     //double outlierprop = 0.05;   // Throw away this proportion of the furthest correspondences
+    double maxcorrespondencedist = MAXCORRESPONDENCEDISTANCE;
     vector<pair<double, int> > dists;
     double meandist = 0;
     for (int i = 0; i < src->size(); ++i) {
@@ -201,6 +204,8 @@ double filterCorrespondences(
     sort(dists.begin(), dists.end());
     //int sz = dists.size()*(1-outlierprop);
     int sz = lower_bound(dists.begin(), dists.end(), make_pair(meandist + stddevthreshold*stdist,0)) - dists.begin();
+    int sz2 = lower_bound(dists.begin(), dists.end(), make_pair(maxcorrespondencedist,0)) - dists.begin();
+    if (sz2 < sz) sz = sz2;
     if (!targetnumber) targetnumber = sz;
     int inc = sz/targetnumber;
     if (!inc) inc = 1;
@@ -434,7 +439,7 @@ Matrix4d partialAlignEdgeToEdge(
     preprocessCloud(tsrc, tsrc, coordtransform, fsrcids, ids[0]);
 
     // Construct search structure
-    ArrayMatrix am(ttgt, 0.02);
+    ArrayMatrix am(ttgt, 0.01);
     // Compute correspondences
     vector<PointXYZ> ptsrc;
     vector<PointXYZ> pttgt;
