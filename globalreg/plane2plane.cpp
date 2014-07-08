@@ -113,12 +113,11 @@ void preprocessCloud(
     transformPointCloud(*inputcloud, *outputcloud, transform);
 
     // Remove boundary points and wall points
-    vector<int> prune(ids);
     if (removedepthdiscontinuities) {
-        markEdges(outputcloud, prune, id, 30);
+        markEdges(outputcloud, ids, id, 30);
         //markDepthDiscontinuities(outputcloud, 0.1, prune, id, 3);
     }
-    filterLabelled(outputcloud, prune, id);
+    filterLabelled(outputcloud, ids, id);
 }
 
 void computeCorrespondences(
@@ -273,8 +272,8 @@ Matrix4d alignPlaneToPlane(
 Matrix4d partialAlignPlaneToPlane(
         PointCloud<PointXYZ>::ConstPtr src,
         PointCloud<PointXYZ>::ConstPtr tgt,
-        vector<Vector4d>& srcplanes, vector<int>& srcids,
-        vector<Vector4d>& tgtplanes, vector<int>& tgtids,
+        vector<Vector4d>& srcplanes, vector<int>& srcids, vector<int>& fsrcids,
+        vector<Vector4d>& tgtplanes, vector<int>& tgtids, vector<int>& ftgtids,
         vector<int>& planecorrespondences,
         vector<PointXYZ>& pointcorrespondences,
         int ncorrs, double t)
@@ -295,8 +294,8 @@ Matrix4d partialAlignPlaneToPlane(
     transform = coordtransform*transform;
 
     // Filter clouds
-    vector<int> fsrcids(srcids);
-    vector<int> ftgtids(tgtids);
+    fsrcids = srcids;
+    ftgtids = tgtids;
     preprocessCloud(tgt, ttgt, coordtransform, ftgtids, tgtid, false);
     preprocessCloud(tsrc, tsrc, coordtransform, fsrcids, srcid);
 
@@ -431,8 +430,8 @@ Matrix4d alignEdgeToEdge(
 Matrix4d partialAlignEdgeToEdge(
         PointCloud<PointXYZ>::ConstPtr src,
         PointCloud<PointXYZ>::ConstPtr tgt,
-        vector<Vector4d>& srcplanes, vector<int>& srcids,
-        vector<Vector4d>& tgtplanes, vector<int>& tgtids,
+        vector<Vector4d>& srcplanes, vector<int>& srcids, vector<int>& fsrcids,
+        vector<Vector4d>& tgtplanes, vector<int>& tgtids, vector<int>& ftgtids,
         vector<int>& planecorrespondences,
         vector<PointXYZ>& pointcorrespondences,
         int ncorrs, double t)
@@ -455,8 +454,8 @@ Matrix4d partialAlignEdgeToEdge(
     transform = coordtransform*transform;
 
     // Filter clouds
-    vector<int> fsrcids(srcids);
-    vector<int> ftgtids(tgtids);
+    fsrcids = srcids;
+    ftgtids = tgtids;
     for (int i = 0; i < ftgtids.size(); ++i) {
         if (ftgtids[i] == planecorrespondences[ids[1]]) {
             ftgtids[i] = planecorrespondences[ids[0]];

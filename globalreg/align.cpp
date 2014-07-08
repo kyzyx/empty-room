@@ -16,7 +16,7 @@ using namespace Eigen;
 int colormode = 0;
 visualization::PCLVisualizer* viewer;
 vector<Vector4d> srcplanes, tgtplanes;
-vector<int> srcids, tgtids;
+vector<int> srcids, tgtids, fsrcids, ftgtids;
 
 PointCloud<PointXYZ>::Ptr cloud1(new PointCloud<PointXYZ>);
 PointCloud<PointXYZ>::Ptr cloud2(new PointCloud<PointXYZ>);
@@ -148,17 +148,14 @@ void colorUnfilteredPoints() {
         if (planecorrespondences[srcid] > -1) break;
     }
     int tgtid = planecorrespondences[srcid];
-    vector<int> prunesrc(srcids);
-    vector<int> prunetgt(tgtids);
-    int MAGIC = 42;
-    markDepthDiscontinuities(cloud1, 0.1, prunesrc, MAGIC, 8);
-    //markDepthDiscontinuities(cloud2, 0.1, prunetgt, MAGIC);
+    if (fsrcids.size() == 0) fsrcids = srcids;
+    if (ftgtids.size() == 0) ftgtids = tgtids;
     for (int i = 0; i < cloud1->size(); ++i) {
-        if (prunesrc[i] == srcid) {
+        if (fsrcids[i] == srcid) {
             colored1->at(i).r = 0;
             colored1->at(i).g = 0;
             colored1->at(i).b = 0;
-        } else if (prunesrc[i] == MAGIC) {
+        } else if (fsrcids[i] == -2) {
             colored1->at(i).r = 63;
             colored1->at(i).g = 0;
             colored1->at(i).b = 0;
@@ -169,11 +166,11 @@ void colorUnfilteredPoints() {
         }
     }
     for (int i = 0; i < cloud2->size(); ++i) {
-        if (prunetgt[i] == tgtid) {
+        if (ftgtids[i] == tgtid) {
             colored2->at(i).r = 0;
             colored2->at(i).g = 0;
             colored2->at(i).b = 0;
-        } else if (prunetgt[i] == MAGIC) {
+        } else if (ftgtids[i] == -2) {
             colored2->at(i).r = 63;
             colored2->at(i).g = 0;
             colored2->at(i).b = 0;
@@ -279,9 +276,9 @@ void kbd_cb(const visualization::KeyboardEvent& event, void*) {
                 double pprop = 3 - (step+1)*0.05;
                 if (pprop < 0.5) pprop = 0.5;
                 if (numcorrespondences == 1) {
-                    partialAlignPlaneToPlane(aligned, cloud2, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences, pointcorrespondences, 2000, pprop);
+                    partialAlignPlaneToPlane(aligned, cloud2, srcplanes, srcids, fsrcids, tgtplanes, tgtids, ftgtids, planecorrespondences, pointcorrespondences, 2000, pprop);
                 } else if (numcorrespondences >= 2) {
-                    partialAlignEdgeToEdge(aligned, cloud2, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences, pointcorrespondences, 800, pprop);
+                    partialAlignEdgeToEdge(aligned, cloud2, srcplanes, srcids, fsrcids, tgtplanes, tgtids, ftgtids, planecorrespondences, pointcorrespondences, 800, pprop);
                 }
                 char linename[30];
                 for (int i = 0; i < pointcorrespondences.size(); i+=2) {
@@ -307,9 +304,9 @@ void kbd_cb(const visualization::KeyboardEvent& event, void*) {
                 pointcorrespondences.clear();
                 Matrix4d t;
                 if (numcorrespondences == 1) {
-                    t = partialAlignPlaneToPlane(aligned, cloud2, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences, pointcorrespondences, 6000, pprop);
+                    t = partialAlignPlaneToPlane(aligned, cloud2, srcplanes, srcids, fsrcids, tgtplanes, tgtids, ftgtids, planecorrespondences, pointcorrespondences, 6000, pprop);
                 } else if (numcorrespondences >= 2) {
-                    t = partialAlignEdgeToEdge(aligned, cloud2, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences, pointcorrespondences, 6000, pprop);
+                    t = partialAlignEdgeToEdge(aligned, cloud2, srcplanes, srcids, fsrcids, tgtplanes, tgtids, ftgtids, planecorrespondences, pointcorrespondences, 6000, pprop);
                 }
                 pointcorrespondences.clear();
                 copyPointCloud(*colored1, *prevcolored);

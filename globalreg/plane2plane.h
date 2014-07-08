@@ -144,16 +144,16 @@ Eigen::Matrix4d computeOptimalRigidXYTransform(
 Eigen::Matrix4d partialAlignPlaneToPlane(
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr src,
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr tgt,
-        std::vector<Eigen::Vector4d>& srcplanes, std::vector<int>& srcids,
-        std::vector<Eigen::Vector4d>& tgtplanes, std::vector<int>& tgtids,
+        std::vector<Eigen::Vector4d>& srcplanes, std::vector<int>& srcids, std::vector<int>& fsrcids,
+        std::vector<Eigen::Vector4d>& tgtplanes, std::vector<int>& tgtids, std::vector<int>& ftgtids,
         std::vector<int>& planecorrespondences,
         std::vector<pcl::PointXYZ>& pointcorrespondences,
         int ncorrs, double t);
 Eigen::Matrix4d partialAlignEdgeToEdge(
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr src,
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr tgt,
-        std::vector<Eigen::Vector4d>& srcplanes, std::vector<int>& srcids,
-        std::vector<Eigen::Vector4d>& tgtplanes, std::vector<int>& tgtids,
+        std::vector<Eigen::Vector4d>& srcplanes, std::vector<int>& srcids, std::vector<int>& fsrcids,
+        std::vector<Eigen::Vector4d>& tgtplanes, std::vector<int>& tgtids, std::vector<int>& ftgtids,
         std::vector<int>& planecorrespondences,
         std::vector<pcl::PointXYZ>& pointcorrespondences,
         int ncorrs, double t);
