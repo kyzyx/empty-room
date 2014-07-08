@@ -8,8 +8,14 @@ using namespace pcl;
 using namespace Eigen;
 using namespace std;
 
-const double MAXCORRESPONDENCEDISTANCE = 0.2;
-const double ANGLETHRESHOLD = M_PI/8;
+const double ANGLETHRESHOLD = M_PI/8;         // Angle between normals to be considered parallel
+const double MAXCORRESPONDENCEDISTANCE = 0.2; // Hard cutoff of correspondence distance
+const int EDGEREMOVAL = 60;                   // Remove this many pixels on the boundaries of depth images
+const int DISCONTINUITYBORDERWIDTH = 4;       // Keep this many pixels on plane edges
+const double DISCONTINUITYTHRESHOLD = 0.1;    // Discontinuity if distance > threshold
+const int maxiterations = 40;          // ICP iterations
+const double SEARCHWIDTH = 0.01;       // Data structure discretization
+const double errthreshold = 0.00005;   // Stop ICP after error below this threshold
 
 void filterLabelled(PointCloud<PointXYZ>::Ptr cloud, vector<int>& labels, int label, bool negative=true)
 {
@@ -78,7 +84,7 @@ void markParallelPlanes(
         if (planes[i].head(3).dot(v) < sin(ANGLETHRESHOLD)) keep[i] = false;
     }
     vector<int> tmp(labels);
-    markDepthDiscontinuities(cloud, 0.1, tmp, EDGE, 2);
+    markDepthDiscontinuities(cloud, DISCONTINUITYTHRESHOLD, tmp, EDGE, DISCONTINUITYBORDERWIDTH);
     for (int i = 0; i < labels.size(); ++i) {
         if (labels[i] > -1 && !keep[labels[i]] && tmp[i] != EDGE) labels[i] = label;
     }
@@ -97,7 +103,7 @@ void markPerpendicularPlanes(
         if (planes[i].head(3).dot(v) > cos(ANGLETHRESHOLD)) keep[i] = false;
     }
     vector<int> tmp(labels);
-    markDepthDiscontinuities(cloud, 0.1, tmp, EDGE, 2);
+    markDepthDiscontinuities(cloud, DISCONTINUITYTHRESHOLD, tmp, EDGE, DISCONTINUITYBORDERWIDTH);
     for (int i = 0; i < labels.size(); ++i) {
         if (labels[i] > -1 && !keep[labels[i]] && tmp[i] != EDGE) labels[i] = label;
     }
@@ -151,10 +157,9 @@ void preprocessCloud(
 {
     transformPointCloud(*inputcloud, *outputcloud, transform);
 
-    // Remove boundary points and wall points
+    // Remove boundary points
     if (removedepthdiscontinuities) {
-        markEdges(outputcloud, ids, id, 30);
-        //markDepthDiscontinuities(outputcloud, 0.1, prune, id, 3);
+        markEdges(outputcloud, ids, id, EDGEREMOVAL);
     }
     filterLabelled(outputcloud, ids, id);
 }
@@ -285,11 +290,9 @@ Matrix4d alignPlaneToPlane(
     preprocessCloud(tsrc, tsrc, coordtransform, fsrcids, srcid);
 
     // Construct layered kdtrees for all non-plane points in tgt
-    LayeredKdTrees lkdt(ttgt, 0.02);
+    LayeredKdTrees lkdt(ttgt, SEARCHWIDTH);
 
     double error = numeric_limits<double>::infinity();
-    double errthreshold = 0.0005;
-    int maxiterations = 20;
     for (int i = 0; i < maxiterations; ++i) {
         // Compute correspondences
         vector<PointXYZ> ptsrc;
@@ -343,7 +346,7 @@ Matrix4d partialAlignPlaneToPlane(
     preprocessCloud(tsrc, tsrc, coordtransform, fsrcids, srcid);
 
     // Construct layered kdtrees for all non-plane points in tgt
-    LayeredKdTrees lkdt(ttgt, 0.01);
+    LayeredKdTrees lkdt(ttgt, SEARCHWIDTH);
 
     vector<PointXYZ> ptsrc;
     vector<PointXYZ> pttgt;
@@ -446,11 +449,9 @@ Matrix4d alignEdgeToEdge(
     preprocessCloud(tsrc, tsrc, coordtransform, fsrcids, ids[0]);
 
     // Construct search structure
-    ArrayMatrix am(ttgt, 0.02);
+    ArrayMatrix am(ttgt, SEARCHWIDTH);
 
     double error = numeric_limits<double>::infinity();
-    double errthreshold = 0.0001;
-    int maxiterations = 20;
     for (int i = 0; i < maxiterations; ++i) {
         // Compute correspondences
         vector<PointXYZ> ptsrc;
@@ -525,7 +526,7 @@ Matrix4d partialAlignEdgeToEdge(
     preprocessCloud(tsrc, tsrc, coordtransform, fsrcids, ids[0]);
 
     // Construct search structure
-    ArrayMatrix am(ttgt, 0.01);
+    ArrayMatrix am(ttgt, SEARCHWIDTH);
     // Compute correspondences
     vector<PointXYZ> ptsrc;
     vector<PointXYZ> pttgt;
