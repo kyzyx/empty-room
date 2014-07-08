@@ -16,6 +16,9 @@ const double DISCONTINUITYTHRESHOLD = 0.1;    // Discontinuity if distance > thr
 const int maxiterations = 40;          // ICP iterations
 const double SEARCHWIDTH = 0.01;       // Data structure discretization
 const double errthreshold = 0.00005;   // Stop ICP after error below this threshold
+const double EPSILON = 0.00001;
+const double MINTRANSLATION = 0.0002;  // Stop ICP after translation below this threshold
+const double MINROTATION = M_PI/40;  // Stop ICP after rotation angle below this threshold
 
 void filterLabelled(PointCloud<PointXYZ>::Ptr cloud, vector<int>& labels, int label, bool negative=true)
 {
@@ -252,11 +255,32 @@ double filterCorrespondences(
     if (!targetnumber) targetnumber = sz;
     int inc = sz/targetnumber;
     if (!inc) inc = 1;
-    for (int i = 0; i < sz; i += inc) {
-        ptsrc.push_back(src->at(dists[i].second));
-        pttgt.push_back(corrs[dists[i].second]);
+    meandist = 0;
+    int count = 0;
+    for (int i = 0; i < sz; ++i) {
+        meandist += dists[i].first*dists[i].first;
+        ++count;
+        if (i%inc == 0) {
+            ptsrc.push_back(src->at(dists[i].second));
+            pttgt.push_back(corrs[dists[i].second]);
+        }
     }
-    return meandist;
+    return sqrt(meandist/count);
+}
+
+double transformAngle(Matrix4d m) {
+    double theta = (m.trace() - 2)/2;
+    if (theta < 1 - EPSILON && theta > EPSILON - 1) theta = acos(theta);
+    else if (theta > 0) theta = 0;
+    else theta = M_PI;
+    return theta;
+}
+double transformTranslation(Matrix4d m) {
+    Vector3d x = m.topRightCorner(3,1);
+    return x.norm();
+}
+bool converged(Matrix4d m, double dx, double dtheta) {
+    return transformTranslation(m) < dx && transformAngle(m) < dtheta;
 }
 
 Matrix4d alignPlaneToPlane(
@@ -300,12 +324,15 @@ Matrix4d alignPlaneToPlane(
         vector<PointXYZ> corrs;
         computeCorrespondences(tsrc, &lkdt, corrs);
         double newerror = filterCorrespondences(tsrc, corrs, ptsrc, pttgt);
-        cout << "Iteration " << i << ": " << newerror << endl;
-        if (abs(error-newerror) < errthreshold) break;
+        //if (abs(error-newerror) < errthreshold) break;
         error = newerror;
 
         // Compute rigid transform
         Matrix4d opt = computeOptimalRigidXYTransform(ptsrc, pttgt);
+        cout << "Iteration " << i << ": RMSE " << newerror;
+        cout << " Angle: " << transformAngle(opt);
+        cout << " Translation: " << transformTranslation(opt) << endl;
+        if (converged(opt, MINTRANSLATION, MINROTATION)) break;
         transform = opt*transform;
         transformPointCloud(*tsrc, *tsrc, opt);
     }
@@ -459,8 +486,7 @@ Matrix4d alignEdgeToEdge(
         vector<PointXYZ> corrs;
         computeCorrespondences(tsrc, &am, corrs);
         double newerror = filterCorrespondences(tsrc, corrs, ptsrc, pttgt);
-        cout << "Iteration " << i << ": " << newerror << endl;
-        if (abs(error-newerror) < errthreshold) break;
+        //if (abs(error-newerror) < errthreshold) break;
         error = newerror;
 
         // Compute rigid translation
@@ -471,6 +497,9 @@ Matrix4d alignEdgeToEdge(
         Matrix4d transl;
         transl.setIdentity();
         transl(2,3) = -computeOptimal1d(dists);
+        cout << "Iteration " << i << ": RMSE " << newerror;
+        cout << " Translation: " << abs(transl(2,3)) << endl;
+        if (converged(transl, MINTRANSLATION, MINROTATION)) break;
         transform = transl*transform;
         transformPointCloud(*tsrc, *tsrc, transl);
     }
