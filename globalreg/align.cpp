@@ -29,6 +29,40 @@ visualization::PointCloudColorHandlerRGBField<PointXYZRGB> prevrgb(prevcolored);
 vector<int> planecorrespondences;
 int numcorrespondences;
 
+#include <pcl/filters/fast_bilateral.h>
+#include <pcl/features/integral_image_normal.h>
+void colorNormals() {
+    PointCloud<Normal>::Ptr normals(new PointCloud<Normal>);
+    IntegralImageNormalEstimation<PointXYZRGB, Normal> ne;
+    ne.setNormalEstimationMethod (ne.AVERAGE_3D_GRADIENT);
+    ne.setMaxDepthChangeFactor(0.02f);
+    ne.setNormalSmoothingSize(10.0f);
+
+    ne.setInputCloud(colored1);
+    ne.compute(*normals);
+    for (int i = 0; i < colored1->size(); ++i) {
+        colored1->at(i).r = normals->at(i).normal_x*128+127;
+        colored1->at(i).g = normals->at(i).normal_y*128+127;
+        colored1->at(i).b = normals->at(i).normal_z*128+127;
+    }
+    ne.setInputCloud(colored2);
+    ne.compute(*normals);
+    for (int i = 0; i < colored2->size(); ++i) {
+        colored2->at(i).r = normals->at(i).normal_x*128+127;
+        colored2->at(i).g = normals->at(i).normal_y*128+127;
+        colored2->at(i).b = normals->at(i).normal_z*128+127;
+    }
+}
+void smooth(double s, double r) {
+    FastBilateralFilter<PointXYZ> fbf;
+    PointCloud<PointXYZ>::Ptr tmp(new PointCloud<PointXYZ>);
+    fbf.setSigmaS(s);
+    fbf.setSigmaR(r);
+    fbf.setInputCloud(cloud1);
+    fbf.applyFilter(*tmp);
+    copyPointCloud(*tmp, *colored1);
+}
+
 void colorPlaneCorrespondences() {
     for (int i = 0; i < srcids.size(); ++i) {
         if (srcids[i] == -1) {
@@ -193,6 +227,8 @@ void updateColormode() {
         cout << "Coloring relevant points for constrained ICP" << endl;
         colorUnfilteredPoints();
     } else if (colormode == 3) {
+        cout << "Coloring normals" << endl;
+        colorNormals();
     }
     viewer->updatePointCloud<PointXYZRGB>(colored1, rgb1, "Mesh1");
     viewer->updatePointCloud<PointXYZRGB>(colored2, rgb2, "Mesh2");
@@ -201,6 +237,8 @@ void updateColormode() {
 vector<PointXYZ> pointcorrespondences;
 void kbd_cb(const visualization::KeyboardEvent& event, void*) {
     static int step = 0;
+    static double ss = 9;
+    static double sr = 0.05;
     static PointCloud<PointXYZ>::Ptr aligned(new PointCloud<PointXYZ>);
     if (event.keyDown()) {
         if (event.getKeyCode() == ' ') {
@@ -220,7 +258,7 @@ void kbd_cb(const visualization::KeyboardEvent& event, void*) {
                 viewprev = !viewprev;
                 viewer->setPointCloudRenderingProperties(visualization::PCL_VISUALIZER_OPACITY, viewprev?1:0, "prev");
             }
-        } else if (event.getKeyCode() == 'n') {
+        } else if (event.getKeyCode() == 'b') {
             copyPointCloud(*cloud1, *aligned);
             char linename[30];
             for (int i = 0; i < pointcorrespondences.size(); i+=2) {
@@ -238,6 +276,30 @@ void kbd_cb(const visualization::KeyboardEvent& event, void*) {
             srcplanes.clear();
             srcids.clear();
             findPlanes(aligned, srcplanes, srcids);
+        } else if (event.getKeyCode() == 'n') {
+            ss-=2;
+            cout << ss << " " << sr << endl;
+            smooth(ss,sr);
+            updateColormode();
+            viewer->updatePointCloud<PointXYZRGB>(colored1, rgb1, "Mesh1");
+        } else if (event.getKeyCode() == 'N') {
+            ss+=2;
+            cout << ss << " " << sr << endl;
+            smooth(ss,sr);
+            updateColormode();
+            viewer->updatePointCloud<PointXYZRGB>(colored1, rgb1, "Mesh1");
+        } else if (event.getKeyCode() == 'm') {
+            sr-=0.01;
+            cout << ss << " " << sr << endl;
+            smooth(ss,sr);
+            updateColormode();
+            viewer->updatePointCloud<PointXYZRGB>(colored1, rgb1, "Mesh1");
+        } else if (event.getKeyCode() == 'M') {
+            sr+=0.01;
+            cout << ss << " " << sr << endl;
+            smooth(ss,sr);
+            updateColormode();
+            viewer->updatePointCloud<PointXYZRGB>(colored1, rgb1, "Mesh1");
         } else if (event.getKeyCode() == 'z') {
             if (step == 0) {
                 if (numcorrespondences == 1) {
