@@ -15,6 +15,8 @@ const double NOISETHRESHOLD = 0.01;
 const double MININLIERPROPORTION = 0.05;
 const double MAXEDGEPROPORTION = 0.04;
 const int MININLIERCOUNT = 12000;
+const double ANGULARDEVIATIONTHRESHOLD = 0.25;
+const double EPSILON = 0.00001;
 
 using namespace std;
 using namespace Eigen;
@@ -420,6 +422,56 @@ void combineLikePlanes(PointCloud<PointXYZ>::ConstPtr cloud, vector<Vector4d>& p
     }
 }
 
+void filterAngleVariance(
+        PointCloud<PointXYZ>::ConstPtr cloud,
+        vector<Vector4d>& planes,
+        vector<int>& ids)
+{
+    // Estimate normals
+    PointCloud<PointNormal>::Ptr filtered(new PointCloud<PointNormal>);
+    copyPointCloud(*cloud, *filtered);
+    IntegralImageNormalEstimation<PointXYZ, PointNormal> ne;
+    ne.setNormalEstimationMethod (ne.AVERAGE_3D_GRADIENT);
+    ne.setMaxDepthChangeFactor(0.05f);
+    ne.setNormalSmoothingSize(12.0f);
+    ne.setInputCloud(cloud);
+    ne.compute(*filtered);
+    // Compute average angular deviation from normal
+    vector<double> std(planes.size(), 0);
+    vector<int> counts(planes.size(), 0);
+    for (int i = 0; i < filtered->size(); ++i) {
+        if (ids[i] > -1 && !isnan(filtered->at(i).normal_x)) {
+            double theta = getNormal(filtered->at(i)).dot(planes[ids[i]].head(3));
+            if (theta < 1 - EPSILON && theta > EPSILON - 1) theta = acos(theta);
+            else if (theta > 0) theta = 0;
+            else theta = M_PI;
+            std[ids[i]] += theta;
+            ++counts[ids[i]];
+        }
+    }
+
+    // Filter planes
+    vector<Vector4d> origplanes(planes);
+    vector<int> newids;
+    planes.clear();
+    int n = 0;
+    for (int i = 0; i < origplanes.size(); ++i) {
+        if (std[i]/counts[i] < ANGULARDEVIATIONTHRESHOLD) {
+            planes.push_back(origplanes[i]);
+            newids.push_back(n++);
+        }
+        else {
+            newids.push_back(-1);
+        }
+    }
+    // Relabel points
+    for (int i = 0; i < ids.size(); ++i) {
+        if (ids[i] > -1) {
+            ids[i] = newids[ids[i]];
+        }
+    }
+}
+
 void findPlanes(
         PointCloud<PointXYZ>::ConstPtr cloud,
         vector<Vector4d>& planes,
@@ -430,4 +482,5 @@ void findPlanes(
     findPlanesWithNormals(cloud, planes, ids);
     combineLikePlanes(cloud, planes, ids);
     combineLikePlanes(cloud, planes, ids);
+    filterAngleVariance(cloud, planes, ids);
 }
