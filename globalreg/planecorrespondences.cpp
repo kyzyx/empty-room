@@ -7,8 +7,9 @@ using namespace std;
 
 const double ANGLETHRESHOLD = M_PI/12;
 const double MATCHANGLETHRESHOLD = M_PI/6;
+const double MAXTRANSLATION = 0.25;
 
-void filterManhattan(
+void recomputePlanesManhattan(
         Vector3d p1, Vector3d p2,
         PointCloud<PointXYZ>::ConstPtr cloud,
         vector<Vector4d>& planes,
@@ -18,21 +19,35 @@ void filterManhattan(
     axes.push_back(p1);
     axes.push_back(p2);
     axes.push_back(p1.cross(p2).normalized());
-    for (int i = 0; i < planes.size(); ++i) {
+    vector<bool> consistent(planes.size(), false);
+    vector<int> relabel;
+    vector<Vector4d> origplanes(planes);
+    planes.clear();
+    int n = 0;
+    for (int i = 0; i < origplanes.size(); ++i) {
+        bool consistent = false;
         for (int j = 0; j < 3; ++j) {
-            if (abs(planes[i].head(3).dot(axes[j])) > cos(ANGLETHRESHOLD)) {
-                if (planes[i].head(3).dot(axes[j]) > 0) {
-                    planes[i].head(3) = axes[j];
+            if (abs(origplanes[i].head(3).dot(axes[j])) > cos(ANGLETHRESHOLD)) {
+                consistent = true;
+                if (origplanes[i].head(3).dot(axes[j]) > 0) {
+                    origplanes[i].head(3) = axes[j];
                 } else {
-                    planes[i].head(3) = -axes[j];
+                    origplanes[i].head(3) = -axes[j];
                 }
+                planes.push_back(origplanes[i]);
+                relabel.push_back(n++);
                 break;
             }
         }
+        if (!consistent) {
+            relabel.push_back(-1);
+        }
     }
+
     vector<double> offsets(planes.size(), 0);
     vector<int> counts(planes.size(), 0);
     for (int i = 0; i < cloud->size(); ++i) {
+        if (ids[i] >= 0) ids[i] = relabel[ids[i]];
         if (ids[i] >= 0) {
             counts[ids[i]]++;
             offsets[ids[i]] -= Vector3d(cloud->at(i).x, cloud->at(i).y, cloud->at(i).z).dot(planes[ids[i]].head(3));
@@ -43,24 +58,21 @@ void filterManhattan(
     }
 }
 
-
-int findPlaneCorrespondences(
-        PointCloud<PointXYZ>::ConstPtr src,
-        PointCloud<PointXYZ>::ConstPtr tgt,
-        vector<Vector4d>& srcplanes, vector<int>& srcids,
-        vector<Vector4d>& tgtplanes, vector<int>& tgtids,
+int findCandidateCorrespondences(
+        vector<Vector4d>& srcplanes,
+        vector<Vector4d>& tgtplanes,
         vector<int>& planecorrespondences)
 {
-    planecorrespondences.resize(srcplanes.size(), -1);
     int numcorrespondences = 0;
-
     // Find all possible correspondences
     for (int i = 0; i < srcplanes.size(); ++i) {
         for (int j = 0; j < tgtplanes.size(); ++j) {
             double cosa = srcplanes[i].head(3).dot(tgtplanes[j].head(3));
             if (cosa > cos(MATCHANGLETHRESHOLD)) {
+                double perpdist = abs(srcplanes[i](3) - tgtplanes[j](3));
+                if (perpdist > MAXTRANSLATION) continue;
                 if (planecorrespondences[i] != -1) {
-                    if (abs(srcplanes[i](3) - tgtplanes[j](3)) < abs(srcplanes[i](3) - tgtplanes[planecorrespondences[i]](3))) {
+                    if (perpdist < abs(srcplanes[i](3) - tgtplanes[planecorrespondences[i]](3))) {
                         planecorrespondences[i] = j;
                     }
                 } else {
@@ -75,6 +87,7 @@ int findPlaneCorrespondences(
         if (planecorrespondences[i] < 0) continue;
         for (int j = i+1; j < srcplanes.size(); ++j) {
             if (planecorrespondences[i] == planecorrespondences[j]) {
+                --numcorrespondences;
                 int t = planecorrespondences[i];
                 if (abs(srcplanes[i](3) - tgtplanes[t](3)) > abs(srcplanes[j](3) - tgtplanes[t](3))) {
                     planecorrespondences[i] = -1;
@@ -85,7 +98,14 @@ int findPlaneCorrespondences(
             }
         }
     }
+    return numcorrespondences;
+}
 
+void selectManhattanSystem(
+        vector<Vector4d>& srcplanes,
+        vector<Vector4d>& tgtplanes,
+        vector<int>& planecorrespondences)
+{
     // Group correspondences based on Manhattan coordinate system
     // TODO: Weight by plane area?
     vector<int> compatible(planecorrespondences.size(), -1);
@@ -121,18 +141,20 @@ int findPlaneCorrespondences(
             planecorrespondences[i] = -1;
         }
     }
+}
 
-    // Isolate at most one plane in each direction to match
+void filterRearmost(vector<Vector4d>& planes, vector<int>& planecorrespondences)
+{
     for (int i = 0; i < planecorrespondences.size(); ++i) {
         if (planecorrespondences[i] > -1) {
             int best = i;
             int orig = planecorrespondences[i];
-            double rearmost = srcplanes[i](3);
+            double rearmost = planes[i](3);
             planecorrespondences[i] = -1;
             for (int j = i+1; j < planecorrespondences.size(); ++j) {
-                if (planecorrespondences[j] > -1 && srcplanes[i].head(3).dot(srcplanes[j].head(3)) > cos(ANGLETHRESHOLD)) {
-                    if (srcplanes[j](3) > rearmost) {
-                        rearmost = srcplanes[j](3);
+                if (planecorrespondences[j] > -1 && planes[i].head(3).dot(planes[j].head(3)) > cos(ANGLETHRESHOLD)) {
+                    if (planes[j](3) > rearmost) {
+                        rearmost = planes[j](3);
                         best = j;
                         orig = planecorrespondences[j];
                     }
@@ -142,8 +164,25 @@ int findPlaneCorrespondences(
             planecorrespondences[best] = orig;
         }
     }
+}
 
-    // Final count of correspondences
+int findPlaneCorrespondences(
+        PointCloud<PointXYZ>::ConstPtr src,
+        PointCloud<PointXYZ>::ConstPtr tgt,
+        vector<Vector4d>& srcplanes, vector<int>& srcids,
+        vector<Vector4d>& tgtplanes, vector<int>& tgtids,
+        vector<int>& planecorrespondences)
+{
+    planecorrespondences.resize(srcplanes.size(), -1);
+    // Generate possible correspondences
+    int numcorrespondences = findCandidateCorrespondences(srcplanes, tgtplanes, planecorrespondences);
+    // Isolate correspondences within a single Manhattan coordinate system
+    selectManhattanSystem(srcplanes, tgtplanes, planecorrespondences);
+
+    // Isolate at most one plane in each direction to match
+    filterRearmost(srcplanes, planecorrespondences);
+
+    // Recount correspondences
     numcorrespondences = 0;
     vector<int> planeids;
     for (int i = 0; i < planecorrespondences.size(); ++i) {
@@ -159,12 +198,26 @@ int findPlaneCorrespondences(
         Vector3d pp = srcplanes[planeids[1]].head(3);
         Vector3d p2 = p1.cross(pp);
         p2.normalize();
-        filterManhattan(p1, p2, src, srcplanes, srcids);
+        recomputePlanesManhattan(p1, p2, src, srcplanes, srcids);
         p1 = tgtplanes[planecorrespondences[planeids[0]]].head(3);
         pp = tgtplanes[planecorrespondences[planeids[1]]].head(3);
         p2 = p1.cross(pp);
         p2.normalize();
-        filterManhattan(p1, p2, tgt, tgtplanes, tgtids);
+        recomputePlanesManhattan(p1, p2, tgt, tgtplanes, tgtids);
+    }
+
+    // Recompute correspondences with new planes
+    planecorrespondences.clear();
+    planecorrespondences.resize(srcplanes.size(), -1);
+    numcorrespondences = findCandidateCorrespondences(srcplanes, tgtplanes, planecorrespondences);
+    filterRearmost(srcplanes, planecorrespondences);
+
+    // Final count of correspondences
+    numcorrespondences = 0;
+    for (int i = 0; i < planecorrespondences.size(); ++i) {
+        if (planecorrespondences[i] > -1) {
+            ++numcorrespondences;
+        }
     }
 
     return numcorrespondences;
