@@ -252,6 +252,10 @@ double filterCorrespondences(
     int sz = lower_bound(dists.begin(), dists.end(), make_pair(meandist + stddevthreshold*stdist,0)) - dists.begin();
     int sz2 = lower_bound(dists.begin(), dists.end(), make_pair(maxcorrespondencedist,0)) - dists.begin();
     if (sz2 < sz) sz = sz2;
+    if (!sz) {
+        cerr << "Error! No correspondences found!" << endl;
+        return numeric_limits<double>::infinity();
+    }
     if (!targetnumber) targetnumber = sz;
     int inc = sz/targetnumber;
     if (!inc) inc = 1;
@@ -324,6 +328,7 @@ Matrix4d alignPlaneToPlane(
         vector<PointXYZ> corrs;
         computeCorrespondences(tsrc, &lkdt, corrs);
         double newerror = filterCorrespondences(tsrc, corrs, ptsrc, pttgt);
+        if (!corrs.size()) return Matrix4d::Identity();
         //if (abs(error-newerror) < errthreshold) break;
         error = newerror;
 
@@ -380,6 +385,7 @@ Matrix4d partialAlignPlaneToPlane(
     vector<PointXYZ> corrs;
     computeCorrespondences(tsrc, &lkdt, corrs);
     double error = filterCorrespondences(tsrc, corrs, ptsrc, pttgt, ncorrs, t);
+    if (!corrs.size()) return Matrix4d::Identity();
     cout << "Error: " << error << endl;
     for (int i = 0; i < ptsrc.size(); ++i) {
         Vector4d pt(ptsrc[i].x, ptsrc[i].y, ptsrc[i].z, 1);
@@ -486,6 +492,7 @@ Matrix4d alignEdgeToEdge(
         vector<PointXYZ> corrs;
         computeCorrespondences(tsrc, &am, corrs);
         double newerror = filterCorrespondences(tsrc, corrs, ptsrc, pttgt);
+        if (!corrs.size()) return Matrix4d::Identity();
         //if (abs(error-newerror) < errthreshold) break;
         error = newerror;
 
@@ -562,6 +569,7 @@ Matrix4d partialAlignEdgeToEdge(
     vector<PointXYZ> corrs;
     computeCorrespondences(tsrc, &am, corrs);
     double error = filterCorrespondences(tsrc, corrs, ptsrc, pttgt, ncorrs, t);
+    if (!corrs.size()) return Matrix4d::Identity();
     cout << "Error: " << error << endl;
     for (int i = 0; i < ptsrc.size(); ++i) {
         Vector4d pt(ptsrc[i].x, ptsrc[i].y, ptsrc[i].z, 1);

@@ -5,7 +5,8 @@ using namespace pcl;
 using namespace Eigen;
 using namespace std;
 
-const double ANGLETHRESHOLD = M_PI/9;
+const double ANGLETHRESHOLD = M_PI/12;
+const double MATCHANGLETHRESHOLD = M_PI/6;
 
 void filterManhattan(
         Vector3d p1, Vector3d p2,
@@ -57,7 +58,7 @@ int findPlaneCorrespondences(
     for (int i = 0; i < srcplanes.size(); ++i) {
         for (int j = 0; j < tgtplanes.size(); ++j) {
             double cosa = srcplanes[i].head(3).dot(tgtplanes[j].head(3));
-            if (cosa > cos(ANGLETHRESHOLD)) {
+            if (cosa > cos(MATCHANGLETHRESHOLD)) {
                 if (planecorrespondences[i] != -1) {
                     if (abs(srcplanes[i](3) - tgtplanes[j](3)) < abs(srcplanes[i](3) - tgtplanes[planecorrespondences[i]](3))) {
                         planecorrespondences[i] = j;
@@ -68,6 +69,21 @@ int findPlaneCorrespondences(
             }
         }
         if (planecorrespondences[i] != -1) numcorrespondences++;
+    }
+    // Find duplicate matches and eliminate less plausible one
+    for (int i = 0; i < srcplanes.size(); ++i) {
+        if (planecorrespondences[i] < 0) continue;
+        for (int j = i+1; j < srcplanes.size(); ++j) {
+            if (planecorrespondences[i] == planecorrespondences[j]) {
+                int t = planecorrespondences[i];
+                if (abs(srcplanes[i](3) - tgtplanes[t](3)) > abs(srcplanes[j](3) - tgtplanes[t](3))) {
+                    planecorrespondences[i] = -1;
+                    break;
+                } else {
+                    planecorrespondences[j] = -1;
+                }
+            }
+        }
     }
 
     // Group correspondences based on Manhattan coordinate system

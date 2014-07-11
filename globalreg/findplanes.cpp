@@ -14,6 +14,7 @@ const double DISTTHRESHOLD = 0.03;
 const double NOISETHRESHOLD = 0.01;
 const double MININLIERPROPORTION = 0.05;
 const double MAXEDGEPROPORTION = 0.04;
+const int MININLIERCOUNT = 12000;
 
 using namespace std;
 using namespace Eigen;
@@ -175,12 +176,13 @@ void findPlanesWithNormals(
         cerr << "Error: findPlanesWithNormals expects a range image" << endl;
         return;
     }
+    // Compute normals
     PointCloud<PointNormal>::Ptr filtered(new PointCloud<PointNormal>);
     copyPointCloud(*cloud, *filtered);
     IntegralImageNormalEstimation<PointXYZ, PointNormal> ne;
     ne.setNormalEstimationMethod (ne.AVERAGE_3D_GRADIENT);
     ne.setMaxDepthChangeFactor(0.05f);
-    ne.setNormalSmoothingSize(10.0f);
+    ne.setNormalSmoothingSize(12.0f);
     ne.setInputCloud(cloud);
     ne.compute(*filtered);
 
@@ -221,7 +223,7 @@ void findPlanesWithNormals(
                                     cloud->at(x,y).y - cloud->at(xx,yy).y,
                                     cloud->at(x,y).z - cloud->at(xx,yy).z);
                             v.normalize();
-                            if (v.dot(avgv) < sin(ANGLETHRESHOLD)) {
+                            if (v.dot(avgv) < sin(2*ANGLETHRESHOLD)) {
                                 nx.push(xx); ny.push(yy);
                                 visited[yy*cloud->width+xx] = -2;
                             }
@@ -230,7 +232,7 @@ void findPlanesWithNormals(
                 }
             }
             //if (cnt/(double) cloud->size() > MININLIERPROPORTION)
-            if (cnt > 10000) {
+            if (cnt > MININLIERCOUNT) {
                 candidates.push_back(Vector4d(avgv(0), avgv(1), avgv(2), 0));
                 candidateids.push_back(n);
                 sizes.push_back(make_pair(cnt, sizes.size()));
@@ -239,6 +241,7 @@ void findPlanesWithNormals(
         }
     }
 
+    // Recompute average offset
     for (int i = 0; i < cloud->size(); ++i) {
         for (int j = 0; j < candidates.size(); ++j) {
             if (visited[i] == candidateids[j]) {
@@ -258,6 +261,7 @@ void findPlanesWithNormals(
         candidateids[i] = tmpids[sizes[i].second];
     }
 
+    // Relabel points based on successful planes
     for (int i = 0; i < cloud->size(); ++i) {
         for (int j = 0; j < planes.size(); ++j) {
             if (visited[i] == candidateids[j]) {
@@ -381,7 +385,7 @@ void combineLikePlanes(PointCloud<PointXYZ>::ConstPtr cloud, vector<Vector4d>& p
             planes.push_back(origplanes[i]);
             for (int j = i+1; j < origplanes.size(); ++j) {
                 if (origplanes[i].head(3).dot(origplanes[j].head(3)) > cos(ANGLETHRESHOLD)) {
-                    if (abs(origplanes[i](3) - origplanes[j](3)) < NOISETHRESHOLD) {
+                    if (abs(origplanes[i](3) - origplanes[j](3)) < 2*NOISETHRESHOLD) {
                         relabel[j] = n;
                     }
                 }
