@@ -9,18 +9,20 @@
 #include <pcl/sample_consensus/sac_model_plane.h>
 #include <pcl/segmentation/sac_segmentation.h>
 
-const double ANGLETHRESHOLD = M_PI/8;
+const double ANGLETHRESHOLD = M_PI/9;
 const double DISTTHRESHOLD = 0.03;
 const double NOISETHRESHOLD = 0.01;
 const double MININLIERPROPORTION = 0.05;
 const double MAXEDGEPROPORTION = 0.04;
-const int MININLIERCOUNT = 12000;
+const int MININLIERCOUNT = 8000;
 const double ANGULARDEVIATIONTHRESHOLD = 0.25;
 const double EPSILON = 0.00001;
 
 using namespace std;
 using namespace Eigen;
 using namespace pcl;
+
+static DefaultPointRepresentation<PointXYZ> pr;
 
 inline bool onPlane(Vector4d plane, PointXYZ p) {
     return abs(p.x*plane(0) + p.y*plane(1) + p.z*plane(2) + plane(3)) < NOISETHRESHOLD;
@@ -48,6 +50,96 @@ double calculateEdgeProportion(pcl::PointCloud<pcl::PointXYZ>::ConstPtr cloud, v
     }
     return count/(double) indices.size();
 }
+
+bool isBehind(PointXYZ p, Vector4d plane) {
+    if (!pr.isValid(p)) return false;
+    return (p.x*plane(0) + p.y*plane(1) + p.z*plane(2) + plane(3)) < -2*NOISETHRESHOLD;
+}
+
+int calculateBoundingSides(Vector4d plane, pcl::PointCloud<pcl::PointXYZ>::ConstPtr cloud, vector<int> indices, int index)
+{
+    const int windowsize = 25;
+    const int windowprop = 10;
+    const double sideprop = 0.08;
+    vector<int> lines(4,0);
+    vector<int> failed(4,0);
+    // Check horizontal bounding-ness
+    for (int i = 0; i < cloud->height; ++i) {
+        for (int j = 0; j < cloud->width; ++j) {
+            int idx = j + i*cloud->width;
+            if (indices[idx] == index) {
+                ++lines[0];
+                if (j >= windowsize) {
+                    int count = 0;
+                    for (int k = 1; k < windowsize+1; ++k) {
+                        if (isBehind(cloud->at(idx-k), plane)) {
+                            ++count;
+                        }
+                    }
+                    if (count >= windowprop) ++failed[0];
+                }
+                break;
+            }
+        }
+        for (int j = cloud->width-1; j >= 0; --j) {
+            int idx = j + i*cloud->width;
+            if (indices[idx] == index) {
+                ++lines[1];
+                if (j < cloud->width - windowsize) {
+                    int count = 0;
+                    for (int k = 1; k < windowsize+1; ++k) {
+                        if (isBehind(cloud->at(idx+k), plane)) {
+                            ++count;
+                        }
+                    }
+                    if (count >= windowprop) ++failed[1];
+                }
+                break;
+            }
+        }
+    }
+    // Check vertical bounding-ness
+    for (int j = 0; j < cloud->width; ++j) {
+        for (int i = 0; i < cloud->height; ++i) {
+            int idx = j + i*cloud->width;
+            if (indices[idx] == index) {
+                ++lines[2];
+                if (i >= windowsize) {
+                    int count = 0;
+                    for (int k = 1; k < windowsize+1; ++k) {
+                        if (isBehind(cloud->at(idx-k*cloud->width), plane)) {
+                            ++count;
+                        }
+                    }
+                    if (count >= windowprop) ++failed[2];
+                }
+                break;
+            }
+        }
+        for (int i = cloud->height-1; i >= 0; --i) {
+            int idx = j + i*cloud->width;
+            if (indices[idx] == index) {
+                ++lines[3];
+                if (i < cloud->height - windowsize) {
+                    int count = 0;
+                    for (int k = 1; k < windowsize+1; ++k) {
+                        if (isBehind(cloud->at(idx+k*cloud->width), plane)) {
+                            ++count;
+                        }
+                    }
+                    if (count >= windowprop) ++failed[3];
+                }
+                break;
+            }
+        }
+    }
+    int numfailed = 0;
+    for (int i = 0; i < 4; ++i) {
+        if (failed[i]/(double) lines[i] > sideprop) ++numfailed;
+    }
+    return numfailed;
+}
+
 void findPlanesRANSAC(
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr cloud,
         std::vector<Eigen::Vector4d>& planes, std::vector<int>& ids)
@@ -164,7 +256,6 @@ inline Vector3d getNormal(PointNormal p) {
     return Vector3d(p.normal_x, p.normal_y, p.normal_z);
 }
 
-static DefaultPointRepresentation<PointXYZ> pr;
 inline double dist2(PointXYZ a, PointXYZ b) {
     if (!pr.isValid(a) || !pr.isValid(b)) return numeric_limits<double>::infinity();
     return (Vector3f(a.x,a.y,a.z)-Vector3f(b.x,b.y,b.z)).squaredNorm();
@@ -271,7 +362,7 @@ void findPlanesWithNormals(
                 break;
             }
         }
-        if (ids[i] == -1) {
+        /*if (ids[i] == -1) {
             for (int j = 0; j < planes.size(); ++j) {
                 if (!pr.isValid(cloud->at(i)) || !onPlane(planes[j], cloud->at(i))) continue;
                 if (pr.isValid(cloud->at(i)) && isnan(filtered->at(i).normal_x)) {
@@ -284,7 +375,7 @@ void findPlanesWithNormals(
                     }
                 }
             }
-        }
+        }*/
     }
 }
 
@@ -472,6 +563,33 @@ void filterAngleVariance(
     }
 }
 
+void filterBoundingSides(
+        PointCloud<PointXYZ>::ConstPtr cloud,
+        vector<Vector4d>& planes,
+        vector<int>& ids)
+{
+    // Filter planes
+    vector<Vector4d> origplanes(planes);
+    vector<int> newids;
+    planes.clear();
+    int n = 0;
+    for (int i = 0; i < origplanes.size(); ++i) {
+        if (calculateBoundingSides(planes[i], cloud, ids, i) < 4) {
+            planes.push_back(origplanes[i]);
+            newids.push_back(n++);
+        }
+        else {
+            newids.push_back(-1);
+        }
+    }
+    // Relabel points
+    for (int i = 0; i < ids.size(); ++i) {
+        if (ids[i] > -1) {
+            ids[i] = newids[ids[i]];
+        }
+    }
+}
+
 void findPlanes(
         PointCloud<PointXYZ>::ConstPtr cloud,
         vector<Vector4d>& planes,
@@ -483,4 +601,7 @@ void findPlanes(
     combineLikePlanes(cloud, planes, ids);
     combineLikePlanes(cloud, planes, ids);
     filterAngleVariance(cloud, planes, ids);
+    if (planes.size() > 1) {
+        filterBoundingSides(cloud, planes, ids);
+    }
 }
