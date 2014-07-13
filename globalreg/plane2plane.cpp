@@ -13,7 +13,6 @@ const double MAXCORRESPONDENCEDISTANCE = 0.2; // Hard cutoff of correspondence d
 const int EDGEREMOVAL = 60;                   // Remove this many pixels on the boundaries of depth images
 const int DISCONTINUITYBORDERWIDTH = 4;       // Keep this many pixels on plane edges
 const double DISCONTINUITYTHRESHOLD = 0.1;    // Discontinuity if distance > threshold
-const int maxiterations = 40;          // ICP iterations
 const double SEARCHWIDTH = 0.01;       // Data structure discretization
 const double errthreshold = 0.00005;   // Stop ICP after error below this threshold
 const double EPSILON = 0.00001;
@@ -292,7 +291,8 @@ AlignmentResult alignPlaneToPlane(
         PointCloud<PointXYZ>::ConstPtr tgt,
         vector<Vector4d>& srcplanes, vector<int>& srcids,
         vector<Vector4d>& tgtplanes, vector<int>& tgtids,
-        vector<int>& planecorrespondences)
+        vector<int>& planecorrespondences,
+        int maxiterations)
 {
     // Put planes into correspondence
     int srcid;
@@ -341,7 +341,6 @@ AlignmentResult alignPlaneToPlane(
         transform = opt*transform;
         transformPointCloud(*tsrc, *tsrc, opt);
     }
-    cout << "Final RMSE: " << error << endl;
     transform = coordtransform.inverse()*transform;
     return AlignmentResult(transform, error);
 }
@@ -441,7 +440,8 @@ AlignmentResult alignEdgeToEdge(
         PointCloud<PointXYZ>::ConstPtr tgt,
         vector<Vector4d>& srcplanes, vector<int>& srcids,
         vector<Vector4d>& tgtplanes, vector<int>& tgtids,
-        vector<int>& planecorrespondences)
+        vector<int>& planecorrespondences,
+        int maxiterations)
 {
     // Put planes into correspondence
     vector<int> ids;
@@ -511,7 +511,6 @@ AlignmentResult alignEdgeToEdge(
         transform = transl*transform;
         transformPointCloud(*tsrc, *tsrc, transl);
     }
-    cout << "Final RMSE: " << error << endl;
     transform = coordtransform.inverse()*transform;
     return AlignmentResult(transform, error);
 }
@@ -590,4 +589,65 @@ AlignmentResult partialAlignEdgeToEdge(
     transl(2,3) = -computeOptimal1d(dists);
     transform = coordtransform.inverse()*transl*transform;
     return AlignmentResult(transform, error);
+}
+
+AlignmentResult alignCornerToCorner(
+        PointCloud<PointXYZ>::ConstPtr src,
+        PointCloud<PointXYZ>::ConstPtr tgt,
+        vector<Vector4d>& srcplanes, vector<int>& srcids,
+        vector<Vector4d>& tgtplanes, vector<int>& tgtids,
+        vector<int>& planecorrespondences)
+{
+    // Put planes into correspondence
+    vector<int> ids;
+    for (int i = 0; i < planecorrespondences.size(); ++i) {
+        if (planecorrespondences[i] > -1) ids.push_back(i);
+    }
+    Matrix4d transform = overlapCorner(
+            srcplanes[ids[0]],
+            srcplanes[ids[1]],
+            srcplanes[ids[2]],
+            tgtplanes[planecorrespondences[ids[0]]],
+            tgtplanes[planecorrespondences[ids[1]]],
+            tgtplanes[planecorrespondences[ids[2]]]);
+    PointCloud<PointXYZ>::Ptr tsrc(new PointCloud<PointXYZ>);
+    transformPointCloud(*src, *tsrc, transform);
+
+    // Convert to common coordinate system
+    PointCloud<PointXYZ>::Ptr ttgt(new PointCloud<PointXYZ>);
+    Matrix4d coordtransform = overlapEdge(tgtplanes[planecorrespondences[ids[0]]],
+                                          tgtplanes[planecorrespondences[ids[1]]],
+                                          Vector4d(1,0,0,0),
+                                          Vector4d(0,1,0,0));
+
+    // Filter clouds
+    vector<int> fsrcids(srcids);
+    vector<int> ftgtids(tgtids);
+    for (int i = 0; i < ftgtids.size(); ++i) {
+        if (ftgtids[i] == planecorrespondences[ids[1]]) {
+            ftgtids[i] = planecorrespondences[ids[0]];
+        }
+    }
+    for (int i = 0; i < fsrcids.size(); ++i) {
+        if (fsrcids[i] == ids[1]) {
+            fsrcids[i] = ids[0];
+        }
+    }
+    Vector3d srcax = srcplanes[ids[0]].head(3);
+    srcax = srcax.cross((Vector3d) (srcplanes[ids[1]].head(3)));
+    Vector3d tgtax = tgtplanes[planecorrespondences[ids[0]]].head(3);
+    tgtax = tgtax.cross((Vector3d) (tgtplanes[planecorrespondences[ids[1]]].head(3)));
+    markParallelPlanes(srcax, tsrc, srcplanes, fsrcids, ids[0]);
+    markParallelPlanes(tgtax, tgt, tgtplanes, ftgtids, planecorrespondences[ids[0]]);
+    preprocessCloud(tgt, ttgt, coordtransform, ftgtids, planecorrespondences[ids[0]], false);
+    preprocessCloud(tsrc, tsrc, coordtransform, fsrcids, ids[0]);
+
+    // Construct search structure
+    ArrayMatrix am(ttgt, SEARCHWIDTH);
+    vector<PointXYZ> ptsrc;
+    vector<PointXYZ> pttgt;
+    vector<PointXYZ> corrs;
+    computeCorrespondences(tsrc, &am, corrs);
+    double err = filterCorrespondences(tsrc, corrs, ptsrc, pttgt);
+    return AlignmentResult(transform, err);
 }

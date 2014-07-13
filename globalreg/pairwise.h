@@ -10,6 +10,13 @@ class AlignmentResult {
     public:
         AlignmentResult(Eigen::Matrix4d xform) : transform(xform), error(0) {}
         AlignmentResult(Eigen::Matrix4d xform, double err) : transform(xform), error(err) {}
+        AlignmentResult& operator=(const AlignmentResult& ar) {
+            if (this != &ar) {
+                error = ar.error;
+                transform = ar.transform;
+            }
+            return *this;
+        }
         double error;
         Eigen::Matrix4d transform;
 };
@@ -55,14 +62,16 @@ AlignmentResult alignPlaneToPlane(
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr tgt,
         std::vector<Eigen::Vector4d>& srcplanes, std::vector<int>& srcids,
         std::vector<Eigen::Vector4d>& tgtplanes, std::vector<int>& tgtids,
-        std::vector<int>& planecorrespondences);
+        std::vector<int>& planecorrespondences,
+        int maxiterations);
 
 AlignmentResult alignEdgeToEdge(
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr src,
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr tgt,
         std::vector<Eigen::Vector4d>& srcplanes, std::vector<int>& srcids,
         std::vector<Eigen::Vector4d>& tgtplanes, std::vector<int>& tgtids,
-        std::vector<int>& planecorrespondences);
+        std::vector<int>& planecorrespondences,
+        int maxiterations);
 
 AlignmentResult alignCornerToCorner(
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr src,
@@ -76,7 +85,8 @@ AlignmentResult alignICP(
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr tgt,
         std::vector<Eigen::Vector4d>& srcplanes, std::vector<int>& srcids,
         std::vector<Eigen::Vector4d>& tgtplanes, std::vector<int>& tgtids,
-        std::vector<int>& planecorrespondences);
+        std::vector<int>& planecorrespondences,
+        int maxiterations);
 /**
  * Applies the transform to the plane in Ax + By + Cz + D = 0 form. Assumes the
  * normal (A,B,C) is normalized.

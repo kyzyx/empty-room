@@ -9,6 +9,8 @@ using namespace std;
 
 const double ANGLETHRESHOLD = M_PI/9;
 const double EPSILON = 0.00001;
+const double REDOTHRESHOLD = 0.03;
+const int MAXITERATIONS = 50;          // ICP iterations for edge and plane
 
 Matrix4d overlapPlanes(Vector4d src, Vector4d tgt) {
     // Construct rotation
@@ -58,34 +60,13 @@ Matrix4d overlapCorner(
     return t2*t1;
 }
 
-AlignmentResult alignCornerToCorner(
-        PointCloud<PointXYZ>::ConstPtr src,
-        PointCloud<PointXYZ>::ConstPtr tgt,
-        vector<Vector4d>& srcplanes, vector<int>& srcids,
-        vector<Vector4d>& tgtplanes, vector<int>& tgtids,
-        vector<int>& planecorrespondences)
-{
-
-    vector<int> ids;
-    for (int i = 0; i < planecorrespondences.size(); ++i) {
-        if (planecorrespondences[i] > -1) ids.push_back(i);
-    }
-    Matrix4d t = overlapCorner(
-            srcplanes[ids[0]],
-            srcplanes[ids[1]],
-            srcplanes[ids[2]],
-            tgtplanes[planecorrespondences[ids[0]]],
-            tgtplanes[planecorrespondences[ids[1]]],
-            tgtplanes[planecorrespondences[ids[2]]]);
-    return AlignmentResult(t, 0);
-}
-
 AlignmentResult alignICP(
         PointCloud<PointXYZ>::ConstPtr src,
         PointCloud<PointXYZ>::ConstPtr tgt,
         vector<Vector4d>& srcplanes, vector<int>& srcids,
         vector<Vector4d>& tgtplanes, vector<int>& tgtids,
-        vector<int>& planecorrespondences)
+        vector<int>& planecorrespondences,
+        int maxiterations)
 {
     PointCloud<PointXYZ>::Ptr s(new PointCloud<PointXYZ>);
     PointCloud<PointXYZ>::Ptr t(new PointCloud<PointXYZ>);
@@ -96,11 +77,10 @@ AlignmentResult alignICP(
     IterativeClosestPoint<PointXYZ, PointXYZ> icp;
     icp.setInputSource(s);
     icp.setInputTarget(t);
-    icp.setMaximumIterations(50);
+    icp.setMaximumIterations(maxiterations);
     icp.align(*s);
     return AlignmentResult(icp.getFinalTransformation().cast<double>(), icp.getFitnessScore());
 }
-
 
 AlignmentResult align(
         PointCloud<PointXYZ>::ConstPtr src,
@@ -124,19 +104,54 @@ AlignmentResult align(
     switch (numcorrespondences) {
         case 0:
             cout << "Aligning ICP" << endl;
-            return alignICP(src, tgt, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences);
+            return alignICP(src, tgt, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences, 100);
             break;
         case 1:
             cout << "Aligning plane to plane" << endl;
-            return alignPlaneToPlane(src, tgt, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences);
+            {
+                AlignmentResult c = alignPlaneToPlane(src, tgt, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences, MAXITERATIONS);
+                cout << "Final RMSE: " << c.error << endl;
+                return c;
+            }
             break;
         case 2:
             cout << "Aligning edge to edge" << endl;
-            return alignEdgeToEdge(src, tgt, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences);
+            {
+                AlignmentResult c = alignEdgeToEdge(src, tgt, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences, MAXITERATIONS);
+                if (c.error > REDOTHRESHOLD) {
+                    cout << "Redoing with plane to plane" << endl;
+                    AlignmentResult c2 = alignPlaneToPlane(src, tgt, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences, MAXITERATIONS);
+                    if (c2.error < c.error) {
+                        cout << "Final RMSE: " << c.error << endl;
+                        return c2;
+                    }
+                }
+                cout << "Final RMSE: " << c.error << endl;
+                return c;
+            }
             break;
         case 3:
             cout << "Aligning corner to corner" << endl;
-            return alignCornerToCorner(src, tgt, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences);
+            {
+                AlignmentResult c = alignCornerToCorner(src, tgt, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences);
+                if (c.error > REDOTHRESHOLD) {
+                    vector<int> ids;
+                    for (int i = 0; i < planecorrespondences.size(); ++i) {
+                        if (planecorrespondences[i] > -1) ids.push_back(i);
+                    }
+                    for (int i = 0; i < 3; ++i) {
+                        cout << "Redoing with edge to edge " << i+1 << endl;
+                        vector<int> pc2(planecorrespondences);
+                        pc2[ids[i]] = -1;
+                        AlignmentResult c2 = alignEdgeToEdge(src, tgt, srcplanes, srcids, tgtplanes, tgtids, pc2, MAXITERATIONS);
+                        if (c2.error < c.error) {
+                            c = c2;
+                        }
+                    }
+                }
+                cout << "Final RMSE: " << c.error << endl;
+                return c;
+            }
             break;
         default:
             cerr << "Error! " << numcorrespondences << " correspondences found!" << endl;
