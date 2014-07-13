@@ -13,7 +13,7 @@
 const double ANGLETHRESHOLD = M_PI/9;
 const double DISTTHRESHOLD = 0.03;
 const double NOISETHRESHOLD = 0.01;
-const double FUSETHRESHOLD = 0.05;
+const double FUSETHRESHOLD = 0.06;
 const double MININLIERPROPORTION = 0.05;
 const double MAXEDGEPROPORTION = 0.04;
 const int MININLIERCOUNT = 8000;
@@ -68,7 +68,7 @@ int calculateBoundingSides(Vector4d plane, pcl::PointCloud<pcl::PointXYZ>::Const
 {
     const int windowsize = 25;
     const int windowprop = 10;
-    const double sideprop = 0.08;
+    const double sideprop = 0.1;
     vector<int> lines(4,0);
     vector<int> failed(4,0);
     // Check horizontal bounding-ness
@@ -658,7 +658,7 @@ void filterBoundingSides(
     planes.clear();
     int n = 0;
     for (int i = 0; i < origplanes.size(); ++i) {
-        if (calculateBoundingSides(planes[i], cloud, ids, i) < 4) {
+        if (calculateBoundingSides(planes[i], cloud, ids, i) < 3) {
             planes.push_back(origplanes[i]);
             newids.push_back(n++);
         }

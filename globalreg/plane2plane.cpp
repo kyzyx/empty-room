@@ -16,7 +16,7 @@ const double DISCONTINUITYTHRESHOLD = 0.1;    // Discontinuity if distance > thr
 const double SEARCHWIDTH = 0.01;       // Data structure discretization
 const double errthreshold = 0.00005;   // Stop ICP after error below this threshold
 const double EPSILON = 0.00001;
-const double MINTRANSLATION = 0.0002;  // Stop ICP after translation below this threshold
+const double MINTRANSLATION = 0.0001;  // Stop ICP after translation below this threshold
 const double MINROTATION = M_PI/40;  // Stop ICP after rotation angle below this threshold
 
 void filterLabelled(PointCloud<PointXYZ>::Ptr cloud, vector<int>& labels, int label, bool negative=true)
