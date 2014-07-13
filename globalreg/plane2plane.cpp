@@ -287,7 +287,7 @@ bool converged(Matrix4d m, double dx, double dtheta) {
     return transformTranslation(m) < dx && transformAngle(m) < dtheta;
 }
 
-Matrix4d alignPlaneToPlane(
+AlignmentResult alignPlaneToPlane(
         PointCloud<PointXYZ>::ConstPtr src,
         PointCloud<PointXYZ>::ConstPtr tgt,
         vector<Vector4d>& srcplanes, vector<int>& srcids,
@@ -328,7 +328,7 @@ Matrix4d alignPlaneToPlane(
         vector<PointXYZ> corrs;
         computeCorrespondences(tsrc, &lkdt, corrs);
         double newerror = filterCorrespondences(tsrc, corrs, ptsrc, pttgt);
-        if (!corrs.size()) return Matrix4d::Identity();
+        if (!corrs.size()) return AlignmentResult(Matrix4d::Identity(), numeric_limits<double>::infinity());
         //if (abs(error-newerror) < errthreshold) break;
         error = newerror;
 
@@ -341,11 +341,12 @@ Matrix4d alignPlaneToPlane(
         transform = opt*transform;
         transformPointCloud(*tsrc, *tsrc, opt);
     }
+    cout << "Final RMSE: " << error << endl;
     transform = coordtransform.inverse()*transform;
-    return transform;
+    return AlignmentResult(transform, error);
 }
 
-Matrix4d partialAlignPlaneToPlane(
+AlignmentResult partialAlignPlaneToPlane(
         PointCloud<PointXYZ>::ConstPtr src,
         PointCloud<PointXYZ>::ConstPtr tgt,
         vector<Vector4d>& srcplanes, vector<int>& srcids, vector<int>& fsrcids,
@@ -385,7 +386,7 @@ Matrix4d partialAlignPlaneToPlane(
     vector<PointXYZ> corrs;
     computeCorrespondences(tsrc, &lkdt, corrs);
     double error = filterCorrespondences(tsrc, corrs, ptsrc, pttgt, ncorrs, t);
-    if (!corrs.size()) return Matrix4d::Identity();
+    if (!corrs.size()) return AlignmentResult(Matrix4d::Identity(), numeric_limits<double>::infinity());
     cout << "Error: " << error << endl;
     for (int i = 0; i < ptsrc.size(); ++i) {
         Vector4d pt(ptsrc[i].x, ptsrc[i].y, ptsrc[i].z, 1);
@@ -400,7 +401,7 @@ Matrix4d partialAlignPlaneToPlane(
     transform = opt*transform;
 
     transform = coordtransform.inverse()*transform;
-    return transform;
+    return AlignmentResult(transform, error);
 }
 
 double computeOptimal1d(vector<double>& x) {
@@ -435,7 +436,7 @@ double computeOptimal1d(vector<double>& x) {
     return tot/n;
 }
 
-Matrix4d alignEdgeToEdge(
+AlignmentResult alignEdgeToEdge(
         PointCloud<PointXYZ>::ConstPtr src,
         PointCloud<PointXYZ>::ConstPtr tgt,
         vector<Vector4d>& srcplanes, vector<int>& srcids,
@@ -492,7 +493,7 @@ Matrix4d alignEdgeToEdge(
         vector<PointXYZ> corrs;
         computeCorrespondences(tsrc, &am, corrs);
         double newerror = filterCorrespondences(tsrc, corrs, ptsrc, pttgt);
-        if (!corrs.size()) return Matrix4d::Identity();
+        if (!corrs.size()) return AlignmentResult(Matrix4d::Identity(), numeric_limits<double>::infinity());
         //if (abs(error-newerror) < errthreshold) break;
         error = newerror;
 
@@ -510,10 +511,11 @@ Matrix4d alignEdgeToEdge(
         transform = transl*transform;
         transformPointCloud(*tsrc, *tsrc, transl);
     }
+    cout << "Final RMSE: " << error << endl;
     transform = coordtransform.inverse()*transform;
-    return transform;
+    return AlignmentResult(transform, error);
 }
-Matrix4d partialAlignEdgeToEdge(
+AlignmentResult partialAlignEdgeToEdge(
         PointCloud<PointXYZ>::ConstPtr src,
         PointCloud<PointXYZ>::ConstPtr tgt,
         vector<Vector4d>& srcplanes, vector<int>& srcids, vector<int>& fsrcids,
@@ -569,7 +571,7 @@ Matrix4d partialAlignEdgeToEdge(
     vector<PointXYZ> corrs;
     computeCorrespondences(tsrc, &am, corrs);
     double error = filterCorrespondences(tsrc, corrs, ptsrc, pttgt, ncorrs, t);
-    if (!corrs.size()) return Matrix4d::Identity();
+    if (!corrs.size()) return AlignmentResult(Matrix4d::Identity(), numeric_limits<double>::infinity());
     cout << "Error: " << error << endl;
     for (int i = 0; i < ptsrc.size(); ++i) {
         Vector4d pt(ptsrc[i].x, ptsrc[i].y, ptsrc[i].z, 1);
@@ -587,5 +589,5 @@ Matrix4d partialAlignEdgeToEdge(
     transl.setIdentity();
     transl(2,3) = -computeOptimal1d(dists);
     transform = coordtransform.inverse()*transl*transform;
-    return transform;
+    return AlignmentResult(transform, error);
 }

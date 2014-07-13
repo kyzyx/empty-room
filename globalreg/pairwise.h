@@ -6,6 +6,14 @@
 #include <pcl/point_types.h>
 #include <vector>
 
+class AlignmentResult {
+    public:
+        AlignmentResult(Eigen::Matrix4d xform) : transform(xform), error(0) {}
+        AlignmentResult(Eigen::Matrix4d xform, double err) : transform(xform), error(err) {}
+        double error;
+        Eigen::Matrix4d transform;
+};
+
 /**
  * Calculates the transformation bringing plane src coplanar to plane tgt
  */
@@ -33,7 +41,7 @@ int findPlaneCorrespondences(
  *
  * Does NOT transform src or srcplanes into tgt's coordinate system.
  */
-Eigen::Matrix4d align(
+AlignmentResult align(
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr src,
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr tgt,
         std::vector<Eigen::Vector4d>& srcplanes, std::vector<int>& srcids,
@@ -42,28 +50,28 @@ Eigen::Matrix4d align(
 /**
  * As align(...), but specifically forces the first planes in correspondence to be coplanar.
  */
-Eigen::Matrix4d alignPlaneToPlane(
+AlignmentResult alignPlaneToPlane(
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr src,
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr tgt,
         std::vector<Eigen::Vector4d>& srcplanes, std::vector<int>& srcids,
         std::vector<Eigen::Vector4d>& tgtplanes, std::vector<int>& tgtids,
         std::vector<int>& planecorrespondences);
 
-Eigen::Matrix4d alignEdgeToEdge(
+AlignmentResult alignEdgeToEdge(
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr src,
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr tgt,
         std::vector<Eigen::Vector4d>& srcplanes, std::vector<int>& srcids,
         std::vector<Eigen::Vector4d>& tgtplanes, std::vector<int>& tgtids,
         std::vector<int>& planecorrespondences);
 
-Eigen::Matrix4d alignCornerToCorner(
+AlignmentResult alignCornerToCorner(
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr src,
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr tgt,
         std::vector<Eigen::Vector4d>& srcplanes, std::vector<int>& srcids,
         std::vector<Eigen::Vector4d>& tgtplanes, std::vector<int>& tgtids,
         std::vector<int>& planecorrespondences);
 
-Eigen::Matrix4d alignICP(
+AlignmentResult alignICP(
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr src,
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr tgt,
         std::vector<Eigen::Vector4d>& srcplanes, std::vector<int>& srcids,

@@ -269,7 +269,7 @@ void kbd_cb(const visualization::KeyboardEvent& event, void*) {
                 sprintf(linename, "line%03d", i/2);
                 viewer->removeShape(linename);
             }
-            Matrix4d t = align(aligned, cloud2, srcplanes, srcids, tgtplanes, tgtids);
+            Matrix4d t = align(aligned, cloud2, srcplanes, srcids, tgtplanes, tgtids).transform;
             copyPointCloud(*colored1, *prevcolored);
             viewer->addPointCloud<PointXYZRGB>(prevcolored, prevrgb, "prev");
             viewer->setPointCloudRenderingProperties(visualization::PCL_VISUALIZER_OPACITY, 0, "prev");
@@ -386,9 +386,9 @@ void kbd_cb(const visualization::KeyboardEvent& event, void*) {
                 pointcorrespondences.clear();
                 Matrix4d t;
                 if (numcorrespondences == 1) {
-                    t = partialAlignPlaneToPlane(aligned, cloud2, srcplanes, srcids, fsrcids, tgtplanes, tgtids, ftgtids, planecorrespondences, pointcorrespondences, 6000, pprop);
+                    t = partialAlignPlaneToPlane(aligned, cloud2, srcplanes, srcids, fsrcids, tgtplanes, tgtids, ftgtids, planecorrespondences, pointcorrespondences, 6000, pprop).transform;
                 } else if (numcorrespondences >= 2) {
-                    t = partialAlignEdgeToEdge(aligned, cloud2, srcplanes, srcids, fsrcids, tgtplanes, tgtids, ftgtids, planecorrespondences, pointcorrespondences, 6000, pprop);
+                    t = partialAlignEdgeToEdge(aligned, cloud2, srcplanes, srcids, fsrcids, tgtplanes, tgtids, ftgtids, planecorrespondences, pointcorrespondences, 6000, pprop).transform;
                 }
                 pointcorrespondences.clear();
                 copyPointCloud(*colored1, *prevcolored);

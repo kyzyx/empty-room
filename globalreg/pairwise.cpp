@@ -58,7 +58,7 @@ Matrix4d overlapCorner(
     return t2*t1;
 }
 
-Matrix4d alignCornerToCorner(
+AlignmentResult alignCornerToCorner(
         PointCloud<PointXYZ>::ConstPtr src,
         PointCloud<PointXYZ>::ConstPtr tgt,
         vector<Vector4d>& srcplanes, vector<int>& srcids,
@@ -70,16 +70,17 @@ Matrix4d alignCornerToCorner(
     for (int i = 0; i < planecorrespondences.size(); ++i) {
         if (planecorrespondences[i] > -1) ids.push_back(i);
     }
-    return overlapCorner(
+    Matrix4d t = overlapCorner(
             srcplanes[ids[0]],
             srcplanes[ids[1]],
             srcplanes[ids[2]],
             tgtplanes[planecorrespondences[ids[0]]],
             tgtplanes[planecorrespondences[ids[1]]],
             tgtplanes[planecorrespondences[ids[2]]]);
+    return AlignmentResult(t, 0);
 }
 
-Matrix4d alignICP(
+AlignmentResult alignICP(
         PointCloud<PointXYZ>::ConstPtr src,
         PointCloud<PointXYZ>::ConstPtr tgt,
         vector<Vector4d>& srcplanes, vector<int>& srcids,
@@ -97,11 +98,11 @@ Matrix4d alignICP(
     icp.setInputTarget(t);
     icp.setMaximumIterations(50);
     icp.align(*s);
-    return icp.getFinalTransformation().cast<double>();
+    return AlignmentResult(icp.getFinalTransformation().cast<double>(), icp.getFitnessScore());
 }
 
 
-Matrix4d align(
+AlignmentResult align(
         PointCloud<PointXYZ>::ConstPtr src,
         PointCloud<PointXYZ>::ConstPtr tgt,
         vector<Vector4d>& srcplanes, vector<int>& srcids,
@@ -140,7 +141,7 @@ Matrix4d align(
         default:
             cerr << "Error! " << numcorrespondences << " correspondences found!" << endl;
     }
-    return Matrix4d::Identity();
+    return AlignmentResult(Matrix4d::Identity(), numeric_limits<double>::infinity());
 }
 
 Vector4d transformPlane(Vector4d plane, Matrix4d transform)
