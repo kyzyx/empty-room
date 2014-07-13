@@ -87,9 +87,4 @@ AlignmentResult alignICP(
         std::vector<Eigen::Vector4d>& tgtplanes, std::vector<int>& tgtids,
         std::vector<int>& planecorrespondences,
         int maxiterations);
-/**
- * Applies the transform to the plane in Ax + By + Cz + D = 0 form. Assumes the
- * normal (A,B,C) is normalized.
- */
-Eigen::Vector4d transformPlane(Eigen::Vector4d plane, Eigen::Matrix4d transform);
 #endif

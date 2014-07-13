@@ -1,5 +1,6 @@
 #include "pairwise.h"
 #include "findplanes.h"
+#include "util.h"
 #include "plane2plane.h"
 #include <pcl/point_representation.h>
 #include <pcl/common/transforms.h>

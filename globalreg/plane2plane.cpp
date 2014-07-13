@@ -1,6 +1,6 @@
 #include "pairwise.h"
 #include "plane2plane.h"
-#include <pcl/point_representation.h>
+#include "util.h"
 #include <pcl/common/transforms.h>
 #include <pcl/filters/extract_indices.h>
 
@@ -15,7 +15,6 @@ const int DISCONTINUITYBORDERWIDTH = 4;       // Keep this many pixels on plane 
 const double DISCONTINUITYTHRESHOLD = 0.1;    // Discontinuity if distance > threshold
 const double SEARCHWIDTH = 0.01;       // Data structure discretization
 const double errthreshold = 0.00005;   // Stop ICP after error below this threshold
-const double EPSILON = 0.00001;
 const double MINTRANSLATION = 0.0001;  // Stop ICP after translation below this threshold
 const double MINROTATION = M_PI/40;  // Stop ICP after rotation angle below this threshold
 
@@ -34,14 +33,9 @@ void filterLabelled(PointCloud<PointXYZ>::Ptr cloud, vector<int>& labels, int la
     removeNaNFromPointCloud(*cloud, *cloud, tmp);
 }
 
-static DefaultPointRepresentation<PointXYZ> pr;
-inline double dist2(PointXYZ a, PointXYZ b) {
-    if (!pr.isValid(a) || !pr.isValid(b)) return numeric_limits<double>::infinity();
-    return (Vector3f(a.x,a.y,a.z)-Vector3f(b.x,b.y,b.z)).squaredNorm();
-}
 PointXYZ LayeredKdTrees::nearest(PointXYZ p, double radius) const
 {
-    if (!pr.isValid(p)) return NaNPt;
+    if (!isValid(p)) return NaNPt;
     const std::vector<Tree*>& trees = p.z>0?postrees:negtrees;
     int ind = abs(p.z/thickness);
     if (ind >= trees.size()) return NaNPt;
@@ -56,7 +50,7 @@ PointXYZ LayeredKdTrees::nearest(PointXYZ p, double radius) const
 }
 PointXYZ ArrayMatrix::nearest(PointXYZ p, double radius) const
 {
-    if (!pr.isValid(p)) return NaNPt;
+    if (!isValid(p)) return NaNPt;
     int qx = p.x>0?1:0;
     int qy = p.y>0?1:0;
     int xx = (abs(p.x/resolution) - 0.5);
@@ -232,7 +226,7 @@ double filterCorrespondences(
     vector<pair<double, int> > dists;
     double meandist = 0;
     for (int i = 0; i < src->size(); ++i) {
-        if (pr.isValid(corrs[i])) {
+        if (isValid(corrs[i])) {
             double d = dist2(src->at(i),corrs[i]);
             dists.push_back(make_pair(sqrt(d),i));
             meandist += d;
@@ -272,11 +266,7 @@ double filterCorrespondences(
 }
 
 double transformAngle(Matrix4d m) {
-    double theta = (m.trace() - 2)/2;
-    if (theta < 1 - EPSILON && theta > EPSILON - 1) theta = acos(theta);
-    else if (theta > 0) theta = 0;
-    else theta = M_PI;
-    return theta;
+    return safe_acos((m.trace() - 2)/2);
 }
 double transformTranslation(Matrix4d m) {
     Vector3d x = m.topRightCorner(3,1);

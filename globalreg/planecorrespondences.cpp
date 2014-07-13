@@ -1,6 +1,6 @@
 #include "pairwise.h"
 #include "findplanes.h"
-#include <pcl/common/common.h>
+#include "util.h"
 
 using namespace pcl;
 using namespace Eigen;
@@ -10,21 +10,6 @@ const double ANGLETHRESHOLD = M_PI/12;
 const double MATCHANGLETHRESHOLD = M_PI/6;
 const double MAXTRANSLATION = 0.25;
 
-Vector3d cloudMidpoint(PointCloud<PointXYZ>::ConstPtr cloud1, PointCloud<PointXYZ>::ConstPtr cloud2)
-{
-    PointXYZ min1, min2, max1, max2;
-    getMinMax3D(*cloud1, min1, max1);
-    getMinMax3D(*cloud2, min2, max2);
-    Vector3d minpt(
-            min(min1.x, min2.x),
-            min(min1.y, min2.y),
-            min(min1.z, min2.z));
-    Vector3d maxpt(
-            max(max1.x, max2.x),
-            max(max1.y, max2.y),
-            max(max1.z, max2.z));
-    return (minpt + maxpt)/2;
-}
 
 void recomputePlanesManhattan(
         Vector3d p1, Vector3d p2,

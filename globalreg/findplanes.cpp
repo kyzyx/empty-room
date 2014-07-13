@@ -1,4 +1,5 @@
 #include "findplanes.h"
+#include "util.h"
 #include <pcl/ModelCoefficients.h>
 #include <pcl/features/normal_3d.h>
 #include <pcl/features/integral_image_normal.h>
@@ -19,18 +20,10 @@ const double MAXEDGEPROPORTION = 0.04;
 const int MININLIERCOUNT = 8000;
 const int MINPLANESIZE = 10000;
 const double ANGULARDEVIATIONTHRESHOLD = 0.25;
-const double EPSILON = 0.00001;
 
 using namespace std;
 using namespace Eigen;
 using namespace pcl;
-
-static DefaultPointRepresentation<PointXYZ> pr;
-inline double dist2(PointXYZ a, PointXYZ b) {
-    if (!pr.isValid(a) || !pr.isValid(b)) return numeric_limits<double>::infinity();
-    return (Vector3f(a.x,a.y,a.z)-Vector3f(b.x,b.y,b.z)).squaredNorm();
-}
-
 
 inline bool onPlane(Vector4d plane, PointXYZ p) {
     return abs(p.x*plane(0) + p.y*plane(1) + p.z*plane(2) + plane(3)) < NOISETHRESHOLD;
@@ -60,7 +53,7 @@ double calculateEdgeProportion(pcl::PointCloud<pcl::PointXYZ>::ConstPtr cloud, v
 }
 
 bool isBehind(PointXYZ p, Vector4d plane) {
-    if (!pr.isValid(p)) return false;
+    if (!isValid(p)) return false;
     return (p.x*plane(0) + p.y*plane(1) + p.z*plane(2) + plane(3)) < -2*NOISETHRESHOLD;
 }
 
@@ -260,10 +253,6 @@ void findPlanesRANSACWithNormals(
     }
 }
 
-inline Vector3d getNormal(PointNormal p) {
-    return Vector3d(p.normal_x, p.normal_y, p.normal_z);
-}
-
 void findPlanesWithNormals(
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr cloud,
         std::vector<Eigen::Vector4d>& planes, std::vector<int>& ids)
@@ -298,7 +287,7 @@ void findPlanesWithNormals(
             while (!nx.empty()) {
                 int x = nx.front(); nx.pop();
                 int y = ny.front(); ny.pop();
-                if (!pr.isValid(cloud->at(x,y)) || isnan(filtered->at(x,y).normal_x)) continue;
+                if (!isValid(cloud->at(x,y)) || isnan(filtered->at(x,y).normal_x)) continue;
                 visited[y*cloud->width + x] = n;
                 avgv = (avgv*cnt + getNormal(filtered->at(x,y)))/(cnt+1);
                 avgv.normalize();
@@ -367,8 +356,8 @@ void findPlanesWithNormals(
         }
         /*if (ids[i] == -1) {
             for (int j = 0; j < planes.size(); ++j) {
-                if (!pr.isValid(cloud->at(i)) || !onPlane(planes[j], cloud->at(i))) continue;
-                if (pr.isValid(cloud->at(i)) && isnan(filtered->at(i).normal_x)) {
+                if (!isValid(cloud->at(i)) || !onPlane(planes[j], cloud->at(i))) continue;
+                if (isValid(cloud->at(i)) && isnan(filtered->at(i).normal_x)) {
                     // If null normal, it's good enough to just be on the plane
                     ids[i] = j;
                 } else {
@@ -390,7 +379,7 @@ void findPlanesWithNormals(
         for (int j = 0; j < cloud->width; ++j) {
             int idx = j + i*cloud->width;
             if (ids[idx] == -1 && last > -1) {
-                if (!pr.isValid(cloud->at(idx)) || !onPlane(planes[last], cloud->at(idx)) || !isnan(filtered->at(idx).normal_x)) continue;
+                if (!isValid(cloud->at(idx)) || !onPlane(planes[last], cloud->at(idx)) || !isnan(filtered->at(idx).normal_x)) continue;
                 nearest[idx] = last;
                 dists[idx] = j - lastj;
             } else {
@@ -403,7 +392,7 @@ void findPlanesWithNormals(
         for (int j = cloud->width-1; j>=0; --j) {
             int idx = j + i*cloud->width;
             if (ids[idx] == -1 && last > -1) {
-                if (!pr.isValid(cloud->at(idx)) || !onPlane(planes[last], cloud->at(idx)) || !isnan(filtered->at(idx).normal_x)) continue;
+                if (!isValid(cloud->at(idx)) || !onPlane(planes[last], cloud->at(idx)) || !isnan(filtered->at(idx).normal_x)) continue;
                 if (dists[idx] > j - lastj) {
                     nearest[idx] = last;
                     dists[idx] = j - lastj;
@@ -420,7 +409,7 @@ void findPlanesWithNormals(
         for (int i = 0; i < cloud->height; ++i) {
             int idx = j + i*cloud->width;
             if (ids[idx] == -1 && last > -1) {
-                if (!pr.isValid(cloud->at(idx)) || !onPlane(planes[last], cloud->at(idx)) || !isnan(filtered->at(idx).normal_x)) continue;
+                if (!isValid(cloud->at(idx)) || !onPlane(planes[last], cloud->at(idx)) || !isnan(filtered->at(idx).normal_x)) continue;
                 nearest[idx] = last;
                 dists[idx] = j - lastj;
             } else {
@@ -433,7 +422,7 @@ void findPlanesWithNormals(
         for (int i = cloud->height-1; i >= 0; --i) {
             int idx = j + i*cloud->width;
             if (ids[idx] == -1 && last > -1) {
-                if (!pr.isValid(cloud->at(idx)) || !onPlane(planes[last], cloud->at(idx)) || !isnan(filtered->at(idx).normal_x)) continue;
+                if (!isValid(cloud->at(idx)) || !onPlane(planes[last], cloud->at(idx)) || !isnan(filtered->at(idx).normal_x)) continue;
                 if (dists[idx] > j - lastj) {
                     nearest[idx] = last;
                     dists[idx] = j - lastj;
@@ -490,7 +479,7 @@ void findPlanesGradient(
             while (!nx.empty()) {
                 int x = nx.top(); nx.pop();
                 int y = ny.top(); ny.pop();
-                if (!pr.isValid(cloud->at(x,y))) continue;
+                if (!isValid(cloud->at(x,y))) continue;
                 ids[y*cloud->width + x] = n;
                 adx = (adx*cnt + dx[x][y])/(cnt+1);
                 ady = (ady*cnt + dy[x][y])/(cnt+1);
@@ -542,11 +531,7 @@ void combineLikePlanes(PointCloud<PointXYZ>::ConstPtr cloud, vector<Vector4d>& p
     vector<Vector4d> origplanes(planes);
     planes.clear();
 
-    PointXYZ minp, maxp;
-    getMinMax3D(*cloud, minp, maxp);
-    Vector3d minpt(minp.x, minp.y, minp.z);
-    Vector3d maxpt(maxp.x, maxp.y, maxp.z);
-    Vector3d avgpt = (minpt + maxpt)/2;
+    Vector3d avgpt = cloudMidpoint(cloud);
 
     for (int i = 0; i < origplanes.size(); ++i) {
         origplanes[i](3) += avgpt.dot(origplanes[i].head(3));
@@ -617,10 +602,7 @@ void filterAngleVariance(
     for (int i = 0; i < filtered->size(); ++i) {
         if (ids[i] > -1 && !isnan(filtered->at(i).normal_x)) {
             double theta = getNormal(filtered->at(i)).dot(planes[ids[i]].head(3));
-            if (theta < 1 - EPSILON && theta > EPSILON - 1) theta = acos(theta);
-            else if (theta > 0) theta = 0;
-            else theta = M_PI;
-            std[ids[i]] += theta;
+            std[ids[i]] += safe_acos(theta);
             ++counts[ids[i]];
         }
     }

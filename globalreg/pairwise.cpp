@@ -1,5 +1,6 @@
 #include "pairwise.h"
 #include "findplanes.h"
+#include "util.h"
 #include <pcl/registration/icp.h>
 #include <pcl/filters/filter.h>
 
@@ -8,7 +9,6 @@ using namespace Eigen;
 using namespace std;
 
 const double ANGLETHRESHOLD = M_PI/9;
-const double EPSILON = 0.00001;
 const double REDOTHRESHOLD = 0.03;
 const int MAXITERATIONS = 50;          // ICP iterations for edge and plane
 
@@ -35,9 +35,7 @@ Matrix4d overlapEdge(Vector4d src1, Vector4d src2, Vector4d tgt1, Vector4d tgt2)
     Vector3d vs2 = tsrc2.head(3);
     Vector3d vt2 = tgt2.head(3);
     Vector3d cross = vs2.cross(vt2);
-    double angle = vs2.dot(vt2);
-    if (abs(angle - 1) < EPSILON) angle = 0;
-    else angle = acos(angle);
+    double angle = safe_acos(vs2.dot(vt2));
     if (cross.dot(tgt1.head(3)) < 0) angle = -angle;
     Matrix4d t2 = Matrix4d::Identity();//AngleAxisd(angle, tgt1).matrix();
     t2.topLeftCorner(3,3) = AngleAxisd(angle, tgt1.head(3)).matrix();
@@ -157,18 +155,4 @@ AlignmentResult align(
             cerr << "Error! " << numcorrespondences << " correspondences found!" << endl;
     }
     return AlignmentResult(Matrix4d::Identity(), numeric_limits<double>::infinity());
-}
-
-Vector4d transformPlane(Vector4d plane, Matrix4d transform)
-{
-    Vector4d dir = plane;
-    dir(3) = 0;
-    Vector4d p(-plane(3)*plane(0), -plane(3)*plane(1), -plane(3)*plane(2), 1);
-
-    dir = transform*dir;
-    dir.head(3) = dir.head(3).normalized();
-    p = transform*p;
-
-    dir(3) = -dir.dot(p);
-    return dir;
 }
