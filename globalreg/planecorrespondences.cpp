@@ -1,5 +1,6 @@
 #include "pairwise.h"
 #include "findplanes.h"
+#include <pcl/common/common.h>
 
 using namespace pcl;
 using namespace Eigen;
@@ -8,6 +9,22 @@ using namespace std;
 const double ANGLETHRESHOLD = M_PI/12;
 const double MATCHANGLETHRESHOLD = M_PI/6;
 const double MAXTRANSLATION = 0.25;
+
+Vector3d cloudMidpoint(PointCloud<PointXYZ>::ConstPtr cloud1, PointCloud<PointXYZ>::ConstPtr cloud2)
+{
+    PointXYZ min1, min2, max1, max2;
+    getMinMax3D(*cloud1, min1, max1);
+    getMinMax3D(*cloud2, min2, max2);
+    Vector3d minpt(
+            min(min1.x, min2.x),
+            min(min1.y, min2.y),
+            min(min1.z, min2.z));
+    Vector3d maxpt(
+            max(max1.x, max2.x),
+            max(max1.y, max2.y),
+            max(max1.z, max2.z));
+    return (minpt + maxpt)/2;
+}
 
 void recomputePlanesManhattan(
         Vector3d p1, Vector3d p2,
@@ -174,6 +191,14 @@ int findPlaneCorrespondences(
         vector<int>& planecorrespondences)
 {
     planecorrespondences.resize(srcplanes.size(), -1);
+    // Make plane offsets relative to center of frame
+    Vector3d avgpt = cloudMidpoint(src, tgt);
+    for (int i = 0; i < srcplanes.size(); ++i) {
+        srcplanes[i](3) += avgpt.dot(srcplanes[i].head(3));
+    }
+    for (int i = 0; i < tgtplanes.size(); ++i) {
+        tgtplanes[i](3) += avgpt.dot(tgtplanes[i].head(3));
+    }
     // Generate possible correspondences
     int numcorrespondences = findCandidateCorrespondences(srcplanes, tgtplanes, planecorrespondences);
     // Isolate correspondences within a single Manhattan coordinate system
@@ -181,6 +206,14 @@ int findPlaneCorrespondences(
 
     // Isolate at most one plane in each direction to match
     filterRearmost(srcplanes, planecorrespondences);
+
+    // Recenter for analysis
+    for (int i = 0; i < srcplanes.size(); ++i) {
+        srcplanes[i](3) -= avgpt.dot(srcplanes[i].head(3));
+    }
+    for (int i = 0; i < tgtplanes.size(); ++i) {
+        tgtplanes[i](3) -= avgpt.dot(tgtplanes[i].head(3));
+    }
 
     // Recount correspondences
     numcorrespondences = 0;
@@ -204,19 +237,35 @@ int findPlaneCorrespondences(
         p2 = p1.cross(pp);
         p2.normalize();
         recomputePlanesManhattan(p1, p2, tgt, tgtplanes, tgtids);
-    }
 
-    // Recompute correspondences with new planes
-    planecorrespondences.clear();
-    planecorrespondences.resize(srcplanes.size(), -1);
-    numcorrespondences = findCandidateCorrespondences(srcplanes, tgtplanes, planecorrespondences);
-    filterRearmost(srcplanes, planecorrespondences);
+        // Make plane offsets relative to center of frame
+        for (int i = 0; i < srcplanes.size(); ++i) {
+            srcplanes[i](3) += avgpt.dot(srcplanes[i].head(3));
+        }
+        for (int i = 0; i < tgtplanes.size(); ++i) {
+            tgtplanes[i](3) += avgpt.dot(tgtplanes[i].head(3));
+        }
 
-    // Final count of correspondences
-    numcorrespondences = 0;
-    for (int i = 0; i < planecorrespondences.size(); ++i) {
-        if (planecorrespondences[i] > -1) {
-            ++numcorrespondences;
+        // Recompute correspondences with new planes
+        planecorrespondences.clear();
+        planecorrespondences.resize(srcplanes.size(), -1);
+        numcorrespondences = findCandidateCorrespondences(srcplanes, tgtplanes, planecorrespondences);
+        filterRearmost(srcplanes, planecorrespondences);
+
+        // Recenter for return
+        for (int i = 0; i < srcplanes.size(); ++i) {
+            srcplanes[i](3) -= avgpt.dot(srcplanes[i].head(3));
+        }
+        for (int i = 0; i < tgtplanes.size(); ++i) {
+            tgtplanes[i](3) -= avgpt.dot(tgtplanes[i].head(3));
+        }
+
+        // Final count of correspondences
+        numcorrespondences = 0;
+        for (int i = 0; i < planecorrespondences.size(); ++i) {
+            if (planecorrespondences[i] > -1) {
+                ++numcorrespondences;
+            }
         }
     }
 
