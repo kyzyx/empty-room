@@ -28,6 +28,7 @@ visualization::PointCloudColorHandlerRGBField<PointXYZRGB> rgb2(colored2);
 visualization::PointCloudColorHandlerRGBField<PointXYZRGB> prevrgb(prevcolored);
 vector<int> planecorrespondences;
 int numcorrespondences;
+double normalsmoothing = 10;
 
 #include <pcl/filters/fast_bilateral.h>
 #include <pcl/features/integral_image_normal.h>
@@ -35,8 +36,8 @@ void colorNormals() {
     PointCloud<Normal>::Ptr normals(new PointCloud<Normal>);
     IntegralImageNormalEstimation<PointXYZRGB, Normal> ne;
     ne.setNormalEstimationMethod (ne.AVERAGE_3D_GRADIENT);
-    ne.setMaxDepthChangeFactor(0.02f);
-    ne.setNormalSmoothingSize(10.0f);
+    ne.setMaxDepthChangeFactor(0.05f);
+    ne.setNormalSmoothingSize(normalsmoothing);
 
     ne.setInputCloud(colored1);
     ne.compute(*normals);
@@ -61,6 +62,9 @@ void smooth(double s, double r) {
     fbf.setInputCloud(cloud1);
     fbf.applyFilter(*tmp);
     copyPointCloud(*tmp, *colored1);
+    fbf.setInputCloud(cloud2);
+    fbf.applyFilter(*tmp);
+    copyPointCloud(*tmp, *colored2);
 }
 
 void colorPlaneCorrespondences() {
@@ -258,7 +262,7 @@ void kbd_cb(const visualization::KeyboardEvent& event, void*) {
                 viewprev = !viewprev;
                 viewer->setPointCloudRenderingProperties(visualization::PCL_VISUALIZER_OPACITY, viewprev?1:0, "prev");
             }
-        } else if (event.getKeyCode() == 'b') {
+        } else if (event.getKeyCode() == 'v') {
             copyPointCloud(*cloud1, *aligned);
             char linename[30];
             for (int i = 0; i < pointcorrespondences.size(); i+=2) {
@@ -276,30 +280,46 @@ void kbd_cb(const visualization::KeyboardEvent& event, void*) {
             srcplanes.clear();
             srcids.clear();
             findPlanes(aligned, srcplanes, srcids);
+        } else if (event.getKeyCode() == 'b') {
+            normalsmoothing -= 1;
+            cout << "Normal smoothing: " << normalsmoothing << endl;
+            updateColormode();
+            viewer->updatePointCloud<PointXYZRGB>(colored1, rgb1, "Mesh1");
+            viewer->updatePointCloud<PointXYZRGB>(colored2, rgb2, "Mesh2");
+        } else if (event.getKeyCode() == 'B') {
+            normalsmoothing += 1;
+            cout << "Normal smoothing: " << normalsmoothing << endl;
+            updateColormode();
+            viewer->updatePointCloud<PointXYZRGB>(colored1, rgb1, "Mesh1");
+            viewer->updatePointCloud<PointXYZRGB>(colored2, rgb2, "Mesh2");
         } else if (event.getKeyCode() == 'n') {
             ss-=2;
             cout << ss << " " << sr << endl;
             smooth(ss,sr);
             updateColormode();
             viewer->updatePointCloud<PointXYZRGB>(colored1, rgb1, "Mesh1");
+            viewer->updatePointCloud<PointXYZRGB>(colored2, rgb2, "Mesh2");
         } else if (event.getKeyCode() == 'N') {
             ss+=2;
             cout << ss << " " << sr << endl;
             smooth(ss,sr);
             updateColormode();
             viewer->updatePointCloud<PointXYZRGB>(colored1, rgb1, "Mesh1");
+            viewer->updatePointCloud<PointXYZRGB>(colored2, rgb2, "Mesh2");
         } else if (event.getKeyCode() == 'm') {
             sr-=0.01;
             cout << ss << " " << sr << endl;
             smooth(ss,sr);
             updateColormode();
             viewer->updatePointCloud<PointXYZRGB>(colored1, rgb1, "Mesh1");
+            viewer->updatePointCloud<PointXYZRGB>(colored2, rgb2, "Mesh2");
         } else if (event.getKeyCode() == 'M') {
             sr+=0.01;
             cout << ss << " " << sr << endl;
             smooth(ss,sr);
             updateColormode();
             viewer->updatePointCloud<PointXYZRGB>(colored1, rgb1, "Mesh1");
+            viewer->updatePointCloud<PointXYZRGB>(colored2, rgb2, "Mesh2");
         } else if (event.getKeyCode() == 'z') {
             if (step == 0) {
                 if (numcorrespondences == 1) {
@@ -413,7 +433,16 @@ int main(int argc, char** argv) {
     cout << "Found frame 2 planes" << endl;
     numcorrespondences = findPlaneCorrespondences(cloud1, cloud2, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences);
     for (int i = 0; i < planecorrespondences.size(); ++i) {
-        cout << i << ": " << planecorrespondences[i] << endl;
+        printf("%d(%.3f, %.3f, %.3f, %.3f): %d",
+                i, srcplanes[i](0), srcplanes[i](1), srcplanes[i](2), srcplanes[i](3), planecorrespondences[i]);
+        if (planecorrespondences[i] > -1) {
+            int j = planecorrespondences[i];
+            printf("(%.3f, %.3f, %.3f, %.3f)", tgtplanes[j](0), tgtplanes[j](1), tgtplanes[j](2), tgtplanes[j](3));
+        }
+        printf("\n");
+    }
+    for (int i = 0; i < tgtplanes.size(); ++i) {
+            printf("%d: (%.3f, %.3f, %.3f, %.3f)\n", i, tgtplanes[i](0), tgtplanes[i](1), tgtplanes[i](2), tgtplanes[i](3));
     }
 
     copyPointCloud(*cloud1, *colored1);
