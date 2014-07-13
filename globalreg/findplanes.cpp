@@ -8,6 +8,7 @@
 #include <pcl/sample_consensus/sac_model_normal_plane.h>
 #include <pcl/sample_consensus/sac_model_plane.h>
 #include <pcl/segmentation/sac_segmentation.h>
+#include <Eigen/SVD>
 
 const double ANGLETHRESHOLD = M_PI/9;
 const double DISTTHRESHOLD = 0.03;
@@ -657,6 +658,66 @@ void filterBoundingSides(
     }
 }
 
+void recalculateOffsets(
+        PointCloud<PointXYZ>::ConstPtr cloud,
+        vector<Vector4d>& planes,
+        vector<int>& ids)
+{
+    for (int i = 0; i < planes.size(); ++i) {
+        planes[i](3) = 0;
+    }
+    // Recompute average offset
+    vector<int> sizes(planes.size(), 0);
+    for (int i = 0; i < cloud->size(); ++i) {
+        for (int j = 0; j < planes.size(); ++j) {
+            if (ids[i] == j) {
+                ++sizes[ids[i]];
+                planes[j](3) -= planes[j](0)*cloud->at(i).x
+                              + planes[j](1)*cloud->at(i).y
+                              + planes[j](2)*cloud->at(i).z;
+            }
+        }
+    }
+    for (int i = 0; i < planes.size(); ++i) {
+        planes[i](3) /= sizes[i];
+    }
+}
+
+void recalculateNormals(
+        PointCloud<PointXYZ>::ConstPtr cloud,
+        vector<Vector4d>& planes,
+        vector<int>& ids)
+{
+    vector<Matrix<double, 3, Dynamic> > m(planes.size());
+    vector<int> counts(planes.size(), 0);
+    vector<Vector3d> centroids(planes.size(), Vector3d::Zero());
+    for (int i = 0; i < cloud->size(); ++i) {
+        if (ids[i] > -1) {
+            counts[ids[i]]++;
+            centroids[ids[i]] += Vector3d(cloud->at(i).x, cloud->at(i).y, cloud->at(i).z);
+        }
+    }
+    for (int i = 0; i < planes.size(); ++i) {
+        m[i].resize(3,counts[i]);
+        centroids[i] /= counts[i];
+        counts[i] = 0;
+    }
+    for (int i = 0; i < cloud->size(); ++i) {
+        if (ids[i] > -1) {
+            m[ids[i]](0,counts[ids[i]]) = cloud->at(i).x - centroids[ids[i]](0);
+            m[ids[i]](1,counts[ids[i]]) = cloud->at(i).y - centroids[ids[i]](1);
+            m[ids[i]](2,counts[ids[i]]) = cloud->at(i).z - centroids[ids[i]](2);
+            counts[ids[i]]++;
+        }
+    }
+    for (int i = 0; i < planes.size(); ++i) {
+        JacobiSVD<Matrix<double, 3, Dynamic> > svd(m[i], ComputeFullU);
+        Vector3d v = svd.matrixU().col(2);
+        if (v.dot(planes[i].head(3)) < 0) v = -v;
+        planes[i].head(3) = v;
+    }
+}
+
 void findPlanes(
         PointCloud<PointXYZ>::ConstPtr cloud,
         vector<Vector4d>& planes,
@@ -665,8 +726,13 @@ void findPlanes(
     ids.resize(cloud->size());
     for (int i = 0; i < ids.size(); ++i) ids[i] = -1;
     findPlanesWithNormals(cloud, planes, ids);
-    combineLikePlanes(cloud, planes, ids);
-    combineLikePlanes(cloud, planes, ids);
+    recalculateNormals(cloud, planes, ids);
+    recalculateOffsets(cloud, planes, ids);
+    for (int i = 0; i < 2; ++i) {
+        combineLikePlanes(cloud, planes, ids);
+        recalculateNormals(cloud, planes, ids);
+        recalculateOffsets(cloud, planes, ids);
+    }
     filterAngleVariance(cloud, planes, ids);
     if (planes.size() > 1) {
         filterBoundingSides(cloud, planes, ids);
