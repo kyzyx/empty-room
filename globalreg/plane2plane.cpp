@@ -318,7 +318,7 @@ AlignmentResult alignPlaneToPlane(
         vector<PointXYZ> corrs;
         computeCorrespondences(tsrc, &lkdt, corrs);
         double newerror = filterCorrespondences(tsrc, corrs, ptsrc, pttgt);
-        if (!corrs.size()) return AlignmentResult(Matrix4d::Identity(), numeric_limits<double>::infinity());
+        if (!corrs.size()) return AlignmentResult(Matrix4d::Identity(), numeric_limits<double>::infinity(), AlignmentResult::ALIGNED_PLANE);
         //if (abs(error-newerror) < errthreshold) break;
         error = newerror;
 
@@ -332,7 +332,7 @@ AlignmentResult alignPlaneToPlane(
         transformPointCloud(*tsrc, *tsrc, opt);
     }
     transform = coordtransform.inverse()*transform;
-    return AlignmentResult(transform, error);
+    return AlignmentResult(transform, error, AlignmentResult::ALIGNED_PLANE);
 }
 
 AlignmentResult partialAlignPlaneToPlane(
@@ -375,7 +375,7 @@ AlignmentResult partialAlignPlaneToPlane(
     vector<PointXYZ> corrs;
     computeCorrespondences(tsrc, &lkdt, corrs);
     double error = filterCorrespondences(tsrc, corrs, ptsrc, pttgt, ncorrs, t);
-    if (!corrs.size()) return AlignmentResult(Matrix4d::Identity(), numeric_limits<double>::infinity());
+    if (!corrs.size()) return AlignmentResult(Matrix4d::Identity(), numeric_limits<double>::infinity(), AlignmentResult::ALIGNED_PLANE);
     cout << "Error: " << error << endl;
     for (int i = 0; i < ptsrc.size(); ++i) {
         Vector4d pt(ptsrc[i].x, ptsrc[i].y, ptsrc[i].z, 1);
@@ -390,7 +390,7 @@ AlignmentResult partialAlignPlaneToPlane(
     transform = opt*transform;
 
     transform = coordtransform.inverse()*transform;
-    return AlignmentResult(transform, error);
+    return AlignmentResult(transform, error, AlignmentResult::ALIGNED_PLANE);
 }
 
 double computeOptimal1d(vector<double>& x) {
@@ -483,7 +483,7 @@ AlignmentResult alignEdgeToEdge(
         vector<PointXYZ> corrs;
         computeCorrespondences(tsrc, &am, corrs);
         double newerror = filterCorrespondences(tsrc, corrs, ptsrc, pttgt);
-        if (!corrs.size()) return AlignmentResult(Matrix4d::Identity(), numeric_limits<double>::infinity());
+        if (!corrs.size()) return AlignmentResult(Matrix4d::Identity(), numeric_limits<double>::infinity(), AlignmentResult::ALIGNED_EDGE);
         //if (abs(error-newerror) < errthreshold) break;
         error = newerror;
 
@@ -502,7 +502,7 @@ AlignmentResult alignEdgeToEdge(
         transformPointCloud(*tsrc, *tsrc, transl);
     }
     transform = coordtransform.inverse()*transform;
-    return AlignmentResult(transform, error);
+    return AlignmentResult(transform, error, AlignmentResult::ALIGNED_EDGE);
 }
 AlignmentResult partialAlignEdgeToEdge(
         PointCloud<PointXYZ>::ConstPtr src,
@@ -560,7 +560,7 @@ AlignmentResult partialAlignEdgeToEdge(
     vector<PointXYZ> corrs;
     computeCorrespondences(tsrc, &am, corrs);
     double error = filterCorrespondences(tsrc, corrs, ptsrc, pttgt, ncorrs, t);
-    if (!corrs.size()) return AlignmentResult(Matrix4d::Identity(), numeric_limits<double>::infinity());
+    if (!corrs.size()) return AlignmentResult(Matrix4d::Identity(), numeric_limits<double>::infinity(), AlignmentResult::ALIGNED_EDGE);
     cout << "Error: " << error << endl;
     for (int i = 0; i < ptsrc.size(); ++i) {
         Vector4d pt(ptsrc[i].x, ptsrc[i].y, ptsrc[i].z, 1);
@@ -578,7 +578,7 @@ AlignmentResult partialAlignEdgeToEdge(
     transl.setIdentity();
     transl(2,3) = -computeOptimal1d(dists);
     transform = coordtransform.inverse()*transl*transform;
-    return AlignmentResult(transform, error);
+    return AlignmentResult(transform, error, AlignmentResult::ALIGNED_EDGE);
 }
 
 AlignmentResult alignCornerToCorner(
@@ -639,5 +639,5 @@ AlignmentResult alignCornerToCorner(
     vector<PointXYZ> corrs;
     computeCorrespondences(tsrc, &am, corrs);
     double err = filterCorrespondences(tsrc, corrs, ptsrc, pttgt);
-    return AlignmentResult(transform, err);
+    return AlignmentResult(transform, err, AlignmentResult::ALIGNED_CORNER);
 }

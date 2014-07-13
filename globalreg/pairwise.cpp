@@ -77,7 +77,7 @@ AlignmentResult alignICP(
     icp.setInputTarget(t);
     icp.setMaximumIterations(maxiterations);
     icp.align(*s);
-    return AlignmentResult(icp.getFinalTransformation().cast<double>(), icp.getFitnessScore());
+    return AlignmentResult(icp.getFinalTransformation().cast<double>(), icp.getFitnessScore(), AlignmentResult::ALIGNED_ICP);
 }
 
 AlignmentResult align(
@@ -154,5 +154,5 @@ AlignmentResult align(
         default:
             cerr << "Error! " << numcorrespondences << " correspondences found!" << endl;
     }
-    return AlignmentResult(Matrix4d::Identity(), numeric_limits<double>::infinity());
+    return AlignmentResult(Matrix4d::Identity(), numeric_limits<double>::infinity(), AlignmentResult::ALIGNED_NONE);
 }

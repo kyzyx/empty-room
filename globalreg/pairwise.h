@@ -8,8 +8,10 @@
 
 class AlignmentResult {
     public:
-        AlignmentResult(Eigen::Matrix4d xform) : transform(xform), error(0) {}
-        AlignmentResult(Eigen::Matrix4d xform, double err) : transform(xform), error(err) {}
+        enum AlignmentType {ALIGNED_NONE, ALIGNED_ICP, ALIGNED_PLANE, ALIGNED_EDGE, ALIGNED_CORNER};
+
+        AlignmentResult(Eigen::Matrix4d xform) : transform(xform), error(0), type(ALIGNED_NONE) {}
+        AlignmentResult(Eigen::Matrix4d xform, double err, AlignmentType t) : transform(xform), error(err), type(t) {}
         AlignmentResult& operator=(const AlignmentResult& ar) {
             if (this != &ar) {
                 error = ar.error;
@@ -17,6 +19,8 @@ class AlignmentResult {
             }
             return *this;
         }
+
+        AlignmentType type;
         double error;
         Eigen::Matrix4d transform;
 };
