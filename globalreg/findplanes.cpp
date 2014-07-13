@@ -13,6 +13,7 @@
 const double ANGLETHRESHOLD = M_PI/9;
 const double DISTTHRESHOLD = 0.03;
 const double NOISETHRESHOLD = 0.01;
+const double FUSETHRESHOLD = 0.05;
 const double MININLIERPROPORTION = 0.05;
 const double MAXEDGEPROPORTION = 0.04;
 const int MININLIERCOUNT = 8000;
@@ -540,6 +541,17 @@ void combineLikePlanes(PointCloud<PointXYZ>::ConstPtr cloud, vector<Vector4d>& p
     vector<int> relabel(planes.size(),-1);
     vector<Vector4d> origplanes(planes);
     planes.clear();
+
+    PointXYZ minp, maxp;
+    getMinMax3D(*cloud, minp, maxp);
+    Vector3d minpt(minp.x, minp.y, minp.z);
+    Vector3d maxpt(maxp.x, maxp.y, maxp.z);
+    Vector3d avgpt = (minpt + maxpt)/2;
+
+    for (int i = 0; i < origplanes.size(); ++i) {
+        origplanes[i](3) += avgpt.dot(origplanes[i].head(3));
+    }
+
     int n = 0;
     for (int i = 0; i < origplanes.size(); ++i) {
         if (relabel[i] == -1) {
@@ -547,13 +559,16 @@ void combineLikePlanes(PointCloud<PointXYZ>::ConstPtr cloud, vector<Vector4d>& p
             planes.push_back(origplanes[i]);
             for (int j = i+1; j < origplanes.size(); ++j) {
                 if (origplanes[i].head(3).dot(origplanes[j].head(3)) > cos(ANGLETHRESHOLD)) {
-                    if (abs(origplanes[i](3) - origplanes[j](3)) < 2*NOISETHRESHOLD) {
+                    if (abs(origplanes[i](3) - origplanes[j](3)) < FUSETHRESHOLD) {
                         relabel[j] = n;
                     }
                 }
             }
             ++n;
         }
+    }
+    for (int i = 0; i < origplanes.size(); ++i) {
+        origplanes[i](3) -= avgpt.dot(origplanes[i].head(3));
     }
     vector<int> origcounts(origplanes.size(),0);
     vector<int> counts(planes.size(),0);
