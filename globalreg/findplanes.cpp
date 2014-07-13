@@ -23,6 +23,11 @@ using namespace Eigen;
 using namespace pcl;
 
 static DefaultPointRepresentation<PointXYZ> pr;
+inline double dist2(PointXYZ a, PointXYZ b) {
+    if (!pr.isValid(a) || !pr.isValid(b)) return numeric_limits<double>::infinity();
+    return (Vector3f(a.x,a.y,a.z)-Vector3f(b.x,b.y,b.z)).squaredNorm();
+}
+
 
 inline bool onPlane(Vector4d plane, PointXYZ p) {
     return abs(p.x*plane(0) + p.y*plane(1) + p.z*plane(2) + plane(3)) < NOISETHRESHOLD;
@@ -256,11 +261,6 @@ inline Vector3d getNormal(PointNormal p) {
     return Vector3d(p.normal_x, p.normal_y, p.normal_z);
 }
 
-inline double dist2(PointXYZ a, PointXYZ b) {
-    if (!pr.isValid(a) || !pr.isValid(b)) return numeric_limits<double>::infinity();
-    return (Vector3f(a.x,a.y,a.z)-Vector3f(b.x,b.y,b.z)).squaredNorm();
-}
-
 void findPlanesWithNormals(
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr cloud,
         std::vector<Eigen::Vector4d>& planes, std::vector<int>& ids)
@@ -376,6 +376,73 @@ void findPlanesWithNormals(
                 }
             }
         }*/
+    }
+
+    // Add labels to neighboring null normals
+    vector<int> dists(ids.size(), 0);
+    vector<int> nearest(ids.size(), -1);
+    for (int i = 0; i < cloud->height; ++i) {
+        int last = -1;
+        int lastj = -1;
+        for (int j = 0; j < cloud->width; ++j) {
+            int idx = j + i*cloud->width;
+            if (ids[idx] == -1 && last > -1) {
+                if (!pr.isValid(cloud->at(idx)) || !onPlane(planes[last], cloud->at(idx)) || !isnan(filtered->at(idx).normal_x)) continue;
+                nearest[idx] = last;
+                dists[idx] = j - lastj;
+            } else {
+                last = ids[idx];
+                lastj = j;
+            }
+        }
+        last = -1;
+        lastj = -1;
+        for (int j = cloud->width-1; j>=0; --j) {
+            int idx = j + i*cloud->width;
+            if (ids[idx] == -1 && last > -1) {
+                if (!pr.isValid(cloud->at(idx)) || !onPlane(planes[last], cloud->at(idx)) || !isnan(filtered->at(idx).normal_x)) continue;
+                if (dists[idx] > j - lastj) {
+                    nearest[idx] = last;
+                    dists[idx] = j - lastj;
+                }
+            } else {
+                last = ids[idx];
+                lastj = j;
+            }
+        }
+    }
+    for (int j = 1; j < cloud->width; ++j) {
+        int last = -1;
+        int lastj = -1;
+        for (int i = 0; i < cloud->height; ++i) {
+            int idx = j + i*cloud->width;
+            if (ids[idx] == -1 && last > -1) {
+                if (!pr.isValid(cloud->at(idx)) || !onPlane(planes[last], cloud->at(idx)) || !isnan(filtered->at(idx).normal_x)) continue;
+                nearest[idx] = last;
+                dists[idx] = j - lastj;
+            } else {
+                last = ids[idx];
+                lastj = j;
+            }
+        }
+        last = -1;
+        lastj = -1;
+        for (int i = cloud->height-1; i >= 0; --i) {
+            int idx = j + i*cloud->width;
+            if (ids[idx] == -1 && last > -1) {
+                if (!pr.isValid(cloud->at(idx)) || !onPlane(planes[last], cloud->at(idx)) || !isnan(filtered->at(idx).normal_x)) continue;
+                if (dists[idx] > j - lastj) {
+                    nearest[idx] = last;
+                    dists[idx] = j - lastj;
+                }
+            } else {
+                last = ids[idx];
+                lastj = j;
+            }
+        }
+    }
+    for (int i = 0; i < ids.size(); ++i) {
+        if (nearest[i] > -1) ids[i] = nearest[i];
     }
 }
 
