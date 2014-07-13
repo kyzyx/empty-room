@@ -16,6 +16,7 @@ const double NOISETHRESHOLD = 0.01;
 const double MININLIERPROPORTION = 0.05;
 const double MAXEDGEPROPORTION = 0.04;
 const int MININLIERCOUNT = 8000;
+const int MINPLANESIZE = 10000;
 const double ANGULARDEVIATIONTHRESHOLD = 0.25;
 const double EPSILON = 0.00001;
 
@@ -683,6 +684,35 @@ void recalculateOffsets(
     }
 }
 
+void filterSize(
+        int minsize,
+        PointCloud<PointXYZ>::ConstPtr cloud,
+        vector<Vector4d>& planes,
+        vector<int>& ids)
+{
+    vector<int> sizes(planes.size(), 0);
+    for (int i = 0; i < ids.size(); ++i) {
+        if (ids[i] > -1) sizes[ids[i]]++;
+    }
+    vector<int> newids;
+    int n = 0;
+    vector<Vector4d> origplanes(planes);
+    planes.clear();
+    for (int i = 0; i < origplanes.size(); ++i) {
+        if (sizes[i] > minsize) {
+            planes.push_back(origplanes[i]);
+            newids.push_back(n++);
+        }
+        else newids.push_back(-1);
+    }
+    // Relabel points
+    for (int i = 0; i < ids.size(); ++i) {
+        if (ids[i] > -1) {
+            ids[i] = newids[ids[i]];
+        }
+    }
+}
+
 void recalculateNormals(
         PointCloud<PointXYZ>::ConstPtr cloud,
         vector<Vector4d>& planes,
@@ -737,4 +767,5 @@ void findPlanes(
     if (planes.size() > 1) {
         filterBoundingSides(cloud, planes, ids);
     }
+    //filterSize(MINPLANESIZE, cloud, planes, ids);
 }
