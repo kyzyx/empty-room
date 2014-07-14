@@ -86,6 +86,16 @@ AlignmentResult align(
         vector<Vector4d>& srcplanes, vector<int>& srcids,
         vector<Vector4d>& tgtplanes, vector<int>& tgtids)
 {
+    vector<int> planecorrespondences;
+    return align(src, tgt, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences);
+}
+AlignmentResult align(
+        PointCloud<PointXYZ>::ConstPtr src,
+        PointCloud<PointXYZ>::ConstPtr tgt,
+        vector<Vector4d>& srcplanes, vector<int>& srcids,
+        vector<Vector4d>& tgtplanes, vector<int>& tgtids,
+        vector<int>& planecorrespondences)
+{
     // Detect planes
     if (tgtids.size() != tgt->size()) {
         findPlanes(tgt, tgtplanes, tgtids);
@@ -96,7 +106,6 @@ AlignmentResult align(
 
     // Find plane correspondences
     // TODO: What if multiple compatible planes?
-    vector<int> planecorrespondences;
     int numcorrespondences = findPlaneCorrespondences(src, tgt, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences);
     // Call appropriate alignment function
     switch (numcorrespondences) {
@@ -137,13 +146,15 @@ AlignmentResult align(
                     for (int i = 0; i < planecorrespondences.size(); ++i) {
                         if (planecorrespondences[i] > -1) ids.push_back(i);
                     }
+                    vector<int> origplanecorrespondences(planecorrespondences);
                     for (int i = 0; i < 3; ++i) {
                         cout << "Redoing with edge to edge " << i+1 << endl;
-                        vector<int> pc2(planecorrespondences);
+                        vector<int> pc2(origplanecorrespondences);
                         pc2[ids[i]] = -1;
                         AlignmentResult c2 = alignEdgeToEdge(src, tgt, srcplanes, srcids, tgtplanes, tgtids, pc2, MAXITERATIONS);
                         if (c2.error < c.error) {
                             c = c2;
+                            planecorrespondences = pc2;
                         }
                     }
                 }

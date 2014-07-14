@@ -8,13 +8,14 @@ link_directories(${PCL_LIBRARY_DIRS} ../GAPS/R3Graphics/ ../GAPS/R3Shapes/
     ../GAPS/jpeg/)
 add_definitions(${PCL_DEFINITIONS})
 add_library(util util.h util.cpp)
+add_library(loopclosure roommodel.h roommodel.cpp)
 add_library(pairwise pairwise.cpp pairwise.h plane2plane.h plane2plane.cpp findplanes.cpp
     findplanes.h planecorrespondences.cpp)
 add_executable(globalreg globalreg.cpp)
 add_executable(planefinder planefinder.cpp)
 add_executable(align align.cpp)
 target_link_libraries(globalreg ${PCL_LIBRARIES} R3Graphics.a RNBasics.a
-    R3Shapes.a R2Shapes.a jpeg.a GL glut GLU GLEW pairwise util)
+    R3Shapes.a R2Shapes.a jpeg.a GL glut GLU GLEW pairwise util loopclosure)
 target_link_libraries(planefinder ${PCL_LIBRARIES} R3Graphics.a RNBasics.a
     R3Shapes.a R2Shapes.a jpeg.a GL glut GLU GLEW pairwise util)
 target_link_libraries(align ${PCL_LIBRARIES} R3Graphics.a RNBasics.a

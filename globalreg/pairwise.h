@@ -57,6 +57,12 @@ AlignmentResult align(
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr tgt,
         std::vector<Eigen::Vector4d>& srcplanes, std::vector<int>& srcids,
         std::vector<Eigen::Vector4d>& tgtplanes, std::vector<int>& tgtids);
+AlignmentResult align(
+        pcl::PointCloud<pcl::PointXYZ>::ConstPtr src,
+        pcl::PointCloud<pcl::PointXYZ>::ConstPtr tgt,
+        std::vector<Eigen::Vector4d>& srcplanes, std::vector<int>& srcids,
+        std::vector<Eigen::Vector4d>& tgtplanes, std::vector<int>& tgtids,
+        std::vector<int>& planecorrespondences);
 
 /**
  * As align(...), but specifically forces the first planes in correspondence to be coplanar.
