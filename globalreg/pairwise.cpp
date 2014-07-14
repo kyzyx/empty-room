@@ -120,7 +120,7 @@ AlignmentResult align(
                     cout << "Redoing with plane to plane" << endl;
                     AlignmentResult c2 = alignPlaneToPlane(src, tgt, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences, MAXITERATIONS);
                     if (c2.error < c.error) {
-                        cout << "Final RMSE: " << c.error << endl;
+                        cout << "Final RMSE: " << c2.error << endl;
                         return c2;
                     }
                 }

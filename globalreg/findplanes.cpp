@@ -14,7 +14,7 @@
 const double ANGLETHRESHOLD = M_PI/9;
 const double DISTTHRESHOLD = 0.03;
 const double NOISETHRESHOLD = 0.01;
-const double FUSETHRESHOLD = 0.06;
+const double FUSETHRESHOLD = 0.05;
 const double MININLIERPROPORTION = 0.05;
 const double MAXEDGEPROPORTION = 0.04;
 const int MININLIERCOUNT = 8000;

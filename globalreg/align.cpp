@@ -411,8 +411,8 @@ void kbd_cb(const visualization::KeyboardEvent& event, void*) {
 void loadFile(string fname, PointCloud<PointXYZ>::Ptr cloud) {
     io::loadPCDFile<PointXYZ>(fname, *cloud);
     FastBilateralFilter<PointXYZ> fbf;
-    fbf.setSigmaS(9);
-    fbf.setSigmaR(0.05);
+    fbf.setSigmaS(5);
+    fbf.setSigmaR(0.04);
     fbf.setInputCloud(cloud);
     fbf.applyFilter(*cloud);
     for (int i = 0; i < cloud->size(); ++i) {

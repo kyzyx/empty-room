@@ -92,8 +92,8 @@ void loadFile(string fname, PointCloud<PointXYZ>::Ptr cloud, bool smoothing) {
     io::loadPCDFile<PointXYZ>(fname, *cloud);
     if (smoothing) {
         FastBilateralFilter<PointXYZ> fbf;
-        fbf.setSigmaS(9);
-        fbf.setSigmaR(0.05);
+        fbf.setSigmaS(5);
+        fbf.setSigmaR(0.04);
         fbf.setInputCloud(cloud);
         fbf.applyFilter(*cloud);
     }
