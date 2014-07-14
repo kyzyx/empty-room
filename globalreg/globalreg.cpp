@@ -1,5 +1,7 @@
 #include "pairwise.h"
 #include "findplanes.h"
+#include "roommodel.h"
+#include "util.h"
 #include <pcl/io/io.h>
 #include <pcl/io/ply_io.h>
 #include <pcl/io/vtk_lib_io.h>
@@ -103,19 +105,24 @@ void loadFile(string fname, PointCloud<PointXYZ>::Ptr cloud, bool smoothing) {
 }
 
 int main(int argc, char** argv) {
-    if (argc < 3) {
-        cout << "Usage: globalreg MANIFEST -outputprefix PREFIX" << endl;
-        cout << "       globalreg MANIFEST -xforms XFORMPATTERN" << endl;
+    if (argc < 2) {
+        cout << "Usage: globalreg MANIFEST" << endl;
+        cout << "    Options:" << endl;
+        cout << "       -xforms XFORMPATTERN: Read in transforms from a file" << endl;
+        cout << "       -outputprefix PREFIX: Write aligned point clouds to ply files" << endl;
+        cout << "       -nodisplay: Exit after performing alignment" << endl;
+        cout << "       -noloopclosure: Write pairwise transforms, without loop closure" << endl;
+        cout << "       -nosmoothing: Don't smooth point clouds before processing" << endl;
         return 0;
     }
     string outputprefix = "";
     string xformspattern = "";
-    bool subsample = false;
     bool display = true;
     bool smoothing = true;
-    if (console::find_switch(argc, argv, "-subsample")) subsample = true;
+    bool doloopclosure = true;
     if (console::find_switch(argc, argv, "-nodisplay")) display = false;
     if (console::find_switch(argc, argv, "-nosmoothing")) smoothing = false;
+    if (console::find_switch(argc, argv, "-noloopclosure")) doloopclosure = false;
     if (console::find_argument(argc, argv, "-outputprefix") > -1) {
         console::parse_argument(argc, argv, "-outputprefix", outputprefix);
     }
@@ -145,25 +152,123 @@ int main(int argc, char** argv) {
     cumxforms.push_back(Matrix4d::Identity());
     vector<Vector4d> srcplanes, tgtplanes;
     vector<int> srcids, tgtids;
+    vector<bool> alignedto;
+    RoomModel rm;
     for (int i = 1; i < clouds.size(); ++i) {
         srcplanes.clear(); tgtplanes.clear();
         srcids.clear(); tgtids.clear();
+        alignedto.clear();
+        double error;
         Matrix4d t;
         if (xformspattern.length() > 0) {
             char fname[20];
-            sprintf(fname, xformspattern.c_str(), i);
+            sprintf(fname, (xformspattern + ".xform").c_str(), i);
             ifstream in(fname);
-            for (int i = 0; i < 4; ++i) {
-                for (int j = 0; j < 4; ++j) {
-                    in >> t(i,j);
+            for (int j = 0; j < 4; ++j) {
+                for (int k = 0; k < 4; ++k) {
+                    in >> t(j,k);
                 }
             }
+            in.close();
+            if (i == 1) {
+                sprintf(fname, (xformspattern + ".planes").c_str(), 0);
+                in.open(fname);
+                int numplanes;
+                in >> numplanes >> error;
+                for (int j = 0; j < numplanes; ++j) {
+                    Vector4d p;
+                    for (int k = 0; k < 4; ++k) in >> p(k);
+                    tgtplanes.push_back(p);
+                    int n;
+                    in >> n;
+                }
+            }
+            in.close();
+            sprintf(fname, (xformspattern + ".planes").c_str(), i);
+            in.open(fname);
+            int numplanes;
+            in >> numplanes >> error;
+            for (int j = 0; j < numplanes; ++j) {
+                Vector4d p;
+                for (int k = 0; k < 4; ++k) in >> p(k);
+                srcplanes.push_back(p);
+                int n;
+                in >> n;
+                if (n) alignedto.push_back(true);
+                else alignedto.push_back(false);
+            }
+            in.close();
         } else {
-            t = align(clouds[i], clouds[i-1], srcplanes, srcids, tgtplanes, tgtids).transform;
-            cout << "Done alignment " << i << endl;
+            vector<int> planecorrespondences;
+            AlignmentResult res = align(clouds[i], clouds[i-1], srcplanes, srcids, tgtplanes, tgtids, planecorrespondences);
+            alignedto.resize(srcplanes.size(), false);
+            t = res.transform;
+            int n = 0;
+            switch (res.type) {
+                case AlignmentResult::ALIGNED_CORNER:
+                    n = 3;
+                    break;
+                case AlignmentResult::ALIGNED_EDGE:
+                    n = 2;
+                    break;
+                case AlignmentResult::ALIGNED_PLANE:
+                    n = 1;
+                    break;
+            }
+            for (int j = 0; j < planecorrespondences.size(); ++j) {
+                if (planecorrespondences[j] > -1) {
+                    alignedto[j] = true;
+                    --n;
+                    if (!n) break;
+                }
+            }
+            error = res.error;
+            if (outputprefix.length() > 0) {
+                char fname[20];
+                sprintf(fname, (outputprefix + ".planes").c_str(), i);
+                ofstream out(fname);
+                out << srcplanes.size() << " " << error << endl;
+                for (int i = 0; i < srcplanes.size(); ++i) {
+                    for (int j = 0; j < 4; ++j) out << srcplanes[i](j) << " ";
+                    out << (alignedto[i]?1:0) << endl;
+                }
+                if (i == 1) {
+                    sprintf(fname, (outputprefix + ".planes").c_str(), 0);
+                    ofstream out(fname);
+                    out << tgtplanes.size() << " " << error << endl;
+                    for (int i = 0; i < tgtplanes.size(); ++i) {
+                        for (int j = 0; j < 4; ++j) out << tgtplanes[i](j) << " ";
+                        out << 0 << endl;
+                    }
+                }
+            }
         }
+
+        if (doloopclosure) {
+            if (i == 1) {
+                vector<Vector3d> alignedVectors;
+                for (int j  = 0; j < alignedto.size(); ++j) {
+                    if (alignedto[j]) {
+                        Vector4d p = transformPlane(srcplanes[j], t);
+                        alignedVectors.push_back(p.head(3));
+                    }
+                }
+                rm.setAxes(alignedVectors[0], alignedVectors[1]);
+                rm.addCloud(clouds[0], tgtplanes, alignedto, Matrix4d::Identity(), 0);
+            }
+            rm.addCloud(clouds[i], srcplanes, alignedto, t, error);
+        }
+        cout << "Done alignment " << i << endl;
+
         cumxforms.push_back(cumxforms.back()*t);
         xforms.push_back(t);
+    }
+
+    if (doloopclosure) {
+        for (int i = 0; i < clouds.size(); ++i) {
+            xforms[i] = rm.getTransform(i);
+            cumxforms[i] = rm.getCumulativeTransform(i);
+        }
     }
 
     if (display) {
@@ -190,9 +295,9 @@ int main(int argc, char** argv) {
         PLYWriter w;
         char fname[20];
         for (int i = 0; i < clouds.size(); ++i) {
-            sprintf(fname, (outputprefix + "%04d.ply").c_str(), i);
+            sprintf(fname, (outputprefix + ".ply").c_str(), i);
             w.write<Pt>(fname, *clouds[i], true, false);
-            sprintf(fname, (outputprefix + "%04d.xform").c_str(), i);
+            sprintf(fname, (outputprefix + ".xform").c_str(), i);
             ofstream out(fname);
             out << xforms[i] << endl;
             out.close();

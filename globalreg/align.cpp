@@ -30,6 +30,7 @@ visualization::PointCloudColorHandlerRGBField<PointXYZRGB> prevrgb(prevcolored);
 vector<int> planecorrespondences;
 int numcorrespondences;
 double normalsmoothing = 10;
+string pattern = "";
 
 #include <pcl/filters/fast_bilateral.h>
 #include <pcl/features/integral_image_normal.h>
@@ -270,7 +271,40 @@ void kbd_cb(const visualization::KeyboardEvent& event, void*) {
                 sprintf(linename, "line%03d", i/2);
                 viewer->removeShape(linename);
             }
-            Matrix4d t = align(aligned, cloud2, srcplanes, srcids, tgtplanes, tgtids).transform;
+            AlignmentResult res = align(aligned, cloud2, srcplanes, srcids, tgtplanes, tgtids);
+            Matrix4d t = res.transform;
+            if (pattern.length() > 0) {
+                ofstream out(pattern + ".xform");
+                out << t << endl;
+                out.close();
+                out.open(pattern + ".planes");
+                out << srcplanes.size() << " " << res.error << endl;
+                vector<bool> alignedto(srcplanes.size(), false);
+                int n = 0;
+                switch (res.type) {
+                    case AlignmentResult::ALIGNED_CORNER:
+                        n = 3;
+                        break;
+                    case AlignmentResult::ALIGNED_EDGE:
+                        n = 2;
+                        break;
+                    case AlignmentResult::ALIGNED_PLANE:
+                        n = 1;
+                        break;
+                }
+                for (int j = 0; j < planecorrespondences.size(); ++j) {
+                    if (planecorrespondences[j] > -1) {
+                        alignedto[j] = true;
+                        --n;
+                        if (!n) break;
+                    }
+                }
+                for (int i = 0; i < srcplanes.size(); ++i) {
+                    for (int j = 0; j < 4; ++j) out << srcplanes[i](j) << " ";
+                    out << (alignedto[i]?1:0) << endl;
+                }
+                out.close();
+            }
             copyPointCloud(*colored1, *prevcolored);
             viewer->addPointCloud<PointXYZRGB>(prevcolored, prevrgb, "prev");
             viewer->setPointCloudRenderingProperties(visualization::PCL_VISUALIZER_OPACITY, 0, "prev");
@@ -427,6 +461,9 @@ int main(int argc, char** argv) {
     }
     loadFile(argv[1], cloud1);
     loadFile(argv[2], cloud2);
+    if (argc > 3) {
+        pattern = argv[3];
+    }
     cout << "Finding planes... ";
     findPlanes(cloud1, srcplanes, srcids);
     cout << "Found frame 1 planes... ";
