@@ -8,7 +8,7 @@ using namespace Eigen;
 using namespace pcl;
 
 const double ANGLETHRESHOLD = M_PI/8;
-const double WALLMERGETHRESHOLD = 0.05;
+const double WALLMERGETHRESHOLD = 0.085;
 const double EQUALTHRESHOLD = M_PI/16;
 
 void RoomModel::setAxes(Vector3d a, Vector3d b) {
@@ -48,6 +48,7 @@ void RoomModel::addCloud(
                 if (alignedto[i]) {
                     constrained[j].back() = true;
                     if (constrained[j].size() > 1 && !constrained[j][constrained[j].size()-2]) newplanes.push_back(p);
+                    else if (constrained[j].size() == 1) checkLoopClosure(p, 1);
                 }
                 break;
             }
@@ -57,43 +58,50 @@ void RoomModel::addCloud(
     if (newplanes.size()) {
         for (int i = 0; i < newplanes.size(); ++i) {
             if (clouds.size() > 1) {
-                distributeRotation(newplanes[i], constrained[0].size()-2);
+                int frame = clouds.size()-2;
+                distributeRotation(newplanes[i], frame);
+                checkLoopClosure(newplanes[i], frame);
             }
         }
     }
     printf("Ntracked: %d %d %d\n", constrained[0].back()?1:0, constrained[1].back()?1:0, constrained[2].back()?1:0);
-    // Check for new walls
-    // checkLoopClosure(newplanes);
 }
 
-void RoomModel::checkLoopClosure(vector<Vector4d>& planes) {
-    for (int i = 0; i < planes.size(); ++i) {
-        Vector4d p = planes[i];
-        for (int j = 0; j < 3; ++j) {
-            if (abs(p.head(3).dot(axes[j])) > cos(ANGLETHRESHOLD)) {
-                int k = p.head(3).dot(axes[j])>0?2*j:2*j+1;
-                if (roomplanes[k].size()) {
-                    double best = numeric_limits<double>::infinity();
-                    map<double, int>::iterator ub = roomplanes[k].upper_bound(p(3));
-                    if (ub != roomplanes[k].end()) {
-                        best = ub->first;
-                    }
-                    if (ub != roomplanes[k].begin()) {
-                        --ub;
-                        if (abs(best-p(3)) > abs(ub->first - p(3))) {
-                            best = ub->first;
-                        }
-                    }
-
-                    if (abs(best-p(3)) > WALLMERGETHRESHOLD) {
-                        roomplanes[k].insert(make_pair(p(3),clouds.size()-1));
-                    } else {
-                        // FIXME: Close loop!
-                    }
-                } else {
-                    roomplanes[k].insert(make_pair(p(3),clouds.size()-1));
+void RoomModel::checkLoopClosure(Vector4d plane, int frame) {
+    for (int i = 0; i < 3; ++i) {
+        if (abs(plane.head(3).dot(axes[i])) > cos(ANGLETHRESHOLD)) {
+            int k = plane.head(3).dot(axes[i])>0?2*i:2*i+1;
+            if (roomplanes[k].size()) {
+                double best = numeric_limits<double>::infinity();
+                int lastframe = -1;
+                map<double, int>::iterator ub = roomplanes[k].upper_bound(plane(3));
+                if (ub != roomplanes[k].end()) {
+                    best = ub->first;
+                    lastframe = ub->second;
                 }
+                if (ub != roomplanes[k].begin()) {
+                    --ub;
+                    if (abs(best-plane(3)) > abs(ub->first - plane(3))) {
+                        best = ub->first;
+                        lastframe = ub->second;
+                    } else {
+                        ++ub;
+                    }
+                }
+
+                if (abs(best-plane(3)) > WALLMERGETHRESHOLD) {
+                    roomplanes[k].insert(make_pair(plane(3),frame));
+                    printf("New wall (oriented %d) at %.3f\n", k, plane(3));
+                } else {
+                    printf("Wall (oriented %d) matched at %.3f\n", k, plane(3));
+                    distributeTranslation(k, best-plane(3), frame, lastframe);
+                    ub->second = frame;
+                }
+            } else {
+                roomplanes[k].insert(make_pair(plane(3),frame));
+                printf("New wall (oriented %d) at %.3f\n", k, plane(3));
             }
+            break;
         }
     }
 }
@@ -159,13 +167,32 @@ void RoomModel::distributeRotation(Vector4d plane, int frame) {
         Matrix4d r = Matrix4d::Identity();
         r.topLeftCorner(3,3) = AngleAxisd(angle*weights[i]/total, axes[tracked]).matrix();
         cout << i << ": " << weights[i]/total << endl;
-        adjustments[i] = t.inverse()*r*t;
+        adjustments[i] = t.inverse()*r*t*adjustments[i];
     }
     recomputeCumulativeTransforms(start);
 }
 
-void RoomModel::distributeTranslation(Vector4d plane, double matched) {
-
+void RoomModel::distributeTranslation(
+        int orientation, double translation,
+        int endframe, int startframe)
+{
+    int o2 = orientation/2;
+    double total = 0;
+    for (int i = startframe+1; i <= endframe; ++i) {
+        if (!constrained[o2][i]) total += weights[i];
+    }
+    printf("Translation %.3f; Closing loop to frame %d\n", translation, startframe);
+    for (int i = startframe+1; i <= endframe; ++i) {
+        if (!constrained[o2][i]) {
+            Matrix4d t = Matrix4d::Identity();
+            Vector3d transl = Vector3d::Zero();
+            transl = ((orientation&1)?1:-1)*axes[o2]*translation*weights[i]/total;
+            t.topRightCorner(3,1) = transl;
+            cout << i << ": " << weights[i]/total << endl;
+            adjustments[i] = t*adjustments[i];
+        }
+    }
+    recomputeCumulativeTransforms(startframe);
 }
 
 void RoomModel::recomputeCumulativeTransforms(int start) {

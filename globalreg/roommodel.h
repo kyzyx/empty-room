@@ -26,8 +26,8 @@ class RoomModel {
 
     private:
         void distributeRotation(Eigen::Vector4d plane, int frame);
-        void distributeTranslation(Eigen::Vector4d plane, double matched);
-        void checkLoopClosure(std::vector<Eigen::Vector4d>& planes);
+        void distributeTranslation(int orientation, double translation, int endframe, int startframe);
+        void checkLoopClosure(Eigen::Vector4d plane, int frame);
         void recomputeCumulativeTransforms(int start=0);
 
         std::vector<pcl::PointCloud<pcl::PointXYZ>::ConstPtr > clouds;
