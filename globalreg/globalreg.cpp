@@ -155,8 +155,8 @@ int main(int argc, char** argv) {
     vector<bool> alignedto;
     RoomModel rm;
     for (int i = 1; i < clouds.size(); ++i) {
-        srcplanes.clear(); tgtplanes.clear();
-        srcids.clear(); tgtids.clear();
+        srcplanes.clear();
+        srcids.clear();
         alignedto.clear();
         double error;
         Matrix4d t;
@@ -262,6 +262,8 @@ int main(int argc, char** argv) {
 
         cumxforms.push_back(cumxforms.back()*t);
         xforms.push_back(t);
+        swap(srcplanes, tgtplanes);
+        swap(srcids, tgtids);
     }
 
     if (doloopclosure) {

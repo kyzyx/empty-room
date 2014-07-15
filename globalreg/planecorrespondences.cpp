@@ -175,6 +175,17 @@ int findPlaneCorrespondences(
         vector<Vector4d>& tgtplanes, vector<int>& tgtids,
         vector<int>& planecorrespondences)
 {
+    return findPlaneCorrespondencesFiltered(src, tgt, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences, false);
+}
+
+int findPlaneCorrespondencesFiltered(
+        PointCloud<PointXYZ>::ConstPtr src,
+        PointCloud<PointXYZ>::ConstPtr tgt,
+        vector<Vector4d>& srcplanes, vector<int>& srcids,
+        vector<Vector4d>& tgtplanes, vector<int>& tgtids,
+        vector<int>& planecorrespondences,
+        bool prefiltered)
+{
     planecorrespondences.resize(srcplanes.size(), -1);
     // Make plane offsets relative to center of frame
     Vector3d avgpt = cloudMidpoint(src, tgt);
@@ -186,8 +197,10 @@ int findPlaneCorrespondences(
     }
     // Generate possible correspondences
     int numcorrespondences = findCandidateCorrespondences(srcplanes, tgtplanes, planecorrespondences);
-    // Isolate correspondences within a single Manhattan coordinate system
-    selectManhattanSystem(srcplanes, tgtplanes, planecorrespondences);
+    if (!prefiltered) {
+        // Isolate correspondences within a single Manhattan coordinate system
+        selectManhattanSystem(srcplanes, tgtplanes, planecorrespondences);
+    }
 
     // Isolate at most one plane in each direction to match
     filterRearmost(srcplanes, planecorrespondences);
@@ -217,11 +230,13 @@ int findPlaneCorrespondences(
         Vector3d p2 = p1.cross(pp);
         p2.normalize();
         recomputePlanesManhattan(p1, p2, src, srcplanes, srcids);
-        p1 = tgtplanes[planecorrespondences[planeids[0]]].head(3);
-        pp = tgtplanes[planecorrespondences[planeids[1]]].head(3);
-        p2 = p1.cross(pp);
-        p2.normalize();
-        recomputePlanesManhattan(p1, p2, tgt, tgtplanes, tgtids);
+        if (!prefiltered) {
+            p1 = tgtplanes[planecorrespondences[planeids[0]]].head(3);
+            pp = tgtplanes[planecorrespondences[planeids[1]]].head(3);
+            p2 = p1.cross(pp);
+            p2.normalize();
+            recomputePlanesManhattan(p1, p2, tgt, tgtplanes, tgtids);
+        }
 
         // Make plane offsets relative to center of frame
         for (int i = 0; i < srcplanes.size(); ++i) {

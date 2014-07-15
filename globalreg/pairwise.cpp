@@ -97,16 +97,19 @@ AlignmentResult align(
         vector<int>& planecorrespondences)
 {
     // Detect planes
-    if (tgtids.size() != tgt->size()) {
+    bool prefiltered = false;
+    if (tgtplanes.empty()) {
         findPlanes(tgt, tgtplanes, tgtids);
+    } else {
+        prefiltered = true;
     }
-    if (srcids.size() != src->size()) {
+    if (srcplanes.empty()) {
         findPlanes(src, srcplanes, srcids);
     }
 
     // Find plane correspondences
     // TODO: What if multiple compatible planes?
-    int numcorrespondences = findPlaneCorrespondences(src, tgt, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences);
+    int numcorrespondences = findPlaneCorrespondencesFiltered(src, tgt, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences, prefiltered);
     // Call appropriate alignment function
     switch (numcorrespondences) {
         case 0:

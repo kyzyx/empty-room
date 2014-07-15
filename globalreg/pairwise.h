@@ -37,6 +37,8 @@ Eigen::Matrix4d overlapCorner(
 /**
  * Calculates which planes in source map to which planes in tgt. Returns the
  * number of correspondences found
+ *
+ * Aligns both sets of planes to a Manhattan coordinate system
  */
 int findPlaneCorrespondences(
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr src,
@@ -44,6 +46,19 @@ int findPlaneCorrespondences(
         std::vector<Eigen::Vector4d>& srcplanes, std::vector<int>& srcids,
         std::vector<Eigen::Vector4d>& tgtplanes, std::vector<int>& tgtids,
         std::vector<int>& planecorrespondences);
+
+/**
+ * Calculates which planes in source map to which planes in tgt. Returns the
+ * number of correspondences found
+ *
+ * If prefiltered, assumes tgtplanes has been prefiltered to follow a coordinate system
+ */
+int findPlaneCorrespondencesFiltered(
+        pcl::PointCloud<pcl::PointXYZ>::ConstPtr src,
+        pcl::PointCloud<pcl::PointXYZ>::ConstPtr tgt,
+        std::vector<Eigen::Vector4d>& srcplanes, std::vector<int>& srcids,
+        std::vector<Eigen::Vector4d>& tgtplanes, std::vector<int>& tgtids,
+        std::vector<int>& planecorrespondences, bool prefiltered);
 
 /**
  * Returns the transformation mapping src to tgt
