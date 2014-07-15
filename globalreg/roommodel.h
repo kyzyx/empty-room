@@ -25,7 +25,7 @@ class RoomModel {
         Eigen::Matrix4d getCumulativeTransform(int n) { return cumxforms[n]; }
 
     private:
-        void distributeRotation(Eigen::Vector4d plane);
+        void distributeRotation(Eigen::Vector4d plane, int frame);
         void distributeTranslation(Eigen::Vector4d plane, double matched);
         void checkLoopClosure(std::vector<Eigen::Vector4d>& planes);
         void recomputeCumulativeTransforms(int start=0);
@@ -39,8 +39,6 @@ class RoomModel {
         std::vector<Eigen::Vector3d> axes;
         std::vector<bool> constrained[3];
         std::vector<bool> seen[3];
-
-        std::vector<Eigen::Vector4d> prevplanes;
 };
 
 #endif

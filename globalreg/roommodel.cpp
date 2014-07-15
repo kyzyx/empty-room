@@ -39,42 +39,29 @@ void RoomModel::addCloud(
         seen[i].push_back(false);
     }
 
-    vector<Vector4d> currplanes;
+    vector<Vector4d> newplanes;
     for (int i = 0; i < planes.size(); ++i) {
         Vector4d p = transformPlane(planes[i], cumxforms.back());
         for (int j = 0; j < 3; ++j) {
             if (abs(p.head(3).dot(axes[j])) > cos(ANGLETHRESHOLD)) {
-                currplanes.push_back(p);
                 seen[j].back() = true;
-                if (alignedto[i]) constrained[j].back() = true;
+                if (alignedto[i]) {
+                    constrained[j].back() = true;
+                    if (constrained[j].size() > 1 && !constrained[j][constrained[j].size()-2]) newplanes.push_back(p);
+                }
                 break;
             }
-        }
-    }
-    vector<Vector4d> newplanes;
-    for (int i = 0; i < currplanes.size(); ++i) {
-        bool matched = false;
-        for (int j = 0; j < prevplanes.size(); ++j) {
-            if (currplanes[i].head(3).dot(prevplanes[j].head(3)) > cos(ANGLETHRESHOLD) &&
-                abs(currplanes[i](3)-prevplanes[j](3)) < WALLMERGETHRESHOLD) {
-                matched = true;
-                break;
-            }
-        }
-        if (!matched) {
-            newplanes.push_back(currplanes[i]);
         }
     }
 
     if (newplanes.size()) {
         for (int i = 0; i < newplanes.size(); ++i) {
             if (clouds.size() > 1) {
-                distributeRotation(newplanes[i]);
+                distributeRotation(newplanes[i], constrained[0].size()-2);
             }
         }
     }
     printf("Ntracked: %d %d %d\n", constrained[0].back()?1:0, constrained[1].back()?1:0, constrained[2].back()?1:0);
-    prevplanes = currplanes;
     // Check for new walls
     // checkLoopClosure(newplanes);
 }
@@ -111,17 +98,17 @@ void RoomModel::checkLoopClosure(vector<Vector4d>& planes) {
     }
 }
 
-void RoomModel::distributeRotation(Vector4d plane) {
+void RoomModel::distributeRotation(Vector4d plane, int frame) {
     int expected = -1;
     int tracked = -1;
     int other = -1;
     for (int j = 0; j < 3; ++j) {
         if (abs(plane.head(3).dot(axes[j])) > cos(ANGLETHRESHOLD)) {
-            if (constrained[j][weights.size()-2]) {
+            if (constrained[j][frame-1]) {
                 return; // Just a plane we stopped tracking, not a new orientation
             }
             expected = j;
-        } else if (constrained[j].back()) {
+        } else if (constrained[j][frame]) {
             if (tracked == -1) tracked = j;
             else {
                 return; // Already aligned
@@ -129,6 +116,17 @@ void RoomModel::distributeRotation(Vector4d plane) {
         }
     }
     printf("New plane: %.3f %.3f %.3f %.3f\n", plane(0), plane(1), plane(2), plane(3));
+    int k = frame-1;
+    while (tracked == -1 && k >= 0) {
+        for (int j = 0; j < 3; ++j) {
+            if (j == expected) continue;
+            if (constrained[j][k]) {
+                tracked = j;
+            }
+        }
+        --k;
+    }
+    if (k == -1) return;
     other = 3 - expected - tracked;
 
     Vector3d expectedNormal = axes[expected];
@@ -140,8 +138,8 @@ void RoomModel::distributeRotation(Vector4d plane) {
     angle = safe_acos(angle);
     if (((Vector3d) plane.head(3)).cross(expectedNormal).dot(axes[tracked]) < 0) angle = -angle;
 
-    double total = weights[weights.size()-1];
-    int i = constrained[0].size()-2;
+    double total = weights[frame];
+    int i = frame-1;
     for (; i >= 0; --i) {
         if (seen[expected][i] || seen[other][i]) {
             break;
@@ -152,7 +150,7 @@ void RoomModel::distributeRotation(Vector4d plane) {
     int start = i+1;
     PointCloud<PointXYZ>::Ptr tcloud1(new PointCloud<PointXYZ>);
     PointCloud<PointXYZ>::Ptr tcloud2(new PointCloud<PointXYZ>);
-    for (i = start; i < constrained[0].size(); ++i) {
+    for (i = start; i <= frame; ++i) {
         transformPointCloud(*clouds[i], *tcloud2, cumxforms[i]);
         transformPointCloud(*clouds[i-1], *tcloud1, cumxforms[i-1]);
         Vector3d avgpt = cloudMidpoint(tcloud1, tcloud2);
