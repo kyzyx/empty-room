@@ -14,10 +14,12 @@ add_library(pairwise pairwise.cpp pairwise.h plane2plane.h plane2plane.cpp findp
 add_executable(globalreg globalreg.cpp)
 add_executable(planefinder planefinder.cpp)
 add_executable(align align.cpp)
+add_executable(postprocess postprocess.cpp)
 target_link_libraries(globalreg ${PCL_LIBRARIES} R3Graphics.a RNBasics.a
     R3Shapes.a R2Shapes.a jpeg.a GL glut GLU GLEW pairwise util loopclosure)
 target_link_libraries(planefinder ${PCL_LIBRARIES} R3Graphics.a RNBasics.a
     R3Shapes.a R2Shapes.a jpeg.a GL glut GLU GLEW pairwise util)
 target_link_libraries(align ${PCL_LIBRARIES} R3Graphics.a RNBasics.a
     R3Shapes.a R2Shapes.a jpeg.a GL glut GLU GLEW pairwise util)
+target_link_libraries(postprocess ${PCL_LIBRARIES} util)
 set(CMAKE_CXX_FLAGS "-Wno-deprecated -std=c++0x")
