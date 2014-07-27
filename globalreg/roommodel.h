@@ -25,7 +25,7 @@ class RoomModel {
                 double rmse
         );
 
-        Eigen::Matrix4d getTransform(int n) { return xforms[n]; }
+        Eigen::Matrix4d getTransform(int n);
         Eigen::Matrix4d getCumulativeTransform(int n) { return cumxforms[n]; }
 
     private:

@@ -210,6 +210,12 @@ void RoomModel::recomputeCumulativeTransforms(int start) {
         cumxforms[i] = adjustments[i]*t*cumxforms[i-1]*xforms[i];
     }
 }
+
+Matrix4d RoomModel::getTransform(int n) {
+    if (n == 0) return xforms[n];
+    return cumxforms[n-1].inverse()*cumxforms[n];
+}
+
 void RoomModel::closeLoop(Matrix4d transform, double rmse) {
     Vector3d t = transform.topRightCorner(3,1);
     distributeTranslation(1, axes[0].dot(t), clouds.size()-1, 0, 0);
