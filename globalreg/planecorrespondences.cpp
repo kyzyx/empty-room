@@ -154,7 +154,7 @@ void filterRearmost(vector<Vector4d>& planes, vector<int>& planecorrespondences)
             double rearmost = planes[i](3);
             planecorrespondences[i] = -1;
             for (int j = i+1; j < planecorrespondences.size(); ++j) {
-                if (planecorrespondences[j] > -1 && planes[i].head(3).dot(planes[j].head(3)) > cos(ANGLETHRESHOLD)) {
+                if (planecorrespondences[j] > -1 && abs(planes[i].head(3).dot(planes[j].head(3))) > cos(ANGLETHRESHOLD)) {
                     if (planes[j](3) > rearmost) {
                         rearmost = planes[j](3);
                         best = j;
