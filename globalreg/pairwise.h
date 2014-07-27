@@ -10,6 +10,7 @@ class AlignmentResult {
     public:
         enum AlignmentType {ALIGNED_NONE, ALIGNED_ICP, ALIGNED_PLANE, ALIGNED_EDGE, ALIGNED_CORNER};
 
+        AlignmentResult() : transform(Eigen::Matrix4d::Identity()), error(0), type(ALIGNED_NONE) {}
         AlignmentResult(Eigen::Matrix4d xform) : transform(xform), error(0), type(ALIGNED_NONE) {}
         AlignmentResult(Eigen::Matrix4d xform, double err, AlignmentType t) : transform(xform), error(err), type(t) {}
         AlignmentResult& operator=(const AlignmentResult& ar) {

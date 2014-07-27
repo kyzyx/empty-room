@@ -154,7 +154,7 @@ int main(int argc, char** argv) {
     vector<int> srcids, tgtids;
     vector<bool> alignedto;
     RoomModel rm;
-    for (int i = 1; i < clouds.size(); ++i) {
+    for (int i = 1; i <= clouds.size(); ++i) {
         srcplanes.clear();
         srcids.clear();
         alignedto.clear();
@@ -200,7 +200,12 @@ int main(int argc, char** argv) {
             in.close();
         } else {
             vector<int> planecorrespondences;
-            AlignmentResult res = align(clouds[i], clouds[i-1], srcplanes, srcids, tgtplanes, tgtids, planecorrespondences);
+            AlignmentResult res;
+            if (i == clouds.size()) {
+                res = align(clouds[0], clouds[i-1], srcplanes, srcids, tgtplanes, tgtids, planecorrespondences);
+            } else {
+                res = align(clouds[i], clouds[i-1], srcplanes, srcids, tgtplanes, tgtids, planecorrespondences);
+            }
             alignedto.resize(srcplanes.size(), false);
             t = res.transform;
             int n = 0;
@@ -228,16 +233,16 @@ int main(int argc, char** argv) {
                 sprintf(fname, (outputprefix + ".planes").c_str(), i);
                 ofstream out(fname);
                 out << srcplanes.size() << " " << error << endl;
-                for (int i = 0; i < srcplanes.size(); ++i) {
-                    for (int j = 0; j < 4; ++j) out << srcplanes[i](j) << " ";
-                    out << (alignedto[i]?1:0) << endl;
+                for (int k = 0; k < srcplanes.size(); ++k) {
+                    for (int j = 0; j < 4; ++j) out << srcplanes[k](j) << " ";
+                    out << (alignedto[k]?1:0) << endl;
                 }
                 if (i == 1) {
                     sprintf(fname, (outputprefix + ".planes").c_str(), 0);
                     ofstream out(fname);
                     out << tgtplanes.size() << " " << error << endl;
-                    for (int i = 0; i < tgtplanes.size(); ++i) {
-                        for (int j = 0; j < 4; ++j) out << tgtplanes[i](j) << " ";
+                    for (int k = 0; k < tgtplanes.size(); ++k) {
+                        for (int j = 0; j < 4; ++j) out << tgtplanes[k](j) << " ";
                         out << 0 << endl;
                     }
                 }
@@ -256,7 +261,12 @@ int main(int argc, char** argv) {
                 rm.setAxes(alignedVectors[0], alignedVectors[1]);
                 rm.addCloud(clouds[0], tgtplanes, alignedto, Matrix4d::Identity(), 0);
             }
-            rm.addCloud(clouds[i], srcplanes, alignedto, t, error);
+            if (i == clouds.size()) {
+                rm.closeLoop(t.inverse()*rm.getCumulativeTransform(i-1).inverse(), error);
+            }
+            else {
+                rm.addCloud(clouds[i], srcplanes, alignedto, t, error);
+            }
         }
         cout << "Done alignment " << i << endl;
 
