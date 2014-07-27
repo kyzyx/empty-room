@@ -135,7 +135,8 @@ void markDepthDiscontinuities(
 void computeCorrespondences(
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr cloud,
         SearchStructure* tree,
-        std::vector<pcl::PointXYZ>& correspondences);
+        std::vector<pcl::PointXYZ>& correspondences,
+        int ncorrs=0);
 
 Eigen::Matrix4d computeOptimalRigidXYTransform(
         std::vector<pcl::PointXYZ>& src,

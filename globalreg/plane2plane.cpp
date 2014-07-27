@@ -163,10 +163,16 @@ void preprocessCloud(
 void computeCorrespondences(
         PointCloud<PointXYZ>::ConstPtr cloud,
         SearchStructure* tree,
-        vector<PointXYZ>& correspondences)
+        vector<PointXYZ>& correspondences,
+        int ncorrs)
 {
+    if (ncorrs == 0) ncorrs = cloud->size();
+    int inc = cloud->size()/ncorrs;
+    if (!inc) inc = 1;
     for (int i = 0; i < cloud->size(); ++i) {
-        correspondences.push_back(tree->nearest(cloud->at(i),0.1));
+        float nan = std::numeric_limits<float>::quiet_NaN();
+        if (i%inc == 0) correspondences.push_back(tree->nearest(cloud->at(i),0.1));
+        else correspondences.push_back(pcl::PointXYZ(nan, nan, nan));
     }
 }
 
@@ -316,7 +322,7 @@ AlignmentResult alignPlaneToPlane(
         vector<PointXYZ> ptsrc;
         vector<PointXYZ> pttgt;
         vector<PointXYZ> corrs;
-        computeCorrespondences(tsrc, &lkdt, corrs);
+        computeCorrespondences(tsrc, &lkdt, corrs, tsrc->size()/2);
         double newerror = filterCorrespondences(tsrc, corrs, ptsrc, pttgt);
         if (!corrs.size()) return AlignmentResult(Matrix4d::Identity(), numeric_limits<double>::infinity(), AlignmentResult::ALIGNED_PLANE);
         //if (abs(error-newerror) < errthreshold) break;
@@ -481,7 +487,7 @@ AlignmentResult alignEdgeToEdge(
         vector<PointXYZ> ptsrc;
         vector<PointXYZ> pttgt;
         vector<PointXYZ> corrs;
-        computeCorrespondences(tsrc, &am, corrs);
+        computeCorrespondences(tsrc, &am, corrs, tsrc->size()/2);
         double newerror = filterCorrespondences(tsrc, corrs, ptsrc, pttgt);
         if (!corrs.size()) return AlignmentResult(Matrix4d::Identity(), numeric_limits<double>::infinity(), AlignmentResult::ALIGNED_EDGE);
         //if (abs(error-newerror) < errthreshold) break;
@@ -637,7 +643,7 @@ AlignmentResult alignCornerToCorner(
     vector<PointXYZ> ptsrc;
     vector<PointXYZ> pttgt;
     vector<PointXYZ> corrs;
-    computeCorrespondences(tsrc, &am, corrs);
+    computeCorrespondences(tsrc, &am, corrs, tsrc->size()/2);
     double err = filterCorrespondences(tsrc, corrs, ptsrc, pttgt);
     return AlignmentResult(transform, err, AlignmentResult::ALIGNED_CORNER);
 }
