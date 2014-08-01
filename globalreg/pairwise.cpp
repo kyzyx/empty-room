@@ -129,11 +129,20 @@ AlignmentResult align(
             {
                 AlignmentResult c = alignEdgeToEdge(src, tgt, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences, MAXITERATIONS);
                 if (c.error > REDOTHRESHOLD) {
-                    cout << "Redoing with plane to plane" << endl;
-                    AlignmentResult c2 = alignPlaneToPlane(src, tgt, srcplanes, srcids, tgtplanes, tgtids, planecorrespondences, MAXITERATIONS);
-                    if (c2.error < c.error) {
-                        cout << "Final RMSE: " << c2.error << endl;
-                        return c2;
+                    vector<int> ids;
+                    for (int i = 0; i < planecorrespondences.size(); ++i) {
+                        if (planecorrespondences[i] > -1) ids.push_back(i);
+                    }
+                    vector<int> origplanecorrespondences(planecorrespondences);
+                    for (int i = 0; i < 2; ++i) {
+                        cout << "Redoing with plane to plane" << endl;
+                        vector<int> pc2(origplanecorrespondences);
+                        pc2[ids[i]] = -1;
+                        AlignmentResult c2 = alignPlaneToPlane(src, tgt, srcplanes, srcids, tgtplanes, tgtids, pc2, MAXITERATIONS);
+                        if (c2.error < c.error) {
+                            c = c2;
+                            planecorrespondences = pc2;
+                        }
                     }
                 }
                 cout << "Final RMSE: " << c.error << endl;
