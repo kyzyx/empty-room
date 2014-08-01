@@ -55,10 +55,12 @@ void keyboard_callback(const visualization::KeyboardEvent& event, void* viewer) 
         else if (event.getKeyCode() == ',') {
             displayindex--;
             if (displayindex < 0) displayindex = clouds.size() - 1;
+            cout << displayindex << endl;
         }
         else if (event.getKeyCode() == '.') {
             displayindex++;
             if (displayindex == clouds.size()) displayindex = 0;
+            cout << displayindex << endl;
         }
         int n = (displayindex+1)%clouds.size();
         if (displaypairs) {
@@ -120,9 +122,16 @@ int main(int argc, char** argv) {
     bool display = true;
     bool smoothing = true;
     bool doloopclosure = true;
+    bool domanhattan = true;
     if (console::find_switch(argc, argv, "-nodisplay")) display = false;
     if (console::find_switch(argc, argv, "-nosmoothing")) smoothing = false;
-    if (console::find_switch(argc, argv, "-noloopclosure")) doloopclosure = false;
+    if (console::find_switch(argc, argv, "-noloopclosure")) {
+        doloopclosure = false;
+        domanhattan = false;
+    }
+    if (console::find_switch(argc, argv, "-manhattanonly")) {
+        doloopclosure = false;
+    }
     if (console::find_argument(argc, argv, "-outputprefix") > -1) {
         console::parse_argument(argc, argv, "-outputprefix", outputprefix);
     }
@@ -249,7 +258,7 @@ int main(int argc, char** argv) {
             }
         }
 
-        if (doloopclosure) {
+        if (doloopclosure || domanhattan) {
             if (i == 1) {
                 vector<Vector3d> alignedVectors;
                 for (int j  = 0; j < alignedto.size(); ++j) {
@@ -261,10 +270,10 @@ int main(int argc, char** argv) {
                 rm.setAxes(alignedVectors[0], alignedVectors[1]);
                 rm.addCloud(clouds[0], tgtplanes, alignedto, Matrix4d::Identity(), 0);
             }
-            if (i == clouds.size()) {
+            if (i == clouds.size() && doloopclosure) {
                 rm.closeLoop(t.inverse()*rm.getCumulativeTransform(i-1).inverse(), error);
             }
-            else {
+            else if (domanhattan) {
                 rm.addCloud(clouds[i], srcplanes, alignedto, t, error);
             }
         }
@@ -276,7 +285,7 @@ int main(int argc, char** argv) {
         swap(srcids, tgtids);
     }
 
-    if (doloopclosure) {
+    if (doloopclosure || domanhattan) {
         for (int i = 0; i < clouds.size(); ++i) {
             xforms[i] = rm.getTransform(i);
             cumxforms[i] = rm.getCumulativeTransform(i);
