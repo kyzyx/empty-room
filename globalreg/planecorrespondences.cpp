@@ -28,7 +28,29 @@ void recomputePlanesManhattan(
     vector<Vector3d> axes;
     axes.push_back(p1);
     axes.push_back(p2);
-    axes.push_back(p1.cross(p2).normalized());
+    axes.push_back(p1.cross(p2));
+    // Take largest planes compatible with coordinate system
+    vector<Vector3d> compatible;
+    for (int i = 0; i < planes.size(); ++i) {
+        for (int j = 0; j < axes.size(); ++j) {
+            if (abs(planes[i].head(3).dot(axes[j])) > cos(MATCHANGLETHRESHOLD)) {
+                compatible.push_back(planes[i].head(3));
+                swap(axes[j], axes[axes.size()-1]);
+                axes.resize(axes.size()-1);
+                break;
+            }
+        }
+    }
+    // Refine coordinate system
+    Vector3d q1 = compatible[0];
+    Vector3d qp = compatible[1];
+    Vector3d q2 = q1.cross(qp);
+    q2.normalize();
+
+    axes.clear();
+    axes.push_back(q1);
+    axes.push_back(q2);
+    axes.push_back(q1.cross(q2).normalized());
     vector<bool> consistent(planes.size(), false);
     vector<int> relabel;
     vector<Vector4d> origplanes(planes);
@@ -68,36 +90,147 @@ void recomputePlanesManhattan(
     }
 }
 
+void findParallelCorrespondences(
+        vector<pair<double,int> >& splanes, vector<pair<double,int> >& tplanes,
+        vector<Vector4d>& srcplanes, vector<Vector4d>& tgtplanes,
+        vector<int>& planecorrespondences,
+        bool multipleAllowed)
+{
+    if (splanes.empty() || tplanes.empty()) return;
+    if (splanes.size() == 1) {
+        double best = 0.5;
+        for (int i = 0; i < tplanes.size(); ++i) {
+            if (srcplanes[splanes[0].second].head(3).dot(tgtplanes[tplanes[i].second].head(3)) > 0) {
+                if (abs(tplanes[i].first - splanes[0].first) < best) {
+                    best = abs(tplanes[i].first - splanes[0].first);
+                    planecorrespondences[splanes[0].second] = tplanes[i].second;
+                }
+            }
+        }
+    } else if (tplanes.size() == 1) {
+        double best = 0.5;
+        for (int i = 0; i < splanes.size(); ++i) {
+            if (srcplanes[splanes[i].second].head(3).dot(tgtplanes[tplanes[0].second].head(3)) > 0) {
+                if (abs(tplanes[0].first - splanes[i].first) < best) {
+                    best = abs(tplanes[0].first - splanes[i].first);
+                    planecorrespondences[splanes[i].second] = tplanes[0].second;
+                }
+            }
+        }
+    } else {
+        sort(splanes.begin(), splanes.end());
+        sort(tplanes.begin(), tplanes.end());
+        vector<double> offsets;
+        for (int i = 0; i < splanes.size(); ++i) {
+            for (int j = 0; j < tplanes.size(); ++j) {
+                if (srcplanes[splanes[i].second].head(3).dot(tgtplanes[tplanes[j].second].head(3)) > 0) {
+                    offsets.push_back(splanes[i].first - tplanes[j].first);
+                }
+            }
+        }
+        sort(offsets.begin(), offsets.end());
+        int bestmatches = 0;
+        double bestoffset = 0;
+        for (int i = 0; i < offsets.size(); ++i) {
+            int matches = 1;
+            double avg = offsets[i];
+            for (int j = i+1; j < offsets.size() && offsets[j] - offsets[i] < OFFSETTHRESHOLD; ++j) {
+                ++matches;
+                avg += offsets[j];
+            }
+            if (matches > bestmatches) {
+                bestmatches = matches;
+                bestoffset = avg/matches;
+            } else if (matches == bestmatches) {
+                if (abs(bestoffset) > abs(avg/matches)) bestoffset = avg/matches;
+            }
+        }
+        bool done = false;
+        int first = planecorrespondences.size();
+        const int MAGIC = 10;
+        for (int i = 0; i < splanes.size(); ++i) {
+            for (int j = 0; j < tplanes.size(); ++j) {
+                if (srcplanes[splanes[i].second].head(3).dot(tgtplanes[tplanes[j].second].head(3)) > 0) {
+                    if (abs((splanes[i].first - tplanes[j].first) - bestoffset) < OFFSETTHRESHOLD/2) {
+                        if (multipleAllowed) planecorrespondences[splanes[i].second] = tplanes[j].second;
+                        else planecorrespondences[splanes[i].second] = -MAGIC - tplanes[j].second;
+                        if (splanes[i].second < first) first = splanes[i].second;
+                        done = true;
+                        break;
+                    }
+                }
+            }
+        }
+        if (!multipleAllowed) planecorrespondences[first] = -planecorrespondences[first] - MAGIC;
+    }
+}
+
+
 int findCandidateCorrespondences(
         vector<Vector4d>& srcplanes,
         vector<Vector4d>& tgtplanes,
         vector<int>& planecorrespondences)
 {
-    int numcorrespondences = 0;
-    // Find all possible correspondences
+    vector<vector<pair<double,int> > > splanes;
+    vector<vector<pair<double,int> > > tplanes;
+    vector<Vector3d> sdirs;
+    vector<Vector3d> tdirs;
+
+    // Find all src plane directions
+    vector<bool> assigned(srcplanes.size(), false);
     for (int i = 0; i < srcplanes.size(); ++i) {
-        for (int j = 0; j < tgtplanes.size(); ++j) {
-            double cosa = srcplanes[i].head(3).dot(tgtplanes[j].head(3));
-            if (cosa > cos(MATCHANGLETHRESHOLD)) {
-                double perpdist = abs(srcplanes[i](3) - tgtplanes[j](3));
-                if (perpdist > MAXTRANSLATION) continue;
-                if (planecorrespondences[i] > -1) {
-                    if (perpdist < abs(srcplanes[i](3) - tgtplanes[planecorrespondences[i]](3))) {
-                        planecorrespondences[i] = j;
-                    }
-                } else {
-                    planecorrespondences[i] = j;
-                }
+        if (assigned[i]) continue;
+        sdirs.push_back(srcplanes[i].head(3));
+        splanes.push_back(vector<pair<double,int> >());
+
+        splanes.back().push_back(make_pair(srcplanes[i](3), i));
+        assigned[i] = true;
+        for (int j = i+1; j < srcplanes.size(); ++j) {
+            if (isParallel(srcplanes[i], srcplanes[j])) {
+                splanes.back().push_back(make_pair(srcplanes[j](3), j));
+                assigned[j] = true;
             }
         }
-        if (planecorrespondences[i] > -1) numcorrespondences++;
+    }
+
+    // Find all tgt plane directions
+    assigned.clear();
+    assigned.resize(tgtplanes.size(), false);
+    for (int i = 0; i < tgtplanes.size(); ++i) {
+        if (assigned[i]) continue;
+        tdirs.push_back(tgtplanes[i].head(3));
+        tplanes.push_back(vector<pair<double,int> >());
+
+        tplanes.back().push_back(make_pair(tgtplanes[i](3), i));
+        assigned[i] = true;
+        for (int j = i+1; j < tgtplanes.size(); ++j) {
+            if (isParallel(tgtplanes[i], tgtplanes[j])) {
+                tplanes.back().push_back(make_pair(tgtplanes[j](3), j));
+                assigned[j] = true;
+            }
+        }
+    }
+
+    planecorrespondences.clear();
+    planecorrespondences.resize(srcplanes.size(), -1);
+    for (int i = 0; i < sdirs.size(); ++i) {
+        int bestj = -1;
+        double besta = 0;
+        for (int j = 0; j < tdirs.size(); ++j) {
+            double cosa = abs(sdirs[i].dot(tdirs[j]));
+            if (cosa > cos(MATCHANGLETHRESHOLD) && cosa > besta) {
+                besta = cosa;
+                bestj = j;
+            }
+        }
+        if (bestj == -1) continue;
+        findParallelCorrespondences(splanes[i], tplanes[bestj], srcplanes, tgtplanes, planecorrespondences, false);
     }
     // Find duplicate matches and eliminate less plausible one
     for (int i = 0; i < srcplanes.size(); ++i) {
         if (planecorrespondences[i] < 0) continue;
         for (int j = i+1; j < srcplanes.size(); ++j) {
             if (planecorrespondences[i] == planecorrespondences[j]) {
-                --numcorrespondences;
                 int t = planecorrespondences[i];
                 if (abs(srcplanes[i](3) - tgtplanes[t](3)) > abs(srcplanes[j](3) - tgtplanes[t](3))) {
                     planecorrespondences[i] = -1;
@@ -107,6 +240,11 @@ int findCandidateCorrespondences(
                 }
             }
         }
+    }
+
+    int numcorrespondences = 0;
+    for (int i = 0; i < planecorrespondences.size(); ++i) {
+        if (planecorrespondences[i] > -1) ++numcorrespondences;
     }
     return numcorrespondences;
 }
@@ -153,7 +291,10 @@ void selectManhattanSystem(
     }
 }
 
-void refineCorrespondences(Vector3d axis1, Vector3d axis2, vector<Vector4d>& srcplanes, vector<Vector4d>& tgtplanes, vector<int>& planecorrespondences)
+
+int findManhattanCorrespondences(Vector3d axis1, Vector3d axis2,
+        vector<Vector4d>& srcplanes, vector<Vector4d>& tgtplanes,
+        vector<int>& planecorrespondences)
 {
     // Assume planes are already aligned
     // For each dominant direction, find the optimal offset
@@ -182,73 +323,14 @@ void refineCorrespondences(Vector3d axis1, Vector3d axis2, vector<Vector4d>& src
     planecorrespondences.clear();
     planecorrespondences.resize(srcplanes.size(), -1);
     for (int i = 0; i < 3; ++i) {
-        if (splanes[i].empty() || tplanes[i].empty()) continue;
-        if (splanes[i].size() == 1) {
-            double best = 0.5;
-            for (int j = 0; j < tplanes[i].size(); ++j) {
-                if (srcplanes[splanes[i][0].second].head(3).dot(tgtplanes[tplanes[i][j].second].head(3)) > 0) {
-                    if (abs(tplanes[i][j].first - splanes[i][0].first) < best) {
-                        best = abs(tplanes[i][j].first - splanes[i][0].first);
-                        planecorrespondences[splanes[i][0].second] = tplanes[i][j].second;
-                    }
-                }
-            }
-        } else if (tplanes[i].size() == 1) {
-            double best = 0.5;
-            for (int j = 0; j < splanes[i].size(); ++j) {
-                if (srcplanes[splanes[i][j].second].head(3).dot(tgtplanes[tplanes[i][0].second].head(3)) > 0) {
-                    if (abs(tplanes[i][0].first - splanes[i][j].first) < best) {
-                        best = abs(tplanes[i][0].first - splanes[i][j].first);
-                        planecorrespondences[splanes[i][j].second] = tplanes[i][0].second;
-                    }
-                }
-            }
-        } else {
-            sort(splanes[i].begin(), splanes[i].end());
-            sort(tplanes[i].begin(), tplanes[i].end());
-            vector<double> offsets;
-            for (int j = 0; j < splanes[i].size(); ++j) {
-                for (int k = 0; k < tplanes[i].size(); ++k) {
-                    if (srcplanes[splanes[i][j].second].head(3).dot(tgtplanes[tplanes[i][k].second].head(3)) > 0) {
-                        offsets.push_back(splanes[i][j].first - tplanes[i][k].first);
-                    }
-                }
-            }
-            sort(offsets.begin(), offsets.end());
-            int bestmatches = 0;
-            double bestoffset = 0;
-            for (int j = 0; j < offsets.size(); ++j) {
-                int matches = 1;
-                double avg = offsets[j];
-                for (int k = j+1; k < offsets.size() && offsets[k] - offsets[j] < OFFSETTHRESHOLD; ++k) {
-                    ++matches;
-                    avg += offsets[k];
-                }
-                if (matches > bestmatches) {
-                    bestmatches = matches;
-                    bestoffset = avg/matches;
-                } else if (matches == bestmatches) {
-                    if (abs(bestoffset) > abs(avg/matches)) bestoffset = avg/matches;
-                }
-            }
-            bool done = false;
-            int first = planecorrespondences.size();
-            const int MAGIC = 10;
-            for (int j = 0; j < splanes[i].size(); ++j) {
-                for (int k = 0; k < tplanes[i].size(); ++k) {
-                    if (srcplanes[splanes[i][j].second].head(3).dot(tgtplanes[tplanes[i][k].second].head(3)) > 0) {
-                        if (abs((splanes[i][j].first - tplanes[i][k].first) - bestoffset) < OFFSETTHRESHOLD/2) {
-                            planecorrespondences[splanes[i][j].second] = -MAGIC - tplanes[i][k].second;
-                            if (splanes[i][j].second < first) first = splanes[i][j].second;
-                            done = true;
-                            break;
-                        }
-                    }
-                }
-            }
-            planecorrespondences[first] = -planecorrespondences[first] - MAGIC;
-        }
+        findParallelCorrespondences(splanes[i], tplanes[i], srcplanes, tgtplanes, planecorrespondences, false);
     }
+
+    int numcorrespondences = 0;
+    for (int i = 0; i < planecorrespondences.size(); ++i) {
+        if (planecorrespondences[i] > -1) ++numcorrespondences;
+    }
+    return numcorrespondences;
 }
 
 void reduceCorrespondences(vector<Vector4d>& planes, vector<int>& planecorrespondences)
@@ -303,14 +385,12 @@ int findPlaneCorrespondencesFiltered(
     }
     // Generate possible correspondences
     int numcorrespondences = findCandidateCorrespondences(srcplanes, tgtplanes, planecorrespondences);
-    if (!prefiltered) {
+    //if (!prefiltered) {
         // Isolate correspondences within a single Manhattan coordinate system
         selectManhattanSystem(srcplanes, tgtplanes, planecorrespondences);
-    }
-
+    //}
     // Isolate at most one plane in each direction to match
     reduceCorrespondences(srcplanes, planecorrespondences);
-
     // Recenter for analysis
     for (int i = 0; i < srcplanes.size(); ++i) {
         srcplanes[i](3) -= avgpt.dot(srcplanes[i].head(3));
@@ -333,6 +413,7 @@ int findPlaneCorrespondencesFiltered(
     if (numcorrespondences > 1) {
         Vector3d p1, p2, pp;
         if (!prefiltered) {
+            // Create tentative coordinate system
             p1 = tgtplanes[planecorrespondences[planeids[0]]].head(3);
             pp = tgtplanes[planecorrespondences[planeids[1]]].head(3);
             p2 = p1.cross(pp);
@@ -356,8 +437,7 @@ int findPlaneCorrespondencesFiltered(
         // Recompute correspondences with new planes
         planecorrespondences.clear();
         planecorrespondences.resize(srcplanes.size(), -1);
-        numcorrespondences = findCandidateCorrespondences(srcplanes, tgtplanes, planecorrespondences);
-        refineCorrespondences(p1, p2, srcplanes, tgtplanes, planecorrespondences);
+        numcorrespondences = findManhattanCorrespondences(p1, p2, srcplanes, tgtplanes, planecorrespondences);
         reduceCorrespondences(srcplanes, planecorrespondences);
 
         // Recenter for return
