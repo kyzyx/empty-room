@@ -71,13 +71,20 @@ void markParallelPlanes(
         Vector3d v,
         PointCloud<PointXYZ>::ConstPtr cloud,
         vector<Vector4d>& planes,
+        vector<int>& planecorrespondences,
         vector<int>& labels,
-        int label)
+        int label, bool src)
 {
     const double EDGE = -3;
+    const int MAGIC = 10;
     vector<bool> keep(planes.size(), true);
-    for (int i = 0; i < planes.size(); ++i) {
-        if (planes[i].head(3).dot(v) < sin(ANGLETHRESHOLD)) keep[i] = false;
+    for (int i = 0; i < planecorrespondences.size(); ++i) {
+        if (planecorrespondences[i] <= -MAGIC) {
+            int idx;
+            if (src) idx = i;
+            else idx = -planecorrespondences[i] - MAGIC;
+            if (planes[idx].head(3).dot(v) < sin(ANGLETHRESHOLD)) keep[idx] = false;
+        }
     }
     vector<int> tmp(labels);
     markDepthDiscontinuities(cloud, DISCONTINUITYTHRESHOLD, tmp, EDGE, DISCONTINUITYBORDERWIDTH);
@@ -473,8 +480,8 @@ AlignmentResult alignEdgeToEdge(
     srcax = srcax.cross((Vector3d) (srcplanes[ids[1]].head(3)));
     Vector3d tgtax = tgtplanes[planecorrespondences[ids[0]]].head(3);
     tgtax = tgtax.cross((Vector3d) (tgtplanes[planecorrespondences[ids[1]]].head(3)));
-    markParallelPlanes(srcax, tsrc, srcplanes, fsrcids, ids[0]);
-    markParallelPlanes(tgtax, tgt, tgtplanes, ftgtids, planecorrespondences[ids[0]]);
+    markParallelPlanes(srcax, tsrc, srcplanes, planecorrespondences, fsrcids, ids[0], true);
+    markParallelPlanes(tgtax, tgt, tgtplanes, planecorrespondences, ftgtids, planecorrespondences[ids[0]], false);
     preprocessCloud(tgt, ttgt, coordtransform, ftgtids, planecorrespondences[ids[0]], false);
     preprocessCloud(tsrc, tsrc, coordtransform, fsrcids, ids[0]);
 
@@ -553,8 +560,8 @@ AlignmentResult partialAlignEdgeToEdge(
     srcax = srcax.cross((Vector3d) (srcplanes[ids[1]].head(3)));
     Vector3d tgtax = tgtplanes[planecorrespondences[ids[0]]].head(3);
     tgtax = tgtax.cross((Vector3d) (tgtplanes[planecorrespondences[ids[1]]].head(3)));
-    markParallelPlanes(srcax, tsrc, srcplanes, fsrcids, ids[0]);
-    markParallelPlanes(tgtax, tgt, tgtplanes, ftgtids, planecorrespondences[ids[0]]);
+    markParallelPlanes(srcax, tsrc, srcplanes, planecorrespondences, fsrcids, ids[0], true);
+    markParallelPlanes(tgtax, tgt, tgtplanes, planecorrespondences, ftgtids, planecorrespondences[ids[0]], false);
     preprocessCloud(tgt, ttgt, coordtransform, ftgtids, planecorrespondences[ids[0]], false);
     preprocessCloud(tsrc, tsrc, coordtransform, fsrcids, ids[0]);
 
@@ -633,8 +640,8 @@ AlignmentResult alignCornerToCorner(
     srcax = srcax.cross((Vector3d) (srcplanes[ids[1]].head(3)));
     Vector3d tgtax = tgtplanes[planecorrespondences[ids[0]]].head(3);
     tgtax = tgtax.cross((Vector3d) (tgtplanes[planecorrespondences[ids[1]]].head(3)));
-    markParallelPlanes(srcax, tsrc, srcplanes, fsrcids, ids[0]);
-    markParallelPlanes(tgtax, tgt, tgtplanes, ftgtids, planecorrespondences[ids[0]]);
+    markParallelPlanes(srcax, tsrc, srcplanes, planecorrespondences, fsrcids, ids[0], true);
+    markParallelPlanes(tgtax, tgt, tgtplanes, planecorrespondences, ftgtids, planecorrespondences[ids[0]], false);
     preprocessCloud(tgt, ttgt, coordtransform, ftgtids, planecorrespondences[ids[0]], false);
     preprocessCloud(tsrc, tsrc, coordtransform, fsrcids, ids[0]);
 

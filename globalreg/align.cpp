@@ -79,7 +79,7 @@ void colorPlaneCorrespondences() {
             colored1->at(i).r = 0;
             colored1->at(i).g = 0;
             colored1->at(i).b = 0;
-            if (planecorrespondences[srcids[i]] == -1) {
+            if (planecorrespondences[srcids[i]] <= -1) {
                 colored1->at(i).b = 255;
                 if ((srcids[i]+1)&1) colored1->at(i).r = 127;
                 if ((srcids[i]+1)&2) colored1->at(i).g = 127;
