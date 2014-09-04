@@ -77,13 +77,13 @@ int main(int argc, char** argv) {
 
         // Output camera params
         //    camera position
-        cameras << -cumXform(0,3) << " ";
-        cameras << -cumXform(1,3) << " ";
-        cameras << -cumXform(2,3) << " ";
+        cameras << cumXform(0,3) << " ";
+        cameras << cumXform(1,3) << " ";
+        cameras << cumXform(2,3) << " ";
         //    camera up
-        cameras << cumXform(0,1) << " ";
-        cameras << cumXform(1,1) << " ";
-        cameras << cumXform(2,1) << " ";
+        cameras << -cumXform(0,1) << " ";
+        cameras << -cumXform(1,1) << " ";
+        cameras << -cumXform(2,1) << " ";
         //    camera towards
         cameras << cumXform(0,2) << " ";
         cameras << cumXform(1,2) << " ";

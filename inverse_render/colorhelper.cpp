@@ -91,35 +91,24 @@ bool ColorHelper::readImageNames(string filename)
 bool ColorHelper::readMayaCameraFile(string filename)
 {
     // Format:
-    //    FrameCount Width Height FocalLength Aperture
-    //    X Y Z Pitch Yaw Roll
+    //    FrameCount Width Height hfov
+    //    X Y Z [Up] [Towards]
     //    Angles in degrees
     try {
         ifstream in(filename.c_str());
         int frames, w, h;
-        double foc, ap;
-        in >> frames >> w >> h >> foc >> ap;
-        // Convert maya aperture (inches) into pixel units
-        // focal length in pixels = focal length in mm * inch/mm * pixels/inch
-        foc *= 0.03937008 * w/ap;
-        // Convert
+        double hfov;
+        in >> frames >> w >> h >> hfov;
+        double foc = w/(2*tan(hfov*M_PI/180));
         double a,b,c;
         for (int i = 0; i < frames; ++i) {
             CameraParams* curr = new CameraParams;
             in >> a >> b >> c;
             curr->pos.Reset(a,b,c);
             in >> a >> b >> c;
-            a *= M_PI/180;
-            b *= M_PI/180;
-            c *= M_PI/180;
-            curr->up.Reset(0,1,0);
-            curr->up.Rotate(R3posz_vector, c);
-            curr->up.Rotate(R3posx_vector, a);
-            curr->up.Rotate(R3posy_vector, b);
-            curr->towards.Reset(0,0,-1);
-            curr->towards.Rotate(R3posz_vector, c);
-            curr->towards.Rotate(R3posx_vector, a);
-            curr->towards.Rotate(R3posy_vector, b);
+            curr->up.Reset(a,b,c);
+            in >> a >> b >> c;
+            curr->towards.Reset(a,b,c);
             curr->right = curr->towards%curr->up;
             curr->width = w;
             curr->height = h;
