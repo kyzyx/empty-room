@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <pcl/io/grabber.h>
 #include <pcl/io/openni2_grabber.h>
 #include <pcl/io/ply_io.h>
 #include <pcl/io/png_io.h>
@@ -10,8 +11,11 @@
 
 using namespace std;
 using namespace pcl;
-using namespace openni_wrapper;
 using namespace io;
+
+int startexp = 70;
+int endexp = 10;
+int changeframe = 0;
 
 void savepoints(const string& filename, PointCloud<PointXYZ>::Ptr cloud) {
     PLYWriter w;
@@ -25,6 +29,7 @@ class DataGrabber {
             rgbviewer.setPosition(IMG_WIDTH,0);
             depthbuffer = new unsigned short[IMG_WIDTH*IMG_HEIGHT];
             rgbbuffer = new unsigned char[3*IMG_WIDTH*IMG_HEIGHT];
+            changing = false;
         }
     public:
         DataGrabber ()
@@ -82,7 +87,7 @@ class DataGrabber {
             if (image && image->getEncoding() != Image::RGB) {
                 saveRgbPNGFile(filename +  ".png", rgbbuffer, IMG_WIDTH, IMG_HEIGHT);
             } else if (image) {
-                saveRgbPNGFile(filename + ".png", (const unsigned char*) image->getMetaData().getData(), IMG_WIDTH, IMG_HEIGHT);
+                saveRgbPNGFile(filename + ".png", (const unsigned char*) image->getData(), IMG_WIDTH, IMG_HEIGHT);
             }
             cout << "Saved " << filename << endl;
         }
@@ -115,12 +120,17 @@ class DataGrabber {
                     }
                 } else if (event.getKeyCode() == 'z') {
                     continuous = !continuous;
+                } else if (event.getKeyCode() == 'a') {
+                    // Start exposure change test
+                    grabber->getDevice()->setExposure(endexp);
+                    changeframe = 0;
+                    changing = true;
                 }
             }
         }
 
         void run() {
-            grabber = new OpenNIGrabber();
+            grabber = new io::OpenNI2Grabber();
 
             rgbviewer.registerKeyboardCallback(&DataGrabber::keyboard_callback, *this);
             depthviewer.registerKeyboardCallback(&DataGrabber::keyboard_callback, *this);
@@ -128,10 +138,10 @@ class DataGrabber {
             boost::function<void(const Image::Ptr&, const PointCloud<PointXYZ>::ConstPtr&, const DepthImage::Ptr&, float)> f =
                 boost::bind(&DataGrabber::data_cb_, this, _1, _2, _3, _4);
             grabber->registerCallback(f);
-            grabber->getDevice()->setExposure(70);
+            grabber->getDevice()->setExposure(startexp);
             grabber->start();
-            grabber->getDevice()->setExposure(70);
-            grabber->getDevice()->setGain(900);
+            grabber->getDevice()->setExposure(startexp);
+            grabber->getDevice()->setGain(100);
             while(!rgbviewer.wasStopped() && !depthviewer.wasStopped()) {
                 Image::Ptr image;
                 DepthImage::Ptr depthimage;
@@ -144,7 +154,19 @@ class DataGrabber {
                 }
                 if (image && depthimage) {
                     if (image->getEncoding() == Image::RGB) {
-                        rgbviewer.addRGBImage((const unsigned char*) image->getMetaData().getData(), image->getWidth(), image->getHeight());
+                        rgbviewer.addRGBImage((const unsigned char*) image->getData(), image->getWidth(), image->getHeight());
+                        if (changing) {
+                            const unsigned char* rgb = (const unsigned char*) image->getData();
+                            double tot = 0;
+                            for (int i = 0; i < 640*90; i+=10) {
+                                tot += 0.2126*rgb[i*3] + 0.7152*rgb[i*3+1] + 0.0722*rgb[i*3+2];
+                            }
+                            tot /= 640*90;
+                            cout << "Lum: " << tot << endl;
+                            changeframe++;
+                            if (changeframe >= 20) changing = false;
+                            //save = true;
+                        }
                     } else {
                         rgbviewer.addRGBImage(rgbbuffer, image->getWidth(), image->getHeight());
                     }
@@ -164,7 +186,7 @@ class DataGrabber {
         }
 
     private:
-        OpenNIGrabber* grabber;
+        io::OpenNI2Grabber* grabber;
         unsigned short* depthbuffer;
         unsigned char* rgbbuffer;
         string path;
@@ -176,6 +198,7 @@ class DataGrabber {
         DepthImage::Ptr depthimage_;
         boost::mutex image_mutex_;
 
+        bool changing;
         bool save;
         bool continuous;
         int savedImages;
@@ -188,6 +211,10 @@ int main(int argc, char** argv) {
     string path = "data/";
     if (argc > 1) {
         path = argv[1];
+        if (argc > 2) {
+            startexp = atoi(argv[2]);
+            endexp = atoi(argv[3]);
+        }
     }
     DataGrabber dg(path);
     dg.run();
