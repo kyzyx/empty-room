@@ -42,7 +42,7 @@ int bfsLabel(Mesh& m, int start, int allowed, int label) {
     }
     return nchanged;
 }
-void clusterLights(Mesh& m, int minLightSize) {
+int clusterLights(Mesh& m, int minLightSize) {
     int lightn = 1;
     labelLights(m);
     for (int i = 0; i < m.getMesh()->NVertices(); ++i) {
@@ -52,4 +52,5 @@ void clusterLights(Mesh& m, int minLightSize) {
             else lightn++;
         }
     }
+    return lightn-1;
 }

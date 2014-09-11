@@ -31,6 +31,9 @@ double minlength = 0.2;
 bool do_wallfinding = true;
 bool do_reprojection = true;
 bool do_sampling = true;
+bool hdr = true;
+double hdr_threshold = 10.;
+double displayscale = 2.;
 
 bool parseargs(int argc, char** argv) {
     if (argc < 3) {
@@ -41,10 +44,12 @@ bool parseargs(int argc, char** argv) {
              "  File Arguments:\n" \
              "      -imagelist file: name of file specifying a list of color\n"\
              "           images taken from the camera positions in camfile\n" \
-             "           Must be specified with lightimagelist\n" \
+             "           Must be specified with lightimagelist or -hdr\n" \
              "      -lightimagelist file: name of file specifying a list of light\n"\
              "           images taken from the camera positions in camfile\n" \
              "           Must be specified with imagelist\n" \
+             "      -hdr: images in imagelist are RADIANCE high dynamic range\n" \
+             "            files. No lightfile required\n" \
              "      -samplefile file: read sampled wall point equations from file\n"\
              "      -reprojectfile file: read sample info from file f\n" \
              "      -wallfile file: read wall info from file f\n" \
@@ -69,11 +74,15 @@ bool parseargs(int argc, char** argv) {
              "      -show_frustrum: with show_camera, draw camera n frustrum\n" \
              "           (default off)\n"
              "      -project_status: with project, show reprojection debugging\n" \
-             "           results, e.g occluded vertices and those not in view\n"
+             "           results, e.g occluded vertices and those not in view\n"\
+             "      -display_scale f: Scale displayed color values by the\n"\
+             "           given amount, useful for HDR viewing\n"\
              "  Reprojection Arguments:\n" \
-             "      -project n: project only camera n\n"
+             "      -project n: project only camera n\n"\
+             "      -hdr_threshold f: radiance threshold above which pixels\n"\
+             "           are considered light pixels (default 10.0)\n"\
              "  Wallfinder Arguments:\n" \
-             "      -ccw: Faces in counterclockwise direction (flip normals)\n" \
+             "      -ccw: Face vertices in counterclockwise direction (flip normals)\n" \
              "      -wallfinder_anglethreshold f: Angle between normals to be\n" \
              "           considered equal, for wallfinding(default PI/40)\n" \
              "      -wallfinder_min_wall_length f: Minimum length of a wall\n" \
@@ -93,6 +102,7 @@ bool parseargs(int argc, char** argv) {
     }
     // Parse arguments
     if (console::find_switch(argc, argv, "-ccw")) ccw = true;
+    if (console::find_switch(argc, argv, "-hdr")) hdr = true;
     if (console::find_switch(argc, argv, "-show_frustrum")) show_frustrum = true;
     if (console::find_switch(argc, argv, "-project_status")) project_debug = true;
     if (console::find_switch(argc, argv, "-nodisplay")) display = false;
@@ -114,6 +124,9 @@ bool parseargs(int argc, char** argv) {
     if (console::find_switch(argc, argv, "-no_cameras")) {
         all_cameras = false;
         camera = -1;
+    }
+    if (console::find_argument(argc, argv, "-hdr_threshold") >= 0) {
+        console::parse_argument(argc, argv, "-hdr_threshold", hdr_threshold);
     }
     if (console::find_argument(argc, argv, "-show_camera") >= 0) {
         console::parse_argument(argc, argv, "-show_camera", camera);
@@ -167,6 +180,9 @@ bool parseargs(int argc, char** argv) {
         cerr << "Error: No camera file specified" << endl;
         return false;
     }
+    if (console::find_argument(argc, argv, "-display_scale") >= 0) {
+        console::parse_argument(argc, argv, "-display_scale", displayscale);
+    }
     if (console::find_argument(argc, argv, "-wallfinder_anglethreshold") >= 0) {
         if (!do_wallfinding) cerr << "Warning: ignoring wallfinder parameters" << endl;
         console::parse_argument(argc, argv, "-wallfinder_anglethreshold", anglethreshold);
@@ -191,7 +207,7 @@ bool parseargs(int argc, char** argv) {
         if (!do_sampling) cerr << "Warning: ignoring solver parameters" << endl;
         console::parse_argument(argc, argv, "-solver_threshold", discardthreshold);
     }
-    if (!input && numImageListFiles != 2) {
+    if (!input && !(numImageListFiles == 2 || hdr && numImageListFiles == 1)) {
         cerr << "Error: Must specify either a reprojectfile or two image lists!" << endl;
         return false;
     }

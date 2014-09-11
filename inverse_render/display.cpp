@@ -19,6 +19,25 @@ int currcube = 0;
 int x = 0;
 bool change = true;
 visualization::ImageViewer* imvu = NULL;
+
+void showimage(InverseRender* ivr, int n, int x) {
+    int res = 150;
+    unsigned char* im = new unsigned char[res*res*3];
+    float* currimage = (float*) ivr->images[2*n+x];
+    for (int i = 0; i < res; ++i) {
+        for (int j = 0; j < res; ++j) {
+            for (int k = 0; k < 3; ++k) {
+                int idx = k + 3*(j + res*i);
+                im[idx] = (unsigned char)(255*displayscale*currimage[idx]*ivr->mesh->maxintensity);
+                //cout << currimage[idx] << ",";
+            }
+            //cout << endl;
+        }
+        //cout << endl;
+    }
+    imvu->showRGBImage(im,res,res);
+}
+
 void kbd_cb_(const visualization::KeyboardEvent& event, void* ir) {
     InverseRender* ivr = (InverseRender*) ir;
     if (event.keyDown()) {
@@ -35,7 +54,7 @@ void kbd_cb_(const visualization::KeyboardEvent& event, void* ir) {
             x = 1-x;
         }
         cout << "Displaying " << (x?"light":"image") <<" " << currcube<<endl;
-        imvu->showRGBImage(ivr->images[2*currcube+x],100,100);
+        showimage(ivr, currcube, x);
     }
 }
 
@@ -55,10 +74,11 @@ void visualize(Mesh& m, PointCloud<PointXYZRGB>::Ptr cloud, ColorHelper& loader,
     if (ir.data.size() > 0 && ir.images) {
         imvu = new visualization::ImageViewer("Hi");
         imvu->registerKeyboardCallback(&kbd_cb_, (void*) &ir);
-        imvu->showRGBImage(ir.images[0], 100, 100);
+        showimage(&ir, 0, 0);
     }
 
     PointIndices::Ptr nonnull(new PointIndices());
+    cloud->is_dense = false;
     for (int i = 0; i < cloud->size(); ++i) {
         if (labeltype == LABEL_REPROJECT_DEBUG) {
             if (m.labels[i] == 3) {
@@ -79,6 +99,7 @@ void visualize(Mesh& m, PointCloud<PointXYZRGB>::Ptr cloud, ColorHelper& loader,
                 cloud->at(i).b = 0;
             }
         } else {
+            int mult = hdr?255:1;
             if (m.samples[i].size()) {
                 if (labeltype == LABEL_LIGHTS && m.labels[i] > 0) {
                     cloud->at(i).r = 0;
@@ -92,13 +113,16 @@ void visualize(Mesh& m, PointCloud<PointXYZRGB>::Ptr cloud, ColorHelper& loader,
                     int g = 0;
                     int b = 0;
                     for (int j = 0; j < m.samples[i].size(); ++j) {
-                        r += m.samples[i][j].r;
-                        g += m.samples[i][j].g;
-                        b += m.samples[i][j].b;
+                        r += mult*m.samples[i][j].r*displayscale;
+                        g += mult*m.samples[i][j].g*displayscale;
+                        b += mult*m.samples[i][j].b*displayscale;
                     }
                     cloud->at(i).r = r/m.samples[i].size();
                     cloud->at(i).g = g/m.samples[i].size();
                     cloud->at(i).b = b/m.samples[i].size();
+                    if (cloud->at(i).r > 255) cloud->at(i).r = 255;
+                    if (cloud->at(i).g > 255) cloud->at(i).g = 255;
+                    if (cloud->at(i).b > 255) cloud->at(i).b = 255;
                 }
                 nonnull->indices.push_back(i);
             } else {
