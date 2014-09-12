@@ -83,12 +83,12 @@ int main(int argc, char* argv[]) {
 
     if (input) {
         cout << "Loading reprojection input files..." << endl;
-        loader.readMayaCameraFile(camfile);
+        loader.readCameraFile(camfile);
         m.readSamples(infile);
         cout << "Done loading samples" << endl;
     } else if (do_reprojection) {
         cout << "Reading input files..." << endl;
-        loader.load(imagelist, camfile);
+        loader.load(camfile);
         cout << "Done reading color images " << loader.size() << endl;
         if (hdr) {
             if (all_project) {

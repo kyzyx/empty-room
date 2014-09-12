@@ -13,9 +13,8 @@ bool write_eq = false;
 bool read_eq = false;
 int project;
 int camera;
-string outfile, infile, camfile, walloutfile, wallfile, imagelist, lightimagelist, samplefile, sampleoutfile;
+string outfile, infile, camfile, walloutfile, wallfile, samplefile, sampleoutfile;
 string radfile = "room.rad";
-int numImageListFiles = 0;
 int wallthreshold = 200;
 int numsamples = 100;
 double discardthreshold = 0.25;
@@ -39,15 +38,8 @@ bool parseargs(int argc, char** argv) {
     if (argc < 3) {
         printf(
              "Usage: invrender mesh.ply -camfile camera.cam [args]\n" \
-             "  Must have (imagelist and lightimagelist) OR samplefile\n" \
              "  Argument types: file=filename (string), n=int, f=float\n" \
              "  File Arguments:\n" \
-             "      -imagelist file: name of file specifying a list of color\n"\
-             "           images taken from the camera positions in camfile\n" \
-             "           Must be specified with lightimagelist or -hdr\n" \
-             "      -lightimagelist file: name of file specifying a list of light\n"\
-             "           images taken from the camera positions in camfile\n" \
-             "           Must be specified with imagelist\n" \
              "      -hdr: images in imagelist are RADIANCE high dynamic range\n" \
              "            files. No lightfile required\n" \
              "      -samplefile file: read sampled wall point equations from file\n"\
@@ -136,14 +128,6 @@ bool parseargs(int argc, char** argv) {
         console::parse_argument(argc, argv, "-project", project);
         all_project = false;
     }
-    if (console::find_argument(argc, argv, "-imagelist") >= 0) {
-        console::parse_argument(argc, argv, "-imagelist", imagelist);
-        numImageListFiles++;
-    }
-    if (console::find_argument(argc, argv, "-lightimagelist") >= 0) {
-        console::parse_argument(argc, argv, "-lightimagelist", lightimagelist);
-        numImageListFiles++;
-    }
     if (console::find_argument(argc, argv, "-wallfile") >= 0) {
         console::parse_argument(argc, argv, "-wallfile", wallfile);
         wallinput = true;
@@ -206,10 +190,6 @@ bool parseargs(int argc, char** argv) {
     if (console::find_argument(argc, argv, "-solver_threshold") >= 0) {
         if (!do_sampling) cerr << "Warning: ignoring solver parameters" << endl;
         console::parse_argument(argc, argv, "-solver_threshold", discardthreshold);
-    }
-    if (!input && !(numImageListFiles == 2 || hdr && numImageListFiles == 1)) {
-        cerr << "Error: Must specify either a reprojectfile or two image lists!" << endl;
-        return false;
     }
     return true;
 }

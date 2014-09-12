@@ -11,15 +11,14 @@
 
 using namespace std;
 
-bool ColorHelper::load(std::string imageListFile, std::string cameraFile) {
-    if (!readImageNames(imageListFile)) return false;
+bool ColorHelper::load(string cameraFile) {
+    readCameraFile(cameraFile);
     for (int i = 0; i < filenames.size(); ++i) {
         if (!readImage(filenames[i])) {
             cerr << "Error reading image " << filenames[i] << endl;
             return false;
         }
     }
-    return readMayaCameraFile(cameraFile);
 }
 bool endswith(const string& s, string e) {
     if (s.length() > e.length())
@@ -112,27 +111,11 @@ bool ColorHelper::readPngImage(const string& filename)
     return true;
 }
 
-bool ColorHelper::readImageNames(const string& filename)
-{
-    try {
-        ifstream in(filename.c_str());
-        string s;
-        getline(in, s);
-        while (!in.eof()) {
-            filenames.push_back(s);
-            getline(in, s);
-        }
-    } catch(...) {
-        return false;
-    }
-    return true;
-}
-
-bool ColorHelper::readMayaCameraFile(const string& filename)
+bool ColorHelper::readCameraFile(const string& filename)
 {
     // Format:
     //    FrameCount Width Height hfov
-    //    X Y Z [Up] [Towards]
+    //    filename X Y Z [Up] [Towards]
     //    Angles in degrees
     try {
         ifstream in(filename.c_str());
@@ -141,9 +124,11 @@ bool ColorHelper::readMayaCameraFile(const string& filename)
         in >> frames >> w >> h >> hfov;
         double foc = w/(2*tan(hfov*M_PI/180));
         double a,b,c;
+        string s;
         for (int i = 0; i < frames; ++i) {
             CameraParams* curr = new CameraParams;
-            in >> a >> b >> c;
+            in >> s >> a >> b >> c;
+            filenames.push_back(s);
 #ifdef OUTPUT_RADIANCE_CAMERAS
             printf("view= pos%d rvu -vtv -vp %f %f %f", i, a, b, c);
 #endif

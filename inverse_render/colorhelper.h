@@ -26,13 +26,13 @@ class ColorHelper {
             for (int i = 0; i < cameras.size(); ++i) delete cameras[i];
         }
 
-        bool load(std::string imageListFile, std::string cameraFile);
+        bool load(std::string cameraFile);
 
         bool readImageNames(const std::string& filename);
         bool readImage(const std::string& filename);
         bool readPngImage(const std::string& filename);
         bool readHdrImage(const std::string& filename);
-        bool readMayaCameraFile(const std::string& filename);
+        bool readCameraFile(const std::string& filename);
 
         int size() const { return data.size(); }
         const char* getImage(int n) { return data[n]; }
