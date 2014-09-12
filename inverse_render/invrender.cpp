@@ -90,24 +90,10 @@ int main(int argc, char* argv[]) {
         cout << "Reading input files..." << endl;
         loader.load(camfile);
         cout << "Done reading color images " << loader.size() << endl;
-        if (hdr) {
-            if (all_project) {
-                reproject(loader, m, hdr_threshold);
-            } else {
-                //const float* hdrimg = (const float*) loader.getImage(project);
-                reproject((float*) loader.getImage(project), loader.getCamera(project), m, hdr_threshold);
-            }
+        if (all_project) {
+            reproject(loader, m, hdr_threshold);
         } else {
-            ColorHelper lights;
-            lights.load(lightimagelist, camfile);
-            cout << "Done reading lighting images " << lights.size() << endl;
-
-
-            if (all_project) {
-                reproject(loader, lights, m);
-            } else {
-                reproject(loader.getImage(project), lights.getImage(project), loader.getCamera(project), m);
-            }
+            reproject((float*) loader.getImage(project), loader.getCamera(project), m, hdr_threshold);
         }
         cout << "Done reprojecting" << endl;
         int numlights = clusterLights(m);

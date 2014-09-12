@@ -26,7 +26,6 @@ extern double minlength;
 extern bool do_wallfinding;
 extern bool do_reprojection;
 extern bool do_sampling;
-extern bool hdr;
 extern double hdr_threshold;
 extern double displayscale;
 

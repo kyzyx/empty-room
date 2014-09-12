@@ -30,7 +30,6 @@ double minlength = 0.2;
 bool do_wallfinding = true;
 bool do_reprojection = true;
 bool do_sampling = true;
-bool hdr = true;
 double hdr_threshold = 10.;
 double displayscale = 2.;
 
@@ -40,15 +39,13 @@ bool parseargs(int argc, char** argv) {
              "Usage: invrender mesh.ply -camfile camera.cam [args]\n" \
              "  Argument types: file=filename (string), n=int, f=float\n" \
              "  File Arguments:\n" \
-             "      -hdr: images in imagelist are RADIANCE high dynamic range\n" \
-             "            files. No lightfile required\n" \
              "      -samplefile file: read sampled wall point equations from file\n"\
              "      -reprojectfile file: read sample info from file f\n" \
              "      -wallfile file: read wall info from file f\n" \
              "      -outputwallfile file: output wall labels and segments to\n" \
              "           the specified file f\n"
-             "      -outputreprojectfile file: output sample info from reprojection to\n" \
-             "           the specified file f\n"
+             "      -outputreprojectfile file: output sample info from reprojection\n" \
+             "           to the specified file f\n"
              "      -outputsamplefile file: output sampled wall point\n" \
              "           equations to the specified file f\n"
              "      -radfile file: output geometry for RADIANCE to specified file\n" \
@@ -94,7 +91,6 @@ bool parseargs(int argc, char** argv) {
     }
     // Parse arguments
     if (console::find_switch(argc, argv, "-ccw")) ccw = true;
-    if (console::find_switch(argc, argv, "-hdr")) hdr = true;
     if (console::find_switch(argc, argv, "-show_frustrum")) show_frustrum = true;
     if (console::find_switch(argc, argv, "-project_status")) project_debug = true;
     if (console::find_switch(argc, argv, "-nodisplay")) display = false;

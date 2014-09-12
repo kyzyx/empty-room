@@ -99,7 +99,7 @@ void visualize(Mesh& m, PointCloud<PointXYZRGB>::Ptr cloud, ColorHelper& loader,
                 cloud->at(i).b = 0;
             }
         } else {
-            int mult = hdr?255:1;
+            int mult = 255;
             if (m.samples[i].size()) {
                 if (labeltype == LABEL_LIGHTS && m.labels[i] > 0) {
                     cloud->at(i).r = 0;
