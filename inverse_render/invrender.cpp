@@ -81,10 +81,11 @@ int main(int argc, char* argv[]) {
     ColorHelper loader;
     Mesh m(mesh,true);
 
+    int numlights;
     if (input) {
         cout << "Loading reprojection input files..." << endl;
         loader.readCameraFile(camfile);
-        m.readSamples(infile);
+        numlights = m.readSamples(infile);
         cout << "Done loading samples" << endl;
     } else if (do_reprojection) {
         cout << "Reading input files..." << endl;
@@ -96,7 +97,7 @@ int main(int argc, char* argv[]) {
             reproject((float*) loader.getImage(project), loader.getCamera(project), m, hdr_threshold);
         }
         cout << "Done reprojecting" << endl;
-        int numlights = clusterLights(m);
+        numlights = clusterLights(m);
         cout << "Done clustering " << numlights << " lights" << endl;
         if (output_reprojection) m.writeSamples(outfile);
     }
@@ -109,7 +110,7 @@ int main(int argc, char* argv[]) {
             if (read_eq) {
                 ir.loadVariablesBinary(samplefile);
             } else {
-                ir.calculate(wallindices, numsamples, discardthreshold, 2);
+                ir.calculate(wallindices, numsamples, discardthreshold, numlights);
                 if (write_eq) {
                     ir.writeVariablesMatlab("eq.m");
                     ir.writeVariablesBinary(sampleoutfile);

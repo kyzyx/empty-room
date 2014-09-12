@@ -36,7 +36,7 @@ class Mesh {
         void addSample(int n, Sample s);
 
         void writeSamples(std::string filename);
-        void readSamples(std::string filename);
+        int readSamples(std::string filename);
 
         R3Mesh* getMesh() { return mesh; }
         R3MeshSearchTree* getSearchTree() { return searchtree; }

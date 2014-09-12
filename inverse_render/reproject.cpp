@@ -8,9 +8,9 @@ inline bool isLight(int x, int y, int w, const float* data, double threshold) {
     return data[3*(x+y*w)] > threshold || data[3*(x+y*w)+1] > threshold || data[3*(x+y*w)+2] > threshold;
 }
 inline void copyColorToSample(int x, int y, int w, const float* data, Sample& s) {
-    s.r = data[3*(x+y*w)];
-    s.g = data[3*(x+y*w)+1];
-    s.b = data[3*(x+y*w)+2];
+    s.r = M_PI*data[3*(x+y*w)];
+    s.g = M_PI*data[3*(x+y*w)+1];
+    s.b = M_PI*data[3*(x+y*w)+2];
 }
 inline void copyColorToSample(int x, int y, int w, const char* data, Sample& s) {
     s.r = data[3*(x+y*w)];

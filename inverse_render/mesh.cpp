@@ -92,7 +92,9 @@ void Mesh::writeSamples(string filename) {
         }
     }
 }
-void Mesh::readSamples(string filename) {
+int Mesh::readSamples(string filename) {
+    vector<bool> islight(128,false);
+    int numlights = 0;
     ifstream in(filename.c_str(), ifstream::binary);
     uint32_t sz;
     in.read((char*) &sz, 4);
@@ -102,6 +104,10 @@ void Mesh::readSamples(string filename) {
         char c;
         in.read(&c, 1);
         labels[i] = c;
+        if (c && !islight[c]) {
+            islight[c] = true;
+            ++numlights;
+        }
         in.read((char*) &sz, 4);
         for (int j = 0; j < sz; ++j) {
             Sample s;
@@ -116,6 +122,7 @@ void Mesh::readSamples(string filename) {
             samples[i].push_back(s);
         }
     }
+    return numlights;
 }
 
 void Mesh::renderOGL(bool light) {

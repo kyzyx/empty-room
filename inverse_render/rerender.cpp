@@ -15,7 +15,7 @@ void outputRadianceFile(string filename, WallFinder& wf, Mesh& m, InverseRender&
     // is related to the radiosity J by
     // J = pi*L
     for (int i = 0; i < ir.lights.size(); ++i) {
-        out << "void light l" << i << endl << 0 << endl << 0 << endl << 3 << " ";
+        out << "void light l" << (i+1) << endl << 0 << endl << 0 << endl << 3 << " ";
         out << ir.lights[i](0)/M_PI << " " << ir.lights[i](1)/M_PI << " " << ir.lights[i](2)/M_PI << endl << endl;
     }
 
@@ -26,11 +26,11 @@ void outputRadianceFile(string filename, WallFinder& wf, Mesh& m, InverseRender&
         // Check if face is a light
         for (int j = 0; j < 3; ++j) {
             int n = m.getMesh()->VertexID(m.getMesh()->VertexOnFace(f, j));
-            if (m.labels[n] < 0) {
+            if (m.labels[n] <= 0) {
                 lightid = -1;
                 break;
             } else {
-                if (lightid < 0) lightid = m.labels[n];
+                if (lightid <= 0) lightid = m.labels[n];
                 else if (lightid != m.labels[n]) {
                     lightid = -1;
                     break;
@@ -39,11 +39,10 @@ void outputRadianceFile(string filename, WallFinder& wf, Mesh& m, InverseRender&
         }
         if (lightid == -1) continue;
         out << "l" << lightid << " polygon light" << i << endl << "0 0 9" << endl;
+        double eps = 0.0001;
         for (int j = 0; j < 3; ++j) {
-            double b[3];
-            b[0] = 0; b[1] = 0; b[2] = 0;
-            b[j] = 1;
-            R3Point v = m.getMesh()->FaceBarycentric(f, b);
+            R3Point v = m.getMesh()->VertexPosition(m.getMesh()->VertexOnFace(f, j));
+            v += m.getMesh()->FaceNormal(f)*eps;
             out << v[0] << " " << v[1] << " " << v[2] << " ";
         }
         out << endl << endl;
