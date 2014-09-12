@@ -102,7 +102,7 @@ int main(int argc, char* argv[]) {
     }
     m.computeColorsOGL();
 
-    InverseRender ir(&m);
+    InverseRender ir(&m, hemicuberesolution);
     // Only do inverse rendering with full reprojection and wall labels
     if ((input || all_project) && (wallinput || do_wallfinding)) {
         if (do_sampling) {

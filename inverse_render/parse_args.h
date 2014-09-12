@@ -13,6 +13,7 @@ extern int camera;
 extern std::string outfile, infile, camfile, walloutfile, wallfile, sampleoutfile, samplefile, radfile;
 extern int wallthreshold;
 extern int numsamples;
+extern int hemicuberesolution;
 extern double discardthreshold;
 extern bool output_reprojection;
 extern bool output_wall;

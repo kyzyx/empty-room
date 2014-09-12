@@ -32,6 +32,7 @@ bool do_reprojection = true;
 bool do_sampling = true;
 double hdr_threshold = 10.;
 double displayscale = 2.;
+int hemicuberesolution = 150;
 
 bool parseargs(int argc, char** argv) {
     if (argc < 3) {
@@ -84,6 +85,7 @@ bool parseargs(int argc, char** argv) {
              "  Solver Arguments:\n" \
              "      -solver_numsamples n: number of wall points to sample for\n" \
              "           final solution (default 100) \n" \
+             "      -solver_hemicuberesolution n: resolution of hemicube (default 150\n" \
              "      -solver_threshold f: maximum unsampled proportion of\n" \
              "           hemisphere (default 0.25) \n" \
                 );
@@ -186,6 +188,10 @@ bool parseargs(int argc, char** argv) {
     if (console::find_argument(argc, argv, "-solver_threshold") >= 0) {
         if (!do_sampling) cerr << "Warning: ignoring solver parameters" << endl;
         console::parse_argument(argc, argv, "-solver_threshold", discardthreshold);
+    }
+    if (console::find_argument(argc, argv, "-solver_hemicuberesolution") >= 0) {
+        if (!do_sampling) cerr << "Warning: ignoring solver parameters" << endl;
+        console::parse_argument(argc, argv, "-solver_hemicuberesolution", hemicuberesolution);
     }
     return true;
 }
