@@ -55,7 +55,7 @@ void InverseRender::calculate(vector<int> indices, int numsamples, double discar
             continue;
         }
         data.push_back(sd);
-        cout << "Rendered " << i+1 << "/" << numsamples << endl;
+        if (i%10 == 9) cout << "Rendered " << i+1 << "/" << numsamples << endl;
     }
     lights.resize(numlights);
 }
@@ -63,10 +63,11 @@ void InverseRender::solve() {
     if (calculateWallMaterialFromUnlit()) {
         cout << "Material estimate: (" << wallMaterial(0) << "," << wallMaterial(1) << "," << wallMaterial(2) << ")" << endl;
     }
+    if (data[0].lightamount.size() == 0) return;
     lights.resize(data[0].lightamount.size());
     solveLights();
     for (int i = 0; i < lights.size(); ++i) {
-        cout << "Light estimate " << i << ": (" << lights[i](0) << "," << lights[i](1) << "," << lights[i](2) << ")" << endl;
+        cout << "Light estimate " << i << ": (" << lights[i](0)/M_PI << "," << lights[i](1)/M_PI << "," << lights[i](2)/M_PI << ")" << endl;
     }
 }
 
@@ -105,24 +106,28 @@ bool InverseRender::calculateWallMaterialFromUnlit() {
     }
     for (int i = 0; i < estimates[0].size(); ++i) {
         for (int ch = 0; ch < 3; ++ch) {
-        stddev[ch] += (estimates[ch][i]-weights[i]*mean[ch])*(estimates[ch][i]-weights[i]*mean[ch]);
+            cout << estimates[ch][i] << " ";
+            stddev[ch] += (estimates[ch][i]-weights[i]*mean[ch])*(estimates[ch][i]-weights[i]*mean[ch]);
         }
+        cout << endl;
     }
     for (int ch = 0; ch < 3; ++ch) {
         stddev[ch] = sqrt(stddev[ch]/totweight);
     }
-    for (int i = 0; i < estimates[0].size(); ++i) {
-        int bound = 0;
-        for (int ch = 0; ch < 3; ++ch) {
-            if (estimates[ch][i] < mean[ch] - stddev[ch]) bound = -1;
-            else if (estimates[ch][i] > mean[ch] + stddev[ch]) bound = 1;
-        }
+    for (int mult = 1; count == 0; ++mult) {
+        for (int i = 0; i < estimates[0].size(); ++i) {
+            int bound = 0;
+            for (int ch = 0; ch < 3; ++ch) {
+                if (estimates[ch][i] < mean[ch] - mult*stddev[ch]) bound = -1;
+                else if (estimates[ch][i] > mean[ch] + mult*stddev[ch]) bound = 1;
+            }
 
-        if (bound < 0) continue;
-        if (bound > 0) break;
-        count += weights[i];
-        for (int ch = 0; ch < 3; ++ch) {
-            newmean[ch] += estimates[ch][i];
+            if (bound < 0) continue;
+            if (bound > 0) break;
+            count += weights[i];
+            for (int ch = 0; ch < 3; ++ch) {
+                newmean[ch] += estimates[ch][i];
+            }
         }
     }
     for (int ch = 0; ch < 3; ++ch) {

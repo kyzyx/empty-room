@@ -53,6 +53,7 @@ bool ColorHelper::readHdrImage(const string& filename) {
         memcpy(image+3*(i*width), image+3*((height-i-1)*width), 3*width*sizeof(float));
         memcpy(image+3*((height-i-1)*width), row, 3*width*sizeof(float));
     }
+    delete [] row;
     data.push_back((char*)image);
     fclose(file);
     return true;

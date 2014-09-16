@@ -28,7 +28,8 @@ void showimage(InverseRender* ivr, int n, int x) {
         for (int j = 0; j < res; ++j) {
             for (int k = 0; k < 3; ++k) {
                 int idx = k + 3*(j + res*i);
-                im[idx] = (unsigned char)(255*displayscale*currimage[idx]);
+                if (x == 0) im[idx] = (unsigned char)(255*displayscale*currimage[idx]);
+                else im[idx] = (unsigned char)(255*currimage[idx]);
             }
         }
     }
@@ -171,8 +172,17 @@ void visualize(Mesh& m, PointCloud<PointXYZRGB>::Ptr cloud, ColorHelper& loader,
         if (imvu && change) {
             char tmp[5];
             intToCube(tmp,previouscube);
+            bool unlit = true;
+            for (int i = 0; i < ir.data[previouscube].lightamount.size(); ++i) {
+                if (ir.data[previouscube].lightamount[i] > 0) unlit = false;
+            }
+            if (unlit) {
+                viewer.setShapeRenderingProperties(visualization::PCL_VISUALIZER_COLOR, 0,1,0,tmp);
+            } else {
+                viewer.setShapeRenderingProperties(visualization::PCL_VISUALIZER_COLOR, 1,1,1,tmp);
+            }
             previouscube = currcube;
-            viewer.setShapeRenderingProperties(visualization::PCL_VISUALIZER_COLOR, 1,1,1,tmp);
+
             intToCube(tmp,currcube);
             viewer.setShapeRenderingProperties(visualization::PCL_VISUALIZER_COLOR, 1,0,1,tmp);
             change = false;
@@ -198,7 +208,11 @@ void VisualizeSamplePoint(Mesh& m, InverseRender::SampleData& s,
     char cubename[5];
     intToCube(cubename, nextcubename++);
     viewer.addCube(pos, rot, boxsize, boxsize, boxsize, cubename);
-    if (s.fractionUnknown == 0) {
+    bool unlit = true;
+    for (int i = 0; i < s.lightamount.size(); ++i) {
+        if (s.lightamount[i] > 0) unlit = false;
+    }
+    if (unlit) {
         viewer.setShapeRenderingProperties(visualization::PCL_VISUALIZER_COLOR, 0,1,0,cubename);
     }
 }
