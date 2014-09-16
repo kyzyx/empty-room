@@ -1,0 +1,89 @@
+-=-=-=-=-=-=-=-=-
+Inverse Rendering
+-=-=-=-=-=-=-=-=-
+TODO: Write compareoutput
+
+-------------------------------
+I. Working with synthetic data:
+-------------------------------
+A. Maya modelling guidelines
+    Currently supported:
+        Polygonal geometry
+        Area lights
+        Point lights
+    Not supported:
+        NURBS surface
+        Directional lights
+        Spot lights
+        Textures
+
+    1. Create a scene, complete with basic materials (i.e. no custom shaders), 
+       geometry, and lighting. For best effects, use an emissive material for
+       area lights rather than creating a Maya area light
+    2. Insert a camera trajectory. The recommended way to do this is:
+        i.   Go to Curves and create a curve using the pencil tool or similar
+        ii.  Go to Rendering and create a camera
+        iii. Select both camera and curve; go to Animation and attach the camera
+             to the curve as a motion path.
+             This makes the camera move along the curve for the duration of
+             your timeline. E.g. if your timeline is 24 frames, it will move
+             1/24th of the way along the curve during each frame. Note that the
+             camera will maintain a consistent orientation relative to the
+             curve
+    3. Export the scene as a .FBX file. (This will save not only the geometry, 
+       but also the materials and lighting)
+    4. Also export the scene as an STL file
+    5. Ensure that the MC2M.mel script is in your maya/projects/default/scripts
+       folder. In the MEL execution box, execute
+          > exportCameraUI()
+       Select the frame range appropriate to your camera trajectory and export
+
+B. Converting a model output from Maya
+    1. Generate RADIANCE files
+         $ radiance_from_maya.py model.fbx model mayacamera.cam
+       This will output two files, named using the prefix given by the last
+       argument (in this example, "model"):
+           - a radiance file model.rad
+           - a radiance rendering file model.rif
+
+    2. Generate a subsampled mesh from the exported geometry
+         $ meshlabserver -i exported.stl -o model.ply -s resample.mlx -om vc vt
+
+C. Rendering in RADIANCE
+    1. Render a set of HDR images:
+         $ rad render.rif
+
+    2. Generate a camera file listing the camera parameters for each
+       RADIANCE image
+         $ cam_from_rif.py render.rif camfile.cam
+
+D. Running the pipeline
+         $ invrender scene.ply -camfile camfile.cam \
+           -outputwallfile walls -outputreprojectfile reproject \
+           -outputsamplefile samples -radfile output.rad -nodisplay
+
+       Fixing Wallfinder:
+       - If wallfinder fails, first try using the -ccw option
+       - If it still doesn't work, try reducing -wallfinder_wallthreshold
+
+       If too many lights are detected, try increasing -hdr_threshold
+
+       To do partial reruns, use
+         $ invrender scene.ply -camfile camfile.cam \
+           -wallfile walls -reprojectfile reproject -samplefile samples \
+           -radfile output.rad -nodisplay
+
+    OPTIONAL: Use MATLAB tools to perform inverse rendering optimization. Also
+    compatible with GNU Octave
+         $ matlab solve.m
+
+E. Analysis
+     $ sed s/scene.rad/output.rad/ <render.rif >rerender.rif
+     $ rad rerender.rif
+     $ compareoutput.py render.rif rerender.rif
+
+-------------
+II. Useful Tools:
+-------------
+HDR image viewing: Use pfsv (preferred) or ximage
+Mesh viewing and editing: Use meshlab

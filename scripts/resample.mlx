@@ -1,0 +1,21 @@
+<!DOCTYPE FilterScript>
+<FilterScript>
+ <filter name="Transform: Scale">
+  <Param type="RichDynamicFloat" value="0.1" min="0.1" name="axisX" max="10"/>
+  <Param type="RichDynamicFloat" value="0.1" min="0.1" name="axisY" max="10"/>
+  <Param type="RichDynamicFloat" value="0.1" min="0.1" name="axisZ" max="10"/>
+  <Param type="RichBool" value="true" name="uniformFlag"/>
+  <Param enum_val0="origin" enum_val1="barycenter" enum_cardinality="3" enum_val2="custom point" type="RichEnum" value="0" name="scaleCenter"/>
+  <Param x="0" y="0" z="0" type="RichPoint3f" name="customCenter"/>
+  <Param type="RichBool" value="false" name="unitFlag"/>
+  <Param type="RichBool" value="true" name="Freeze"/>
+ </filter>
+ <filter name="Uniform Mesh Resampling">
+  <Param type="RichAbsPerc" value="0.016688" min="0" name="CellSize" max="7.48331"/>
+  <Param type="RichAbsPerc" value="0" min="-1.49666" name="Offset" max="1.49666"/>
+  <Param type="RichBool" value="true" name="mergeCloseVert"/>
+  <Param type="RichBool" value="false" name="discretize"/>
+  <Param type="RichBool" value="false" name="multisample"/>
+  <Param type="RichBool" value="false" name="absDist"/>
+ </filter>
+</FilterScript>
