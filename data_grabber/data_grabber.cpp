@@ -25,26 +25,20 @@ class DataGrabber {
             rgbviewer.setPosition(IMG_WIDTH,0);
             depthbuffer = new unsigned short[IMG_WIDTH*IMG_HEIGHT];
             rgbbuffer = new unsigned char[3*IMG_WIDTH*IMG_HEIGHT];
-            exposuremax = 0;
-            exposuremin = 0;
+            exposuremax = 50;
+            exposuremin = 2;
             exposureincrement = -10;
             state = STATE_START;
         }
     public:
         DataGrabber ()
-            : save(0), continuous(false), savedImages(0),
+            : save(0), savedImages(0), direction(0),
             path("data/"), rgbviewer("RGB Image") , depthviewer("Depth Image")
         {
             init();
         }
         DataGrabber (string outputpath)
-            : save(0), continuous(false), savedImages(0),
-            path(outputpath), rgbviewer("RGB Image") , depthviewer("Depth Image")
-        {
-            init();
-        }
-        DataGrabber (string outputpath, int freq)
-            : save(0), continuous(false), savedImages(0),
+            : save(0), savedImages(0), direction(0),
             path(outputpath), rgbviewer("RGB Image") , depthviewer("Depth Image")
         {
             init();
@@ -59,10 +53,10 @@ class DataGrabber {
             image_ = rgb;
             depthimage_ = depth;
             cloud_ = cloud;
-            adjustExposure();
             if (rgb->getEncoding() != Image::RGB) {
                 image_->fillRGB(rgb->getWidth(), rgb->getHeight(), rgbbuffer);
             }
+            adjustExposure();
             depthimage_->fillDepthImageRaw(depth->getWidth(), depth->getHeight(), depthbuffer);
         }
 
@@ -80,15 +74,6 @@ class DataGrabber {
             cout << "Saved " << filename << endl;
         }
 
-        double meanLuminance() {
-            unsigned char* pixels = (unsigned char*) image_->getData();
-            double tot = 0;
-            for (int i = 0; i < IMG_WIDTH*IMG_HEIGHT; ++i) {
-                tot += pixels[i*3] + pixels[i*3+1] + pixels[i*3+2];
-            }
-            tot /= IMG_WIDTH*IMG_HEIGHT*3;
-        }
-
         bool isOverExposed() {
             const int maxpixelval = 240;
             int numoverexposed = 0;
@@ -98,10 +83,10 @@ class DataGrabber {
                     numoverexposed++;
                 }
             }
-            return numoverexposed > IMG_WIDTH;
+            return numoverexposed > 10;
         }
         bool isUnderExposed() {
-            const int minpixelval = 15;
+            const int minpixelval = 10;
             int numunderexposed = 0;
             unsigned char* pixels = (unsigned char*) image_->getData();
             for (int i = 0; i < IMG_WIDTH*IMG_HEIGHT; ++i) {
@@ -109,79 +94,86 @@ class DataGrabber {
                     numunderexposed++;
                 }
             }
-            return numunderexposed > IMG_WIDTH;
+            return numunderexposed > 2*IMG_WIDTH;
+        }
+
+        void setExposureAndGain(int newexposure) {
+            prevexposure = currexposure;
+            currexposure = newexposure;
+            int currgain = currexposure*20;
+            if (currexposure < 10) currgain = (currexposure-2)*12.5 + 100;
+            grabber->getDevice()->setExposure(currexposure);
+            grabber->getDevice()->setGain(currgain);
+        }
+
+        bool exposureReady() {
+            if (prevexposure < 20) return framewait == 5;
+            else if (prevexposure < 40) return framewait == 4;
+            else return framewait == 3;
+        }
+
+        bool resetDirection() {
+            direction = (currexposure == exposuremin)?1:-1;
+        }
+        int nextExposure() {
+            if (direction == 0) resetDirection();
+            if (currexposure < 10-direction) {
+                if (currexposure + direction*2 == exposuremin) {
+                    direction = 1;
+                    return exposuremin;
+                }
+                return currexposure + direction*2;
+            }
+            else if (currexposure <= exposuremax) {
+                if (currexposure + direction*5 == exposuremax) {
+                    direction = -1;
+                    return exposuremax;
+                }
+                return currexposure + direction*5;
+            }
         }
 
         void adjustExposure() {
             if (state == STATE_BRACKET1 || state == STATE_BRACKET2 || state == STATE_CAPTURING) {
-                double currlum = meanLuminance();
-                cout << abs(currlum - meanlum) << endl;
-                if (abs(currlum - meanlum) > 10) {
+                if (exposureReady()) {
                     if (state == STATE_BRACKET1) {
                         if (isOverExposed()) {
-                            if (currexposure <= 2 && currgain <= 100) {
+                            if (currexposure <= 2) {
                                 cerr << "Note: Brightest object is too bright for this camera!" << endl;
                             }
-                            cerr << "Set lower bracket to " << prevexposure << " at gain " << currgain << endl;
+                            cerr << "Set lower bracket to " << prevexposure << endl;
                             cout << "Please aim camera at darkest region of scene" << endl;
                             exposuremin = prevexposure;
                             state = STATE_BRACKETED1;
                         } else {
-                            prevexposure = currexposure;
-                            if (currexposure < 10) currexposure += 2;
-                            else if (currexposure < 20) currexposure += 5;
-                            else {
-                                if (currgain < 1000) {
-                                    currgain += 100;
-                                    currexposure = 5;
-                                    // Increase gain
-                                    grabber->getDevice()->setGain(currgain);
-                                    grabber->getDevice()->setExposure(currexposure);
-                                } else {
-                                    cerr << "Note: No significant light source detected!" << endl;
-                                    state = STATE_ERROR;
-                                }
+                            if (currexposure == 50) {
+                                cerr << "Note: No significant light source detected!" << endl;
+                                state = STATE_ERROR;
+                            } else {
+                                setExposureAndGain(nextExposure());
                             }
-                            grabber->getDevice()->setExposure(currexposure);
                         }
                     } else if (state == STATE_BRACKET2) {
                         if (isUnderExposed()) {
-                            if (prevexposure == currexposure && currgain < 1000) {
-                                currgain += 100;
-                                currexposure = 50;
-                                grabber->getDevice()->setGain(currgain);
-                                grabber->getDevice()->setExposure(currexposure);
-                            } else {
-                                exposuremax = prevexposure;
-                                cerr << "Set upper bracket to " << prevexposure << " and gain " << currgain << endl;
-                                state = STATE_BRACKETED2;
-                            }
+                            exposuremax = prevexposure;
+                            cerr << "Set upper bracket to " << prevexposure << endl;
+                            if (exposuremax == 50) cerr << "Note: Your scene is very dark" << endl;
+                            state = STATE_BRACKETED2;
                         } else {
-                            prevexposure = currexposure;
-                            if (currexposure < 2) {
-                                if (currgain <= 100) {
-                                    cerr << "Scene too bright for camera!" << endl;
-                                    state = STATE_ERROR;
-                                } else {
-                                    cerr << "Something went wrong here!" << endl;
-                                    state = STATE_ERROR;
-                                }
+                            if (currexposure == 2) {
+                                cerr << "Something strange happened..." << endl;
+                                state = STATE_ERROR;
+                            } else {
+                                setExposureAndGain(nextExposure());
                             }
-                            else if (currexposure < 10) currexposure -= 2;
-                            else if (currexposure < 50) currexposure -= 5;
-                            grabber->getDevice()->setExposure(currexposure);
                         }
                     } else {
                         save = currexposure;
-                        prevexposure = currexposure;
-                        currexposure += exposureincrement;
-                        if (currexposure == exposuremax || currexposure == exposuremin) {
-                            exposureincrement = -exposureincrement;
-                        }
-                        grabber->getDevice()->setExposure(currexposure);
+                        setExposureAndGain(nextExposure());
                     }
+                    framewait = 0;
                 }
-                meanlum = currlum;
+                framewait++;
             }
         }
 
@@ -189,20 +181,25 @@ class DataGrabber {
             if (state == STATE_START) {
                 // Capture brightest area
                 state = STATE_BRACKET1;
-                currexposure = prevexposure = exposuremin = 2;
-                currgain = 100;
-                meanlum = meanLuminance();
-                grabber->getDevice()->setExposure(currexposure);
-                grabber->getDevice()->setGain(currgain);
+                framewait = 0;
+                setExposureAndGain(exposuremin);
+                prevexposure = exposuremin;
+                resetDirection();
             } else if (state == STATE_BRACKETED1) {
                 // Capture darkest area
                 state = STATE_BRACKET2;
-                currexposure = prevexposure = exposuremax = 50;
-                meanlum = meanLuminance();
-                grabber->getDevice()->setExposure(currexposure);
-            } else if (state == STATE_BRACKETED2 || state == STATE_CAPTURING) {
+                framewait = 0;
+                setExposureAndGain(exposuremax);
+                prevexposure = exposuremax;
+                resetDirection();
+            } else if (state == STATE_BRACKETED2) {
                 // Toggle capture
-                continuous = !continuous;
+                state = STATE_CAPTURING;
+                framewait = 0;
+                setExposureAndGain(exposuremin);
+                resetDirection();
+            } else if (state == STATE_CAPTURING) {
+                state = STATE_BRACKETED2;
             }
         }
         void keyboard_callback(const visualization::KeyboardEvent& event, void*) {
@@ -223,8 +220,7 @@ class DataGrabber {
                 boost::bind(&DataGrabber::data_cb_, this, _1, _2, _3, _4);
             grabber->registerCallback(f);
             grabber->start();
-            grabber->getDevice()->setExposure(2);
-            grabber->getDevice()->setGain(400);
+            setExposureAndGain(2);
             cout << "Please point camera at brightest light emitter in scene, then press [Space]" << endl;
             while(!rgbviewer.wasStopped() && !depthviewer.wasStopped()) {
                 Image::Ptr image;
@@ -271,18 +267,18 @@ class DataGrabber {
         boost::mutex image_mutex_;
 
         int save;
-        bool continuous;
         int savedImages;
 
         enum {STATE_START, STATE_BRACKET1, STATE_BRACKETED1, STATE_BRACKET2, STATE_BRACKETED2, STATE_CAPTURING, STATE_ERROR};
-        double meanlum;
         int state;
         int exposureincrement;
-        int currgain;
         int currexposure;
         int prevexposure;
         int exposuremax;
         int exposuremin;
+        int direction;
+
+        int framewait;
 };
 
 int main(int argc, char** argv) {
