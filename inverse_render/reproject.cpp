@@ -94,8 +94,8 @@ void reproject(const float* hdrimage, const CameraParams* cam, Mesh& mesh, doubl
         if (isect.t < d && isect.type != R3_MESH_NULL_TYPE) continue;
         mesh.labels[j] = 4;
 
-        int xx = vx*cam->width/(2*maxx) + cam->width/2 + 0.5;
-        int yy = vy*cam->height/(2*maxy) + cam->height/2 + 0.5;
+        int xx = vx*cam->width/(2*maxx) + cam->width/2;
+        int yy = vy*cam->height/(2*maxy) + cam->height/2;
         // If light, label light
         // Compute direction, add sample
         Sample s;
