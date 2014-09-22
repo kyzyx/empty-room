@@ -21,19 +21,16 @@ bool change = true;
 visualization::ImageViewer* imvu = NULL;
 
 void showimage(InverseRender* ivr, int n, int x) {
-    int res = 150;
+    int res = hemicuberesolution;
     unsigned char* im = new unsigned char[res*res*3];
     float* currimage = (float*) ivr->images[2*n+x];
     for (int i = 0; i < res; ++i) {
         for (int j = 0; j < res; ++j) {
             for (int k = 0; k < 3; ++k) {
                 int idx = k + 3*(j + res*i);
-                im[idx] = (unsigned char)(255*displayscale*currimage[idx]*ivr->mesh->maxintensity);
-                //cout << currimage[idx] << ",";
+                im[idx] = (unsigned char)(255*displayscale*currimage[idx]);
             }
-            //cout << endl;
         }
-        //cout << endl;
     }
     imvu->showRGBImage(im,res,res);
 }

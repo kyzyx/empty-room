@@ -15,7 +15,6 @@ Mesh::~Mesh() {
     delete searchtree;
 }
 Mesh::Mesh(PolygonMesh::Ptr m, bool initOGL) {
-    maxintensity = 0;
     PointCloud<PointXYZ>::Ptr cloud(new PointCloud<PointXYZ>());
     fromPCLPointCloud2(m->cloud, *cloud);
 
@@ -183,23 +182,9 @@ void Mesh::computeColorsOGL() {
                     vertices[ind+3] /= total;
                     vertices[ind+4] /= total;
                     vertices[ind+5] /= total;
-                    maxintensity = max(vertices[ind+3], maxintensity);
-                    maxintensity = max(vertices[ind+4], maxintensity);
-                    maxintensity = max(vertices[ind+5], maxintensity);
                 }
             }
         }
-    }
-    maxintensity = 35;
-    if (maxintensity > 1) {
-        for (int i = 0; i < 3*mesh->NFaces(); ++i) {
-            vertices[i*6+3] /= maxintensity;
-            vertices[i*6+4] /= maxintensity;
-            vertices[i*6+5] /= maxintensity;
-        }
-        cout << maxintensity << endl;
-    } else {
-        maxintensity = 1;
     }
     glBufferData(GL_ARRAY_BUFFER, 6*3*mesh->NFaces()*sizeof(float),
             vertices, GL_STATIC_DRAW);

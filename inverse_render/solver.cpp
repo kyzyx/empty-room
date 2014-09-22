@@ -208,6 +208,10 @@ void InverseRender::loadVariablesBinary(string filename) {
 }
 
 bool InverseRender::setupRasterizer() {
+    glClampColor(GL_CLAMP_READ_COLOR, GL_FALSE);
+    glClampColor(GL_CLAMP_VERTEX_COLOR, GL_FALSE);
+    glClampColor(GL_CLAMP_FRAGMENT_COLOR, GL_FALSE);
+
     glGenTextures(1, &tex);
     glBindTexture(GL_TEXTURE_2D, tex);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -350,9 +354,9 @@ float InverseRender::renderHemicube(
                 {
                     blank += sideHemicubeFF[i][j];
                 } else {
-                    m.r += sideHemicubeFF[i][j]*image[3*(i*res+j)]*mesh->maxintensity;
-                    m.g += sideHemicubeFF[i][j]*image[3*(i*res+j)+1]*mesh->maxintensity;
-                    m.b += sideHemicubeFF[i][j]*image[3*(i*res+j)+2]*mesh->maxintensity;
+                    m.r += sideHemicubeFF[i][j]*image[3*(i*res+j)];
+                    m.g += sideHemicubeFF[i][j]*image[3*(i*res+j)+1];
+                    m.b += sideHemicubeFF[i][j]*image[3*(i*res+j)+2];
                 }
             }
         }
@@ -372,9 +376,9 @@ float InverseRender::renderHemicube(
             {
                 blank += topHemicubeFF[i][j];
             } else {
-                m.r += topHemicubeFF[i][j]*image[3*(i*res+j)]*mesh->maxintensity;
-                m.g += topHemicubeFF[i][j]*image[3*(i*res+j)+1]*mesh->maxintensity;
-                m.b += topHemicubeFF[i][j]*image[3*(i*res+j)+2]*mesh->maxintensity;
+                m.r += topHemicubeFF[i][j]*image[3*(i*res+j)];
+                m.g += topHemicubeFF[i][j]*image[3*(i*res+j)+1];
+                m.b += topHemicubeFF[i][j]*image[3*(i*res+j)+2];
             }
         }
     }
@@ -385,7 +389,6 @@ void InverseRender::renderFace(const R3Point& p,
         float* image, bool colorimage)
 {
     glDisable(GL_CULL_FACE);
-    glClampColor(GL_CLAMP_READ_COLOR, GL_FALSE);
     glViewport(0,0,res,res);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
