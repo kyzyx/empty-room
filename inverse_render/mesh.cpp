@@ -144,6 +144,7 @@ void Mesh::computeColorsOGL() {
     glGenBuffers(1, &cbo);
     glBindBuffer(GL_ARRAY_BUFFER, cbo);
     float* vertices = new float[6*3*mesh->NFaces()];
+    memset(vertices, 0, sizeof(float)*6*3*mesh->NFaces());
     for (int i = 0; i < mesh->NFaces(); ++i) {
         // If any vertex has no samples, discard this face
         bool valid = true;
@@ -152,7 +153,6 @@ void Mesh::computeColorsOGL() {
         for (int j = 0; j < 3; ++j) {
             int n = mesh->VertexID(mesh->VertexOnFace(mesh->Face(i), j));
             int ind = 6*(3*i + j);
-            for (int k = 0; k < 6; ++k) vertices[ind + k] = 0;
             vertices[ind+2] = 1;
             if (samples[n].size() == 0) {
                 valid = false;
@@ -169,10 +169,10 @@ void Mesh::computeColorsOGL() {
                 vertices[ind+2] = 0;
             } else if (light != -1) {
                 vertices[ind+2] = 0;
-                float total = 0;
+                double total = 0;
                 int n = mesh->VertexID(mesh->VertexOnFace(mesh->Face(i), j));
                 for (int k = 0; k < samples[n].size(); ++k) {
-                    float s = abs(samples[n][k].dA);
+                    double s = abs(samples[n][k].dA);
                     vertices[ind+3] += samples[n][k].r*s;
                     vertices[ind+4] += samples[n][k].g*s;
                     vertices[ind+5] += samples[n][k].b*s;

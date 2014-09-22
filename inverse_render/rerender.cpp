@@ -147,9 +147,6 @@ void outputRadianceFile(string filename, WallFinder& wf, Mesh& m, InverseRender&
         double z2 = wf.wallsegments[i].getCoords(wf.wallsegments[i].end).second;
         out << x1 << " " << lo << " " << z1 << " " << x1 << " " << hi << " " << z1 << " ";
         out << x2 << " " << hi << " " << z2 << " " << x2 << " " << lo << " " << z2 << endl << endl;
-        out << "wallmat polygon wall2_" << i << endl << 0 << endl << 0 << endl << 12 << " ";
-        out << x1 << " " << lo << " " << z1 << " " << x2 << " " << lo << " " << z2 << " ";
-        out << x2 << " " << hi << " " << z2 << " " << x1 << " " <<hi << " " << z1 << endl << endl;
     }
     double xmin = m.getMesh()->BBox().XMin();
     double zmin = m.getMesh()->BBox().ZMin();
