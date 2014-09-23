@@ -84,10 +84,19 @@ bool InverseRender::calculateWallMaterialFromUnlit() {
         }
         if (unlit) {
             double w = 1 - data[i].fractionUnknown;
+            bool valid = true;
             for (int ch = 0; ch < 3; ++ch) {
-                estimates[ch].push_back(data[i].radiosity(ch)*w*w/data[i].netIncoming(ch));
+                if (data[i].radiosity(ch)*w/data[i].netIncoming(ch) > 1) {
+                    valid = false;
+                    break;
+                }
             }
-            weights.push_back(w);
+            if (valid) {
+                for (int ch = 0; ch < 3; ++ch) {
+                    estimates[ch].push_back(data[i].radiosity(ch)*w/data[i].netIncoming(ch));
+                }
+                weights.push_back(w);
+            }
         }
     }
     if (estimates[0].size() == 0) return false;
@@ -99,15 +108,17 @@ bool InverseRender::calculateWallMaterialFromUnlit() {
     double newmean[3];
     double count = 0;
     for (int ch = 0; ch < 3; ++ch) {
-        mean[ch] = accumulate(estimates[ch].begin(), estimates[ch].end(), 0.);
+        mean[ch] = 0;
+        for (int i = 0; i < estimates[ch].size(); ++i) {
+            mean[ch] += estimates[ch][i]*weights[i];
+        }
         mean[ch] /= totweight;
         stddev[ch] = 0;
-        newmean[ch] = 0;
     }
     for (int i = 0; i < estimates[0].size(); ++i) {
         for (int ch = 0; ch < 3; ++ch) {
             cout << estimates[ch][i] << " ";
-            stddev[ch] += (estimates[ch][i]-weights[i]*mean[ch])*(estimates[ch][i]-weights[i]*mean[ch]);
+            stddev[ch] += weights[i]*(estimates[ch][i]-mean[ch])*(estimates[ch][i]-mean[ch]);
         }
         cout << endl;
     }
@@ -115,6 +126,9 @@ bool InverseRender::calculateWallMaterialFromUnlit() {
         stddev[ch] = sqrt(stddev[ch]/totweight);
     }
     for (int mult = 1; count == 0; ++mult) {
+        for (int ch = 0; ch < 3; ++ch) {
+            newmean[ch] = 0;
+        }
         for (int i = 0; i < estimates[0].size(); ++i) {
             int bound = 0;
             for (int ch = 0; ch < 3; ++ch) {
@@ -126,7 +140,7 @@ bool InverseRender::calculateWallMaterialFromUnlit() {
             if (bound > 0) break;
             count += weights[i];
             for (int ch = 0; ch < 3; ++ch) {
-                newmean[ch] += estimates[ch][i];
+                newmean[ch] += weights[i]*estimates[ch][i];
             }
         }
     }
