@@ -354,6 +354,7 @@ float InverseRender::renderHemicube(
     R3Point pp = p + 0.0001*n;
     R3Vector x = R3yaxis_vector;
     x.Cross(n);
+    x.Normalize();
     R3Vector y = x%n;
     R3Vector orientations[] = {x,-x,y,-y};
     for (int o = 0; o < 4; ++o) {
@@ -365,7 +366,7 @@ float InverseRender::renderHemicube(
                         light[3*(i*res+j)+1] == 0 &&
                         light[3*(i*res+j)+2] == 0)
                 {
-                    int lightid = light[3*(i*res+j)]*MAX_LIGHTS;
+                    int lightid = light[3*(i*res+j)]*MAX_LIGHTS - 1;
                     lightareas[lightid] += sideHemicubeFF[i][j];
                 }  else if (light[3*(i*res+j)] == 0 &&
                         light[3*(i*res+j)+1] == 0 &&
@@ -388,7 +389,8 @@ float InverseRender::renderHemicube(
                     light[3*(i*res+j)+1] == 0 &&
                     light[3*(i*res+j)+2] == 0)
             {
-                lightareas[light[3*(i*res+j)]-1] += topHemicubeFF[i][j];
+                int lightid = light[3*(i*res+j)]*MAX_LIGHTS - 1;
+                lightareas[lightid] += topHemicubeFF[i][j];
             }  else if (light[3*(i*res+j)] == 0 &&
                     light[3*(i*res+j)+1] == 0 &&
                     light[3*(i*res+j)+2] != 0)
