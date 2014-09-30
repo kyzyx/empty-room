@@ -15,6 +15,7 @@ int project;
 int camera;
 string outfile, infile, camfile, walloutfile, wallfile, samplefile, sampleoutfile;
 string radfile = "room.rad";
+string matlabsamplefile = "samples.m";
 int wallthreshold = 200;
 int numsamples = 100;
 double discardthreshold = 0.25;
@@ -48,7 +49,10 @@ bool parseargs(int argc, char** argv) {
              "      -outputreprojectfile file: output sample info from reprojection\n" \
              "           to the specified file f\n"
              "      -outputsamplefile file: output sampled wall point\n" \
-             "           equations to the specified file f\n"
+             "           equations to the specified file f\n" \
+             "      -outputmatlabfile file: output sampled wall point\n" \
+             "           equations in a format readable by matlab to the\n" \
+             "           specified file f\n" \
              "      -radfile file: output geometry for RADIANCE to specified file\n" \
              "  Partial Execution Arguments:\n" \
              "      -wallfind_only: only perform wallfinding\n" \
@@ -155,6 +159,9 @@ bool parseargs(int argc, char** argv) {
     }
     if (console::find_argument(argc, argv, "-radfile") >= 0) {
         console::parse_argument(argc, argv, "-radfile", radfile);
+    }
+    if (console::find_argument(argc, argv, "-outputmatlabfile") >= 0) {
+        console::parse_argument(argc, argv, "-outputmatlabfile", matlabsamplefile);
     }
     if (console::find_argument(argc, argv, "-camfile") >= 0) {
         console::parse_argument(argc, argv, "-camfile", camfile);

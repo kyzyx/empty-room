@@ -39,8 +39,9 @@ class Mesh {
         int readSamples(std::string filename);
 
         R3Mesh* getMesh() { return mesh; }
+        const R3Mesh* getMesh() const { return mesh; }
         R3MeshSearchTree* getSearchTree() { return searchtree; }
-        void renderOGL(bool light=false);
+        void renderOGL(bool light=false) const;
         void computeColorsOGL();
 
         std::vector<std::vector<Sample> > samples;

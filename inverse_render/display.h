@@ -13,7 +13,7 @@ enum {
     LABEL_LIGHTS,
 };
 
-void visualize(Mesh& m, pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
+void visualize(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
         ColorHelper& loader, InverseRender& ir, WallFinder& wf,
-        int labeltype, int cameraid);
+        int labeltype, int cameraid, std::vector<SampleData>& data);
 #endif

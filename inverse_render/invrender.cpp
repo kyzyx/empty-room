@@ -103,20 +103,21 @@ int main(int argc, char* argv[]) {
     }
     m.computeColorsOGL();
 
-    InverseRender ir(&m, hemicuberesolution);
+    InverseRender ir(&m, numlights, hemicuberesolution);
+    vector<SampleData> walldata;
     // Only do inverse rendering with full reprojection and wall labels
     if ((input || all_project) && (wallinput || do_wallfinding)) {
         if (do_sampling) {
             if (read_eq) {
-                ir.loadVariablesBinary(samplefile);
+                ir.loadVariablesBinary(walldata, samplefile);
             } else {
-                ir.calculate(wallindices, numsamples, discardthreshold, numlights);
+                ir.computeSamples(walldata, wallindices, numsamples, discardthreshold);
                 if (write_eq) {
-                    ir.writeVariablesMatlab("eq.m");
-                    ir.writeVariablesBinary(sampleoutfile);
+                    ir.writeVariablesMatlab(walldata, matlabsamplefile);
+                    ir.writeVariablesBinary(walldata, sampleoutfile);
                 }
             }
-            ir.solve();
+            ir.solve(walldata);
         }
         outputRadianceFile(radfile, wf, m, ir);
     }
@@ -124,7 +125,7 @@ int main(int argc, char* argv[]) {
     if (display) {
         int labeltype = LABEL_LIGHTS;
         if (project_debug) labeltype = LABEL_REPROJECT_DEBUG;
-        visualize(m, cloud, loader, ir, wf, labeltype, camera);
+        visualize(cloud, loader, ir, wf, labeltype, camera, walldata);
     }
     return 0;
 }

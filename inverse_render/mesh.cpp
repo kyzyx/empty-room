@@ -124,7 +124,7 @@ int Mesh::readSamples(string filename) {
     return numlights;
 }
 
-void Mesh::renderOGL(bool light) {
+void Mesh::renderOGL(bool light) const {
     glDepthMask(true);
     glClearColor(0.,0.,0.,0.);
     glDisable(GL_LIGHTING);

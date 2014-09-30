@@ -1,5 +1,6 @@
 #include "display.h"
 #include "parse_args.h"
+#include "hemicuberenderer.h"
 #include <pcl/visualization/image_viewer.h>
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/visualization/point_cloud_color_handlers.h>
@@ -11,8 +12,7 @@ using namespace pcl;
 void VisualizeCamera(const CameraParams* cam, visualization::PCLVisualizer& viewer,
         string name, double f=0, bool axes=true);
 
-void VisualizeSamplePoint(Mesh& m, InverseRender::SampleData& s,
-        visualization::PCLVisualizer& viewer);
+void VisualizeSamplePoint(Mesh& m, SampleData& s, visualization::PCLVisualizer& viewer);
 
 int previouscube = 0;
 int currcube = 0;
@@ -20,10 +20,16 @@ int x = 0;
 bool change = true;
 visualization::ImageViewer* imvu = NULL;
 
+class kbdhelper {
+    public:
+        InverseRender* ivr;
+        vector<SampleData>* data;
+};
+
 void showimage(InverseRender* ivr, int n, int x) {
     int res = hemicuberesolution;
     unsigned char* im = new unsigned char[res*res*3];
-    float* currimage = (float*) ivr->images[2*n+x];
+    float* currimage = ivr->images[2*n+x];
     for (int i = 0; i < res; ++i) {
         for (int j = 0; j < res; ++j) {
             for (int k = 0; k < 3; ++k) {
@@ -36,23 +42,23 @@ void showimage(InverseRender* ivr, int n, int x) {
     imvu->showRGBImage(im,res,res);
 }
 
-void kbd_cb_(const visualization::KeyboardEvent& event, void* ir) {
-    InverseRender* ivr = (InverseRender*) ir;
+void kbd_cb_(const visualization::KeyboardEvent& event, void* helper) {
+    kbdhelper* kbd = (kbdhelper*) helper;
     if (event.keyDown()) {
         if (event.getKeyCode() == ',') {
             currcube--;
-            if (currcube < 0) currcube += ivr->data.size();
+            if (currcube < 0) currcube += kbd->data->size();
             change = true;
         } else if (event.getKeyCode() == '.') {
             currcube++;
-            if (currcube >= ivr->data.size()) currcube = 0;
+            if (currcube >= kbd->data->size()) currcube = 0;
             change = true;
         }
         if (event.getKeyCode() == 'm') {
             x = 1-x;
         }
         cout << "Displaying " << (x?"light":"image") <<" " << currcube<<endl;
-        showimage(ivr, currcube, x);
+        showimage(kbd->ivr, currcube, x);
     }
 }
 
@@ -65,13 +71,16 @@ void intToCube(char c[5], int n) {
     }
 }
 
-void visualize(Mesh& m, PointCloud<PointXYZRGB>::Ptr cloud, ColorHelper& loader,
+void visualize(PointCloud<PointXYZRGB>::Ptr cloud, ColorHelper& loader,
         InverseRender& ir, WallFinder& wf,
-        int labeltype, int cameraid) {
-
-    if (ir.data.size() > 0 && ir.images) {
+        int labeltype, int cameraid, vector<SampleData>& data) {
+    Mesh& m = *(ir.mesh);
+    kbdhelper kbdh;
+    if (data.size() > 0 && ir.images) {
+        kbdh.ivr = &ir;
+        kbdh.data = &data;
         imvu = new visualization::ImageViewer("Hi");
-        imvu->registerKeyboardCallback(&kbd_cb_, (void*) &ir);
+        imvu->registerKeyboardCallback(&kbd_cb_, (void*) &kbdh);
         showimage(&ir, 0, 0);
     }
 
@@ -163,8 +172,8 @@ void visualize(Mesh& m, PointCloud<PointXYZRGB>::Ptr cloud, ColorHelper& loader,
             n[2]++;
         }
     }
-    for (int i = 0; i < ir.data.size() && i < 100; ++i)
-        VisualizeSamplePoint(m, ir.data[i], viewer);
+    for (int i = 0; i < data.size() && i < 100; ++i)
+        VisualizeSamplePoint(m, data[i], viewer);
 
     while (!viewer.wasStopped()) {
         viewer.spinOnce(100);
@@ -173,8 +182,8 @@ void visualize(Mesh& m, PointCloud<PointXYZRGB>::Ptr cloud, ColorHelper& loader,
             char tmp[5];
             intToCube(tmp,previouscube);
             bool unlit = true;
-            for (int i = 0; i < ir.data[previouscube].lightamount.size(); ++i) {
-                if (ir.data[previouscube].lightamount[i] > 0) unlit = false;
+            for (int i = 0; i < data[previouscube].lightamount.size(); ++i) {
+                if (data[previouscube].lightamount[i] > 0) unlit = false;
             }
             if (unlit) {
                 viewer.setShapeRenderingProperties(visualization::PCL_VISUALIZER_COLOR, 0,1,0,tmp);
@@ -191,7 +200,7 @@ void visualize(Mesh& m, PointCloud<PointXYZRGB>::Ptr cloud, ColorHelper& loader,
 }
 
 int nextcubename = 0;
-void VisualizeSamplePoint(Mesh& m, InverseRender::SampleData& s,
+void VisualizeSamplePoint(Mesh& m, SampleData& s,
         visualization::PCLVisualizer& viewer) {
     double boxsize = 0.1;
     R3Point p = m.getMesh()->VertexPosition(m.getMesh()->Vertex(s.vertexid));
