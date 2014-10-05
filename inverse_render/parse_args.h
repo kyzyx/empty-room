@@ -7,7 +7,7 @@ extern bool all_project;
 extern bool project_debug;
 extern bool show_frustrum;
 extern bool wallinput;
-extern bool read_eq, write_eq;
+extern bool read_eq, write_eq, write_matlab;
 extern int project;
 extern int camera;
 extern std::string outfile, infile, camfile, walloutfile, wallfile, sampleoutfile, samplefile, radfile, matlabsamplefile;

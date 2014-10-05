@@ -113,8 +113,10 @@ int main(int argc, char* argv[]) {
             } else {
                 ir.computeSamples(walldata, wallindices, numsamples, discardthreshold);
                 if (write_eq) {
-                    ir.writeVariablesMatlab(walldata, matlabsamplefile);
                     ir.writeVariablesBinary(walldata, sampleoutfile);
+                }
+                if (write_matlab) {
+                    ir.writeVariablesMatlab(walldata, matlabsamplefile);
                 }
             }
             ir.solve(walldata);

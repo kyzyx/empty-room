@@ -10,6 +10,7 @@ bool project_debug = false;
 bool show_frustrum = false;
 bool wallinput = false;
 bool write_eq = false;
+bool write_matlab = false;
 bool read_eq = false;
 int project;
 int camera;
@@ -162,6 +163,7 @@ bool parseargs(int argc, char** argv) {
     }
     if (console::find_argument(argc, argv, "-outputmatlabfile") >= 0) {
         console::parse_argument(argc, argv, "-outputmatlabfile", matlabsamplefile);
+        write_matlab = true;
     }
     if (console::find_argument(argc, argv, "-camfile") >= 0) {
         console::parse_argument(argc, argv, "-camfile", camfile);
