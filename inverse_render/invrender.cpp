@@ -52,7 +52,14 @@ int main(int argc, char* argv[]) {
 
     vector<int> wallindices;
     vector<int> labels(cloud->size(), WallFinder::LABEL_NONE);
-    WallFinder wf(resolution);
+    PlaneOrientationFinder of(mesh,0.01);
+    of.computeNormals(ccw);
+    if (!of.computeOrientation()) {
+        cout << "Error computing orientation! Non-triangle mesh!" << endl;
+    }
+    cout << "Done analyzing geometry" << endl;
+    of.normalize();
+    WallFinder wf(&of, resolution);
     if (wallinput) {
         cout << "Loading wall files..." << endl;
         wf.loadWalls(wallfile, labels);
@@ -60,17 +67,8 @@ int main(int argc, char* argv[]) {
             if (labels[i] == WallFinder::LABEL_WALL) wallindices.push_back(i);
         }
     } else if (do_wallfinding) {
-        PlaneOrientationFinder of(mesh,0.01);
-        of.computeNormals(ccw);
-        if (!of.computeOrientation()) {
-            cout << "Error computing orientation! Non-triangle mesh!" << endl;
-        }
-        cout << "Done analyzing geometry" << endl;
-        // FIXME: Transform camera positions from normalize
-        //of.normalize();
-        wf.findFloorAndCeiling(of, labels, anglethreshold);
-        wf.findWalls(of, labels, wallthreshold, minlength, anglethreshold);
-        // FIXME: if (output_wall) ;
+        wf.findFloorAndCeiling(labels, anglethreshold);
+        wf.findWalls(labels, wallthreshold, minlength, anglethreshold);
         cout << "Done finding walls" << endl;
         for (int i = 0; i < labels.size(); ++i) {
             if (labels[i] == WallFinder::LABEL_WALL) wallindices.push_back(i);
@@ -120,8 +118,10 @@ int main(int argc, char* argv[]) {
                 }
             }
             ir.solve(walldata);
+            if (radfile != "") {
+                outputRadianceFile(radfile, wf, m, ir);
+            }
         }
-        outputRadianceFile(radfile, wf, m, ir);
     }
 
     if (display) {

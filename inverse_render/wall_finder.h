@@ -1,6 +1,7 @@
 #ifndef _WALL_FINDER_H
 #define _WALL_FINDER_H
 
+#include <pcl/PolygonMesh.h>
 #include <pcl/point_types.h>
 #include "orientation_finder.h"
 
@@ -10,7 +11,7 @@ class GridSegment {
     public:
     GridSegment(int d, int s, int e, int c) : direction(d), start(s), end(e), coord(c) {;}
     GridSegment() {;}
-    std::pair<int,int> getCoords(int s) {
+    std::pair<int,int> getCoords(int s) const {
         if (direction) return std::make_pair(s, coord);
         else           return std::make_pair(coord, s);
     }
@@ -30,7 +31,7 @@ class Segment {
         coord = g.coord*resolution;
     }
     Segment() {;}
-    std::pair<double,double> getCoords(double s) {
+    std::pair<double,double> getCoords(double s) const {
         if (direction) return std::make_pair(s, coord);
         else           return std::make_pair(coord, s);
     }
@@ -52,7 +53,14 @@ class WallFinder {
             LABEL_FLOOR,
             LABEL_CORNER
         };
-        WallFinder(double gridsize=0.01) : resolution(gridsize){;}
+        WallFinder(OrientationFinder* orfinder, double gridsize=0.01)
+            : of(orfinder), resolution(gridsize){;}
+        WallFinder(pcl::PolygonMesh::Ptr mesh, double gridsize=0.01)
+            : of(new PlaneOrientationFinder(mesh)), resolution(gridsize) {
+                of->computeNormals();
+                of->computeOrientation();
+                of->normalize();
+            }
         /**
          * resolution denotes the threshold beyond which points are not
          * considered on the same plane
@@ -60,7 +68,6 @@ class WallFinder {
          * Returns the floor plane level
          */
         double findFloorAndCeiling(
-                OrientationFinder& of,
                 std::vector<int>& labels,
                 double anglethreshold=M_PI/40);
         /**
@@ -70,7 +77,6 @@ class WallFinder {
          *
          */
         void findWalls(
-                OrientationFinder& of,
                 std::vector<int>& labels,
                 int wallthreshold=200,
                 double minlength=0.2,
@@ -79,12 +85,14 @@ class WallFinder {
         void loadWalls(std::string filename, std::vector<int>& labels);
         void saveWalls(std::string filename, std::vector<int>& labels);
         double getResolution() const { return resolution; }
+        Eigen::Vector3f getWallEndpoint(int i, bool lo, double height=0) const;
 
         double floorplane;
         double ceilplane;
         std::vector<Segment> wallsegments;
     private:
         double resolution;
+        OrientationFinder* of;
         double findExtremal(
             pcl::PointCloud<pcl::PointNormal>::ConstPtr cloud,
             Eigen::Vector3f dir,

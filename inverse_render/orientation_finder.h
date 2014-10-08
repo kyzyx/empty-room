@@ -27,6 +27,7 @@ class OrientationFinder {
         void normalize();
 
         // Accessors
+        Eigen::Matrix4f getNormalizationTransform() const { return normalizationtransform; }
         Eigen::Vector3f getAxis(int n) const { return axes[n]; }
         pcl::PointCloud<pcl::PointNormal>::ConstPtr getCloud() const {
             return pcl::PointCloud<pcl::PointNormal>::ConstPtr(cloud);
@@ -47,6 +48,7 @@ class OrientationFinder {
         std::vector<Eigen::Vector3f> facenormals;
 
         std::vector<Eigen::Vector3f> axes;
+        Eigen::Matrix4f normalizationtransform;
     private:
         OrientationFinder() {;}
 };

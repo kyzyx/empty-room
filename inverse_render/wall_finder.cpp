@@ -134,12 +134,11 @@ double WallFinder::findExtremal(
 }
 
 double WallFinder::findFloorAndCeiling(
-        OrientationFinder& of,
         vector<int>& labels,
         double anglethreshold)
 {
     PointCloud<PointNormal>::Ptr floorcandidates(new PointCloud<PointNormal>());
-    PointCloud<PointNormal>::ConstPtr cloud = of.getCloud();
+    PointCloud<PointNormal>::ConstPtr cloud = of->getCloud();
     floorplane = findExtremal(cloud, Eigen::Vector3f(0.,1.,0.), anglethreshold, floorcandidates);
     PointCloud<PointNormal>::Ptr ceilcandidates(new PointCloud<PointNormal>());
     ceilplane = -findExtremal(cloud, Eigen::Vector3f(0.,-1.,0.), anglethreshold, ceilcandidates);
@@ -202,7 +201,6 @@ class Grid {
 };
 
 void WallFinder::findWalls(
-        OrientationFinder& of,
         vector<int>& labels,
         int wallthreshold,
         double minlength,
@@ -212,15 +210,15 @@ void WallFinder::findWalls(
     float maxx = -numeric_limits<float>::max();
     float maxz = -numeric_limits<float>::max();
     PointCloud<PointNormal>::const_iterator it;
-    for (it = of.getCloud()->begin(); it != of.getCloud()->end(); ++it) {
+    for (it = of->getCloud()->begin(); it != of->getCloud()->end(); ++it) {
         maxx = max(it->x, maxx);
         maxz = max(it->z, maxz);
     }
     int width = maxx/resolution + 1;
     int height = maxz/resolution + 1;
     Grid grid(width, height, resolution);
-    for (int i = 0; i < of.getCloud()->size(); ++i) {
-        grid.insert(of.getCloud()->at(i), i);
+    for (int i = 0; i < of->getCloud()->size(); ++i) {
+        grid.insert(of->getCloud()->at(i), i);
     }
 
     // Scan grid and extract line segments
@@ -297,9 +295,9 @@ void WallFinder::findWalls(
             vector<int>& indices = grid.getPointIndices(segments[i].getCoords(j));
             for (int k = 0; k < indices.size(); ++k) {
                 if (segments[i].direction) {
-                    netcount += -sgn<double>(of.getCloud()->at(indices[k]).normal_z);
+                    netcount += -sgn<double>(of->getCloud()->at(indices[k]).normal_z);
                 } else {
-                    netcount += -sgn<double>(of.getCloud()->at(indices[k]).normal_x);
+                    netcount += -sgn<double>(of->getCloud()->at(indices[k]).normal_x);
                 }
             }
         }
@@ -389,7 +387,7 @@ void WallFinder::findWalls(
     int i;
     vector<double> segmentcoords(wallsegments.size(), 0);
     vector<int> segmentcounts(wallsegments.size(), 0);
-    for (it = of.getCloud()->begin(), i=0; it != of.getCloud()->end(); ++it, ++i) {
+    for (it = of->getCloud()->begin(), i=0; it != of->getCloud()->end(); ++it, ++i) {
         for (int j = 0; j < wallsegments.size(); ++j) {
             bool horiz = wallsegments[j].direction;
             // Check if on same plane
@@ -493,4 +491,16 @@ void WallFinder::saveWalls(string filename, vector<int>& labels) {
     }
     out.write((char*) &floorplane, sizeof(double));
     out.write((char*) &ceilplane, sizeof(double));
+}
+
+Eigen::Vector3f WallFinder::getWallEndpoint(int i, bool lo, double height) const {
+    if (i >= wallsegments.size()) i %= wallsegments.size();
+    Eigen::Vector4f p;
+    pair<int,int> x = wallsegments[i].getCoords(lo?wallsegments[i].start:wallsegments[i].end);
+    p[0] = x.first;
+    p[1] = height*ceilplane + (1-height)*floorplane;
+    p[2] = x.second;
+    p[3] = 1;
+    p = of->getNormalizationTransform().inverse()*p;
+    return Eigen::Vector3f(p[0]/p[3], p[1]/p[3], p[2]/p[3]);
 }

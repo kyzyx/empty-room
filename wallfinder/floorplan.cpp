@@ -71,16 +71,16 @@ int main(int argc, char* argv[]) {
     if (!of.computeOrientation()) {
         cout << "Error computing orientation! Non-triangle mesh!" << endl;
     }
-    //of.normalize();
+    of.normalize();
 
     for (int i = 0; i < 3; ++i) {
         //cout << of.getAxis(i) << endl;
         cout << 180*acos(of.getAxis(i).dot(of.getAxis((i+1)%3)))/M_PI - 90 << " degrees from perpendicular" << endl;
     }
-    WallFinder wf(resolution);
+    WallFinder wf(&of, resolution);
     vector<int> labels(of.getCloud()->size(), WallFinder::LABEL_NONE);
-    wf.findFloorAndCeiling(of, labels, anglethreshold);
-    wf.findWalls(of, labels, wallthreshold, minlength, anglethreshold);
+    wf.findFloorAndCeiling(labels, anglethreshold);
+    wf.findWalls(labels, wallthreshold, minlength, anglethreshold);
     if (print_wall) {
         for (int i = 0; i < wf.wallsegments.size(); ++i) {
             pair<int,int> x = wf.wallsegments[i].getCoords(wf.wallsegments[i].start);
@@ -116,7 +116,7 @@ int main(int argc, char* argv[]) {
         visualization::PCLVisualizer viewer("Room");
         viewer.setBackgroundColor(0,0,0);
         if (show_grid) {
-            PointCloud<PointXYZ>::Ptr grid(wf.getHistogram(of));
+            PointCloud<PointXYZ>::Ptr grid(wf.getHistogram());
             PointCloud<PointXYZRGB>::Ptr colorgrid(new PointCloud<PointXYZRGB>());
             colorgrid->resize(grid->size());
             for (int i = 0; i < grid->size(); ++i) {

@@ -160,17 +160,12 @@ void visualize(PointCloud<PointXYZRGB>::Ptr cloud, ColorHelper& loader,
     }
     char n[] = {'L', 'i', '0'};
     for (int i = 0; i < wf.wallsegments.size(); ++i) {
-        if (wf.wallsegments[i].direction == 0) {
-            PointXYZ start(wf.wallsegments[i].coord, 0, wf.wallsegments[i].start);
-            PointXYZ end(wf.wallsegments[i].coord, 0, wf.wallsegments[i].end);
-            viewer.addLine(start, end, 1, 0, i/(double)wf.wallsegments.size(), n);
-            n[2]++;
-        } else {
-            PointXYZ start(wf.wallsegments[i].start, 0, wf.wallsegments[i].coord);
-            PointXYZ end(wf.wallsegments[i].end, 0, wf.wallsegments[i].coord);
-            viewer.addLine(start, end, 1, 0, i/(double)wf.wallsegments.size(), n);
-            n[2]++;
-        }
+        Eigen::Vector3f p1 = wf.getWallEndpoint(i,0);
+        Eigen::Vector3f p2 = wf.getWallEndpoint(i,1);
+        PointXYZ start(p1[0], p1[1], p1[2]);
+        PointXYZ end(p2[0], p2[1], p2[2]);
+        viewer.addLine(start, end, 1, 0, i/(double)wf.wallsegments.size(), n);
+        n[2]++;
     }
     for (int i = 0; i < data.size() && i < 100; ++i)
         VisualizeSamplePoint(m, data[i], viewer);

@@ -177,6 +177,7 @@ void OrientationFinder::normalize()
     trans.setIdentity();
     trans.block<3,1>(0,3) = -minimum;
     transformPointCloudWithNormals(*cloud, *cloud, trans);
+    normalizationtransform = trans*transform.matrix();
 }
 // Compute orientation with normals
 bool NormalOrientationFinder::prepareComputeOrientation() {

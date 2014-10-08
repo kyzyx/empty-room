@@ -15,7 +15,7 @@ bool read_eq = false;
 int project;
 int camera;
 string outfile, infile, camfile, walloutfile, wallfile, samplefile, sampleoutfile;
-string radfile = "room.rad";
+string radfile = "";
 string matlabsamplefile = "samples.m";
 int wallthreshold = 200;
 int numsamples = 100;

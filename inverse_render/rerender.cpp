@@ -140,13 +140,17 @@ void outputRadianceFile(string filename, WallFinder& wf, Mesh& m, InverseRender&
 
     // output walls
     for (int i = 0; i < wf.wallsegments.size(); ++i) {
+        Eigen::Vector3f p[] = {
+            wf.getWallEndpoint(i,1,0),
+            wf.getWallEndpoint(i,1,1),
+            wf.getWallEndpoint(i,0,1),
+            wf.getWallEndpoint(i,0,0)
+        };
         out << "wallmat polygon wall" << i << endl << 0 << endl << 0 << endl << 12 << " ";
-        double x1 = wf.wallsegments[i].getCoords(wf.wallsegments[i].start).first;
-        double z1 = wf.wallsegments[i].getCoords(wf.wallsegments[i].start).second;
-        double x2 = wf.wallsegments[i].getCoords(wf.wallsegments[i].end).first;
-        double z2 = wf.wallsegments[i].getCoords(wf.wallsegments[i].end).second;
-        out << x1 << " " << lo << " " << z1 << " " << x1 << " " << hi << " " << z1 << " ";
-        out << x2 << " " << hi << " " << z2 << " " << x2 << " " << lo << " " << z2 << endl << endl;
+        for (int j = 0; j < 4; ++j) {
+            for (int k = 0; k < 3; ++k) out << p[j][k] << " ";
+        }
+        out << endl << endl;
     }
     double xmin = m.getMesh()->BBox().XMin();
     double zmin = m.getMesh()->BBox().ZMin();
