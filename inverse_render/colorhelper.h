@@ -31,6 +31,7 @@ class ColorHelper {
         bool readImageNames(const std::string& filename);
         bool readImage(const std::string& filename);
         bool readPngImage(const std::string& filename);
+        bool readExrImage(const std::string& filename);
         bool readHdrImage(const std::string& filename);
         bool readCameraFile(const std::string& filename);
 

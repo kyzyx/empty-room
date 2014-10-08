@@ -1,5 +1,9 @@
 #include "colorhelper.h"
 
+#include <OpenEXR/ImfRgbaFile.h>
+#include <OpenEXR/ImfArray.h>
+#include <OpenEXR/ImfHeader.h>
+
 #include <iostream>
 #include <fstream>
 #include <cstdio>
@@ -10,6 +14,8 @@
 //#define OUTPUT_RADIANCE_CAMERAS
 
 using namespace std;
+using namespace Imf_2_2;
+using namespace Imath_2_2;
 
 bool ColorHelper::load(string cameraFile) {
     readCameraFile(cameraFile);
@@ -31,9 +37,34 @@ bool ColorHelper::readImage(const string& filename) {
         return readPngImage(filename);
     else if (endswith(filename, ".hdr") || endswith(filename, ".pic"))
         return readHdrImage(filename);
+    else if (endswith(filename, ".exr"))
+        return readExrImage(filename);
     else
         return false;
 }
+bool ColorHelper::readExrImage(const string& filename) {
+    RgbaInputFile f(filename.c_str());
+    Box2i dw = f.dataWindow();
+    int width, height;
+    width = dw.max.x - dw.min.x + 1;
+    height = dw.max.y - dw.min.y + 1;
+    Array2D<Rgba> pixels;
+    pixels.resizeErase(height, width);
+    f.setFrameBuffer(&pixels[0][0] - dw.min.x - dw.min.y * width, 1, width);
+    f.readPixels(dw.min.y, dw.max.y);
+    float* image = new float[3*width*height];
+    for (int i = 0; i < height; ++i) {
+        for (int j = 0; j < width; ++j) {
+            int idx = width*(height-i-1) + j;
+            image[3*idx] = pixels[i][j].r;
+            image[3*idx+1] = pixels[i][j].g;
+            image[3*idx+2] = pixels[i][j].b;
+        }
+    }
+    data.push_back((char*) image);
+    return true;
+}
+
 bool ColorHelper::readHdrImage(const string& filename) {
     int width, height;
     rgbe_header_info info;

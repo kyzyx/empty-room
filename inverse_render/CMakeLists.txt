@@ -15,5 +15,5 @@ add_executable(invrender rgbe.cpp rgbe.h invrender.cpp colorhelper.h
     solver.cpp solver.h clusterlights.cpp clusterlights.h
     display.cpp display.h parse_args.cpp parse_args.h rerender.cpp rerender.h)
 target_link_libraries(invrender ${PCL_LIBRARIES} R3Graphics.a RNBasics.a
-    R3Shapes.a R2Shapes.a jpeg.a GL glut GLU GLEW)
+    R3Shapes.a R2Shapes.a jpeg.a GL glut GLU GLEW IlmImf Half)
 set(CMAKE_CXX_FLAGS "-Wno-deprecated -std=c++0x")
