@@ -90,9 +90,9 @@ int main(int argc, char* argv[]) {
         loader.load(camfile);
         cout << "Done reading color images " << loader.size() << endl;
         if (all_project) {
-            reproject(loader, m, hdr_threshold);
+            reproject(loader, m, hdr_threshold, image_flip_x, image_flip_y);
         } else {
-            reproject((float*) loader.getImage(project), loader.getCamera(project), m, hdr_threshold);
+            reproject((float*) loader.getImage(project), loader.getCamera(project), m, hdr_threshold, image_flip_x, image_flip_y);
         }
         cout << "Done reprojecting" << endl;
         numlights = clusterLights(m);

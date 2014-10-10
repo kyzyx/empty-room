@@ -68,7 +68,14 @@ void reproject(const char* color, const char* light, const CameraParams* cam, Me
         mesh.addSample(j, s);
     }
 }
-void reproject(const float* hdrimage, const CameraParams* cam, Mesh& mesh, double threshold) {
+void reproject(
+        const float* hdrimage,
+        const CameraParams* cam,
+        Mesh& mesh,
+        double threshold,
+        bool flip_x,
+        bool flip_y)
+{
     R3Mesh* m = mesh.getMesh();
     double maxx = cam->width/(2*cam->focal_length);
     double maxy = cam->height/(2*cam->focal_length);
@@ -95,7 +102,9 @@ void reproject(const float* hdrimage, const CameraParams* cam, Mesh& mesh, doubl
         mesh.labels[j] = 4;
 
         int xx = vx*cam->width/(2*maxx) + cam->width/2;
+        if (flip_x) xx = cam->width - xx - 1;
         int yy = vy*cam->height/(2*maxy) + cam->height/2;
+        if (flip_y) yy = cam->height - yy - 1;
         // If light, label light
         // Compute direction, add sample
         Sample s;
@@ -120,9 +129,9 @@ void reproject(ColorHelper& ch, ColorHelper& lights, Mesh& mesh) {
         std::cout << "Finished projecting image " << i << std::endl;
     }
 }
-void reproject(ColorHelper& hdr, Mesh& mesh, double threshold) {
+void reproject(ColorHelper& hdr, Mesh& mesh, double threshold, bool flip_x, bool flip_y) {
     for (int i = 0; i < hdr.size(); ++i) {
-        reproject((float*)hdr.getImage(i), hdr.getCamera(i), mesh, threshold);
+        reproject((float*)hdr.getImage(i), hdr.getCamera(i), mesh, threshold, flip_x, flip_y);
         std::cout << "Finished projecting image " << i << std::endl;
     }
 }

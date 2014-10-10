@@ -35,6 +35,8 @@ bool do_sampling = true;
 double hdr_threshold = 10.;
 double displayscale = 2.;
 int hemicuberesolution = 150;
+bool image_flip_x = false;
+bool image_flip_y = false;
 
 bool parseargs(int argc, char** argv) {
     if (argc < 3) {
@@ -74,6 +76,8 @@ bool parseargs(int argc, char** argv) {
              "           given amount, useful for HDR viewing\n"\
              "  Reprojection Arguments:\n" \
              "      -project n: project only camera n\n"\
+             "      -flip_x: Mirror the input images horizontally\n"\
+             "      -flip_y: Mirror the input images vertically\n"\
              "      -hdr_threshold f: radiance threshold above which pixels\n"\
              "           are considered light pixels (default 10.0)\n"\
              "  Wallfinder Arguments:\n" \
@@ -103,6 +107,8 @@ bool parseargs(int argc, char** argv) {
     if (console::find_switch(argc, argv, "-nodisplay")) display = false;
     if (console::find_switch(argc, argv, "-prune_occluded")) prune = true;
     if (console::find_switch(argc, argv, "-nosolve")) do_sampling = false;
+    if (console::find_switch(argc, argv, "-flip_x")) image_flip_x = true;
+    if (console::find_switch(argc, argv, "-flip_y")) image_flip_x = true;
     if (console::find_switch(argc, argv, "-wallfind_only")) {
         do_reprojection = false;
         do_wallfinding = true;
