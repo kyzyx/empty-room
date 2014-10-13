@@ -25,7 +25,7 @@ class DataGrabber {
             rgbviewer.setPosition(IMG_WIDTH,0);
             depthbuffer = new unsigned short[IMG_WIDTH*IMG_HEIGHT];
             rgbbuffer = new unsigned char[3*IMG_WIDTH*IMG_HEIGHT];
-            exposuremax = 50;
+            exposuremax = 30;
             exposuremin = 2;
             exposureincrement = -10;
             state = STATE_START;
@@ -100,7 +100,7 @@ class DataGrabber {
         void setExposureAndGain(int newexposure) {
             prevexposure = currexposure;
             currexposure = newexposure;
-            int currgain = currexposure*20;
+            int currgain = currexposure*50-300;
             if (currexposure < 10) currgain = (currexposure-2)*12.5 + 100;
             grabber->getDevice()->setExposure(currexposure);
             grabber->getDevice()->setGain(currgain);
@@ -118,18 +118,18 @@ class DataGrabber {
         int nextExposure() {
             if (direction == 0) resetDirection();
             if (currexposure < 10-direction) {
-                if (currexposure + direction*2 == exposuremin) {
+                if (currexposure + direction*4 == exposuremin) {
                     direction = 1;
                     return exposuremin;
                 }
-                return currexposure + direction*2;
+                return currexposure + direction*4;
             }
             else if (currexposure <= exposuremax) {
-                if (currexposure + direction*5 == exposuremax) {
+                if (currexposure + direction*10 == exposuremax) {
                     direction = -1;
                     return exposuremax;
                 }
-                return currexposure + direction*5;
+                return currexposure + direction*10;
             }
         }
 
