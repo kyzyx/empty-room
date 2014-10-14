@@ -146,18 +146,30 @@ void HemicubeRenderer::renderFace(const R3Point& p,
         const R3Vector& towards, const R3Vector& up,
         float* image, bool colorimage)
 {
+    render(p, towards, up, 90, res, res, image, colorimage);
+}
+void HemicubeRenderer::render(
+        const R3Point& p,
+        const R3Vector& towards,
+        const R3Vector& up,
+        const double fov,
+        const int width,
+        const int height,
+        float* image,
+        bool colorimage)
+{
     glDisable(GL_CULL_FACE);
-    glViewport(0,0,res,res);
+    glViewport(0,0,width,height);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluPerspective(90, 1., 0.001, 100);
+    gluPerspective(fov, width/(double) height, 0.001, 100);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     R3Point at = p + towards;
     gluLookAt(p[0], p[1], p[2], at[0], at[1], at[2], up[0], up[1], up[2]);
     glBindFramebuffer(GL_FRAMEBUFFER_EXT, fbo);
     mesh->renderOGL(colorimage);
-    glReadPixels(0,0,res,res,GL_RGB,GL_FLOAT,(void*)image);
+    glReadPixels(0,0,width,height,GL_RGB,GL_FLOAT,(void*)image);
     glBindFramebuffer(GL_FRAMEBUFFER_EXT, 0);
 }
 void HemicubeRenderer::computeSamples(

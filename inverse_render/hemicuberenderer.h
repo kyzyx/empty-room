@@ -27,6 +27,15 @@ class HemicubeRenderer {
                 Material& m, std::vector<float>& lightareas, float* color,
                 float* light);
         int getHemicubeResolution() const { return res; }
+        void render(
+            const R3Point& p,
+            const R3Vector& towards,
+            const R3Vector& up,
+            const double fov,
+            const int width,
+            const int height,
+            float* image,
+            bool colorimage);
     private:
         void renderFace(const R3Point& p,
                 const R3Vector& towards, const R3Vector& up,
