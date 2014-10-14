@@ -12,18 +12,21 @@ using namespace pcl;
 void VisualizeCamera(const CameraParams* cam, visualization::PCLVisualizer& viewer,
         string name, double f=0, bool axes=true);
 
+void recalculateColors(PointCloud<PointXYZRGB>::Ptr cloud, int labeltype, Mesh& m);
 void VisualizeSamplePoint(Mesh& m, SampleData& s, visualization::PCLVisualizer& viewer);
 
 int previouscube = 0;
 int currcube = 0;
 int x = 0;
 bool change = true;
+bool updatepointcloud = true;
 visualization::ImageViewer* imvu = NULL;
 
 class kbdhelper {
     public:
         InverseRender* ivr;
         vector<SampleData>* data;
+        PointCloud<PointXYZRGB>::Ptr cloud;
 };
 
 void showimage(InverseRender* ivr, int n, int x) {
@@ -40,6 +43,21 @@ void showimage(InverseRender* ivr, int n, int x) {
         }
     }
     imvu->showRGBImage(im,res,res);
+}
+
+void pointcloud_kbd_cb_(const visualization::KeyboardEvent& event, void* helper) {
+    kbdhelper* kbd = (kbdhelper*) helper;
+    if (event.keyDown()) {
+        if (event.getKeyCode() == '[') {
+            displayscale /= 2;
+            recalculateColors(kbd->cloud, LABEL_NONE, *(kbd->ivr->mesh));
+            updatepointcloud = true;
+        } else if (event.getKeyCode() == ']') {
+            displayscale *= 2;
+            recalculateColors(kbd->cloud, LABEL_NONE, *(kbd->ivr->mesh));
+            updatepointcloud = true;
+        }
+    }
 }
 
 void kbd_cb_(const visualization::KeyboardEvent& event, void* helper) {
@@ -71,21 +89,7 @@ void intToCube(char c[5], int n) {
     }
 }
 
-void visualize(PointCloud<PointXYZRGB>::Ptr cloud, ColorHelper& loader,
-        InverseRender& ir, WallFinder& wf,
-        int labeltype, int cameraid, vector<SampleData>& data) {
-    Mesh& m = *(ir.mesh);
-    kbdhelper kbdh;
-    if (data.size() > 0 && ir.images) {
-        kbdh.ivr = &ir;
-        kbdh.data = &data;
-        imvu = new visualization::ImageViewer("Hi");
-        imvu->registerKeyboardCallback(&kbd_cb_, (void*) &kbdh);
-        showimage(&ir, 0, 0);
-    }
-
-    PointIndices::Ptr nonnull(new PointIndices());
-    cloud->is_dense = false;
+void recalculateColors(PointCloud<PointXYZRGB>::Ptr cloud, int labeltype, Mesh& m) {
     for (int i = 0; i < cloud->size(); ++i) {
         if (labeltype == LABEL_REPROJECT_DEBUG) {
             if (m.labels[i] == 3) {
@@ -131,12 +135,35 @@ void visualize(PointCloud<PointXYZRGB>::Ptr cloud, ColorHelper& loader,
                     if (cloud->at(i).g > 255) cloud->at(i).g = 255;
                     if (cloud->at(i).b > 255) cloud->at(i).b = 255;
                 }
-                nonnull->indices.push_back(i);
             } else {
                 cloud->at(i).r = 100;
                 cloud->at(i).g = 100;
                 cloud->at(i).b = 100;
             }
+        }
+    }
+}
+
+void visualize(PointCloud<PointXYZRGB>::Ptr cloud, ColorHelper& loader,
+        InverseRender& ir, WallFinder& wf,
+        int labeltype, int cameraid, vector<SampleData>& data) {
+    Mesh& m = *(ir.mesh);
+    kbdhelper kbdh;
+    kbdh.ivr = &ir;
+    kbdh.cloud = cloud;
+    if (data.size() > 0 && ir.images) {
+        kbdh.data = &data;
+        imvu = new visualization::ImageViewer("Hi");
+        imvu->registerKeyboardCallback(&kbd_cb_, (void*) &kbdh);
+        showimage(&ir, 0, 0);
+    }
+
+    PointIndices::Ptr nonnull(new PointIndices());
+    cloud->is_dense = false;
+    recalculateColors(cloud, labeltype, m);
+    for (int i = 0; i < cloud->size(); ++i) {
+        if (labeltype != LABEL_REPROJECT_DEBUG && m.samples[i].size()) {
+                nonnull->indices.push_back(i);
         }
     }
     if (prune) {
@@ -149,6 +176,7 @@ void visualize(PointCloud<PointXYZRGB>::Ptr cloud, ColorHelper& loader,
     visualization::PCLVisualizer viewer("Cloud viewer");
     visualization::PointCloudColorHandlerRGBField<PointXYZRGB> rgb(cloud);
     viewer.addPointCloud<PointXYZRGB>(cloud, rgb, "Mesh");
+    viewer.registerKeyboardCallback(&pointcloud_kbd_cb_, (void*) &kbdh);
     if (all_cameras) {
         char n[] = {'A', '0'};
         for (int i = 0; i < loader.size(); i++) {
@@ -190,6 +218,11 @@ void visualize(PointCloud<PointXYZRGB>::Ptr cloud, ColorHelper& loader,
             intToCube(tmp,currcube);
             viewer.setShapeRenderingProperties(visualization::PCL_VISUALIZER_COLOR, 1,0,1,tmp);
             change = false;
+        }
+        if (updatepointcloud) {
+            visualization::PointCloudColorHandlerRGBField<PointXYZRGB> rgb2(cloud);
+            viewer.updatePointCloud<PointXYZRGB>(cloud, rgb2, "Mesh");
+            updatepointcloud = false;
         }
     }
 }

@@ -83,7 +83,7 @@ bool parseargs(int argc, char** argv) {
              "  Wallfinder Arguments:\n" \
              "      -ccw: Face vertices in counterclockwise direction (flip normals)\n" \
              "      -wallfinder_anglethreshold f: Angle between normals to be\n" \
-             "           considered equal, for wallfinding(default PI/40)\n" \
+             "           considered equal, for wallfinding (default PI/40)\n" \
              "      -wallfinder_min_wall_length f: Minimum length of a wall\n" \
              "           (default 0.2)\n" \
              "      -wallfinder_resolution f: maximum distance for a point to\n" \
@@ -94,7 +94,7 @@ bool parseargs(int argc, char** argv) {
              "  Solver Arguments:\n" \
              "      -solver_numsamples n: number of wall points to sample for\n" \
              "           final solution (default 100) \n" \
-             "      -solver_hemicuberesolution n: resolution of hemicube (default 150\n" \
+             "      -solver_hemicuberesolution n: resolution of hemicube (default 150)\n" \
              "      -solver_threshold f: maximum unsampled proportion of\n" \
              "           hemisphere (default 0.25) \n" \
                 );

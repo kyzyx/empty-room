@@ -118,7 +118,7 @@ void reproject(
         // Using dA to dA form factor, scaled by M_PI*pixelsize
         s.dA = -vhat.Dot(cam->towards)*vhat.Dot(m->VertexNormal(m->Vertex(j)))/(d*d);
         // Use approximation that distance from point to pixel is much greater than
-        // pixel size (e.g. for 54 degree fov at 640x480, each pixel is 1.7mm
+        // pixel size (e.g. for 54 degree fov at 640x480, each pixel is 1.7mm)
         //s.dA = vhat.dot(cam->towards)/(d*d); // Solid Angle
         mesh.addSample(j, s);
     }
