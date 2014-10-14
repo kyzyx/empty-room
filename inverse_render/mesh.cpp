@@ -64,6 +64,7 @@ Mesh::Mesh(PolygonMesh::Ptr m, bool initOGL) {
     searchtree = new R3MeshSearchTree(mesh);
 
     labels.resize(mesh->NVertices(), 0);
+    types.resize(mesh->NVertices(), 0);
     samples.resize(mesh->NVertices());
 }
 
@@ -76,7 +77,9 @@ void Mesh::writeSamples(string filename) {
     out.write((char*) &sz, 4);
     for (int i = 0; i < samples.size(); ++i) {
         char c = labels[i];
+        char t = types[i];
         out.write(&c, 1);
+        out.write(&t, 1);
         sz = samples[i].size();
         out.write((char*) &sz, 4);
         for (int j = 0; j < samples[i].size(); ++j) {
@@ -92,13 +95,14 @@ void Mesh::writeSamples(string filename) {
     }
 }
 int Mesh::readSamples(string filename) {
-    vector<bool> islight(128,false);
+    vector<bool> islight(MAX_LIGHTS,false);
     int numlights = 0;
     ifstream in(filename.c_str(), ifstream::binary);
     uint32_t sz;
     in.read((char*) &sz, 4);
     samples.resize(sz);
     labels.resize(sz);
+    types.resize(sz);
     for (int i = 0; i < samples.size(); ++i) {
         char c;
         in.read(&c, 1);
@@ -107,6 +111,8 @@ int Mesh::readSamples(string filename) {
             islight[c] = true;
             ++numlights;
         }
+        in.read(&c, 1);
+        types[i] = c;
         in.read((char*) &sz, 4);
         for (int j = 0; j < sz; ++j) {
             Sample s;
@@ -140,6 +146,7 @@ void Mesh::renderOGL(bool light) const {
     glDisableClientState(GL_VERTEX_ARRAY);
     glDisableClientState(GL_COLOR_ARRAY);
 }
+
 void Mesh::computeColorsOGL() {
     glGenBuffers(1, &cbo);
     glBindBuffer(GL_ARRAY_BUFFER, cbo);
@@ -153,6 +160,7 @@ void Mesh::computeColorsOGL() {
         for (int j = 0; j < 3; ++j) {
             int n = mesh->VertexID(mesh->VertexOnFace(mesh->Face(i), j));
             int ind = 6*(3*i + j);
+            vertices[ind+1] = types[n]/128.;
             vertices[ind+2] = 1;
             if (samples[n].size() == 0) {
                 valid = false;

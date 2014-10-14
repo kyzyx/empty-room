@@ -68,7 +68,7 @@ class WallFinder {
          * Returns the floor plane level
          */
         double findFloorAndCeiling(
-                std::vector<int>& labels,
+                std::vector<char>& labels,
                 double anglethreshold=M_PI/40);
         /**
          * Label the point cloud with wall points
@@ -77,13 +77,13 @@ class WallFinder {
          *
          */
         void findWalls(
-                std::vector<int>& labels,
+                std::vector<char>& labels,
                 int wallthreshold=200,
                 double minlength=0.2,
                 double anglethreshold=M_PI/40);
 
-        void loadWalls(std::string filename, std::vector<int>& labels);
-        void saveWalls(std::string filename, std::vector<int>& labels);
+        void loadWalls(std::string filename, std::vector<char>& labels);
+        void saveWalls(std::string filename, std::vector<char>& labels);
         double getResolution() const { return resolution; }
         Eigen::Vector3f getWallEndpoint(int i, bool lo, double height=0) const;
 

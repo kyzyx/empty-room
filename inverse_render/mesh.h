@@ -46,6 +46,7 @@ class Mesh {
 
         std::vector<std::vector<Sample> > samples;
         std::vector<char> labels;
+        std::vector<char> types;
     private:
         Mesh() {;}
 

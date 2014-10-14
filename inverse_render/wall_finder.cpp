@@ -134,7 +134,7 @@ double WallFinder::findExtremal(
 }
 
 double WallFinder::findFloorAndCeiling(
-        vector<int>& labels,
+        vector<char>& labels,
         double anglethreshold)
 {
     PointCloud<PointNormal>::Ptr floorcandidates(new PointCloud<PointNormal>());
@@ -201,7 +201,7 @@ class Grid {
 };
 
 void WallFinder::findWalls(
-        vector<int>& labels,
+        vector<char>& labels,
         int wallthreshold,
         double minlength,
         double anglethreshold)
@@ -451,7 +451,7 @@ void WallFinder::findWalls(
     }
 }
 
-void WallFinder::loadWalls(string filename, vector<int>& labels) {
+void WallFinder::loadWalls(string filename, vector<char>& labels) {
     ifstream in(filename.c_str(), ifstream::binary);
     uint32_t sz;
     in.read((char*) &sz, 4);
@@ -460,7 +460,7 @@ void WallFinder::loadWalls(string filename, vector<int>& labels) {
     wallsegments.resize(sz);
     in.read((char*) &resolution, sizeof(double));
     for (int i = 0; i < labels.size(); ++i) {
-        in.read((char*) &(labels[i]), 4);
+        in.read(&(labels[i]), 1);
     }
     for (int i = 0; i < sz; ++i) {
         in.read((char*) &(wallsegments[i].direction), 4);
@@ -472,7 +472,7 @@ void WallFinder::loadWalls(string filename, vector<int>& labels) {
     in.read((char*) &floorplane, sizeof(double));
     in.read((char*) &ceilplane, sizeof(double));
 }
-void WallFinder::saveWalls(string filename, vector<int>& labels) {
+void WallFinder::saveWalls(string filename, vector<char>& labels) {
     ofstream out(filename.c_str(), ofstream::binary);
     uint32_t sz = labels.size();
     out.write((char*) &sz, 4);
@@ -480,7 +480,7 @@ void WallFinder::saveWalls(string filename, vector<int>& labels) {
     out.write((char*) &sz, 4);
     out.write((char*) &resolution, sizeof(double));
     for (int i = 0; i < labels.size(); ++i) {
-        out.write((char*) &(labels[i]), 4);
+        out.write(&(labels[i]), 1);
     }
     for (int i = 0; i < wallsegments.size(); ++i) {
         out.write((char*) &(wallsegments[i].direction), 4);

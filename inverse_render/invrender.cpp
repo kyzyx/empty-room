@@ -59,25 +59,26 @@ int main(int argc, char* argv[]) {
     }
     cout << "Done analyzing geometry" << endl;
     of.normalize();
-    WallFinder wf(&of, resolution);
-    if (wallinput) {
-        cout << "Loading wall files..." << endl;
-        wf.loadWalls(wallfile, labels);
-        for (int i = 0; i < labels.size(); ++i) {
-            if (labels[i] == WallFinder::LABEL_WALL) wallindices.push_back(i);
-        }
-    } else if (do_wallfinding) {
-        wf.findFloorAndCeiling(labels, anglethreshold);
-        wf.findWalls(labels, wallthreshold, minlength, anglethreshold);
-        cout << "Done finding walls" << endl;
-        for (int i = 0; i < labels.size(); ++i) {
-            if (labels[i] == WallFinder::LABEL_WALL) wallindices.push_back(i);
-        }
-        if (output_wall) wf.saveWalls(walloutfile, labels);
-    }
 
     ColorHelper loader;
     Mesh m(mesh,true);
+    WallFinder wf(&of, resolution);
+
+    if (wallinput) {
+        cout << "Loading wall files..." << endl;
+        wf.loadWalls(wallfile, m.types);
+        for (int i = 0; i < m.types.size(); ++i) {
+            if (m.types[i] == WallFinder::LABEL_WALL) wallindices.push_back(i);
+        }
+    } else if (do_wallfinding) {
+        wf.findFloorAndCeiling(m.types, anglethreshold);
+        wf.findWalls(m.types, wallthreshold, minlength, anglethreshold);
+        cout << "Done finding walls" << endl;
+        for (int i = 0; i < m.types.size(); ++i) {
+            if (m.types[i] == WallFinder::LABEL_WALL) wallindices.push_back(i);
+        }
+        if (output_wall) wf.saveWalls(walloutfile, m.types);
+    }
 
     int numlights;
     if (input) {

@@ -102,15 +102,13 @@ float HemicubeRenderer::renderHemicube(
         for (int i = res/2; i < res; ++i) {
             for (int j = 0; j < res; ++j) {
                 if (light[3*(i*res+j)] != 0 &&
-                        light[3*(i*res+j)+1] == 0 &&
-                        light[3*(i*res+j)+2] == 0)
+                    light[3*(i*res+j)+2] == 0)
                 {
                     int lightid = light[3*(i*res+j)]*MAX_LIGHTS - 1;
                     if (lightid >= lightareas.size()) lightareas.resize(lightid+1);
                     lightareas[lightid] += sideHemicubeFF[i][j];
                 }  else if (light[3*(i*res+j)] == 0 &&
-                        light[3*(i*res+j)+1] == 0 &&
-                        light[3*(i*res+j)+2] != 0)
+                            light[3*(i*res+j)+2] != 0)
                 {
                     blank += sideHemicubeFF[i][j];
                 } else {
@@ -126,15 +124,13 @@ float HemicubeRenderer::renderHemicube(
     for (int i = 0; i < res; ++i) {
         for (int j = 0; j < res; ++j) {
             if (light[3*(i*res+j)] != 0 &&
-                    light[3*(i*res+j)+1] == 0 &&
-                    light[3*(i*res+j)+2] == 0)
+                light[3*(i*res+j)+2] == 0)
             {
                 int lightid = light[3*(i*res+j)]*MAX_LIGHTS - 1;
                 if (lightid >= lightareas.size()) lightareas.resize(lightid+1);
                 lightareas[lightid] += topHemicubeFF[i][j];
             }  else if (light[3*(i*res+j)] == 0 &&
-                    light[3*(i*res+j)+1] == 0 &&
-                    light[3*(i*res+j)+2] != 0)
+                        light[3*(i*res+j)+2] != 0)
             {
                 blank += topHemicubeFF[i][j];
             } else {
