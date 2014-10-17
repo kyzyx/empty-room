@@ -15,4 +15,6 @@ void findPlanes(
         pcl::PointCloud<pcl::PointXYZ>::ConstPtr cloud,
         std::vector<Eigen::Vector4d>& planes, std::vector<int>& ids);
 
+int setMinPlaneInliers(int n=8000);
+double setAngleThreshold(double d=M_PI/9);
 #endif

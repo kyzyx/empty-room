@@ -8,7 +8,7 @@ using namespace Eigen;
 using namespace pcl;
 
 const double ANGLETHRESHOLD = M_PI/8;
-const double WALLMERGETHRESHOLD = 0.1;
+const double WALLMERGETHRESHOLD = 0.24;
 const double EQUALTHRESHOLD = M_PI/16;
 
 void RoomModel::setAxes(Vector3d a, Vector3d b) {
@@ -225,7 +225,9 @@ void RoomModel::closeLoop(Matrix4d transform, double rmse) {
     distributeTranslation(1, axes[0].dot(t), clouds.size()-1, 0, 0);
     distributeTranslation(3, axes[1].dot(t), clouds.size()-1, 0, 0);
     distributeTranslation(5, axes[2].dot(t), clouds.size()-1, 0, 0);
+}
 
+void RoomModel::makeWallsConsistent() {
     for (int z = 0; z < clouds.size(); ++z) {
         for (int i = 0; i < allplanes[z].size(); ++i) {
             Vector4d p = transformPlane(allplanes[z][i], cumxforms[z]);

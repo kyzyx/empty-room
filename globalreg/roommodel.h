@@ -24,6 +24,7 @@ class RoomModel {
                 Eigen::Matrix4d transform,
                 double rmse
         );
+        void makeWallsConsistent();
 
         Eigen::Matrix4d getTransform(int n);
         Eigen::Matrix4d getCumulativeTransform(int n) { return cumxforms[n]; }
