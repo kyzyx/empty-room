@@ -42,6 +42,28 @@ bool ColorHelper::readImage(const string& filename) {
     else
         return false;
 }
+
+bool ColorHelper::writeExrImage(const std::string& filename,
+        const float* image,
+        int width,
+        int height)
+{
+    Rgba* pixels = new Rgba[width*height];
+    for (int i = 0; i < height; ++i) {
+        for (int j = 0; j < width; ++j) {
+            int idx = j + (height-i-1)*width;
+            pixels[idx].r = image[3*idx];
+            pixels[idx].g = image[3*idx+1];
+            pixels[idx].b = image[3*idx+2];
+            pixels[idx].a = 1;
+        }
+    }
+    RgbaOutputFile file(filename.c_str(), width, height, WRITE_RGBA);
+    file.setFrameBuffer(pixels, 1, width);
+    file.writePixels(height);
+    delete pixels;
+}
+
 bool ColorHelper::readExrImage(const string& filename) {
     RgbaInputFile f(filename.c_str());
     Box2i dw = f.dataWindow();
