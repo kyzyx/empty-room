@@ -87,19 +87,19 @@ float HemicubeRenderer::renderHemicube(
         vector<float>& lightareas,
         float* image, float* light)
 {
-    float blank = 0;
+    double blank = 0;
     if (image == NULL) image = new float[3*res*res];
     if (light == NULL) light = new float[3*res*res];
     R3Point pp = p + 0.0001*n;
-    R3Vector x = R3yaxis_vector;
+    R3Vector x = abs(n[0])>abs(n[1])?R3yaxis_vector:R3xaxis_vector;
     x.Cross(n);
     x.Normalize();
-    R3Vector y = x%n;
+    R3Vector y = n%x;
     R3Vector orientations[] = {x,-x,y,-y};
     for (int o = 0; o < 4; ++o) {
         renderFace(pp, orientations[o], n, image, true);
         renderFace(pp, orientations[o], n, light, false);
-        for (int i = res/2; i < res; ++i) {
+        for (int i = 0; i < res/2; ++i) {
             for (int j = 0; j < res; ++j) {
                 if (light[3*(i*res+j)] != 0 &&
                     light[3*(i*res+j)+2] == 0)
@@ -166,7 +166,7 @@ void HemicubeRenderer::render(
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     R3Point at = p + towards;
-    gluLookAt(p[0], p[1], p[2], at[0], at[1], at[2], up[0], up[1], up[2]);
+    gluLookAt(p[0], p[1], p[2], at[0], at[1], at[2], -up[0], -up[1], -up[2]); // OpenGL is lower left origin
     glBindFramebuffer(GL_FRAMEBUFFER_EXT, fbo);
     mesh->renderOGL(colorimage);
     glReadPixels(0,0,width,height,GL_RGB,GL_FLOAT,(void*)image);
