@@ -15,6 +15,7 @@ struct CameraParams {
     int width;
     int height;
     double focal_length;
+    double fov;
 };
 
 class ColorHelper {

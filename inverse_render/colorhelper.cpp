@@ -168,15 +168,15 @@ bool ColorHelper::readPngImage(const string& filename)
 bool ColorHelper::readCameraFile(const string& filename)
 {
     // Format:
-    //    FrameCount Width Height hfov
+    //    FrameCount Width Height vfov
     //    filename X Y Z [Up] [Towards]
     //    Angles in degrees
     try {
         ifstream in(filename.c_str());
         int frames, w, h;
-        double hfov;
-        in >> frames >> w >> h >> hfov;
-        double foc = w/(2*tan(hfov*M_PI/180));
+        double hfov, vfov;
+        in >> frames >> w >> h >> vfov;
+        double foc = h/(2*tan(vfov*M_PI/360));
         double a,b,c;
         string s;
         for (int i = 0; i < frames; ++i) {
@@ -194,13 +194,14 @@ bool ColorHelper::readCameraFile(const string& filename)
 #ifdef OUTPUT_RADIANCE_CAMERAS
             printf(" -vu %f %f %f", curr->up[0], curr->up[1], curr->up[2]);
             printf(" -vd %f %f %f", curr->towards[0], curr->towards[1], curr->towards[2]);
-            double vfov = hfov*curr->height/curr->width;
+            hfov = vfov*curr->width/curr->height;
             printf(" -vh %f -vv %f -vo 0 -va 0 -vs 0 -vl 0\n", hfov, vfov);
 #endif
             curr->right = curr->towards%curr->up;
             curr->width = w;
             curr->height = h;
             curr->focal_length = foc;
+            curr->fov = vfov;
             cameras.push_back(curr);
         }
     } catch (...) {
