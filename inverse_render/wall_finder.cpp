@@ -357,7 +357,7 @@ void WallFinder::findWalls(
     vector<bool> inwall(candidatewalls.size(), false);
     do {
         double mindist = numeric_limits<double>::max();
-        int besti;
+        int besti = -1;
         for (int i = 0; i < candidatewalls.size(); ++i) {
             if (i == curridx || wall.size() && i == wall.back()) continue;
             double d;
@@ -375,6 +375,7 @@ void WallFinder::findWalls(
         wallsegments.push_back(Segment(candidatewalls[curridx], resolution));
         inwall[curridx] = true;
         curridx = besti;
+        if (curridx == -1) break;
         if (inwall[curridx]) {
             break;
         }
