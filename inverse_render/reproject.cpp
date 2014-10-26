@@ -48,8 +48,8 @@ void reproject(const char* color, const char* light, const CameraParams* cam, Me
         if (isect.t < d && isect.type != R3_MESH_NULL_TYPE) continue;
         mesh.labels[j] = 4;
 
-        int xx = vx*cam->width/(2*maxx) + cam->width/2 + 0.5;
-        int yy = vy*cam->height/(2*maxy) + cam->height/2 + 0.5;
+        int xx = vx*cam->focal_length + cam->width/2;
+        int yy = vy*cam->focal_length + cam->height/2;
         // If light, label light
         // Compute direction, add sample
         Sample s;
@@ -101,9 +101,9 @@ void reproject(
         if (isect.t < d && isect.type != R3_MESH_NULL_TYPE) continue;
         mesh.labels[j] = 4;
 
-        int xx = vx*cam->width/(2*maxx) + cam->width/2;
+        int xx = vx*cam->focal_length + cam->width/2;
         if (flip_x) xx = cam->width - xx - 1;
-        int yy = vy*cam->height/(2*maxy) + cam->height/2;
+        int yy = vy*cam->focal_length + cam->height/2;
         if (flip_y) yy = cam->height - yy - 1;
         // If light, label light
         // Compute direction, add sample
