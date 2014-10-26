@@ -51,8 +51,8 @@ int main(int argc, char* argv[]) {
     cout << "Done loading mesh geometry" << endl;
 
     vector<int> wallindices;
-    vector<int> labels(cloud->size(), WallFinder::LABEL_NONE);
-    PlaneOrientationFinder of(mesh,0.01);
+    vector<int> floorindices;
+    PlaneOrientationFinder of(mesh, 0.01);
     of.computeNormals(ccw);
     if (!of.computeOrientation()) {
         cout << "Error computing orientation! Non-triangle mesh!" << endl;
@@ -69,6 +69,7 @@ int main(int argc, char* argv[]) {
         wf.loadWalls(wallfile, m.types);
         for (int i = 0; i < m.types.size(); ++i) {
             if (m.types[i] == WallFinder::LABEL_WALL) wallindices.push_back(i);
+            else if (m.types[i] == WallFinder::LABEL_FLOOR) floorindices.push_back(i);
         }
     } else if (do_wallfinding) {
         wf.findFloorAndCeiling(m.types, anglethreshold);
@@ -76,6 +77,7 @@ int main(int argc, char* argv[]) {
         cout << "Done finding walls" << endl;
         for (int i = 0; i < m.types.size(); ++i) {
             if (m.types[i] == WallFinder::LABEL_WALL) wallindices.push_back(i);
+            else if (m.types[i] == WallFinder::LABEL_FLOOR) floorindices.push_back(i);
         }
         if (output_wall) wf.saveWalls(walloutfile, m.types);
     }
@@ -102,23 +104,39 @@ int main(int argc, char* argv[]) {
     }
     m.computeColorsOGL();
 
+    if (do_reprojection) {
+        hemicuberesolution = max(hemicuberesolution, loader.getCamera(0)->width);
+        hemicuberesolution = max(hemicuberesolution, loader.getCamera(0)->height);
+    }
     InverseRender ir(&m, numlights, hemicuberesolution);
-    vector<SampleData> walldata;
+    vector<SampleData> walldata, floordata;
     // Only do inverse rendering with full reprojection and wall labels
     if ((input || all_project) && (wallinput || do_wallfinding)) {
         if (do_sampling) {
             if (read_eq) {
-                ir.loadVariablesBinary(walldata, samplefile);
+                ir.loadVariablesBinary(walldata, samplefile + ".walls");
+                ir.loadVariablesBinary(floordata, samplefile + ".floors");
             } else {
                 ir.computeSamples(walldata, wallindices, numsamples, discardthreshold);
+                ir.computeSamples(floordata, floorindices, numsamples, discardthreshold);
                 if (write_eq) {
-                    ir.writeVariablesBinary(walldata, sampleoutfile);
+                    ir.writeVariablesBinary(walldata, sampleoutfile + ".walls");
+                    ir.writeVariablesBinary(floordata, sampleoutfile + ".floors");
                 }
                 if (write_matlab) {
                     ir.writeVariablesMatlab(walldata, matlabsamplefile);
                 }
             }
             ir.solve(walldata);
+            Eigen::Vector3f floornormal(0,1,0);
+            floornormal = of.getNormalizationTransform().inverse().topLeftCorner(3,3)*floornormal;
+            Texture tex;
+            loader.load(camfile);
+            ir.solveTexture(floordata, &loader, floornormal, tex);
+            cout << "Done solving texture..." << endl;
+            if (tex.size > 0) {
+                ColorHelper::writeExrImage("texture.exr", tex.texture, tex.size, tex.size);
+            }
             if (radfile != "") {
                 outputRadianceFile(radfile, wf, m, ir);
             }

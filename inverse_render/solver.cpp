@@ -1,4 +1,5 @@
 #include "solver.h"
+#include "wall_finder.h"
 #include <random>
 #include <Eigen/Dense>
 #include <fstream>

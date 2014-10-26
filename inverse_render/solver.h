@@ -1,7 +1,9 @@
 #ifndef _SOLVER_H
 #define _SOLVER_H
 #include <vector>
+#include <Eigen/Eigen>
 
+#include "colorhelper.h"
 #include "hemicuberenderer.h"
 #include "material.h"
 #include "mesh.h"
@@ -14,6 +16,11 @@ class InverseRender {
             lights.resize(numlights);
         }
         void solve(std::vector<SampleData>& data);
+        void solveTexture(
+                std::vector<SampleData>& data,
+                ColorHelper* colorhelper,
+                Eigen::Vector3f surfacenormal,
+                Texture& tex);
         void computeSamples(
                 std::vector<SampleData>& data,
                 std::vector<int> indices,
@@ -25,9 +32,16 @@ class InverseRender {
         void writeVariablesBinary(std::vector<SampleData>& data, std::string filename);
         void loadVariablesBinary(std::vector<SampleData>& data, std::string filename);
     private:
+        // Inverse Rendering helpers
         bool calculateWallMaterialFromUnlit(std::vector<SampleData>& data);
         bool solveLights(std::vector<SampleData>& data);
         bool solveMaterials(std::vector<SampleData>& data);
+
+        // Texture recovery helpers
+        Material computeAverageMaterial(
+                std::vector<SampleData>& data,
+                std::vector<Material>& lightintensies);
+        double generateBinaryMask(const CameraParams* cam, std::vector<bool>& mask, int label);
 
         HemicubeRenderer hr;
     public:
