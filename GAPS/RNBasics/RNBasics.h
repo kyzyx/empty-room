@@ -65,7 +65,7 @@
 /* Graphics utility include files */
 
 #include "RNGrfx.h"
-#include "RNRgb.h"
+#include "R2Pixel.h"
 
 
 
