@@ -19,10 +19,10 @@ using namespace std;
 using namespace Imf_2_2;
 using namespace Imath_2_2;
 
-bool ColorHelper::load(string cameraFile) {
+bool ColorHelper::load(string cameraFile, bool read_confidence_file) {
     readCameraFile(cameraFile);
     for (int i = 0; i < filenames.size(); ++i) {
-        if (!readImage(filenames[i])) {
+        if (!readImage(filenames[i], read_confidence_file)) {
             cerr << "Error reading image " << filenames[i] << endl;
             return false;
         }
@@ -34,7 +34,12 @@ bool endswith(const string& s, string e) {
     else
         return false;
 }
-bool ColorHelper::readImage(const string& filename) {
+bool ColorHelper::readImage(const string& filename, bool read_confidence_file) {
+    if (read_confidence_file) {
+        if (!readConfidenceFile(filename + ".conf")) {
+            return false;
+        }
+    }
     if (endswith(filename, ".png"))
         return readPngImage(filename);
     else if (endswith(filename, ".hdr") || endswith(filename, ".pic"))
@@ -45,7 +50,24 @@ bool ColorHelper::readImage(const string& filename) {
         return false;
 }
 
-bool ColorHelper::writeExrImage(const std::string& filename,
+bool ColorHelper::readConfidenceFile(const string& filename) {
+    try {
+        int w = cameras[conf.size()]->width;
+        int h = cameras[conf.size()]->height;
+        float* confidences = new float[w*h];
+
+        ifstream in(filename.c_str(), ifstream::binary);
+        for (int i = 0; i < w*h; ++i) {
+            in.read((char*) &confidences[i], sizeof(float));
+        }
+        conf.push_back(confidences);
+    } catch (...) {
+        return false;
+    }
+    return true;
+}
+
+bool ColorHelper::writeExrImage(const string& filename,
         const float* image,
         int width,
         int height)

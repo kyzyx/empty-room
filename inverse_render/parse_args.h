@@ -6,6 +6,7 @@ extern bool all_cameras;
 extern bool all_project;
 extern bool project_debug;
 extern bool show_frustrum;
+extern bool use_confidence_files;
 extern bool wallinput;
 extern bool read_eq, write_eq, write_matlab;
 extern int project;

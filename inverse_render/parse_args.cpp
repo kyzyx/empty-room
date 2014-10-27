@@ -8,6 +8,7 @@ bool all_cameras = true;
 bool all_project = true;
 bool project_debug = false;
 bool show_frustrum = false;
+bool use_confidence_files = false;
 bool wallinput = false;
 bool write_eq = false;
 bool write_matlab = false;
@@ -78,6 +79,11 @@ bool parseargs(int argc, char** argv) {
              "      -project n: project only camera n\n"\
              "      -flip_x: Mirror the input images horizontally\n"\
              "      -flip_y: Mirror the input images vertically\n"\
+             "      -use_confidence_files: Input files have a per-pixel confidence\n"\
+             "           estimate, stored in a separate file. If the image filename\n"\
+             "           is image.exr, the confidence is in image.exr.conf.\n"\
+             "           These conf files should be binary encoded simply\n"\
+             "           containing 4-byte floating point confidence values\n"\
              "      -hdr_threshold f: radiance threshold above which pixels\n"\
              "           are considered light pixels (default 10.0)\n"\
              "  Wallfinder Arguments:\n" \
@@ -109,6 +115,7 @@ bool parseargs(int argc, char** argv) {
     if (console::find_switch(argc, argv, "-nosolve")) do_sampling = false;
     if (console::find_switch(argc, argv, "-flip_x")) image_flip_x = true;
     if (console::find_switch(argc, argv, "-flip_y")) image_flip_x = true;
+    if (console::find_switch(argc, argv, "-use_confidence_files")) use_confidence_files = true;
     if (console::find_switch(argc, argv, "-wallfind_only")) {
         do_reprojection = false;
         do_wallfinding = true;

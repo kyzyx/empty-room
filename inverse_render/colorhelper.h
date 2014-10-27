@@ -27,10 +27,10 @@ class ColorHelper {
             for (int i = 0; i < cameras.size(); ++i) delete cameras[i];
         }
 
-        bool load(std::string cameraFile);
+        bool load(std::string cameraFile, bool read_confidence_file=false);
 
-        bool readImageNames(const std::string& filename);
-        bool readImage(const std::string& filename);
+        bool readImage(const std::string& filename, bool read_confidence_file=false);
+        bool readConfidenceFile(const std::string& filename);
         bool readPngImage(const std::string& filename);
         bool readExrImage(const std::string& filename);
         bool readHdrImage(const std::string& filename);
@@ -42,6 +42,7 @@ class ColorHelper {
                 int height);
         int size() const { return data.size(); }
         const char* getImage(int n) { return data[n]; }
+        const float* getConfidenceMap(int n) { return conf[n]; }
         const CameraParams* getCamera(int n) { return cameras[n]; }
     protected:
         void transformAllCameras(const R4Matrix& m);
@@ -49,6 +50,7 @@ class ColorHelper {
     private:
         std::vector<std::string> filenames;
         std::vector<char*> data;
+        std::vector<float*> conf;
         std::vector<CameraParams*> cameras;
 };
 
