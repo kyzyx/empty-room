@@ -44,6 +44,7 @@ class ColorHelper {
         const char* getImage(int n) { return data[n]; }
         const CameraParams* getCamera(int n) { return cameras[n]; }
     protected:
+        void transformAllCameras(const R4Matrix& m);
 
     private:
         std::vector<std::string> filenames;

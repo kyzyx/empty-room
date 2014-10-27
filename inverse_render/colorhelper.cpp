@@ -4,8 +4,10 @@
 #include <OpenEXR/ImfArray.h>
 #include <OpenEXR/ImfHeader.h>
 
+#include <algorithm>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <cstdio>
 
 #include "rgbe.h"
@@ -168,14 +170,25 @@ bool ColorHelper::readPngImage(const string& filename)
 bool ColorHelper::readCameraFile(const string& filename)
 {
     // Format:
-    //    FrameCount Width Height vfov
-    //    filename X Y Z [Up] [Towards]
-    //    Angles in degrees
+    //    FrameCount Width Height vfov [transformfilename]
+    //    filename1 x y z Up_x Up_y Up_z Towards_x Towards_y Towards_z
+    //    filename2 x y z Up_x Up_y Up_z Towards_x Towards_y Towards_z
+    //    filename3 x y z Up_x Up_y Up_z Towards_x Towards_y Towards_z
+    //    ...
+    //    Note: angles in degrees
     try {
         ifstream in(filename.c_str());
         int frames, w, h;
         double hfov, vfov;
-        in >> frames >> w >> h >> vfov;
+        string infoline;
+        getline(in, infoline);
+        size_t numparams = count(infoline.begin(), infoline.end(), ' ') + 1;
+        stringstream infoin(infoline);
+        if (numparams < 4) {
+            cerr << "Error! Invalid camera file!" << endl;
+            return false;
+        }
+        infoin >> frames >> w >> h >> vfov;
         double foc = h/(2*tan(vfov*M_PI/360));
         double a,b,c;
         string s;
@@ -204,8 +217,27 @@ bool ColorHelper::readCameraFile(const string& filename)
             curr->fov = vfov;
             cameras.push_back(curr);
         }
+        if (numparams > 4) {
+            string camxform;
+            infoin >> camxform;
+            ifstream xformin(camxform.c_str());
+            double m[16];
+            for (int i = 0; i < 16; ++i) xformin >> m[i];
+            R4Matrix mat(m);
+            transformAllCameras(m);
+        }
     } catch (...) {
         return false;
     }
     return true;
+}
+
+void ColorHelper::transformAllCameras(const R4Matrix& m) {
+    for (int i = 0; i < cameras.size(); ++i) {
+        CameraParams* cam = cameras[i];
+        cam->pos = m*cam->pos;
+        cam->up = m*cam->up;
+        cam->towards = m*cam->towards;
+        cam->right = m*cam->right;
+    }
 }
