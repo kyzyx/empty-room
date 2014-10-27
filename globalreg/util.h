@@ -3,8 +3,15 @@
 #include <Eigen/Eigen>
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
+#include <pcl/visualization/interactor_style.h>
 
 const double EPSILON = 0.00001;
+
+class InteractorStyle : public pcl::visualization::PCLVisualizerInteractorStyle {
+    public:
+        void OnChar();
+        void OnKeyDown();
+};
 
 double dist2(pcl::PointXYZ a, pcl::PointXYZ b);
 bool isValid(pcl::PointXYZ p);

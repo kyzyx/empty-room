@@ -11,13 +11,13 @@
 #include <pcl/segmentation/sac_segmentation.h>
 #include <Eigen/SVD>
 
-const double ANGLETHRESHOLD = M_PI/9;
+double ANGLETHRESHOLD = M_PI/9;
 const double DISTTHRESHOLD = 0.03;
 const double NOISETHRESHOLD = 0.01;
 const double FUSETHRESHOLD = 0.05;
 const double MININLIERPROPORTION = 0.05;
 const double MAXEDGEPROPORTION = 0.04;
-const int MININLIERCOUNT = 8000;
+int MININLIERCOUNT = 8000;
 const int MINPLANESIZE = 10000;
 const double ANGULARDEVIATIONTHRESHOLD = 0.25;
 
@@ -585,7 +585,8 @@ void combineLikePlanes(PointCloud<PointXYZ>::ConstPtr cloud, vector<Vector4d>& p
 void filterAngleVariance(
         PointCloud<PointXYZ>::ConstPtr cloud,
         vector<Vector4d>& planes,
-        vector<int>& ids)
+        vector<int>& ids,
+        double deviationthreshold = ANGULARDEVIATIONTHRESHOLD)
 {
     // Estimate normals
     PointCloud<PointNormal>::Ptr filtered(new PointCloud<PointNormal>);
@@ -613,7 +614,7 @@ void filterAngleVariance(
     planes.clear();
     int n = 0;
     for (int i = 0; i < origplanes.size(); ++i) {
-        if (std[i]/counts[i] < ANGULARDEVIATIONTHRESHOLD) {
+        if (std[i]/counts[i] < deviationthreshold) {
             planes.push_back(origplanes[i]);
             newids.push_back(n++);
         }
@@ -765,4 +766,13 @@ void findPlanes(
         filterBoundingSides(cloud, planes, ids);
     }
     //filterSize(MINPLANESIZE, cloud, planes, ids);
+}
+
+int setMinPlaneInliers(int n) {
+    MININLIERCOUNT = n;
+    return MININLIERCOUNT;
+}
+double setAngleThreshold(double d) {
+    ANGLETHRESHOLD = d;
+    return ANGLETHRESHOLD;
 }

@@ -8,7 +8,7 @@ using namespace Eigen;
 using namespace pcl;
 
 const double ANGLETHRESHOLD = M_PI/8;
-const double WALLMERGETHRESHOLD = 0.1;
+const double WALLMERGETHRESHOLD = 0.24;
 const double EQUALTHRESHOLD = M_PI/16;
 
 void RoomModel::setAxes(Vector3d a, Vector3d b) {
@@ -67,6 +67,7 @@ void RoomModel::addCloud(
             if (clouds.size() > 1) {
                 int frame = clouds.size()-2;
                 distributeRotation(newplanes[i], frame);
+                break;
             }
         }
     }
@@ -101,6 +102,7 @@ void RoomModel::checkLoopClosure(Vector4d plane, int frame) {
                 } else {
                     printf("%d Wall (oriented %d) matched at %.3f\n", frame, k, plane(3));
                     distributeTranslation(k, best-plane(3), frame, lastframe);
+                    distributeTranslation(k, -(best-plane(3)), lastframe, frame);
                     ub->second = frame;
                 }
             } else {
@@ -169,22 +171,24 @@ void RoomModel::distributeTranslation(
         int orientation, double translation,
         int endframe, int startframe, double residualweight)
 {
+    int n = adjustments.size();
+    if (endframe < startframe) endframe += n;
     int o2 = orientation/2;
     double total = residualweight;
     for (int i = startframe+1; i <= endframe; ++i) {
-        if (constrained[o2][i] == -1) total += weights[i];
+        if (constrained[o2][i%n] == -1) total += weights[i%n];
     }
     printf("Translation %.3f; Closing loop to frame %d\n", translation, startframe);
     for (int i = startframe+1; i <= endframe; ++i) {
-        if (constrained[o2][i] == -1) {
+        if (constrained[o2][i%n] == -1) {
             Matrix4d t = Matrix4d::Identity();
-            Vector3d transl = ((orientation&1)?1:-1)*axes[o2]*translation*weights[i]/total;
+            Vector3d transl = ((orientation&1)?1:-1)*axes[o2]*translation*weights[i%n]/total;
             t.topRightCorner(3,1) = transl;
-            cout << i << ": " << weights[i]/total << endl;
-            adjustments[i] = t*adjustments[i];
+            cout << i%n << ": " << weights[i%n]/total << endl;
+            adjustments[i%n] = t*adjustments[i%n];
         }
     }
-    recomputeCumulativeTransforms(startframe);
+    recomputeCumulativeTransforms(endframe>n?0:startframe);
 }
 
 void RoomModel::recomputeCumulativeTransforms(int start) {
@@ -221,7 +225,9 @@ void RoomModel::closeLoop(Matrix4d transform, double rmse) {
     distributeTranslation(1, axes[0].dot(t), clouds.size()-1, 0, 0);
     distributeTranslation(3, axes[1].dot(t), clouds.size()-1, 0, 0);
     distributeTranslation(5, axes[2].dot(t), clouds.size()-1, 0, 0);
+}
 
+void RoomModel::makeWallsConsistent() {
     for (int z = 0; z < clouds.size(); ++z) {
         for (int i = 0; i < allplanes[z].size(); ++i) {
             Vector4d p = transformPlane(allplanes[z][i], cumxforms[z]);
