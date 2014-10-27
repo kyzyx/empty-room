@@ -19,6 +19,9 @@
 #include "display.h"
 #include "solver.h"
 
+inline R3Vector eigen2gaps(Eigen::Vector3f v) {
+    return R3Vector(v(0), v(1), v(2));
+}
 
 using namespace std;
 using namespace pcl;
@@ -128,11 +131,19 @@ int main(int argc, char* argv[]) {
                 }
             }
             ir.solve(walldata);
+
+            // Prepare floor plane
+            Eigen::Matrix4f t = of.getNormalizationTransform().inverse();
             Eigen::Vector3f floornormal(0,1,0);
-            floornormal = of.getNormalizationTransform().inverse().topLeftCorner(3,3)*floornormal;
+            floornormal = t.topLeftCorner(3,3)*floornormal;
+            Eigen::Vector4f floorpoint(0, wf.floorplane, 0, 1);
+            floorpoint = t*floorpoint;
+            R3Plane floorplane(eigen2gaps(floorpoint.head(3)).Point(), eigen2gaps(floornormal));
+
             Texture tex;
             loader.load(camfile);
-            ir.solveTexture(floordata, &loader, floornormal, tex);
+
+            ir.solveTexture(floordata, &loader, floorplane, tex);
             cout << "Done solving texture..." << endl;
             if (tex.size > 0) {
                 ColorHelper::writeExrImage("texture.exr", tex.texture, tex.size, tex.size);

@@ -13,6 +13,7 @@ add_executable(invrender rgbe.cpp rgbe.h invrender.cpp colorhelper.h
     hemicuberenderer.h hemicuberenderer.cpp
     orientation_finder.cpp orientation_finder.h
     R2ImageOld.cpp R2ImageOld.h
+    rectify.cpp rectify.h
     solver.cpp solvetexture.cpp solver.h clusterlights.cpp clusterlights.h
     display.cpp display.h parse_args.cpp parse_args.h rerender.cpp rerender.h)
 target_link_libraries(invrender ${PCL_LIBRARIES} R3Graphics.a RNBasics.a

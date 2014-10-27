@@ -1,8 +1,8 @@
 #ifndef _SOLVER_H
 #define _SOLVER_H
 #include <vector>
-#include <Eigen/Eigen>
 
+#include "R3Shapes/R3Shapes.h"
 #include "colorhelper.h"
 #include "hemicuberenderer.h"
 #include "material.h"
@@ -19,7 +19,7 @@ class InverseRender {
         void solveTexture(
                 std::vector<SampleData>& data,
                 ColorHelper* colorhelper,
-                Eigen::Vector3f surfacenormal,
+                const R3Plane& surface,
                 Texture& tex);
         void computeSamples(
                 std::vector<SampleData>& data,
