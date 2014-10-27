@@ -141,7 +141,8 @@ AlignmentResult align(
                         AlignmentResult c2 = alignPlaneToPlane(src, tgt, srcplanes, srcids, tgtplanes, tgtids, pc2, MAXITERATIONS);
                         if (c2.error < c.error) {
                             c = c2;
-                            planecorrespondences = pc2;
+                            Vector4d newplane = transformPlane(srcplanes[ids[i]], c2.transform);
+                            if (abs(newplane(3) - tgtplanes[origplanecorrespondences[ids[i]]](3)) > 0.05) planecorrespondences = pc2;
                         }
                     }
                 }
@@ -166,7 +167,8 @@ AlignmentResult align(
                         AlignmentResult c2 = alignEdgeToEdge(src, tgt, srcplanes, srcids, tgtplanes, tgtids, pc2, MAXITERATIONS);
                         if (c2.error < c.error) {
                             c = c2;
-                            planecorrespondences = pc2;
+                            Vector4d newplane = transformPlane(srcplanes[ids[i]], c2.transform);
+                            if (abs(newplane(3) - tgtplanes[origplanecorrespondences[ids[i]]](3)) > 0.05) planecorrespondences = pc2;
                         }
                     }
                 }

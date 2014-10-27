@@ -67,6 +67,7 @@ void RoomModel::addCloud(
             if (clouds.size() > 1) {
                 int frame = clouds.size()-2;
                 distributeRotation(newplanes[i], frame);
+                break;
             }
         }
     }
