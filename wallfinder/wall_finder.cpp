@@ -10,6 +10,8 @@
 #include <limits>
 #include <fstream>
 
+#include "shortestpath.h"
+
 using namespace pcl;
 using namespace std;
 template <typename T> int sgn(T val) {
@@ -377,38 +379,16 @@ void WallFinder::findWalls(
         cerr << "Error! No walls found!" << endl;
         return;
     }
-    int curridx = maxidx;
     vector<int> wall;
-    vector<bool> inwall(candidatewalls.size(), false);
-    do {
-        double mindist = numeric_limits<double>::max();
-        int besti = -1;
-        for (int i = 0; i < candidatewalls.size(); ++i) {
-            if (i == curridx || wall.size() && i == wall.back()) continue;
-            double d;
-            if (curridx < i) {
-                d = edges[i][curridx];
-            } else if (curridx > i) {
-                d = edges[curridx][i];
-            }
-            if (d < mindist) {
-                mindist = d;
-                besti = i;
-            }
-        }
-        wall.push_back(curridx);
-        wallsegments.push_back(Segment(candidatewalls[curridx], resolution));
-        inwall[curridx] = true;
-        curridx = besti;
-        if (curridx == -1 || inwall[curridx]) {
-            break;
-        }
-    } while(curridx != maxidx);
-    if (curridx != maxidx) {
+    double c = shortestPath(maxidx, maxidx, edges, candidatewalls.size(), wall);
+    if (c == numeric_limits<double>::max()) {
         cerr << "Error determining floor plan!" << endl;
     }
-    // Add labels to all compatible pixels regardless of bin and compute more accurate
-    // coords
+    for (int i = 0; i < wall.size(); ++i) {
+        wallsegments.push_back(Segment(candidatewalls[wall[i]], resolution));
+    }
+    // Add labels to all compatible pixels regardless of bin and compute more
+    // accurate coords
     int i;
     vector<double> segmentcoords(wallsegments.size(), 0);
     vector<int> segmentcounts(wallsegments.size(), 0);
