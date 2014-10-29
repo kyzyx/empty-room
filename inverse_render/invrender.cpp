@@ -55,7 +55,7 @@ int main(int argc, char* argv[]) {
 
     vector<int> wallindices;
     vector<int> floorindices;
-    PlaneOrientationFinder of(mesh, 0.01);
+    PlaneOrientationFinder of(mesh, resolution/2);
     of.computeNormals(ccw);
     if (!of.computeOrientation()) {
         cout << "Error computing orientation! Non-triangle mesh!" << endl;

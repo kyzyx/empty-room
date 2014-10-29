@@ -42,6 +42,7 @@ int main(int argc, char* argv[]) {
     bool print_wall = false;
     double anglethreshold = M_PI/40;
     double resolution = 0.01;
+    double orientationresolution = 0.01;
     double minlength = 0.2;
     bool show_grid = false;
     int wallthreshold = 200;
@@ -56,6 +57,9 @@ int main(int argc, char* argv[]) {
     if (console::find_argument(argc, argv, "-resolution")) {
         console::parse_argument(argc, argv, "-resolution", resolution);
     }
+    if (console::find_argument(argc, argv, "-orientationresolution")) {
+        console::parse_argument(argc, argv, "-orientationresolution", orientationresolution);
+    }
     if (console::find_argument(argc, argv, "-wallthreshold")) {
         console::parse_argument(argc, argv, "-wallthreshold", wallthreshold);
     }
@@ -66,7 +70,7 @@ int main(int argc, char* argv[]) {
     PolygonMesh::Ptr mesh(new PolygonMesh());
     io::loadPolygonFile(argv[1], *mesh);
 
-    PlaneOrientationFinder of(mesh,0.01);
+    PlaneOrientationFinder of(mesh,orientationresolution);
     of.computeNormals(ccw);
     if (!of.computeOrientation()) {
         cout << "Error computing orientation! Non-triangle mesh!" << endl;
@@ -123,7 +127,9 @@ int main(int argc, char* argv[]) {
                 colorgrid->at(i).x = grid->at(i).x;
                 colorgrid->at(i).y = grid->at(i).y;
                 colorgrid->at(i).z = grid->at(i).z;
-                colorgrid->at(i).r = 0;
+                double count = grid->at(i).y;
+                count = count*count*100;
+                colorgrid->at(i).r = count > wallthreshold?255:0;
                 colorgrid->at(i).g = colorgrid->at(i).y/2*255;
                 colorgrid->at(i).b = 255-colorgrid->at(i).y/2*255;
 

@@ -224,9 +224,9 @@ void WallFinder::findWalls(
     }
 
     // Scan grid and extract line segments
-    int overlapthreshold = 6;
+    int overlapthreshold = 10;
     int steepness = 10;
-    int skipsallowed = 2;
+    int skipsallowed = 3;
     vector<GridSegment> segments;
     // Check vertical walls
     int numsegs = 0;
