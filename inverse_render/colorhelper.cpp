@@ -34,9 +34,17 @@ bool endswith(const string& s, string e) {
     else
         return false;
 }
+string replaceExtension(const string& s, string newext) {
+    size_t i = s.find_last_of(".");
+    if (i == string::npos) return s + newext;
+    else return s.substr(0,i+1) + newext;
+
+}
+
 bool ColorHelper::readImage(const string& filename, bool read_confidence_file) {
     if (read_confidence_file) {
-        if (!readConfidenceFile(filename + ".conf")) {
+        if (!readConfidenceFile(replaceExtension(filename, "conf"))) {
+            cerr << "Error reading confidence file!" << endl;
             return false;
         }
     }

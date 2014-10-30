@@ -13,6 +13,7 @@ void reproject(
 );
 void reproject(
         const float* hdrimage,
+        const float* confidencemap,
         const CameraParams* cam,
         Mesh& mesh,
         double threshold,

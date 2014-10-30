@@ -99,12 +99,12 @@ int main(int argc, char* argv[]) {
             cout << "Done loading reprojection files" << endl;
         } else {
             cout << "Reading input files..." << endl;
-            loader.load(camfile);
+            loader.load(camfile, use_confidence_files);
             cout << "Done reading " << loader.size() << " color images; reprojecting..." << endl;
             if (all_project) {
                 reproject(loader, m, hdr_threshold, image_flip_x, image_flip_y);
             } else {
-            reproject((float*) loader.getImage(project), loader.getCamera(project), m, hdr_threshold, image_flip_x, image_flip_y);
+                reproject((float*) loader.getImage(project), loader.getConfidenceMap(project), loader.getCamera(project), m, hdr_threshold, image_flip_x, image_flip_y);
             }
             cout << "Done reprojecting; clustering lights..." << endl;
             numlights = clusterLights(m);

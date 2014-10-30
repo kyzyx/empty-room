@@ -1,11 +1,14 @@
 #include "reproject.h"
 
 #include <iostream>
-inline bool isBlack(int x, int y, int w, const char* data) {
-    return data[3*(x+y*w)] == 0 && data[3*(x+y*w)+1] == 0 && data[3*(x+y*w)+2] == 0;
+inline bool isBlack(int idx, const char* data) {
+    return data[3*idx] == 0 && data[3*idx+1] == 0 && data[3*idx+2] == 0;
 }
-inline bool isLight(int x, int y, int w, const float* data, double threshold) {
-    return data[3*(x+y*w)] > threshold || data[3*(x+y*w)+1] > threshold || data[3*(x+y*w)+2] > threshold;
+inline bool shouldDiscard(float confidence) {
+    return confidence <= 0;
+}
+inline bool isLight(int idx, const float* data, const float* confidencemap, double threshold) {
+    return (confidencemap && confidencemap[idx] < 0) || data[3*idx] > threshold || data[3*idx+1] > threshold || data[3*idx+2] > threshold;
 }
 inline void copyColorToSample(int x, int y, int w, const float* data, Sample& s) {
     s.r = M_PI*data[3*(x+y*w)];
@@ -54,7 +57,8 @@ void reproject(const char* color, const char* light, const CameraParams* cam, Me
         // Compute direction, add sample
         Sample s;
         s.label = 0;
-        if (!isBlack(xx, yy, cam->width, light)) {
+        int idx = xx + yy*cam->width;
+        if (!isBlack(idx, light)) {
             s.label = 1;
         }
         copyColorToSample(xx, yy, cam->width, color, s);
@@ -70,6 +74,7 @@ void reproject(const char* color, const char* light, const CameraParams* cam, Me
 }
 void reproject(
         const float* hdrimage,
+        const float* confidencemap,
         const CameraParams* cam,
         Mesh& mesh,
         double threshold,
@@ -109,20 +114,26 @@ void reproject(
         // Compute direction, add sample
         Sample s;
         s.label = 0;
-        if (isLight(xx, yy, cam->width, hdrimage, threshold)) {
+        int idx = xx + yy*cam->width;
+        if (isLight(idx, hdrimage, confidencemap, threshold)) {
             s.label = 1;
         }
-        copyColorToSample(xx, yy, cam->width, hdrimage, s);
-        R3Vector outgoing = -ray.Vector();
-        copyVectorToSample(outgoing, s);
-        // Using dA to dA form factor, scaled by M_PI*pixelsize
-        s.dA = -vhat.Dot(cam->towards)*vhat.Dot(m->VertexNormal(m->Vertex(j)))/(d*d);
-        // Use approximation that distance from point to pixel is much greater than
-        // pixel size (e.g. for 54 degree fov at 640x480, each pixel is 1.7mm)
-        //s.dA = vhat.dot(cam->towards)/(d*d); // Solid Angle
-        mesh.addSample(j, s);
+        if (!confidencemap || !shouldDiscard(confidencemap[idx]) || s.label == 1) {
+            copyColorToSample(xx, yy, cam->width, hdrimage, s);
+            if (!confidencemap) s.confidence = 1;
+            else s.confidence = confidencemap[idx];
+            R3Vector outgoing = -ray.Vector();
+            copyVectorToSample(outgoing, s);
+            // Using dA to dA form factor, scaled by M_PI*pixelsize
+            s.dA = -vhat.Dot(cam->towards)*vhat.Dot(m->VertexNormal(m->Vertex(j)))/(d*d);
+            // Use approximation that distance from point to pixel is much greater than
+            // pixel size (e.g. for 54 degree fov at 640x480, each pixel is 1.7mm)
+            //s.dA = vhat.dot(cam->towards)/(d*d); // Solid Angle
+            mesh.addSample(j, s);
+        }
     }
 }
+
 void reproject(ColorHelper& ch, ColorHelper& lights, Mesh& mesh) {
     for (int i = 0; i < ch.size(); ++i) {
         reproject(ch.getImage(i), lights.getImage(i), ch.getCamera(i), mesh);
@@ -131,7 +142,7 @@ void reproject(ColorHelper& ch, ColorHelper& lights, Mesh& mesh) {
 }
 void reproject(ColorHelper& hdr, Mesh& mesh, double threshold, bool flip_x, bool flip_y) {
     for (int i = 0; i < hdr.size(); ++i) {
-        reproject((float*)hdr.getImage(i), hdr.getCamera(i), mesh, threshold, flip_x, flip_y);
+        reproject((float*)hdr.getImage(i), hdr.getConfidenceMap(i), hdr.getCamera(i), mesh, threshold, flip_x, flip_y);
         std::cout << "Finished projecting image " << i << std::endl;
     }
 }

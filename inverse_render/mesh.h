@@ -22,6 +22,7 @@ class Sample {
         float x;
         float y;
         float z;
+        float confidence;
         float dA;
         // Larger solid angle implies less accurate colors, since more of
         // the pixel actually comes from other vertices

@@ -90,6 +90,7 @@ void Mesh::writeSamples(string filename) {
             out.write((char*) &samples[i][j].x, sizeof(float));
             out.write((char*) &samples[i][j].y, sizeof(float));
             out.write((char*) &samples[i][j].z, sizeof(float));
+            out.write((char*) &samples[i][j].confidence, sizeof(float));
             out.write((char*) &samples[i][j].dA, sizeof(float));
         }
     }
@@ -123,6 +124,7 @@ int Mesh::readSamples(string filename) {
             in.read((char*) &s.x, sizeof(float));
             in.read((char*) &s.y, sizeof(float));
             in.read((char*) &s.z, sizeof(float));
+            in.read((char*) &s.confidence, sizeof(float));
             in.read((char*) &s.dA, sizeof(float));
             samples[i].push_back(s);
         }
@@ -181,10 +183,13 @@ void Mesh::computeColorsOGL() {
                 int n = mesh->VertexID(mesh->VertexOnFace(mesh->Face(i), j));
                 for (int k = 0; k < samples[n].size(); ++k) {
                     double s = abs(samples[n][k].dA);
-                    vertices[ind+3] += samples[n][k].r*s;
-                    vertices[ind+4] += samples[n][k].g*s;
-                    vertices[ind+5] += samples[n][k].b*s;
-                    total += s;
+                    double c = samples[n][k].confidence;
+                    if (c > 0) {
+                        vertices[ind+3] += samples[n][k].r*s*c;
+                        vertices[ind+4] += samples[n][k].g*s*c;
+                        vertices[ind+5] += samples[n][k].b*s*c;
+                        total += s*c;
+                    }
                 }
                 if (total > 0) {
                     vertices[ind+3] /= total;

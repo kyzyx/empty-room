@@ -41,8 +41,14 @@ class ColorHelper {
                 int width,
                 int height);
         int size() const { return data.size(); }
-        const char* getImage(int n) { return data[n]; }
-        const float* getConfidenceMap(int n) { return conf[n]; }
+        const char* getImage(int n) {
+            if (n >= data.size()) return NULL;
+            return data[n];
+        }
+        const float* getConfidenceMap(int n) {
+            if (n >= conf.size()) return NULL;
+            return conf[n];
+        }
         const CameraParams* getCamera(int n) { return cameras[n]; }
     protected:
         void transformAllCameras(const R4Matrix& m);
