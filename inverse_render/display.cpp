@@ -178,10 +178,16 @@ void visualize(PointCloud<PointXYZRGB>::Ptr cloud, ColorHelper& loader,
     viewer.addPointCloud<PointXYZRGB>(cloud, rgb, "Mesh");
     viewer.registerKeyboardCallback(&pointcloud_kbd_cb_, (void*) &kbdh);
     if (all_cameras) {
-        char n[] = {'A', '0'};
-        for (int i = 0; i < loader.size(); i++) {
+        char n[] = {'A', '0', '\0'};
+        int inc = 1;
+        if (loader.size() > 400) inc = 2;
+        for (int i = 0; i < loader.size(); i+=inc) {
             VisualizeCamera(loader.getCamera(i), viewer, n);
             n[1]++;
+            if (n[1] == 0) {
+                n[0]++;
+                n[1]++;
+            }
         }
     } else if (cameraid >= 0) {
         VisualizeCamera(loader.getCamera(cameraid), viewer, "cam", show_frustrum?3:0);

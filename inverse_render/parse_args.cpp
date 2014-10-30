@@ -119,6 +119,7 @@ bool parseargs(int argc, char** argv) {
     if (console::find_switch(argc, argv, "-wallfind_only")) {
         do_reprojection = false;
         do_wallfinding = true;
+        do_sampling = false;
     }
     if (console::find_switch(argc, argv, "-reproject_only")) {
         if (!do_reprojection) {
@@ -127,6 +128,7 @@ bool parseargs(int argc, char** argv) {
         }
         do_reprojection = true;
         do_wallfinding = false;
+        do_sampling = false;
     }
     if (console::find_switch(argc, argv, "-prune_occluded")) prune = true;
     if (console::find_switch(argc, argv, "-no_cameras")) {

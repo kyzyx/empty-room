@@ -39,6 +39,7 @@ int main(int argc, char* argv[]) {
     }
     if (!parseargs(argc, argv)) return 1;
     PolygonMesh::Ptr mesh(new PolygonMesh());
+    cout << "Loading mesh geometry...." << endl;
     io::loadPolygonFile(argv[1], *mesh);
     PointCloud<PointXYZRGB>::Ptr cloud(new PointCloud<PointXYZRGB>());
     {
@@ -51,108 +52,113 @@ int main(int argc, char* argv[]) {
             cloud->points[i].z = tmp[i].z;
         }
     }
+    PlaneOrientationFinder of(mesh, resolution/2);
+    of.computeNormals(ccw);
     cout << "Done loading mesh geometry" << endl;
 
     vector<int> wallindices;
     vector<int> floorindices;
-    PlaneOrientationFinder of(mesh, 0.01);
-    of.computeNormals(ccw);
-    if (!of.computeOrientation()) {
-        cout << "Error computing orientation! Non-triangle mesh!" << endl;
-    }
-    cout << "Done analyzing geometry" << endl;
-    of.normalize();
-
     ColorHelper loader;
     Mesh m(mesh,true);
     WallFinder wf(&of, resolution);
 
-    if (wallinput) {
-        cout << "Loading wall files..." << endl;
-        wf.loadWalls(wallfile, m.types);
-        for (int i = 0; i < m.types.size(); ++i) {
-            if (m.types[i] == WallFinder::LABEL_WALL) wallindices.push_back(i);
-            else if (m.types[i] == WallFinder::LABEL_FLOOR) floorindices.push_back(i);
+    if (do_wallfinding) {
+        cout << "Analyzing geometry..." << endl;
+        if (!of.computeOrientation()) {
+            cout << "Error computing orientation! Non-triangle mesh!" << endl;
         }
-    } else if (do_wallfinding) {
-        wf.findFloorAndCeiling(m.types, anglethreshold);
-        wf.findWalls(m.types, wallthreshold, minlength, anglethreshold);
-        cout << "Done finding walls" << endl;
+        of.normalize();
+        cout << "Done analyzing geometry" << endl;
+
+        cout << "===== WALLFINDING =====" << endl;
+        if (wallinput) {
+            cout << "Loading wall files..." << endl;
+            wf.loadWalls(wallfile, m.types);
+            cout << "Done loading wall files..." << endl;
+        } else {
+            cout << "Finding walls..." << endl;
+            wf.findFloorAndCeiling(m.types, anglethreshold);
+            wf.findWalls(m.types, wallthreshold, minlength, anglethreshold);
+            cout << "Done finding walls" << endl;
+        }
         for (int i = 0; i < m.types.size(); ++i) {
             if (m.types[i] == WallFinder::LABEL_WALL) wallindices.push_back(i);
             else if (m.types[i] == WallFinder::LABEL_FLOOR) floorindices.push_back(i);
         }
         if (output_wall) wf.saveWalls(walloutfile, m.types);
+        cout << "=======================" << endl;
     }
 
-    int numlights;
-    if (input) {
-        cout << "Loading reprojection input files..." << endl;
-        loader.readCameraFile(camfile);
-        numlights = m.readSamples(infile);
-        cout << "Done loading samples" << endl;
-    } else if (do_reprojection) {
-        cout << "Reading input files..." << endl;
-        loader.load(camfile);
-        cout << "Done reading color images " << loader.size() << endl;
-        if (all_project) {
-            reproject(loader, m, hdr_threshold, image_flip_x, image_flip_y);
-        } else {
-            reproject((float*) loader.getImage(project), loader.getCamera(project), m, hdr_threshold, image_flip_x, image_flip_y);
-        }
-        cout << "Done reprojecting" << endl;
-        numlights = clusterLights(m);
-        cout << "Done clustering " << numlights << " lights" << endl;
-        if (output_reprojection) m.writeSamples(outfile);
-    }
-    m.computeColorsOGL();
-
+    int numlights = 0;
     if (do_reprojection) {
+        cout << "===== REPROJECTING =====" << endl;
+        if (input) {
+            cout << "Loading reprojection input files..." << endl;
+            loader.readCameraFile(camfile);
+            numlights = m.readSamples(infile);
+            cout << "Done loading reprojection files" << endl;
+        } else {
+            cout << "Reading input files..." << endl;
+            loader.load(camfile);
+            cout << "Done reading " << loader.size() << " color images; reprojecting..." << endl;
+            if (all_project) {
+                reproject(loader, m, hdr_threshold, image_flip_x, image_flip_y);
+            } else {
+            reproject((float*) loader.getImage(project), loader.getCamera(project), m, hdr_threshold, image_flip_x, image_flip_y);
+            }
+            cout << "Done reprojecting; clustering lights..." << endl;
+            numlights = clusterLights(m);
+            cout << "Done clustering " << numlights << " lights" << endl;
+        }
+        if (output_reprojection) m.writeSamples(outfile);
+        m.computeColorsOGL();
         hemicuberesolution = max(hemicuberesolution, loader.getCamera(0)->width);
         hemicuberesolution = max(hemicuberesolution, loader.getCamera(0)->height);
+        cout << "========================" << endl;
     }
     InverseRender ir(&m, numlights, hemicuberesolution);
     vector<SampleData> walldata, floordata;
     // Only do inverse rendering with full reprojection and wall labels
-    if ((input || all_project) && (wallinput || do_wallfinding)) {
-        if (do_sampling) {
-            if (read_eq) {
-                ir.loadVariablesBinary(walldata, samplefile + ".walls");
-                ir.loadVariablesBinary(floordata, samplefile + ".floors");
-            } else {
-                ir.computeSamples(walldata, wallindices, numsamples, discardthreshold);
-                ir.computeSamples(floordata, floorindices, numsamples, discardthreshold);
-                if (write_eq) {
-                    ir.writeVariablesBinary(walldata, sampleoutfile + ".walls");
-                    ir.writeVariablesBinary(floordata, sampleoutfile + ".floors");
-                }
-                if (write_matlab) {
-                    ir.writeVariablesMatlab(walldata, matlabsamplefile);
-                }
+    if (do_sampling && (input || all_project) && (wallinput || do_wallfinding)) {
+        cout << "==== SAMPLING SCENE ====" << endl;
+        if (read_eq) {
+            ir.loadVariablesBinary(walldata, samplefile + ".walls");
+            ir.loadVariablesBinary(floordata, samplefile + ".floors");
+        } else {
+            ir.computeSamples(walldata, wallindices, numsamples, discardthreshold);
+            ir.computeSamples(floordata, floorindices, numsamples, discardthreshold);
+            if (write_eq) {
+                ir.writeVariablesBinary(walldata, sampleoutfile + ".walls");
+                ir.writeVariablesBinary(floordata, sampleoutfile + ".floors");
             }
-            ir.solve(walldata);
-
-            // Prepare floor plane
-            Eigen::Matrix4f t = of.getNormalizationTransform().inverse();
-            Eigen::Vector3f floornormal(0,1,0);
-            floornormal = t.topLeftCorner(3,3)*floornormal;
-            Eigen::Vector4f floorpoint(0, wf.floorplane, 0, 1);
-            floorpoint = t*floorpoint;
-            R3Plane floorplane(eigen2gaps(floorpoint.head(3)).Point(), eigen2gaps(floornormal));
-
-            Texture tex;
-            loader.load(camfile);
-
-            ir.solveTexture(floordata, &loader, floorplane, tex);
-            cout << "Done solving texture..." << endl;
-            if (tex.size > 0) {
-                ColorHelper::writeExrImage("texture.exr", tex.texture, tex.size, tex.size);
-            }
-            if (radfile != "") {
-                outputRadianceFile(radfile, wf, m, ir);
+            if (write_matlab) {
+                ir.writeVariablesMatlab(walldata, matlabsamplefile);
             }
         }
+        cout << "========================" << endl;
+        ir.solve(walldata);
+
+        // Prepare floor plane
+        Eigen::Matrix4f t = of.getNormalizationTransform().inverse();
+        Eigen::Vector3f floornormal(0,1,0);
+        floornormal = t.topLeftCorner(3,3)*floornormal;
+        Eigen::Vector4f floorpoint(0, wf.floorplane, 0, 1);
+        floorpoint = t*floorpoint;
+        R3Plane floorplane(eigen2gaps(floorpoint.head(3)).Point(), eigen2gaps(floornormal));
+
+        Texture tex;
+        loader.load(camfile);
+
+        ir.solveTexture(floordata, &loader, floorplane, tex);
+        cout << "Done solving texture..." << endl;
+        if (tex.size > 0) {
+            ColorHelper::writeExrImage("texture.exr", tex.texture, tex.size, tex.size);
+        }
+        if (radfile != "") {
+            outputRadianceFile(radfile, wf, m, ir);
+        }
     }
+    cout << "DONE PROCESSING" << endl;
 
     if (display) {
         int labeltype = LABEL_LIGHTS;

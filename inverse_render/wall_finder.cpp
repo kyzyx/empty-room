@@ -497,7 +497,7 @@ void WallFinder::saveWalls(string filename, vector<char>& labels) {
 Eigen::Vector3f WallFinder::getWallEndpoint(int i, bool lo, double height) const {
     if (i >= wallsegments.size()) i %= wallsegments.size();
     Eigen::Vector4f p;
-    pair<int,int> x = wallsegments[i].getCoords(lo?wallsegments[i].start:wallsegments[i].end);
+    pair<double,double> x = wallsegments[i].getCoords(lo?wallsegments[i].start:wallsegments[i].end);
     p[0] = x.first;
     p[1] = height*ceilplane + (1-height)*floorplane;
     p[2] = x.second;
