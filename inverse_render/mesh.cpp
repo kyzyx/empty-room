@@ -1,5 +1,6 @@
 #include <GL/glew.h>
 #include "mesh.h"
+#include "material.h"
 
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -71,6 +72,51 @@ Mesh::Mesh(PolygonMesh::Ptr m, bool initOGL) {
 void Mesh::addSample(int n, Sample s) {
     samples[n].push_back(s);
 }
+
+void Mesh::writeColoredMesh(std::string filename) {
+    ofstream out(filename);
+    int n = mesh->NVertices();
+    int f = mesh->NFaces();
+    out << "ply" << endl;
+    out << "format ascii 1.0" << endl;
+    out << "element vertex " << n << endl;
+    out << "property float x" << endl;
+    out << "property float y" << endl;
+    out << "property float z" << endl;
+    out << "property uchar red" << endl;
+    out << "property uchar green" << endl;
+    out << "property uchar blue" << endl;
+    out << "element face " << f << endl;
+    out << "property list uchar int vertex_indices" << endl;
+    out << "end_header" << endl;
+    for (int i = 0; i < n; ++i) {
+        R3Point p = mesh->VertexPosition(mesh->Vertex(i));
+        out << p[0] << " " << p[1] << " " << p[2] << " ";
+        Material m;
+        double total = 0;
+        for (int k = 0; k < samples[i].size(); ++k) {
+            Sample& s = samples[i][k];
+            if (s.confidence > 0) {
+                m += Material(s.r,s.g,s.b)*abs(s.dA)*s.confidence;
+                total += s.dA*s.confidence;
+            }
+        }
+        if (total > 0) {
+            m /= total;
+        }
+        m *= 195;
+        out << min((int)m.r,255) << " " << min((int)m.g,255) << " " << min((int)m.b,255) << endl;
+    }
+    for (int i = 0; i < f; ++i) {
+        out << "3";
+        for (int j = 0; j < 3; ++j) {
+            int vid = mesh->VertexID(mesh->VertexOnFace(mesh->Face(i), j));
+            out << " " << vid;
+        }
+        out << endl;
+    }
+}
+
 void Mesh::writeSamples(string filename) {
     ofstream out(filename.c_str(), ofstream::binary);
     uint32_t sz = samples.size();
