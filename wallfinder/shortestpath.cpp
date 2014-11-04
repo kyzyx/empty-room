@@ -8,35 +8,30 @@ using namespace std;
 typedef pair<double,pair<int,int> > tdii;
 double shortestPath(int from, int to, double** edges, int n, vector<int>& path) {
     if (from == to) {
+        // FIXME:
         int bestn = -1;
         double best = numeric_limits<double>::max();
         double currcost;
         for (int i = 0; i < n; ++i) {
             if (i == from) continue;
-            if (i < from) currcost = edges[from][i];
-            else if (i > from) currcost = edges[i][from];
+            currcost = edges[i][from];
             if (currcost < numeric_limits<double>::max()) {
-                if (i < from) edges[from][i] = numeric_limits<double>::max();
-                else if (i > from) edges[i][from] = numeric_limits<double>::max();
+                edges[i][from] = numeric_limits<double>::max();
                 double c = shortestPath(from, i, edges, n, path) + currcost;
                 if (c < best) {
                     best = c;
                     bestn = i;
                 }
-                if (i < from) edges[from][i] = currcost;
-                else if (i > from) edges[i][from] = currcost;
+                edges[i][from] = currcost;
             }
         }
-        if (bestn < from) {
-            currcost = edges[from][bestn];
-            edges[from][bestn] = numeric_limits<double>::max();
-        } else if (bestn > from) {
-            currcost = edges[bestn][from];
-            edges[bestn][from] = numeric_limits<double>::max();
+        if (bestn == -1) {
+            return numeric_limits<double>::max();
         }
+        currcost = edges[bestn][from];
+        edges[bestn][from] = numeric_limits<double>::max();
         shortestPath(from, bestn, edges, n, path);
-        if (bestn < from) edges[from][bestn] = currcost;
-        else if (bestn > from) edges[bestn][from] = currcost;
+        edges[bestn][from] = currcost;
         return best;
     }
     vector<double> cost(n, numeric_limits<double>::max());
@@ -49,11 +44,7 @@ double shortestPath(int from, int to, double** edges, int n, vector<int>& path) 
         for (int i = 0; i < n; ++i) {
             if (i == curr || i == pred[curr] || cost[i] < numeric_limits<double>::max()) continue;
             double currcost, costsofar;
-            if (i > curr) {
-                currcost = edges[i][curr];
-            } else if (i < curr) {
-                currcost = edges[curr][i];
-            }
+            currcost = edges[curr][i];
             if (currcost < numeric_limits<double>::max()) {
                 next.push(make_pair(cost[curr]+currcost,make_pair(curr,i)));
             }
