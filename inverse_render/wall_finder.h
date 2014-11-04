@@ -86,6 +86,7 @@ class WallFinder {
         void saveWalls(std::string filename, std::vector<char>& labels);
         double getResolution() const { return resolution; }
         Eigen::Vector3f getWallEndpoint(int i, bool lo, double height=0) const;
+        Eigen::Vector3f getNormalizedWallEndpoint(int i, bool lo, double height=0) const;
         Eigen::Matrix4f getNormalizationTransform() const { return of->getNormalizationTransform(); }
 
         double floorplane;

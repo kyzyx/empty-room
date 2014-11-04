@@ -164,3 +164,62 @@ void outputRadianceFile(string filename, WallFinder& wf, Mesh& m, InverseRender&
     out << xmin << " " << lo << " " << zmin << " " << xmax << " " << lo << " " << zmin << " ";
     out << xmax << " " << lo << " " << zmax << " " << xmin << " " << lo << " " << zmax << endl << endl;
 }
+void outputPlyFile(std::string filename, WallFinder& wf, Mesh& m, InverseRender& ir) {
+    ofstream out(filename);
+    int n = wf.wallsegments.size()*2+8;
+    int f = (wf.wallsegments.size()+2)*2;
+    out << "ply" << endl;
+    out << "format ascii 1.0" << endl;
+    out << "element vertex " << n << endl;
+    out << "property float x" << endl;
+    out << "property float y" << endl;
+    out << "property float z" << endl;
+    out << "property uchar red" << endl;
+    out << "property uchar green" << endl;
+    out << "property uchar blue" << endl;
+    out << "element face " << f << endl;
+    out << "property list uchar int vertex_indices" << endl;
+    out << "end_header" << endl;
+    char color[50];
+    sprintf(color, "%f %f %f", ir.wallMaterial(0), ir.wallMaterial(1), ir.wallMaterial(2));
+
+    R3Box b;
+    for (int i = 0; i < wf.wallsegments.size(); ++i) {
+        Eigen::Vector3f p[] = {
+            wf.getWallEndpoint(i,0,1),
+            wf.getWallEndpoint(i,0,0)
+        };
+        Eigen::Vector3f c = wf.getNormalizedWallEndpoint(i,0,0);
+        R3Point pp(c(0),c(1),c(2));
+        b.Union(pp);
+        for (int j = 0; j < 2; ++j) {
+            out << p[j](0) << " " << p[j](1) << " " << p[j](2) << " ";
+            out << color << endl;
+        }
+    }
+    for (int i = 0; i < 8; ++i) {
+        Vector4f p(b.Coord(i&1,0),((i>>2)&1)?wf.floorplane:wf.ceilplane,b.Coord((i>>1)&1,2),1);
+        p = wf.getNormalizationTransform().inverse()*p;
+        out <<  p(0)/p(3) << " " << p(1)/p(3) << " " << p(2)/p(3) << " ";
+        out << color << endl;
+    }
+    for (int i = 0; i < wf.wallsegments.size(); ++i) {
+        if (i == wf.wallsegments.size() - 1) {
+            out << "3 " << 2*i << " " << 0 << " " << 2*i+1 << endl;
+            out << "3 " << 0 << " " << 1 << " " << 2*i+1 << endl;
+        } else {
+            out << "3 " << 2*i << " " << 2*i+2 << " " << 2*i+1 << endl;
+            out << "3 " << 2*i+2 << " " << 2*i+3 << " " << 2*i+1 << endl;
+        }
+    }
+    n -= 8;
+    // Floor triangles
+    out << "3 " << n << " " << n+2 << " " << n+1 << endl;
+    out << "3 " << n+1 << " " << n+2 << " " << n+3 << endl;
+    // Ceiling triangles
+    out << "3 " << n+4 << " " << n+5 << " " << n+6 << endl;
+    out << "3 " << n+5 << " " << n+7 << " " << n+6 << endl;
+
+}
+void outputPbrtFile(std::string filename, WallFinder& wf, Mesh& m, InverseRender& ir) {
+}

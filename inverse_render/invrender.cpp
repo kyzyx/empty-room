@@ -171,6 +171,9 @@ int main(int argc, char* argv[]) {
         if (radfile != "") {
             outputRadianceFile(radfile, wf, m, ir);
         }
+        if (plyfile != "") {
+            outputPlyFile(plyfile, wf, m, ir);
+        }
     }
     cout << "DONE PROCESSING" << endl;
 

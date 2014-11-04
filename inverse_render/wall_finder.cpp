@@ -587,3 +587,14 @@ Eigen::Vector3f WallFinder::getWallEndpoint(int i, bool lo, double height) const
     p = of->getNormalizationTransform().inverse()*p;
     return Eigen::Vector3f(p[0]/p[3], p[1]/p[3], p[2]/p[3]);
 }
+
+Eigen::Vector3f WallFinder::getNormalizedWallEndpoint(int i, bool lo, double height) const {
+    if (i >= wallsegments.size()) i %= wallsegments.size();
+    double coord = (lo==forwards[i])?wallsegments[i].start:wallsegments[i].end;
+    pair<double,double> x = wallsegments[i].getCoords(coord);
+    Eigen::Vector3f p;
+    p[0] = x.first;
+    p[1] = height*ceilplane + (1-height)*floorplane;
+    p[2] = x.second;
+    return p;
+}
