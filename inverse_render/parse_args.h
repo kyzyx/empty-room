@@ -15,6 +15,7 @@ extern std::string outfile, infile, camfile, walloutfile, wallfile, sampleoutfil
 extern int wallthreshold;
 extern int numsamples;
 extern int hemicuberesolution;
+extern int minlightsize;
 extern double discardthreshold;
 extern bool output_reprojection;
 extern bool output_wall;
@@ -28,6 +29,7 @@ extern double minlength;
 extern bool do_wallfinding;
 extern bool do_reprojection;
 extern bool do_sampling;
+extern bool do_texture;
 extern double hdr_threshold;
 extern double displayscale;
 extern bool image_flip_x, image_flip_y;

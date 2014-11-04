@@ -97,17 +97,22 @@ int main(int argc, char* argv[]) {
             loader.readCameraFile(camfile);
             numlights = m.readSamples(infile);
             cout << "Done loading reprojection files" << endl;
+            if (hdr_threshold > 0) {
+                numlights = clusterLights(m, hdr_threshold, minlightsize);
+                cout << "Done clustering " << numlights << " lights" << endl;
+            }
         } else {
             cout << "Reading input files..." << endl;
             loader.load(camfile, use_confidence_files);
             cout << "Done reading " << loader.size() << " color images; reprojecting..." << endl;
+            if (hdr_threshold < 0) hdr_threshold = 10.0;
             if (all_project) {
                 reproject(loader, m, hdr_threshold, image_flip_x, image_flip_y);
             } else {
                 reproject((float*) loader.getImage(project), loader.getConfidenceMap(project), loader.getCamera(project), m, hdr_threshold, image_flip_x, image_flip_y);
             }
             cout << "Done reprojecting; clustering lights..." << endl;
-            numlights = clusterLights(m);
+            numlights = clusterLights(m, hdr_threshold, minlightsize);
             cout << "Done clustering " << numlights << " lights" << endl;
         }
         if (output_reprojection) m.writeSamples(outfile);
@@ -123,13 +128,19 @@ int main(int argc, char* argv[]) {
         cout << "==== SAMPLING SCENE ====" << endl;
         if (read_eq) {
             ir.loadVariablesBinary(walldata, samplefile + ".walls");
-            ir.loadVariablesBinary(floordata, samplefile + ".floors");
+            if (do_texture) {
+                ir.loadVariablesBinary(floordata, samplefile + ".floors");
+            }
         } else {
             ir.computeSamples(walldata, wallindices, numsamples, discardthreshold);
-            ir.computeSamples(floordata, floorindices, numsamples, discardthreshold);
+            if (do_texture) {
+                ir.computeSamples(floordata, floorindices, numsamples, discardthreshold);
+            }
             if (write_eq) {
                 ir.writeVariablesBinary(walldata, sampleoutfile + ".walls");
-                ir.writeVariablesBinary(floordata, sampleoutfile + ".floors");
+                if (do_texture) {
+                    ir.writeVariablesBinary(floordata, sampleoutfile + ".floors");
+                }
             }
             if (write_matlab) {
                 ir.writeVariablesMatlab(walldata, matlabsamplefile);
@@ -138,21 +149,24 @@ int main(int argc, char* argv[]) {
         cout << "========================" << endl;
         ir.solve(walldata);
 
-        // Prepare floor plane
-        Eigen::Matrix4f t = of.getNormalizationTransform().inverse();
-        Eigen::Vector3f floornormal(0,1,0);
-        floornormal = t.topLeftCorner(3,3)*floornormal;
-        Eigen::Vector4f floorpoint(0, wf.floorplane, 0, 1);
-        floorpoint = t*floorpoint;
-        R3Plane floorplane(eigen2gaps(floorpoint.head(3)).Point(), eigen2gaps(floornormal));
+        if (do_texture) {
+            // Prepare floor plane
+            Eigen::Matrix4f t = of.getNormalizationTransform().inverse();
+            Eigen::Vector3f floornormal(0,1,0);
+            floornormal = t.topLeftCorner(3,3)*floornormal;
+            Eigen::Vector4f floorpoint(0, wf.floorplane, 0, 1);
+            floorpoint = t*floorpoint;
+            R3Plane floorplane(eigen2gaps(floorpoint.head(3)).Point(), eigen2gaps(floornormal));
 
-        Texture tex;
-        loader.load(camfile);
+            Texture tex;
+            loader.load(camfile);
 
-        ir.solveTexture(floordata, &loader, floorplane, tex);
-        cout << "Done solving texture..." << endl;
-        if (tex.size > 0) {
-            ColorHelper::writeExrImage("texture.exr", tex.texture, tex.size, tex.size);
+            cout << "Solving texture..." << endl;
+            ir.solveTexture(floordata, &loader, floorplane, tex);
+            cout << "Done solving texture..." << endl;
+            if (tex.size > 0) {
+                ColorHelper::writeExrImage("texture.exr", tex.texture, tex.size, tex.size);
+            }
         }
         if (radfile != "") {
             outputRadianceFile(radfile, wf, m, ir);

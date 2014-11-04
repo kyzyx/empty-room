@@ -50,11 +50,11 @@ void pointcloud_kbd_cb_(const visualization::KeyboardEvent& event, void* helper)
     if (event.keyDown()) {
         if (event.getKeyCode() == '[') {
             displayscale /= 2;
-            recalculateColors(kbd->cloud, LABEL_NONE, *(kbd->ivr->mesh));
+            recalculateColors(kbd->cloud, LABEL_LIGHTS, *(kbd->ivr->mesh));
             updatepointcloud = true;
         } else if (event.getKeyCode() == ']') {
             displayscale *= 2;
-            recalculateColors(kbd->cloud, LABEL_NONE, *(kbd->ivr->mesh));
+            recalculateColors(kbd->cloud, LABEL_LIGHTS, *(kbd->ivr->mesh));
             updatepointcloud = true;
         }
     }

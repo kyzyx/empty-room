@@ -20,6 +20,7 @@ string radfile = "";
 string matlabsamplefile = "samples.m";
 int wallthreshold = 200;
 int numsamples = 100;
+int minlightsize = 100;
 double discardthreshold = 0.25;
 bool output_reprojection = false;
 bool output_wall = false;
@@ -33,7 +34,8 @@ double minlength = 0.2;
 bool do_wallfinding = true;
 bool do_reprojection = true;
 bool do_sampling = true;
-double hdr_threshold = 10.;
+bool do_texture = true;
+double hdr_threshold = -1.;
 double displayscale = 2.;
 int hemicuberesolution = 150;
 bool image_flip_x = false;
@@ -63,6 +65,7 @@ bool parseargs(int argc, char** argv) {
              "      -reproject_only: only perform reprojection\n" \
              "      -solve_only: only perform solving; requires -samplefile\n" \
              "      -nosolve: do not perform solving (default off)\n" \
+             "      -notexture: do not perform texture recovery (default off)\n" \
              "  Display Arguments:\n" \
              "      -nodisplay: exit immediately\n"
              "      -prune_occluded: Do not display points for which there\n" \
@@ -86,6 +89,7 @@ bool parseargs(int argc, char** argv) {
              "           containing 4-byte floating point confidence values\n"\
              "      -hdr_threshold f: radiance threshold above which pixels\n"\
              "           are considered light pixels (default 10.0)\n"\
+             "      -min_light_size n: Minimum number of vertices in a light\n"\
              "  Wallfinder Arguments:\n" \
              "      -ccw: Face vertices in counterclockwise direction (flip normals)\n" \
              "      -wallfinder_anglethreshold f: Angle between normals to be\n" \
@@ -113,6 +117,7 @@ bool parseargs(int argc, char** argv) {
     if (console::find_switch(argc, argv, "-nodisplay")) display = false;
     if (console::find_switch(argc, argv, "-prune_occluded")) prune = true;
     if (console::find_switch(argc, argv, "-nosolve")) do_sampling = false;
+    if (console::find_switch(argc, argv, "-notexture")) do_texture = false;
     if (console::find_switch(argc, argv, "-flip_x")) image_flip_x = true;
     if (console::find_switch(argc, argv, "-flip_y")) image_flip_x = true;
     if (console::find_switch(argc, argv, "-use_confidence_files")) use_confidence_files = true;
@@ -137,6 +142,9 @@ bool parseargs(int argc, char** argv) {
     }
     if (console::find_argument(argc, argv, "-hdr_threshold") >= 0) {
         console::parse_argument(argc, argv, "-hdr_threshold", hdr_threshold);
+    }
+    if (console::find_argument(argc, argv, "-min_light_size") >= 0) {
+        console::parse_argument(argc, argv, "-min_light_size", minlightsize);
     }
     if (console::find_argument(argc, argv, "-show_camera") >= 0) {
         console::parse_argument(argc, argv, "-show_camera", camera);
