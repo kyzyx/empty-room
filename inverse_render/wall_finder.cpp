@@ -497,8 +497,10 @@ void WallFinder::findWalls(
             if (abs(wallsegments[i].start - wallsegments[j].coord) <
                 abs(wallsegments[i].end - wallsegments[j].coord))
             {
+                forwards.push_back(false);
                 wallsegments[i].start = wallsegments[j].coord;
             } else {
+                forwards.push_back(true);
                 wallsegments[i].end = wallsegments[j].coord;
             }
             if (abs(wallsegments[j].start - wallsegments[i].coord) <
@@ -532,6 +534,7 @@ void WallFinder::loadWalls(string filename, vector<char>& labels) {
     labels.resize(sz);
     in.read((char*) &sz, 4);
     wallsegments.resize(sz);
+    forwards.resize(sz);
     in.read((char*) &resolution, sizeof(double));
     for (int i = 0; i < labels.size(); ++i) {
         in.read(&(labels[i]), 1);
@@ -542,6 +545,9 @@ void WallFinder::loadWalls(string filename, vector<char>& labels) {
         in.read((char*) &(wallsegments[i].end), sizeof(double));
         in.read((char*) &(wallsegments[i].norm), 4);
         in.read((char*) &(wallsegments[i].coord), sizeof(double));
+        uint32_t f;
+        in.read((char*) &f, 4);
+        forwards[i] = f;
     }
     in.read((char*) &floorplane, sizeof(double));
     in.read((char*) &ceilplane, sizeof(double));
@@ -562,6 +568,8 @@ void WallFinder::saveWalls(string filename, vector<char>& labels) {
         out.write((char*) &(wallsegments[i].end), sizeof(double));
         out.write((char*) &(wallsegments[i].norm), 4);
         out.write((char*) &(wallsegments[i].coord), sizeof(double));
+        uint32_t f = forwards[i];
+        out.write((char*) &(f), 4);
     }
     out.write((char*) &floorplane, sizeof(double));
     out.write((char*) &ceilplane, sizeof(double));
@@ -570,7 +578,8 @@ void WallFinder::saveWalls(string filename, vector<char>& labels) {
 Eigen::Vector3f WallFinder::getWallEndpoint(int i, bool lo, double height) const {
     if (i >= wallsegments.size()) i %= wallsegments.size();
     Eigen::Vector4f p;
-    pair<double,double> x = wallsegments[i].getCoords(lo?wallsegments[i].start:wallsegments[i].end);
+    double coord = (lo==forwards[i])?wallsegments[i].start:wallsegments[i].end;
+    pair<double,double> x = wallsegments[i].getCoords(coord);
     p[0] = x.first;
     p[1] = height*ceilplane + (1-height)*floorplane;
     p[2] = x.second;

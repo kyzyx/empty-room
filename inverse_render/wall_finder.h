@@ -86,10 +86,12 @@ class WallFinder {
         void saveWalls(std::string filename, std::vector<char>& labels);
         double getResolution() const { return resolution; }
         Eigen::Vector3f getWallEndpoint(int i, bool lo, double height=0) const;
+        Eigen::Matrix4f getNormalizationTransform() const { return of->getNormalizationTransform(); }
 
         double floorplane;
         double ceilplane;
         std::vector<Segment> wallsegments;
+        std::vector<bool> forwards;
     private:
         double resolution;
         OrientationFinder* of;
