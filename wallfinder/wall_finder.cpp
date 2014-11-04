@@ -231,7 +231,8 @@ void WallFinder::findWalls(
         vector<int>& labels,
         int wallthreshold,
         double minlength,
-        double anglethreshold)
+        double anglethreshold,
+        bool returnallcandidates)
 {
     // Create grid
     float maxx = -numeric_limits<float>::max();
@@ -335,6 +336,11 @@ void WallFinder::findWalls(
         }
         candidatewalls.push_back(segments[i]);
     }
+    if (maxidx == -1) {
+        cerr << "Error! No walls found!" << endl;
+        return;
+    }
+
     // Create edge cost matrix based on compatibility
     // Two segments are compatible if:
     //     Perpendicular: endpoints are close together and normals are compatible
@@ -375,8 +381,10 @@ void WallFinder::findWalls(
         }
     }
     // Starting with largest planar section, wind around compatible sections
-    if (maxidx == -1) {
-        cerr << "Error! No walls found!" << endl;
+    if (returnallcandidates) {
+        for (int i = 0; i < candidatewalls.size(); ++i) {
+            wallsegments.push_back(Segment(candidatewalls[i], resolution));
+        }
         return;
     }
     vector<int> wall;
