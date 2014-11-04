@@ -10,6 +10,8 @@
 #include <limits>
 #include <fstream>
 
+#include "shortestpath.h"
+
 using namespace pcl;
 using namespace std;
 template <typename T> int sgn(T val) {
@@ -229,7 +231,8 @@ void WallFinder::findWalls(
         vector<int>& labels,
         int wallthreshold,
         double minlength,
-        double anglethreshold)
+        double anglethreshold,
+        bool returnallcandidates)
 {
     // Create grid
     float maxx = -numeric_limits<float>::max();
@@ -247,9 +250,9 @@ void WallFinder::findWalls(
     }
 
     // Scan grid and extract line segments
-    int overlapthreshold = 6;
+    int overlapthreshold = 10;
     int steepness = 10;
-    int skipsallowed = 2;
+    int skipsallowed = 3;
     vector<GridSegment> segments;
     // Check vertical walls
     int numsegs = 0;
@@ -312,8 +315,6 @@ void WallFinder::findWalls(
     // Filter out segments with no empty space
     vector<GridSegment> candidatewalls;
     vector<GridSegment> walls;
-    int maxidx = -1;
-    double maxlength = 0;
     for (int i = 0; i < segments.size(); ++i) {
         int netcount = 0;
         for (int j = segments[i].start; j < segments[i].end; ++j) {
@@ -327,30 +328,79 @@ void WallFinder::findWalls(
             }
         }
         segments[i].norm = sgn<int>(netcount);
-        if (maxlength < segments[i].end - segments[i].start) {
-            maxlength = segments[i].end - segments[i].start;
-            maxidx = i;
-        }
         candidatewalls.push_back(segments[i]);
     }
+
+    // Merge collinear segments
+    bool changed = true;
+    while (changed) {
+        changed = false;
+        for (int i = 0; i < candidatewalls.size(); ++i) {
+            for (int j = 0; j < i; ++j) {
+                if (candidatewalls[i].direction == candidatewalls[j].direction &&
+                    abs(candidatewalls[i].coord - candidatewalls[j].coord) < 3)
+                {
+                    bool swapped = false;
+                    if (candidatewalls[i].start < candidatewalls[j].start) {
+                        swapped = true;
+                        swap(candidatewalls[i],candidatewalls[j]);
+                    }
+                    if (candidatewalls[i].start - candidatewalls[j].end > skipsallowed*2) {
+                        continue;
+                    }
+                    changed = true;
+                    if (candidatewalls[i].end > candidatewalls[j].end) {
+                        candidatewalls[j].end = candidatewalls[i].end;
+                    }
+                    int il = candidatewalls[i].end - candidatewalls[i].start;
+                    int jl = candidatewalls[j].end - candidatewalls[j].start;
+                    candidatewalls[j].coord = (candidatewalls[i].coord*il + candidatewalls[j].coord*jl)/(il+jl);
+                    candidatewalls.erase(candidatewalls.begin()+i);
+                    --i;
+                    break;
+                }
+            }
+        }
+    }
+    int maxidx = -1;
+    double maxlength = 0;
+    for (int i = 0; i < candidatewalls.size(); ++i) {
+        if (maxlength < candidatewalls[i].end - candidatewalls[i].start) {
+            maxlength = candidatewalls[i].end - candidatewalls[i].start;
+            maxidx = i;
+        }
+    }
+    if (maxidx == -1) {
+        cerr << "Error! No walls found!" << endl;
+        return;
+    }
+
     // Create edge cost matrix based on compatibility
     // Two segments are compatible if:
     //     Perpendicular: endpoints are close together and normals are compatible
     //     Parallel: Normals are compatible and coords are similar and close together
-    double** edges = new double*[candidatewalls.size()];
+    double** edges = new double*[candidatewalls.size()*2];
     for (int i = 0; i < candidatewalls.size(); ++i) {
-        edges[i] = new double[candidatewalls.size()];
+        edges[2*i] = new double[candidatewalls.size()*2];
+        edges[2*i+1] = new double[candidatewalls.size()*2];
+        for (int j = 0; j < 2*candidatewalls.size(); ++j) {
+            edges[2*i][j] = numeric_limits<double>::quiet_NaN();
+            edges[2*i+1][j] = numeric_limits<double>::quiet_NaN();
+        }
+        edges[2*i+1][2*i] = 0;
         for (int j = 0; j < i; ++j) {
+            edges[2*i][2*j] = numeric_limits<double>::max();
+            edges[2*i+1][2*j] = numeric_limits<double>::max();
+            edges[2*i+1][2*j+1] = numeric_limits<double>::max();
+            edges[2*i][2*j+1] = numeric_limits<double>::max();
             if (candidatewalls[i].direction == candidatewalls[j].direction) {
                 if (abs(candidatewalls[i].coord - candidatewalls[j].coord) < 3 &&
                     candidatewalls[i].norm == candidatewalls[j].norm)
                 {
-                    edges[i][j] = min(
-                            abs(candidatewalls[i].start - candidatewalls[j].end),
-                            abs(candidatewalls[j].start - candidatewalls[i].end)
-                    );
-                } else {
-                    edges[i][j] = numeric_limits<double>::max();
+                    edges[2*i][2*j] = abs(candidatewalls[i].start - candidatewalls[j].start);
+                    edges[2*i+1][2*j] = abs(candidatewalls[i].end - candidatewalls[j].start);
+                    edges[2*i+1][2*j+1] = abs(candidatewalls[i].end - candidatewalls[j].end);
+                    edges[2*i][2*j+1] = abs(candidatewalls[i].start - candidatewalls[j].end);
                 }
             } else {
                 // HACK: Uses fact that vertical edges are always before horizontal ones
@@ -358,57 +408,87 @@ void WallFinder::findWalls(
                 GridSegment& b = candidatewalls[j];
                 int n = a.norm*b.norm;
                 if (b.coord >= a.end - overlapthreshold && a.coord >= b.end - overlapthreshold && n >= 0) {
-                    edges[i][j] = b.coord - a.end + a.coord - b.end;
-                } else if (b.coord >= a.end - overlapthreshold && a.coord <= b.start + overlapthreshold && n <= 0) {
-                    edges[i][j] = b.coord - a.end + b.start - a.coord;
-                } else if (b.coord <= a.start + overlapthreshold && a.coord >= b.end - overlapthreshold && n <= 0) {
-                    edges[i][j] = a.start - b.coord + a.coord - b.end;
-                } else if (b.coord <= a.start + overlapthreshold && a.coord <= b.start + overlapthreshold && n >= 0) {
-                    edges[i][j] = a.start - b.coord + b.start - a.coord;
-                } else {
-                    edges[i][j] = numeric_limits<double>::max();
+                    edges[2*i+1][2*j+1] = abs(b.coord - a.end + a.coord - b.end);
                 }
-                edges[i][j] = abs(edges[i][j]);
+                if (b.coord >= a.end - overlapthreshold && a.coord <= b.start + overlapthreshold && n <= 0) {
+                    edges[2*i+1][2*j] = abs(b.coord - a.end + b.start - a.coord);
+                }
+                if (b.coord <= a.start + overlapthreshold && a.coord >= b.end - overlapthreshold && n <= 0) {
+                    edges[2*i][2*j+1] = abs(a.start - b.coord + a.coord - b.end);
+                }
+                if (b.coord <= a.start + overlapthreshold && a.coord <= b.start + overlapthreshold && n >= 0) {
+                    edges[2*i][2*j] = abs(a.start - b.coord + b.start - a.coord);
+                }
             }
         }
     }
-    // Starting with largest planar section, wind around compatible sections
-    if (maxidx == -1) {
-        cerr << "Error! No walls found!" << endl;
+    for (int i = 0; i < 2*candidatewalls.size(); ++i) {
+        for (int j = 0; j < i; ++j) {
+            if (isnan(edges[i][j])) edges[i][j] = edges[j][i];
+            else edges[j][i] = edges[i][j];
+        }
+    }
+    // Force graph to be directed via bfs
+    {
+        vector<bool> visited(candidatewalls.size()*2, false);
+        deque<int> q;
+        deque<int> d;
+        visited[2*maxidx] = true;
+        visited[2*maxidx+1] = true;
+        q.push_back(2*maxidx+1);
+        d.push_back(0);
+        for (int i = 0; i < candidatewalls.size()*2; ++i) {
+            edges[2*maxidx][i] = numeric_limits<double>::max();
+        }
+        edges[2*maxidx][2*maxidx+1] = 0;
+        edges[2*maxidx+1][2*maxidx] = numeric_limits<double>::max();
+        while (!q.empty()) {
+            int n = q.front(); q.pop_front();
+            int dist = d.front(); d.pop_front();
+            int nn = (n&1)?n-1:n+1;
+            if (dist&1) {
+                if (!visited[nn]) {
+                    q.push_back(nn);
+                    d.push_back(dist+1);
+                    visited[nn] = true;
+                    for (int i = 0; i < candidatewalls.size()*2; ++i) {
+                        if (i == nn || i == n) continue;
+                        edges[n][i] = numeric_limits<double>::max();
+                    }
+                    edges[nn][n] = numeric_limits<double>::max();
+                }
+            } else {
+                for (int i = 0; i < candidatewalls.size()*2; ++i) {
+                    if (n == i || nn == i) continue;
+                    if (edges[n][i] < numeric_limits<double>::max()) {
+                        if (!visited[i]) {
+                            q.push_back(i);
+                            d.push_back(dist+1);
+                            visited[i] = true;
+                        }
+                        edges[i][n] = numeric_limits<double>::max();
+                    }
+                }
+            }
+        }
+    }
+    if (returnallcandidates) {
+        for (int i = 0; i < candidatewalls.size(); ++i) {
+            wallsegments.push_back(Segment(candidatewalls[i], resolution));
+        }
         return;
     }
-    int curridx = maxidx;
+    // Starting with largest planar section, wind around compatible sections
     vector<int> wall;
-    vector<bool> inwall(candidatewalls.size(), false);
-    do {
-        double mindist = numeric_limits<double>::max();
-        int besti = -1;
-        for (int i = 0; i < candidatewalls.size(); ++i) {
-            if (i == curridx || wall.size() && i == wall.back()) continue;
-            double d;
-            if (curridx < i) {
-                d = edges[i][curridx];
-            } else if (curridx > i) {
-                d = edges[curridx][i];
-            }
-            if (d < mindist) {
-                mindist = d;
-                besti = i;
-            }
-        }
-        wall.push_back(curridx);
-        wallsegments.push_back(Segment(candidatewalls[curridx], resolution));
-        inwall[curridx] = true;
-        curridx = besti;
-        if (curridx == -1 || inwall[curridx]) {
-            break;
-        }
-    } while(curridx != maxidx);
-    if (curridx != maxidx) {
+    double c = shortestPath(2*maxidx, 2*maxidx, edges, 2*candidatewalls.size(), wall);
+    if (c == numeric_limits<double>::max()) {
         cerr << "Error determining floor plan!" << endl;
     }
-    // Add labels to all compatible pixels regardless of bin and compute more accurate
-    // coords
+    for (int i = 0; i < wall.size(); i+=2) {
+        wallsegments.push_back(Segment(candidatewalls[wall[i]/2], resolution));
+    }
+    // Add labels to all compatible pixels regardless of bin and compute more
+    // accurate coords
     int i;
     vector<double> segmentcoords(wallsegments.size(), 0);
     vector<int> segmentcounts(wallsegments.size(), 0);
@@ -468,8 +548,9 @@ void WallFinder::findWalls(
             if (wallsegments[i].end < wallsegments[j].end) {
                 wallsegments[i].end = wallsegments[j].end;
             }
-            wallsegments[i].coord += wallsegments[j].coord;
-            wallsegments[i].coord /= 2;
+            int il = wallsegments[i].end - wallsegments[i].start;
+            int jl = wallsegments[j].end - wallsegments[j].start;
+            wallsegments[i].coord = (wallsegments[i].coord*il + wallsegments[j].coord*jl)/(il+jl);
             wallsegments.erase(wallsegments.begin()+j);
             --i;
         }

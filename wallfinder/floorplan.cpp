@@ -25,6 +25,7 @@ int main(int argc, char* argv[]) {
                 "     -ccw: Faces in counterclockwise direction (flip normals)\n" \
                 "     -visualize: Show visualization (default on)\n" \
                 "     -print_wall: Print out wall segments (default off)\n" \
+                "     -all_candidates: show all potential wall segments (default off)\n" \
                 "     -novisualize: Exit immediately\n" \
                 "     -visualize_grid: show histogram of points instead of 3d model\n" \
                 "     -wallthreshold int: number of points in a bin to be considered a possible wall\n" \
@@ -40,8 +41,10 @@ int main(int argc, char* argv[]) {
     bool ccw = false;
     bool visualize = true;
     bool print_wall = false;
+    bool all_candidates = false;
     double anglethreshold = M_PI/40;
     double resolution = 0.01;
+    double orientationresolution = 0.01;
     double minlength = 0.2;
     bool show_grid = false;
     int wallthreshold = 200;
@@ -49,12 +52,16 @@ int main(int argc, char* argv[]) {
     if (console::find_switch(argc, argv, "-visualize")) visualize = true;
     if (console::find_switch(argc, argv, "-print_wall")) print_wall = true;
     if (console::find_switch(argc, argv, "-novisualize")) visualize = false;
+    if (console::find_switch(argc, argv, "-all_candidates")) all_candidates = true;
     if (console::find_switch(argc, argv, "-visualize_grid")) show_grid = true;
     if (console::find_argument(argc, argv, "-anglethreshold")) {
         console::parse_argument(argc, argv, "-anglethreshold", anglethreshold);
     }
     if (console::find_argument(argc, argv, "-resolution")) {
         console::parse_argument(argc, argv, "-resolution", resolution);
+    }
+    if (console::find_argument(argc, argv, "-orientationresolution")) {
+        console::parse_argument(argc, argv, "-orientationresolution", orientationresolution);
     }
     if (console::find_argument(argc, argv, "-wallthreshold")) {
         console::parse_argument(argc, argv, "-wallthreshold", wallthreshold);
@@ -66,7 +73,7 @@ int main(int argc, char* argv[]) {
     PolygonMesh::Ptr mesh(new PolygonMesh());
     io::loadPolygonFile(argv[1], *mesh);
 
-    PlaneOrientationFinder of(mesh,0.01);
+    PlaneOrientationFinder of(mesh,orientationresolution);
     of.computeNormals(ccw);
     if (!of.computeOrientation()) {
         cout << "Error computing orientation! Non-triangle mesh!" << endl;
@@ -80,7 +87,7 @@ int main(int argc, char* argv[]) {
     WallFinder wf(&of, resolution);
     vector<int> labels(of.getCloud()->size(), WallFinder::LABEL_NONE);
     wf.findFloorAndCeiling(labels, anglethreshold);
-    wf.findWalls(labels, wallthreshold, minlength, anglethreshold);
+    wf.findWalls(labels, wallthreshold, minlength, anglethreshold, all_candidates);
     if (print_wall) {
         for (int i = 0; i < wf.wallsegments.size(); ++i) {
             pair<int,int> x = wf.wallsegments[i].getCoords(wf.wallsegments[i].start);
@@ -123,7 +130,9 @@ int main(int argc, char* argv[]) {
                 colorgrid->at(i).x = grid->at(i).x;
                 colorgrid->at(i).y = grid->at(i).y;
                 colorgrid->at(i).z = grid->at(i).z;
-                colorgrid->at(i).r = 0;
+                double count = grid->at(i).y;
+                count = count*count*100;
+                colorgrid->at(i).r = count > wallthreshold?255:0;
                 colorgrid->at(i).g = colorgrid->at(i).y/2*255;
                 colorgrid->at(i).b = 255-colorgrid->at(i).y/2*255;
 

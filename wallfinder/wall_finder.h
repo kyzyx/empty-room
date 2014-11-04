@@ -80,7 +80,8 @@ class WallFinder {
                 std::vector<int>& labels,
                 int wallthreshold=200,
                 double minlength=0.2,
-                double anglethreshold=M_PI/40);
+                double anglethreshold=M_PI/40,
+                bool returnallcandidates=false);
         pcl::PointCloud<pcl::PointXYZ>::Ptr getHistogram();
 
         void loadWalls(std::string filename, std::vector<int>& labels);
