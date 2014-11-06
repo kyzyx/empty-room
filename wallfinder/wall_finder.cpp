@@ -81,8 +81,47 @@ class DotComparison : public ComparisonBase<PointT> {
     private:
         DotComparison() {;}
 };
+double WallFinder::findExtremalHistogram(
+        PointCloud<PointNormal>::ConstPtr cloud,
+        Eigen::Vector3f dir,
+        double resolution, double threshold)
+{
+    double vmin = std::numeric_limits<double>::infinity();
+    double vmax = -std::numeric_limits<double>::infinity();
+    for (int i = 0; i < cloud->points.size(); ++i) {
+        double val = cloud->points[i].x*dir(0) + cloud->points[i].y*dir(1) + cloud->points[i].z*dir(2);
+        vmin = min(vmin, val);
+        vmax = max(vmax, val);
+    }
+    int sz = 1+(vmax-vmin)/resolution;
+    int* hist = new int[sz];
+    memset(hist, 0, sz*sizeof(int));
+    for (int i = 0; i < cloud->points.size(); ++i) {
+        double val = cloud->points[i].x*dir(0) + cloud->points[i].y*dir(1) + cloud->points[i].z*dir(2);
+        hist[(int)((val-vmin)/resolution)]++;
+    }
 
-double WallFinder::findExtremal(
+    int besti = -1;
+    for (int i = 0; i < sz; ++i) {
+        if (hist[i] > threshold) {
+            besti = i;
+            break;
+        }
+    }
+    double avg = 0;
+    int n = 0;
+    for (int i = 0; i < cloud->points.size(); ++i) {
+        double val = cloud->points[i].x*dir(0) + cloud->points[i].y*dir(1) + cloud->points[i].z*dir(2);
+        int idx = (val-vmin)/resolution;
+        if (idx == besti || idx == besti+1) {
+            avg += val;
+            n++;
+        }
+    }
+    return avg/n;
+}
+
+double WallFinder::findExtremalNormal(
         PointCloud<PointNormal>::ConstPtr cloud,
         Eigen::Vector3f dir,
         double anglethreshold,
@@ -139,18 +178,16 @@ double WallFinder::findFloorAndCeiling(
         vector<int>& labels,
         double anglethreshold)
 {
-    PointCloud<PointNormal>::Ptr floorcandidates(new PointCloud<PointNormal>());
     PointCloud<PointNormal>::ConstPtr cloud = of->getCloud();
-    floorplane = findExtremal(cloud, Eigen::Vector3f(0.,1.,0.), anglethreshold, floorcandidates);
-    PointCloud<PointNormal>::Ptr ceilcandidates(new PointCloud<PointNormal>());
-    ceilplane = -findExtremal(cloud, Eigen::Vector3f(0.,-1.,0.), anglethreshold, ceilcandidates);
+    floorplane = findExtremalHistogram(cloud, Eigen::Vector3f(0.,1.,0.), resolution, 10000);
+    ceilplane = -findExtremalHistogram(cloud, Eigen::Vector3f(0.,-1.,0.), resolution, 10000);
     double t = cos(anglethreshold);
     for (int i = 0; i < cloud->size(); ++i) {
         if (abs((*cloud)[i].y - floorplane) < resolution &&
-                (*cloud)[i].normal_y > t) {
+                (*cloud)[i].normal_y < -t) {
             labels[i] = LABEL_FLOOR;
         } else if (abs((*cloud)[i].y - ceilplane) < resolution &&
-                (*cloud)[i].normal_y < -t) {
+                (*cloud)[i].normal_y > t) {
             labels[i] = LABEL_CEILING;
         }
     }
@@ -511,7 +548,7 @@ void WallFinder::findWalls(
                                    it->normal_z);
             Eigen::Vector3f axis = (horiz?Eigen::Vector3f::UnitZ():Eigen::Vector3f::UnitX());
             axis *= -wallsegments[j].norm;
-            if (acos(normal.dot(axis)) < anglethreshold) {
+            if (normal.dot(axis) > cos(anglethreshold)) {
                 labels[i] = LABEL_WALL;
                 segmentcoords[j] += horiz?it->z:it->x;
                 segmentcounts[j]++;
