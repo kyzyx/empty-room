@@ -81,6 +81,13 @@ int main(int argc, char* argv[]) {
             wf.findWalls(m.types, wallthreshold, minlength, anglethreshold);
             cout << "Done finding walls" << endl;
         }
+        if (flipfloorceiling) {
+            swap(wf.floorplane, wf.ceilplane);
+            for (int i = 0; i < m.types.size(); ++i) {
+                if (m.types[i] == WallFinder::LABEL_CEILING) m.types[i] = WallFinder::LABEL_FLOOR;
+                else if (m.types[i] == WallFinder::LABEL_FLOOR) m.types[i] = WallFinder::LABEL_CEILING;
+            }
+        }
         for (int i = 0; i < m.types.size(); ++i) {
             if (m.types[i] == WallFinder::LABEL_WALL) wallindices.push_back(i);
             else if (m.types[i] == WallFinder::LABEL_FLOOR) floorindices.push_back(i);

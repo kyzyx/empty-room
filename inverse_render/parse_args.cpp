@@ -29,6 +29,7 @@ bool input = false;
 bool display = true;
 bool prune = false;
 bool ccw = false;
+bool flipfloorceiling = false;
 double anglethreshold = M_PI/40;
 double resolution = 0.01;
 double minlength = 0.2;
@@ -100,6 +101,7 @@ bool parseargs(int argc, char** argv) {
              "           (default 0.2)\n" \
              "      -wallfinder_resolution f: maximum distance for a point to\n" \
              "           be considered on a plane for wallfinder (default 0.01)\n" \
+             "      -wallfinder_flip_floor_ceiling: Reverse the floor and ceiling\n" \
              "      -wallfinder_wallthreshold n: Minimum bucket count in\n" \
              "           histogram to count as a wall; dependent on resolution!\n" \
              "           (default 200)\n" \
@@ -122,6 +124,7 @@ bool parseargs(int argc, char** argv) {
     if (console::find_switch(argc, argv, "-notexture")) do_texture = false;
     if (console::find_switch(argc, argv, "-flip_x")) image_flip_x = true;
     if (console::find_switch(argc, argv, "-flip_y")) image_flip_x = true;
+    if (console::find_switch(argc, argv, "-wallfinder_flip_floor_ceiling")) flipfloorceiling = true;
     if (console::find_switch(argc, argv, "-use_confidence_files")) use_confidence_files = true;
     if (console::find_switch(argc, argv, "-wallfind_only")) {
         do_reprojection = false;

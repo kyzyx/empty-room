@@ -23,6 +23,7 @@ extern bool input;
 extern bool display;
 extern bool prune;
 extern bool ccw;
+extern bool flipfloorceiling;
 extern double anglethreshold;
 extern double resolution;
 extern double minlength;
