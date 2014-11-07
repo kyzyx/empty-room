@@ -221,7 +221,7 @@ void outputPlyFile(std::string filename, WallFinder& wf, Mesh& m, InverseRender&
     out << "3 " << n+5 << " " << n+7 << " " << n+6 << endl;
 
 }
-void outputPbrtFile(std::string filename, WallFinder& wf, Mesh& m, InverseRender& ir) {
+void outputPbrtFile(std::string filename, WallFinder& wf, Mesh& m, InverseRender& ir, Texture floortex, string floortexfilename) {
     ofstream out(filename);
     ifstream tpl("template.pbrt");
     // Basic rendering info
@@ -231,12 +231,33 @@ void outputPbrtFile(std::string filename, WallFinder& wf, Mesh& m, InverseRender
         out << line << endl;
     } while(!tpl.eof());
     out << endl;
-    // Output wall material
+
+    // Calculate room dimensions and aspect ratio
+    R3Box b;
+    for (int i = 0; i < wf.wallsegments.size(); ++i) {
+        Eigen::Vector3f c = wf.getNormalizedWallEndpoint(i,0,0);
+        R3Point p(c(0),c(1),c(2));
+        b.Union(p);
+    }
+    double roomw = b.XLength();
+    double roomd = b.ZLength();
+
     out << "WorldBegin" << endl;
+    // Output wall material
     out << "MakeNamedMaterial \"Wall\"" << endl;
     out << "\t\"color Kd\" [";
     for (int i = 0; i < 3; ++i) out << ir.wallMaterial(i) << " ";
     out << "]" << endl;
+    out << "\t\"float sigma\" [0.0]" << endl;
+    out << "\t\"string type\" [\"matte\"]" << endl << endl;
+    // Output floor texture
+    out << "Texture \"FloorTexture\" \"color\" \"imagemap\"" << endl;
+    out << "\t\"string filename\" [\"" << floortexfilename << "\"]" << endl;
+    out << "\t\"string wrap\" [\"repeat\"]" << endl;
+    out << "\t\"float scale\" [" << floortex.scale/min(roomw, roomd) << "]" << endl;
+    // Output floor material
+    out << "MakeNamedMaterial \"FloorMaterial\"" << endl;
+    out << "\t\"texture Kd\" [\"FloorTexture\"]" << endl;
     out << "\t\"float sigma\" [0.0]" << endl;
     out << "\t\"string type\" [\"matte\"]" << endl << endl;
     // Output room geometry
@@ -245,15 +266,11 @@ void outputPbrtFile(std::string filename, WallFinder& wf, Mesh& m, InverseRender
     out << "NamedMaterial \"Wall\"" << endl;
     out << "Shape \"trianglemesh\"" << endl;
     out << "\"point P\" [" << endl;
-    R3Box b;
     for (int i = 0; i < wf.wallsegments.size(); ++i) {
         Eigen::Vector3f p[] = {
             wf.getWallEndpoint(i,0,1),
             wf.getWallEndpoint(i,0,0)
         };
-        Eigen::Vector3f c = wf.getNormalizedWallEndpoint(i,0,0);
-        R3Point pp(c(0),c(1),c(2));
-        b.Union(pp);
         for (int j = 0; j < 2; ++j) {
             out << '\t' << p[j](0) << " " << p[j](1) << " " << p[j](2) << endl;
         }
@@ -275,9 +292,6 @@ void outputPbrtFile(std::string filename, WallFinder& wf, Mesh& m, InverseRender
         }
     }
     int n = wf.wallsegments.size()*2;
-    // Floor triangles
-    out << '\t' << n << " " << n+2 << " " << n+1 << endl;
-    out << '\t' << n+1 << " " << n+2 << " " << n+3 << endl;
     // Ceiling triangles
     out << '\t' << n+4 << " " << n+5 << " " << n+6 << endl;
     out << '\t' << n+5 << " " << n+7 << " " << n+6 << endl;
@@ -285,7 +299,35 @@ void outputPbrtFile(std::string filename, WallFinder& wf, Mesh& m, InverseRender
     out << "\"bool generatetangents\" [\"false\"]" << endl;
     out << "\"string name\" [\"Room\"]" << endl;
     out << "AttributeEnd" << endl;
-    // FIXME: Separate floor material
+
+    // Output floor plane
+    out << "AttributeBegin" << endl;
+    out << "Transform [1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1]" << endl;
+    out << "NamedMaterial \"FloorMaterial\"" << endl;
+    out << "Shape \"trianglemesh\"" << endl;
+    out << "\"point P\" [" << endl;
+    for (int i = 0; i < 4; ++i) {
+        Vector4f p(b.Coord(i&1,0),wf.floorplane,b.Coord((i>>1)&1,2),1);
+        p = wf.getNormalizationTransform().inverse()*p;
+        out <<  '\t' << p(0)/p(3) << " " << p(1)/p(3) << " " << p(2)/p(3) << endl;
+    }
+    out << "]" << endl;
+    out << "\"integer indices\" [" << endl;
+        out << '\t' << 0 << " " << 2 << " " << 1 << endl;
+        out << '\t' << 1 << " " << 2 << " " << 3 << endl;
+    out << "]" << endl;
+    out << "\"float uv\" [" << endl;
+    if (roomw < roomd) {
+        double s = roomd/roomw;
+        out << "\t0 0 1 0 0 " << s << " 1 " << s;
+    } else {
+        double s = roomw/roomd;
+        out << "\t0 0 " << s << " 0 0 1 " << s << " 1";
+    }
+    out << "]" << endl;
+    out << "\"bool generatetangents\" [\"false\"]" << endl;
+    out << "\"string name\" [\"Floor\"]" << endl;
+    out << "AttributeEnd" << endl;
 
     // Output light sources
     for (int i = 0; i < ir.lights.size(); ++i) {

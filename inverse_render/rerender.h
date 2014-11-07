@@ -8,5 +8,5 @@
 
 void outputRadianceFile(std::string filename, WallFinder& wf, Mesh& m, InverseRender& ir);
 void outputPlyFile(std::string filename, WallFinder& f, Mesh& m, InverseRender& ir);
-void outputPbrtFile(std::string filename, WallFinder& wf, Mesh& m, InverseRender& ir);
+void outputPbrtFile(std::string filename, WallFinder& wf, Mesh& m, InverseRender& ir, Texture floortex, std::string floortexfilename);
 #endif
