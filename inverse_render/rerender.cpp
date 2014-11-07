@@ -9,14 +9,16 @@ using namespace Eigen;
 const double EPSILON = 0.0001;
 const double CIRCLETOLERANCE = 1.2;
 
-void estimateLightShape(ofstream& out, Mesh& m, int id) {
-    vector<R3Point> points;
+void estimateLightShape(Mesh& m, int id, vector<R3Point>& points, vector<int>& indices) {
+    vector<int> vid2point(m.getMesh()->NVertices(), -1);
     R3Point mean(0,0,0);
     for (int i = 0; i < m.getMesh()->NVertices(); ++i) {
         R3MeshVertex* v = m.getMesh()->Vertex(i);
-        if (m.labels[m.getMesh()->VertexID(v)] == id) {
+        int vid = m.getMesh()->VertexID(v);
+        if (m.labels[vid] == id) {
             points.push_back(m.getMesh()->VertexPosition(v));
             mean += points.back();
+            vid2point[vid] = points.size()-1;
         }
     }
     mean /= points.size();
@@ -50,14 +52,10 @@ void estimateLightShape(ofstream& out, Mesh& m, int id) {
                 }
             }
             if (lightid != id) continue;
-            out << "l" << lightid << " polygon light" << i << endl << "0 0 9" << endl;
-            double eps = 0.0001;
             for (int j = 0; j < 3; ++j) {
-                R3Point v = m.getMesh()->VertexPosition(m.getMesh()->VertexOnFace(f, j));
-                v += m.getMesh()->FaceNormal(f)*eps;
-                out << v[0] << " " << v[1] << " " << v[2] << " ";
+                int n = m.getMesh()->VertexID(m.getMesh()->VertexOnFace(f, j));
+                indices.push_back(vid2point[n]);
             }
-            out << endl << endl;
         }
     } else if (svd.singularValues()[1] > EPSILON) {
         // Project points onto plane and find extrema
@@ -94,11 +92,12 @@ void estimateLightShape(ofstream& out, Mesh& m, int id) {
             Vector3d yax = Vector3d(0,maxcoefs[1],0).transpose()*svd.matrixV().transpose();
             Vector3d zax = xax.cross(yax);
             zax /= zax.norm();
-            Vector3d center(mean[0],mean[1],mean[2]);
-            out << "l" << id << " ring light" << id << "_"  << endl << "0 0 8" << endl;
-            out << mean[0] << " " << mean[1] << " " << mean[2] << " ";
-            out << zax[0] << " " << zax[1] << " " << zax[2] << " ";
-            out << "0 " << xax.norm() << endl << endl;
+            double radius = xax.norm();
+            points.clear();
+            points.push_back(mean);
+            points.push_back(R3Point(radius, radius, radius));
+            points.push_back(R3Point(zax(0), zax(1), zax(2)));
+            points.push_back(R3Point(xax(0), xax(1), xax(2)));
         } else {
             // Transform extreme points back to original coordinates
             MatrixXd corners(4,3);
@@ -107,11 +106,20 @@ void estimateLightShape(ofstream& out, Mesh& m, int id) {
                        mincoefs[0], mincoefs[1],0,
                        mincoefs[0], maxcoefs[1],0;
             corners = corners*svd.matrixV().transpose();
-            out << "l" << id << " polygon light" << id << "_"  << endl << "0 0 12" << endl;
+            points.clear();
             for (int i = 0; i < 4; ++i) {
-                for (int j = 0; j < 3; ++j) out << corners(i,j)*s[j] + mean[j] << " ";
+                R3Point p;
+                for (int j = 0; j < 3; ++j) {
+                    p[j] = corners(i,j)*s[j] + mean[j];
+                }
+                points.push_back(p);
             }
-            out << endl << endl;
+            indices.push_back(0);
+            indices.push_back(1);
+            indices.push_back(2);
+            indices.push_back(0);
+            indices.push_back(2);
+            indices.push_back(3);
         }
     } else {
         cout << "Error: Line source not implemented!" << endl;
@@ -132,7 +140,32 @@ void outputRadianceFile(string filename, WallFinder& wf, Mesh& m, InverseRender&
     for (int i = 0; i < ir.lights.size(); ++i) {
         out << "void light l" << (i+1) << endl << 0 << endl << 0 << endl << 3 << " ";
         out << ir.lights[i](0)/M_PI << " " << ir.lights[i](1)/M_PI << " " << ir.lights[i](2)/M_PI << endl << endl;
-        estimateLightShape(out, m, i+1);
+        vector<int> indices;
+        vector<R3Point> points;
+        int id = i+1;
+        estimateLightShape(m, id, points, indices);
+        if (points.size() == 3 && indices.size() == 0) {
+            out << "l" << id << " ring light" << id << "_"  << endl << "0 0 8" << endl;
+            out << points[0][0] << " " << points[0][1] << " " << points[0][2] << " ";
+            out << points[2][0] << " " << points[2][1] << " " << points[2][2] << " ";
+            out << "0 " << points[1][0] << endl << endl;
+        } else {
+            if (points.size()  == 4 && indices.size() == 6) {
+                out << "l" << id << " polygon light" << id << "_"  << endl << "0 0 12" << endl;
+                for (int i = 0; i < points.size(); ++i) {
+                    for (int j = 0; j < 3; ++j) out << points[i][j] << " ";
+                    out << endl;
+                }
+                out << endl;
+            } else {
+                out << "l" << id << " polygon light" << id << endl << "0 0 " << 3*indices.size() << endl;
+                for (int i = 0; i < indices.size(); ++i) {
+                    for (int j = 0; j < 3; ++j) out << points[indices[i]][j] << " ";
+                    out << endl;
+                }
+                out << endl;
+            }
+        }
     }
 
     double hi = wf.ceilplane;
@@ -331,18 +364,66 @@ void outputPbrtFile(std::string filename, WallFinder& wf, Mesh& m, InverseRender
 
     // Output light sources
     for (int i = 0; i < ir.lights.size(); ++i) {
+        vector<R3Point> pts;
+        vector<int> indices;
+        estimateLightShape(m, i+1, pts, indices);
         out << "AttributeBegin" << endl;
-        out << "Transform [1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1]" << endl;
-        out << "AreaLightSource \"diffuse\" \"rgb L\" [";
-        for (int j = 0; j < 3; ++j) out << ir.lights[i](j) << " ";
-        out << "]" << endl;
-        out << "Shape \"trianglemesh\"" << endl;
-        out << "\"point P\" [" << endl;
-        // FIXME
-        out << "]" << endl;
-        out << "\"integer indices\" [" << endl;
-        // FIXME
-        out << "]" << endl;
+        if (pts.size() == 4 && indices.size() == 0) {
+            if (pts.size() == 4) {
+                // Disk area light
+                out << "AreaLightSource \"diffuse\" \"rgb L\" [";
+                for (int j = 0; j < 3; ++j) out << ir.lights[i](j)/M_PI << " ";
+                out << "]" << endl;
+                Matrix3d rot;
+                Vector3d axes[3];
+                axes[0] = Vector3d(pts[2][0], pts[2][1], pts[2][2]);
+                axes[2] = Vector3d(pts[3][0], pts[3][1], pts[3][2]);
+                axes[1] = axes[2].cross(axes[0]);
+                for (int j = 0; j < 3; ++j) rot.col(j) = axes[j];
+                rot = rot.inverse();
+                out << "Transform [";
+                for (int j = 0; j < 3; ++j) {
+                    for (int k = 0; k < 3; ++k) out << rot(j,k) << " ";
+                    out << pts[0][j] << " ";
+                }
+                out << "0 0 0 1]" << endl;
+                out << "Shape \"disk\" \"float radius\" [" << pts[1][0] << "]" << endl;
+            } else if (pts.size() == 1) {
+                // Point light
+                double radius = 0.02;
+                out << "AreaLightSource \"diffuse\" \"rgb L\" [";
+                for (int j = 0; j < 3; ++j) out << ir.lights[i](j)/(M_PI*radius*radius) << " ";
+                out << "]" << endl;
+                out << "Transform [1 0 0 " << pts[0][0] <<
+                                 " 0 1 0 " << pts[0][1] <<
+                                 " 0 0 1 " << pts[0][2] <<
+                                 " 0 0 0 1]" << endl;
+                out << "Shape \"sphere\" \"float radius\" [" << radius << "]" << endl;
+            }
+        } else {
+            out << "AreaLightSource \"diffuse\" \"rgb L\" [";
+            for (int j = 0; j < 3; ++j) out << ir.lights[i](j)/M_PI << " ";
+            out << "]" << endl;
+            out << "Transform [1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1]" << endl;
+            for (int j = 0; j < pts.size(); ++j) {
+                pts[j] = b.ClosestPoint(pts[j]);
+            }
+            out << "Shape \"trianglemesh\"" << endl;
+            out << "\"point P\" [" << endl;
+            for (int j = 0; j < pts.size(); ++j) {
+                out << '\t';
+                for (int k = 0; k < 3; ++k) out << pts[j][k] << " ";
+                out << endl;
+            }
+            out << "]" << endl;
+            out << "\"integer indices\" [" << endl;
+            for (int j = 0; j < indices.size(); j+=3) {
+                out << '\t';
+                for (int k = 0; k < 3; ++k) out << indices[j+k] << " ";
+                out << endl;
+            }
+            out << "]" << endl;
+        }
         out << "AttributeEnd" << endl;
     }
     out << "WorldEnd" << endl;
