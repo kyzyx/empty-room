@@ -1,0 +1,27 @@
+# Main Scene File
+
+Renderer "sampler"
+
+Sampler "lowdiscrepancy"
+    "integer pixelsamples" [1536]
+
+SurfaceIntegrator "path"
+
+PixelFilter "mitchell"
+	"float B" [0.333333343267441]
+	"float C" [0.333333343267441]
+	"float xwidth" [2.000000000000000]
+	"float ywidth" [2.000000000000000]
+
+Film "image"
+	"integer xresolution" [640]
+	"integer yresolution" [480]
+	"string filename" ["compleximport.Scene.00000.exr"]
+
+LookAt 0 0 0 0 0 1 0 -1 0
+
+Camera "perspective"
+	"float fov" [45]
+	"float shutteropen" [0.000000000000000]
+	"float shutterclose" [0.041666666666667]
+
