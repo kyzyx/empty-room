@@ -1,6 +1,5 @@
 #include <GL/glew.h>
 #include "mesh.h"
-#include "material.h"
 
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -92,18 +91,7 @@ void Mesh::writeColoredMesh(std::string filename) {
     for (int i = 0; i < n; ++i) {
         R3Point p = mesh->VertexPosition(mesh->Vertex(i));
         out << p[0] << " " << p[1] << " " << p[2] << " ";
-        Material m;
-        double total = 0;
-        for (int k = 0; k < samples[i].size(); ++k) {
-            Sample& s = samples[i][k];
-            if (s.confidence > 0) {
-                m += Material(s.r,s.g,s.b)*abs(s.dA)*s.confidence;
-                total += s.dA*s.confidence;
-            }
-        }
-        if (total > 0) {
-            m /= total;
-        }
+        Material m = getVertexColor(i);
         m *= 195;
         out << min((int)m.r,255) << " " << min((int)m.g,255) << " " << min((int)m.b,255) << endl;
     }
@@ -225,27 +213,30 @@ void Mesh::computeColorsOGL() {
                 vertices[ind+2] = 0;
             } else if (light != -1) {
                 vertices[ind+2] = 0;
-                double total = 0;
                 int n = mesh->VertexID(mesh->VertexOnFace(mesh->Face(i), j));
-                for (int k = 0; k < samples[n].size(); ++k) {
-                    double s = abs(samples[n][k].dA);
-                    double c = samples[n][k].confidence;
-                    if (c > 0) {
-                        vertices[ind+3] += samples[n][k].r*s*c;
-                        vertices[ind+4] += samples[n][k].g*s*c;
-                        vertices[ind+5] += samples[n][k].b*s*c;
-                        total += s*c;
-                    }
-                }
-                if (total > 0) {
-                    vertices[ind+3] /= total;
-                    vertices[ind+4] /= total;
-                    vertices[ind+5] /= total;
-                }
+                Material m = getVertexColor(n);
+                vertices[ind+3] = m.r;
+                vertices[ind+4] = m.g;
+                vertices[ind+5] = m.b;
             }
         }
     }
     glBufferData(GL_ARRAY_BUFFER, 6*3*mesh->NFaces()*sizeof(float),
             vertices, GL_STATIC_DRAW);
     delete [] vertices;
+}
+Material Mesh::getVertexColor(int n) const {
+    Material m(0,0,0);
+    double total = 0;
+    for (int i = 0; i < samples[n].size(); ++i) {
+        const Sample& s = samples[n][i];
+        if (s.confidence > 0) {
+            m += Material(s.r,s.g,s.b)*abs(s.dA)*s.confidence;
+            total += s.dA*s.confidence;
+        }
+    }
+    if (total > 0) {
+        m /= total;
+    }
+    return m;
 }

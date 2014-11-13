@@ -134,17 +134,11 @@ void recalculateColors(PointCloud<PointXYZRGB>::Ptr cloud, int labeltype, Mesh& 
                     if (m.labels[i]&2) cloud->at(i).g = 255;
                     if (m.labels[i]&4) cloud->at(i).b = 255;
                 } else {
-                    int r = 0;
-                    int g = 0;
-                    int b = 0;
-                    for (int j = 0; j < m.samples[i].size(); ++j) {
-                        r += mult*m.samples[i][j].r*displayscale;
-                        g += mult*m.samples[i][j].g*displayscale;
-                        b += mult*m.samples[i][j].b*displayscale;
-                    }
-                    cloud->at(i).r = r/m.samples[i].size();
-                    cloud->at(i).g = g/m.samples[i].size();
-                    cloud->at(i).b = b/m.samples[i].size();
+                    Material mat = m.getVertexColor(i);
+                    mat *= mult*displayscale;
+                    cloud->at(i).r = mat.r;
+                    cloud->at(i).g = mat.g;
+                    cloud->at(i).b = mat.b;
                     if (cloud->at(i).r > 255) cloud->at(i).r = 255;
                     if (cloud->at(i).g > 255) cloud->at(i).g = 255;
                     if (cloud->at(i).b > 255) cloud->at(i).b = 255;

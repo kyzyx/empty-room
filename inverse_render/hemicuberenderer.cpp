@@ -201,16 +201,7 @@ void HemicubeRenderer::computeSamples(
 
         SampleData sd;
         sd.vertexid = indices[n];
-        sd.radiosity = Material(0,0,0);
-        double total = 0;
-        for (int j = 0; j < mesh->samples[indices[n]].size(); ++j) {
-            float s = abs(mesh->samples[indices[n]][j].dA);
-            sd.radiosity.r += mesh->samples[indices[n]][j].r*s;
-            sd.radiosity.g += mesh->samples[indices[n]][j].g*s;
-            sd.radiosity.b += mesh->samples[indices[n]][j].b*s;
-            total += s;
-        }
-        sd.radiosity /= total;
+        sd.radiosity = mesh->getVertexColor(indices[n]);
         if (images) {
             radimage = images[2*i];
             lightimage = images[2*i+1];

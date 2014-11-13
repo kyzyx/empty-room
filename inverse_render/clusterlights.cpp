@@ -10,18 +10,7 @@ using namespace std;
 // Marks all lights with a 1
 void labelLights(Mesh& m, double hdrthreshold) {
     for (int i = 0; i < m.getMesh()->NVertices(); ++i) {
-        Material mat;
-        double total = 0;
-        for (int k = 0; k < m.samples[i].size(); ++k) {
-            Sample& s = m.samples[i][k];
-            if (s.confidence > 0) {
-                mat += Material(s.r,s.g,s.b)*abs(s.dA)*s.confidence;
-                total += s.dA*s.confidence;
-            }
-        }
-        if (total > 0) {
-            mat /= total;
-        }
+        Material mat = m.getVertexColor(i);
         /*int count = 0;
         for (int j = 0; j < m.samples[i].size(); ++j) {
             if (m.samples[i][j].label == 1) ++count;

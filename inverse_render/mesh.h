@@ -4,6 +4,7 @@
 #include <GL/gl.h>
 #include "RNBasics/RNBasics.h"
 #include "R3Shapes/R3Shapes.h"
+#include "material.h"
 #include <pcl/PolygonMesh.h>
 #include <vector>
 #include <string>
@@ -45,6 +46,7 @@ class Mesh {
         R3MeshSearchTree* getSearchTree() { return searchtree; }
         void renderOGL(bool light=false) const;
         void computeColorsOGL();
+        Material getVertexColor(int n) const;
 
         std::vector<std::vector<Sample> > samples;
         std::vector<char> labels;
