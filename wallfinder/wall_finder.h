@@ -95,7 +95,11 @@ class WallFinder {
     private:
         double resolution;
         OrientationFinder* of;
-        double findExtremal(
+        double findExtremalHistogram(
+            pcl::PointCloud<pcl::PointNormal>::ConstPtr cloud,
+            Eigen::Vector3f dir,
+            double resolution, double threshold);
+        double findExtremalNormal(
             pcl::PointCloud<pcl::PointNormal>::ConstPtr cloud,
             Eigen::Vector3f dir,
             double anglethreshold,
