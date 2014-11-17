@@ -34,8 +34,7 @@ class InverseRender {
     private:
         // Inverse Rendering helpers
         bool calculateWallMaterialFromUnlit(std::vector<SampleData>& data);
-        bool solveLights(std::vector<SampleData>& data);
-        bool solveMaterials(std::vector<SampleData>& data);
+        bool solveAll(std::vector<SampleData>& data);
 
         // Texture recovery helpers
         Material computeAverageMaterial(

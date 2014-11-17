@@ -3,18 +3,63 @@
 #include <random>
 #include <Eigen/Dense>
 #include <fstream>
+#include "eigen_nnls.h"
 
 using namespace std;
 using namespace Eigen;
 
+void solveLights(vector<SampleData>& data, vector<Material>& lights, double r, int ch) {
+    VectorXd b(data.size());
+    MatrixXd A(data.size(), lights.size());
+    for (int i = 0; i < data.size(); ++i) {
+        b[i] = (1-data[i].fractionUnknown)*(data[i].radiosity(ch) - r*data[i].netIncoming(ch));
+        for (int j = 0; j < data[i].lightamount.size(); ++j) {
+            A(i,j) = (1-data[i].fractionUnknown)*r*data[i].lightamount[j];
+        }
+    }
+    VectorXd x(lights.size());
+    NNLS<MatrixXd>::solve(A, b, x);
+    //VectorXd x = A.jacobiSvd(ComputeThinU | ComputeThinV).solve(b);
+    for (int i = 0; i < lights.size(); ++i) {
+        lights[i](ch) = x[i];
+    }
+}
+
+double error(vector<SampleData>& data, vector<Material>& lights, double r, int ch) {
+    double err = 0;
+    for (int i = 0; i < data.size(); ++i) {
+        double d = data[i].radiosity(ch) - r*data[i].netIncoming(ch);
+        for (int j = 0; j < data[i].lightamount.size(); ++j) {
+            d -= r*data[i].lightamount[j]*lights[j](ch);
+        }
+        d *= 1-data[i].fractionUnknown;
+        err += d*d;
+    }
+    return err;
+}
+
+bool InverseRender::solveAll(vector<SampleData>& data) {
+    double reflectanceresolution = 0.01;
+    for (int ch = 0; ch < 3; ++ch) {
+        double besterr = numeric_limits<double>::max();
+        double bestr = -1;
+        for (double r = 0; r < 1; r += reflectanceresolution) {
+            solveLights(data, lights, r, ch);
+            double err = error(data, lights, r, ch);
+            if (err < besterr) {
+                besterr = err;
+                bestr = r;
+            }
+        }
+        wallMaterial(ch) = bestr;
+    }
+}
 
 void InverseRender::solve(vector<SampleData>& data) {
-    if (calculateWallMaterialFromUnlit(data)) {
-        cout << "Material estimate: (" << wallMaterial(0) << "," << wallMaterial(1) << "," << wallMaterial(2) << ")" << endl;
-    }
     if (!numlights) return;
+    solveAll(data);
     lights.resize(numlights);
-    solveLights(data);
+    cout << "Material estimate: (" << wallMaterial(0) << "," << wallMaterial(1) << "," << wallMaterial(2) << ")" << endl;
     for (int i = 0; i < lights.size(); ++i) {
         cout << "Light estimate " << i << ": (" << lights[i](0)/M_PI << "," << lights[i](1)/M_PI << "," << lights[i](2)/M_PI << ")" << endl;
     }
@@ -30,6 +75,9 @@ void InverseRender::computeSamples(
         images = new float*[numsamples*2];
     }
     hr.computeSamples(data, indices, numsamples, discardthreshold, images);
+    for (int i = 0; i < data.size(); ++i) {
+        data[i].lightamount.resize(numlights, 0);
+    }
 }
 
 void InverseRender::writeVariablesMatlab(vector<SampleData>& data, string filename) {
@@ -188,53 +236,4 @@ bool InverseRender::calculateWallMaterialFromUnlit(vector<SampleData>& data) {
         wallMaterial(ch) = newmean[ch]/count;
     }
     return true;
-}
-
-
-const double threshold = 0.01; // % change above which we are not converged
-bool InverseRender::solveLights(vector<SampleData>& data) {
-    // Weighted linear least squares for each channel
-    double maxchange = 0.;
-    for (int ch = 0; ch < 3; ++ch) {
-        VectorXd b(data.size());
-        MatrixXd A(data.size(), numlights);
-        for (int i = 0; i < data.size(); ++i) {
-            b[i] = (1-data[i].fractionUnknown)*data[i].radiosity(ch) - wallMaterial(ch)*data[i].netIncoming(ch);
-            for (int j = 0; j < data[i].lightamount.size(); ++j) {
-                A(i,j) = (1-data[i].fractionUnknown)*wallMaterial(ch)*data[i].lightamount[j];
-            }
-        }
-        VectorXd x = A.jacobiSvd(ComputeThinU | ComputeThinV).solve(b);
-        for (int i = 0; i < numlights; ++i) {
-            if (lights[i](ch) > 0) {
-                double delta = abs(lights[i](ch) - x[i]);
-                double percent = delta/lights[i](ch);
-                if (percent > maxchange) maxchange = percent;
-            }
-            lights[i](ch) = x[i];
-        }
-    }
-    return maxchange < threshold;
-}
-
-bool InverseRender::solveMaterials(vector<SampleData>& data) {
-    // Weighted average over sample points
-    bool converged = true;
-    for (int ch = 0; ch < 3; ++ch) {
-        double prev = wallMaterial(ch);
-        wallMaterial(ch) = 0;
-        double tot = 0;
-        for (int i = 0; i < data.size(); ++i) {
-            double totalin = data[i].netIncoming(ch);
-            for (int j = 0; j < data[i].lightamount.size(); ++j) {
-                totalin += lights[j](ch)*data[i].lightamount[j]*(1-data[i].fractionUnknown);
-            }
-            double p = data[i].radiosity(ch)*(1-data[i].fractionUnknown)/totalin;
-            wallMaterial(ch) += p;
-            tot += 1-data[i].fractionUnknown;
-        }
-        wallMaterial(ch) /= tot;
-        if (abs(prev - wallMaterial(ch)) > threshold) converged = false;
-    }
-    return converged;
 }
