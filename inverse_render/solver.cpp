@@ -8,13 +8,13 @@
 using namespace std;
 using namespace Eigen;
 
-void solveLights(vector<SampleData>& data, vector<Material>& lights, double r, int ch) {
-    VectorXd b(data.size());
-    MatrixXd A(data.size(), lights.size());
-    for (int i = 0; i < data.size(); ++i) {
-        b[i] = (1-data[i].fractionUnknown)*(data[i].radiosity(ch) - r*data[i].netIncoming(ch));
-        for (int j = 0; j < data[i].lightamount.size(); ++j) {
-            A(i,j) = (1-data[i].fractionUnknown)*r*data[i].lightamount[j];
+void solveLights(vector<SampleData>& data, vector<int>& indices, vector<Material>& lights, double r, int ch) {
+    VectorXd b(indices.size());
+    MatrixXd A(indices.size(), lights.size());
+    for (int i = 0; i < indices.size(); ++i) {
+        b[i] = (1-data[indices[i]].fractionUnknown)*(data[indices[i]].radiosity(ch) - r*data[indices[i]].netIncoming(ch));
+        for (int j = 0; j < data[indices[i]].lightamount.size(); ++j) {
+            A(i,j) = (1-data[indices[i]].fractionUnknown)*r*data[indices[i]].lightamount[j];
         }
     }
     VectorXd x(lights.size());
@@ -25,34 +25,99 @@ void solveLights(vector<SampleData>& data, vector<Material>& lights, double r, i
     }
 }
 
-double error(vector<SampleData>& data, vector<Material>& lights, double r, int ch) {
+double error(vector<SampleData>& data, vector<int>& indices, vector<Material>& lights, double r, int ch) {
     double err = 0;
-    for (int i = 0; i < data.size(); ++i) {
-        double d = data[i].radiosity(ch) - r*data[i].netIncoming(ch);
-        for (int j = 0; j < data[i].lightamount.size(); ++j) {
-            d -= r*data[i].lightamount[j]*lights[j](ch);
+    for (int i = 0; i < indices.size(); ++i) {
+        double d = data[indices[i]].radiosity(ch) - r*data[indices[i]].netIncoming(ch);
+        for (int j = 0; j < data[indices[i]].lightamount.size(); ++j) {
+            d -= r*data[indices[i]].lightamount[j]*lights[j](ch);
         }
-        d *= 1-data[i].fractionUnknown;
+        d *= 1-data[indices[i]].fractionUnknown;
         err += d*d;
     }
     return err;
 }
 
-bool InverseRender::solveAll(vector<SampleData>& data) {
-    double reflectanceresolution = 0.01;
-    for (int ch = 0; ch < 3; ++ch) {
-        double besterr = numeric_limits<double>::max();
-        double bestr = -1;
-        for (double r = 0; r < 1; r += reflectanceresolution) {
-            solveLights(data, lights, r, ch);
-            double err = error(data, lights, r, ch);
-            if (err < besterr) {
-                besterr = err;
-                bestr = r;
-            }
+void searchSolveSubset(vector<SampleData>& data, vector<int>& indices,
+                       vector<Material>& lights, Material& mat, int ch,
+                       int numpoints, double lower, double upper, double precision)
+{
+    double inc = (upper-lower)/numpoints;
+    double besterr = numeric_limits<double>::max();
+    double bestr = -1;
+    for (double r = lower; r <= upper; r += inc) {
+        solveLights(data, indices, lights, r, ch);
+        double err = error(data, indices, lights, r, ch);
+        if (err < besterr) {
+            besterr = err;
+            bestr = r;
         }
-        wallMaterial(ch) = bestr;
     }
+    if (inc < precision) {
+        mat(ch) = bestr;
+        solveLights(data, indices, lights, bestr, ch);
+    }
+    else {
+        double ll, hh;
+        if (bestr == lower) ll = bestr;
+        else ll = bestr - inc;
+        if (bestr == upper) hh = bestr;
+        else hh = bestr + inc;
+        searchSolveSubset(data, indices, lights, mat, ch, numpoints, ll, hh, precision);
+    }
+}
+
+void solveSubset(vector<SampleData>& data, vector<int>& indices, vector<Material>& lights, Material& mat) {
+    int numpoints = 8;
+    double precision = 0.005;
+    for (int ch = 0; ch < 3; ++ch) {
+        searchSolveSubset(data, indices, lights, mat, ch, numpoints, 0, 1, precision);
+    }
+}
+
+bool InverseRender::solveAll(vector<SampleData>& data) {
+    int numRansacIters = 800;
+    for (int i = 0; i < data.size(); ++i) {
+        double direct = 0;
+        for (int j = 0; j < data[i].lightamount.size(); ++j) direct += data[i].lightamount[j];
+        double indirect = 1 - data[i].fractionUnknown - direct;
+        data[i].netIncoming *= (indirect + data[i].fractionUnknown)/indirect;
+    }
+    int subsetSize = 4+numlights;
+    double maxPercentErr = 0.1;
+    vector<int> bestinliers;
+    vector<int> indices;
+    for (int i = 0; i < numRansacIters; ++i) {
+        // Select subset
+        indices.resize(data.size());
+        for (int j = 0; j < data.size(); ++j) indices[j] = j;
+        random_shuffle(indices.begin(), indices.end());
+        indices.resize(subsetSize);
+
+        // Solve for subset
+        solveSubset(data, indices, lights, wallMaterial);
+
+        // Compute inliers
+        vector<int> inliers;
+        for (int j = 0; j < data.size(); ++j) {
+            bool isinlier = true;
+            for (int ch = 0; ch < 3; ++ch) {
+                double err = data[j].netIncoming(ch);
+                for (int k = 0; k < numlights; ++k) {
+                    err += data[j].lightamount[k]*lights[k](ch);
+                }
+                err = abs(data[j].radiosity(ch) - wallMaterial(ch)*err);
+                if (err/data[j].radiosity(ch) > maxPercentErr) isinlier = false;
+            }
+            if (isinlier) inliers.push_back(j);
+        }
+        if (inliers.size() > bestinliers.size()) swap(inliers, bestinliers);
+        if (i%100 == 0) cout << "Iteration " << i << endl;
+    }
+    cout << "Inlier proportion: " << bestinliers.size()/(double) data.size() << endl;
+
+    // Recompute parameters with inliers
+    solveSubset(data, bestinliers, lights, wallMaterial);
 }
 
 void InverseRender::solve(vector<SampleData>& data) {
