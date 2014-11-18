@@ -154,6 +154,8 @@ int main(int argc, char* argv[]) {
             }
         }
         cout << "========================" << endl;
+        ir.setNumRansacIters(numRansacIters);
+        ir.setMaxPercentErr(maxPercentErr);
         ir.solve(walldata);
 
         if (do_texture) {

@@ -42,6 +42,8 @@ double displayscale = 2.;
 int hemicuberesolution = 150;
 bool image_flip_x = false;
 bool image_flip_y = false;
+int numRansacIters = 1000;
+double maxPercentErr = 0.1;
 
 bool parseargs(int argc, char** argv) {
     if (argc < 3) {
@@ -111,6 +113,11 @@ bool parseargs(int argc, char** argv) {
              "      -solver_hemicuberesolution n: resolution of hemicube (default 150)\n" \
              "      -solver_threshold f: maximum unsampled proportion of\n" \
              "           hemisphere (default 0.25) \n" \
+             "      -solver_ransac_iterations n: number of iterations of RANSAC to\n" \
+             "           run (default 1000) \n" \
+             "      -solver_ransac_percent_err f: Maximum percent error in calculated\n" \
+             "           radiosity vs. measured radiosity for a point to count as an\n" \
+             "           inlier (default 0.1)\n" \
                 );
         return 0;
     }
@@ -232,6 +239,14 @@ bool parseargs(int argc, char** argv) {
     if (console::find_argument(argc, argv, "-solver_hemicuberesolution") >= 0) {
         if (!do_sampling) cerr << "Warning: ignoring solver parameters" << endl;
         console::parse_argument(argc, argv, "-solver_hemicuberesolution", hemicuberesolution);
+    }
+    if (console::find_argument(argc, argv, "-solver_ransac_iterations") >= 0) {
+        if (!do_sampling) cerr << "Warning: ignoring solver parameters" << endl;
+        console::parse_argument(argc, argv, "-solver_ransac_iterations", numRansacIters);
+    }
+    if (console::find_argument(argc, argv, "-solver_ransac_percent_err") >= 0) {
+        if (!do_sampling) cerr << "Warning: ignoring solver parameters" << endl;
+        console::parse_argument(argc, argv, "-solver_ransac_percent_err", maxPercentErr);
     }
     return true;
 }

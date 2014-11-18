@@ -11,7 +11,8 @@
 class InverseRender {
     public:
         InverseRender(Mesh* m, int nlights, int hemicubeResolution=150)
-            : hr(m, hemicubeResolution), mesh(m), numlights(nlights), images(NULL)
+            : hr(m, hemicubeResolution), mesh(m), numlights(nlights), images(NULL),
+              maxPercentErr(0.1), numRansacIters(1000)
         {
             lights.resize(numlights);
         }
@@ -31,6 +32,9 @@ class InverseRender {
         void writeVariablesMatlab(std::vector<SampleData>& data, std::string filename);
         void writeVariablesBinary(std::vector<SampleData>& data, std::string filename);
         void loadVariablesBinary(std::vector<SampleData>& data, std::string filename);
+
+        void setNumRansacIters(int n) { numRansacIters = n; }
+        void setMaxPercentErr(double d) { maxPercentErr = d; }
     private:
         // Inverse Rendering helpers
         bool calculateWallMaterialFromUnlit(std::vector<SampleData>& data);
@@ -43,6 +47,9 @@ class InverseRender {
         double generateBinaryMask(const CameraParams* cam, std::vector<bool>& mask, int label);
 
         HemicubeRenderer hr;
+
+        int numRansacIters;
+        double maxPercentErr;
     public:
         float** images;
         Mesh* mesh;

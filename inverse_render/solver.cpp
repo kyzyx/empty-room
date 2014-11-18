@@ -76,7 +76,6 @@ void solveSubset(vector<SampleData>& data, vector<int>& indices, vector<Material
 }
 
 bool InverseRender::solveAll(vector<SampleData>& data) {
-    int numRansacIters = 800;
     for (int i = 0; i < data.size(); ++i) {
         double direct = 0;
         for (int j = 0; j < data[i].lightamount.size(); ++j) direct += data[i].lightamount[j];
@@ -84,7 +83,6 @@ bool InverseRender::solveAll(vector<SampleData>& data) {
         data[i].netIncoming *= (indirect + data[i].fractionUnknown)/indirect;
     }
     int subsetSize = 4+numlights;
-    double maxPercentErr = 0.1;
     vector<int> bestinliers;
     vector<int> indices;
     for (int i = 0; i < numRansacIters; ++i) {

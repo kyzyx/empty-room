@@ -34,6 +34,8 @@ extern bool do_texture;
 extern double hdr_threshold;
 extern double displayscale;
 extern bool image_flip_x, image_flip_y;
+extern int numRansacIters;
+extern double maxPercentErr;
 
 bool parseargs(int argc, char** argv);
 #endif
