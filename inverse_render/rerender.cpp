@@ -3,11 +3,31 @@
 #include <Eigen/Dense>
 #include <Eigen/SVD>
 
+#include "Simplify.h"
+
 using namespace std;
 using namespace Eigen;
 
 const double EPSILON = 0.0001;
 const double CIRCLETOLERANCE = 1.2;
+
+int getFaceLightID(R3MeshFace* f, R3Mesh* m, vector<char>& labels) {
+    int lightid = -1;
+    for (int j = 0; j < 3; ++j) {
+        int n = m->VertexID(m->VertexOnFace(f, j));
+        if (labels[n] <= 0) {
+            lightid = -1;
+            break;
+        } else {
+            if (lightid <= 0) lightid = labels[n];
+            else if (lightid != labels[n]) {
+                lightid = -1;
+                break;
+            }
+        }
+    }
+    return lightid;
+}
 
 void estimateLightShape(Mesh& m, int id, vector<R3Point>& points, vector<int>& indices) {
     vector<int> vid2point(m.getMesh()->NVertices(), -1);
@@ -33,29 +53,33 @@ void estimateLightShape(Mesh& m, int id, vector<R3Point>& points, vector<int>& i
 
     // Check for non-flat source
     if (svd.singularValues()[2] > EPSILON) {
-        // Output light triangles;
+        cout << "Non-flat source, outputting triangles" << endl;
+        // Add light triangles to simplification structure
+        for (int i = 0; i < points.size(); ++i) {
+            Simplify::Vertex v;
+            v.p = points[i] - R3null_point;
+            Simplify::vertices.push_back(v);
+        }
         for (int i = 0; i < m.getMesh()->NFaces(); ++i) {
             R3MeshFace* f = m.getMesh()->Face(i);
-            int lightid = -1;
-            // Check if face is a light
-            for (int j = 0; j < 3; ++j) {
-                int n = m.getMesh()->VertexID(m.getMesh()->VertexOnFace(f, j));
-                if (m.labels[n] <= 0) {
-                    lightid = -1;
-                    break;
-                } else {
-                    if (lightid <= 0) lightid = m.labels[n];
-                    else if (lightid != m.labels[n]) {
-                        lightid = -1;
-                        break;
-                    }
-                }
-            }
+            int lightid = getFaceLightID(f, m.getMesh(), m.labels);
             if (lightid != id) continue;
+            Simplify::Triangle t;
             for (int j = 0; j < 3; ++j) {
                 int n = m.getMesh()->VertexID(m.getMesh()->VertexOnFace(f, j));
-                indices.push_back(vid2point[n]);
+                t.v[j] = vid2point[n];
             }
+            Simplify::triangles.push_back(t);
+        }
+        // Simplify
+        Simplify::simplify_mesh(60);
+        // Recopy results
+        points.clear();
+        for (int i = 0; i < Simplify::vertices.size(); ++i) {
+            points.push_back(Simplify::vertices[i].p + R3null_point);
+        }
+        for (int i = 0; i < Simplify::triangles.size(); ++i) {
+            for (int j = 0; j < 3; ++j) indices.push_back(Simplify::triangles[i].v[j]);
         }
     } else if (svd.singularValues()[1] > EPSILON) {
         // Project points onto plane and find extrema
