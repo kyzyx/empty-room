@@ -82,7 +82,6 @@ int main(int argc, char* argv[]) {
             cout << "Done finding walls" << endl;
         }
         if (flipfloorceiling) {
-            swap(wf.floorplane, wf.ceilplane);
             for (int i = 0; i < m.types.size(); ++i) {
                 if (m.types[i] == WallFinder::LABEL_CEILING) m.types[i] = WallFinder::LABEL_FLOOR;
                 else if (m.types[i] == WallFinder::LABEL_FLOOR) m.types[i] = WallFinder::LABEL_CEILING;
@@ -158,17 +157,17 @@ int main(int argc, char* argv[]) {
         ir.setMaxPercentErr(maxPercentErr);
         ir.solve(walldata);
 
+        Texture tex;
         if (do_texture) {
             // Prepare floor plane
             Eigen::Matrix4f t = of.getNormalizationTransform().inverse();
-            Eigen::Vector3f floornormal(0,1,0);
+            Eigen::Vector3f floornormal(0,flipfloorceiling?-1:1,0);
             floornormal = t.topLeftCorner(3,3)*floornormal;
             Eigen::Vector4f floorpoint(0, wf.floorplane, 0, 1);
             floorpoint = t*floorpoint;
             R3Plane floorplane(eigen2gaps(floorpoint.head(3)).Point(), eigen2gaps(floornormal));
 
-            Texture tex;
-            loader.load(camfile);
+            loader.load(camfile, use_confidence_files);
 
             cout << "Solving texture..." << endl;
             ir.solveTexture(floordata, &loader, floorplane, tex);

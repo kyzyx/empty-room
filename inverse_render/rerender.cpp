@@ -307,7 +307,7 @@ void outputPbrtFile(string filename, WallFinder& wf, Mesh& m, InverseRender& ir,
     out << "\"float shutterclose\" [0.041666666666667]" << endl << endl;
 
     // Calculate room dimensions and aspect ratio
-    R3Box b;
+    R3Box b = R3null_box;
     for (int i = 0; i < wf.wallsegments.size(); ++i) {
         Eigen::Vector3f c = wf.getNormalizedWallEndpoint(i,0,0);
         R3Point p(c(0),c(1),c(2));
@@ -454,7 +454,13 @@ void outputPbrtFile(string filename, WallFinder& wf, Mesh& m, InverseRender& ir,
             out << "]" << endl;
             out << "Transform [1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1]" << endl;
             for (int j = 0; j < pts.size(); ++j) {
-                pts[j] = b.ClosestPoint(pts[j]);
+                Vector4f q(pts[j][0],pts[j][1],pts[j][2],1);
+                q = wf.getNormalizationTransform()*q;
+                q /= q(3);
+                R3Point tmp = b.ClosestPoint(R3Point(q(0),q(1),q(2)));
+                q = wf.getNormalizationTransform().inverse()*Vector4f(tmp[0], tmp[1], tmp[2], 1);
+                q /= q(3);
+                pts[j] = R3Point(q(0),q(1),q(2));
             }
             out << "Shape \"trianglemesh\"" << endl;
             out << "\"point P\" [" << endl;

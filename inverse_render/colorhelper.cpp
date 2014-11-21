@@ -20,7 +20,7 @@ using namespace Imf_2_2;
 using namespace Imath_2_2;
 
 bool ColorHelper::load(string cameraFile, bool read_confidence_file) {
-    readCameraFile(cameraFile);
+    if (cameras.size() == 0) readCameraFile(cameraFile);
     for (int i = 0; i < filenames.size(); ++i) {
         if (!readImage(filenames[i], read_confidence_file)) {
             cerr << "Error reading image " << filenames[i] << endl;
