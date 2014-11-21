@@ -221,7 +221,7 @@ void outputRadianceFile(string filename, WallFinder& wf, Mesh& m, InverseRender&
     out << xmin << " " << lo << " " << zmin << " " << xmax << " " << lo << " " << zmin << " ";
     out << xmax << " " << lo << " " << zmax << " " << xmin << " " << lo << " " << zmax << endl << endl;
 }
-void outputPlyFile(std::string filename, WallFinder& wf, Mesh& m, InverseRender& ir) {
+void outputPlyFile(string filename, WallFinder& wf, Mesh& m, InverseRender& ir) {
     ofstream out(filename);
     int n = wf.wallsegments.size()*2+8;
     int f = (wf.wallsegments.size()+2)*2;
@@ -278,16 +278,33 @@ void outputPlyFile(std::string filename, WallFinder& wf, Mesh& m, InverseRender&
     out << "3 " << n+5 << " " << n+7 << " " << n+6 << endl;
 
 }
-void outputPbrtFile(std::string filename, WallFinder& wf, Mesh& m, InverseRender& ir, Texture floortex, string floortexfilename) {
+void outputPbrtFile(string filename, WallFinder& wf, Mesh& m, InverseRender& ir, Texture floortex, const CameraParams* cam, string floortexfilename) {
     ofstream out(filename);
-    ifstream tpl("template.pbrt");
+
     // Basic rendering info
-    string line;
-    do {
-        getline(tpl, line);
-        out << line << endl;
-    } while(!tpl.eof());
-    out << endl;
+    out << "# Main Scene File" << endl;
+    out << "Renderer \"sampler\"" << endl << endl;
+    out << "Sampler \"lowdiscrepancy\"" << endl;
+    out << "\"integer pixelsamples\" [1024]" << endl << endl;
+    out << "SurfaceIntegrator \"path\"" << endl << endl;
+    out << "PixelFilter \"mitchell\"" << endl;
+    out << "\"float B\" [0.333333343267441]" << endl;
+    out << "\"float C\" [0.333333343267441]" << endl;
+    out << "\"float xwidth\" [2.000000000000000]" << endl;
+    out << "\"float ywidth\" [2.000000000000000]" << endl << endl;
+    out << "Film \"image\"" << endl;
+    out << "\"integer xresolution\" [" << cam->width << "]" << endl;
+    out << "\"integer yresolution\" [" << cam->height << "]" << endl;
+    out << "\"string filename\" [\"scene.exr\"]" << endl << endl;
+    out << "LookAt ";
+    for (int i = 0; i < 3; ++i) out << cam->pos[i] << " ";
+    for (int i = 0; i < 3; ++i) out << cam->up[i] << " ";
+    for (int i = 0; i < 3; ++i) out << cam->towards[i] << " ";
+    out << endl << endl;
+    out << "Camera \"perspective\"" << endl;
+    out << "\"float fov\" [" << cam->fov << "]" << endl;
+    out << "\"float shutteropen\" [0.000000000000000]" << endl;
+    out << "\"float shutterclose\" [0.041666666666667]" << endl << endl;
 
     // Calculate room dimensions and aspect ratio
     R3Box b;
@@ -307,14 +324,21 @@ void outputPbrtFile(std::string filename, WallFinder& wf, Mesh& m, InverseRender
     out << "]" << endl;
     out << "\t\"float sigma\" [0.0]" << endl;
     out << "\t\"string type\" [\"matte\"]" << endl << endl;
-    // Output floor texture
-    out << "Texture \"FloorTexture\" \"color\" \"imagemap\"" << endl;
-    out << "\t\"string filename\" [\"" << floortexfilename << "\"]" << endl;
-    out << "\t\"string wrap\" [\"repeat\"]" << endl;
-    out << "\t\"float scale\" [" << floortex.scale/min(roomw, roomd) << "]" << endl;
     // Output floor material
-    out << "MakeNamedMaterial \"FloorMaterial\"" << endl;
-    out << "\t\"texture Kd\" [\"FloorTexture\"]" << endl;
+    if (floortexfilename.empty()) {
+        out << "MakeNamedMaterial \"FloorMaterial\"" << endl;
+        out << "\t\"color Kd\" [";
+        for (int i = 0; i < 3; ++i) out << ir.wallMaterial(i) << " ";
+        out << "]" << endl;
+    } else {
+        // Output floor texture
+        out << "Texture \"FloorTexture\" \"color\" \"imagemap\"" << endl;
+        out << "\t\"string filename\" [\"" << floortexfilename << "\"]" << endl;
+        out << "\t\"string wrap\" [\"repeat\"]" << endl;
+        out << "\t\"float scale\" [" << floortex.scale/min(roomw, roomd) << "]" << endl << endl;
+        out << "MakeNamedMaterial \"FloorMaterial\"" << endl;
+        out << "\t\"texture Kd\" [\"FloorTexture\"]" << endl;
+    }
     out << "\t\"float sigma\" [0.0]" << endl;
     out << "\t\"string type\" [\"matte\"]" << endl << endl;
     // Output room geometry

@@ -11,7 +11,7 @@ extern bool wallinput;
 extern bool read_eq, write_eq, write_matlab;
 extern int project;
 extern int camera;
-extern std::string outfile, infile, camfile, walloutfile, wallfile, sampleoutfile, samplefile, radfile, plyfile, matlabsamplefile;
+extern std::string outfile, infile, camfile, walloutfile, wallfile, sampleoutfile, samplefile, radfile, plyfile, pbrtfile, matlabsamplefile, texfile;
 extern int wallthreshold;
 extern int numsamples;
 extern int hemicuberesolution;

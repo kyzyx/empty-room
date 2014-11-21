@@ -174,7 +174,7 @@ int main(int argc, char* argv[]) {
             ir.solveTexture(floordata, &loader, floorplane, tex);
             cout << "Done solving texture..." << endl;
             if (tex.size > 0) {
-                ColorHelper::writeExrImage("texture.exr", tex.texture, tex.size, tex.size);
+                ColorHelper::writeExrImage(texfile, tex.texture, tex.size, tex.size);
             }
         }
         if (radfile != "") {
@@ -182,6 +182,9 @@ int main(int argc, char* argv[]) {
         }
         if (plyfile != "") {
             outputPlyFile(plyfile, wf, m, ir);
+        }
+        if (pbrtfile != "") {
+            outputPbrtFile(pbrtfile, wf, m, ir, tex, loader.getCamera(0), do_texture?texfile:"");
         }
     }
     cout << "DONE PROCESSING" << endl;
