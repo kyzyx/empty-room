@@ -11,6 +11,7 @@ enum {
     LABEL_NONE,
     LABEL_REPROJECT_DEBUG,
     LABEL_LIGHTS,
+    LABEL_AF,
 };
 
 void visualize(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,

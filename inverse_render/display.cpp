@@ -56,6 +56,9 @@ void pointcloud_kbd_cb_(const visualization::KeyboardEvent& event, void* helper)
             displayscale *= 2;
             recalculateColors(kbd->cloud, LABEL_LIGHTS, *(kbd->ivr->mesh));
             updatepointcloud = true;
+        } else if (event.getKeyCode() == ' ') {
+            recalculateColors(kbd->cloud, LABEL_AF, *(kbd->ivr->mesh));
+            updatepointcloud = true;
         }
     }
 }
@@ -108,6 +111,17 @@ void recalculateColors(PointCloud<PointXYZRGB>::Ptr cloud, int labeltype, Mesh& 
                 cloud->at(i).r = 255;
                 cloud->at(i).g = 255;
                 cloud->at(i).b = 0;
+            }
+        } else if (labeltype == LABEL_AF) {
+            cloud->at(i).r = 0;
+            cloud->at(i).g = 0;
+            cloud->at(i).b = 0;
+            if (m.types[i] == WallFinder::LABEL_WALL) {
+                cloud->at(i).g = 255;
+            } else if (m.types[i] == WallFinder::LABEL_CEILING) {
+                cloud->at(i).b = 255;
+            } else if (m.types[i] == WallFinder::LABEL_FLOOR) {
+                cloud->at(i).r = 255;
             }
         } else {
             int mult = 255;
