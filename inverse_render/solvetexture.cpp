@@ -19,7 +19,7 @@ int bfsLabel(vector<int>& labels, const vector<bool>& open, int w) {
         if (visited[i] || !open[i]) continue;
         q.push_back(i);
         visited[i] = true;
-        labels[i] = currlabel++;
+        labels[i] = currlabel;
         while (!q.empty()) {
             int n = q.front(); q.pop_front();
             int x = n%w;
@@ -36,18 +36,19 @@ int bfsLabel(vector<int>& labels, const vector<bool>& open, int w) {
                 }
             }
         }
+        currlabel++;
     }
     return currlabel;
 }
 
 int reduceToLargestCluster(vector<bool>& v, int w) {
-    vector<int> labels(v.size());
+    vector<int> labels(v.size(), -1);
     int numlabels = bfsLabel(labels, v, w);
     if (numlabels == 0) return 0;
     // Count cluster sizes
     vector<int> szs(numlabels, 0);
     for (int i = 0; i < v.size(); ++i) {
-        if (v[i]) szs[labels[i]]++;
+        if (v[i] && labels[i] > -1) szs[labels[i]]++;
     }
     int largestcluster = distance(szs.begin(), max_element(szs.begin(), szs.end()));
     // Clear non-max clusters
@@ -99,10 +100,7 @@ void InverseRender::solveTexture(
 {
     tex.size = 0;
     // Compute average reflectance
-    vector<Material> truth;
-    if (lights.size() > 1) truth.push_back(Material(75, 73.88, 48.78));
-    truth.push_back(Material(100,100,100));
-    Material avg = computeAverageMaterial(data, truth);
+    Material avg = computeAverageMaterial(data, lights);
 
     // Find best image containing enough textured pixels and from a reasonably
     // direct camera pose
@@ -117,7 +115,11 @@ void InverseRender::solveTexture(
             p = generateBinaryMask(cam, isfloor, WallFinder::LABEL_FLOOR);
             if (p == 0) continue;
             int n = reduceToLargestCluster(isfloor, cam->width);
-            p = n/(double)(cam->width*cam->height);
+            p = 0;
+            for (int j = 0; j < isfloor.size(); ++j) {
+                if (isfloor[j]) p += colorhelper->getConfidenceMap(i)[j];
+            }
+            if (p > 0) cout << i << ": Floor proportion " << p << endl;
             if (p > bestproportion) {
                 bestproportion = p;
                 bestimage = i;
@@ -148,6 +150,9 @@ void InverseRender::solveTexture(
                 if (j > maxx) maxx = j;
             }
         }
+    }
+    if (miny >= maxy || minx >= maxx) {
+        cerr << "Error solving for texture!" << endl;
     }
     // Crop image to cluster
     float* uncropped = (float*) colorhelper->getImage(bestimage);
@@ -204,6 +209,8 @@ void InverseRender::solveTexture(
     int best = 0;
     int bestr = -1;
     int bestc = -1;
+    w = cropped.Width();
+    h = cropped.Height();
     int* largest = new int[w*h];
     for (int i = 0; i < w; ++i) largest[i] = cropped.Pixel(i,0).Alpha() > 0;
     for (int i = 1; i < h; ++i) {
