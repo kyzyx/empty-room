@@ -32,6 +32,9 @@ class Material {
             else if (n == 1) return g;
             else if (n == 2) return b;
         }
+        bool isEmpty() {
+            return r == 0 && g == 0 && b == 0;
+        }
         Material operator+(const Material& m) {
             return Material(r + m.r, g + m.g, b + m.b, !t.isEmpty()?t:m.t);
         }

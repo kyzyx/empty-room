@@ -412,6 +412,7 @@ void outputPbrtFile(string filename, WallFinder& wf, Mesh& m, InverseRender& ir,
 
     // Output light sources
     for (int i = 0; i < ir.lights.size(); ++i) {
+        if (ir.lights[i].isEmpty()) continue;
         vector<R3Point> pts;
         vector<int> indices;
         estimateLightShape(m, i+1, pts, indices);
