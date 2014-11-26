@@ -14,6 +14,8 @@
 
 using namespace pcl;
 using namespace std;
+using namespace Eigen;
+
 template <typename T> int sgn(T val) {
     return (T(0) < val) - (val < T(0));
 }
@@ -500,26 +502,11 @@ void WallFinder::findWalls(
     vector<int> segmentcounts(wallsegments.size(), 0);
     for (it = of->getCloud()->begin(), i=0; it != of->getCloud()->end(); ++it, ++i) {
         for (int j = 0; j < wallsegments.size(); ++j) {
-            bool horiz = wallsegments[j].direction;
-            // Check if on same plane
-            double coord = horiz?it->z:it->x;
-            if (abs(wallsegments[j].coord - coord) > 2*resolution) {
-                continue;
-            }
-            // Check if within bounds
-            coord = horiz?it->x:it->z;
-            if (coord > 2*resolution + wallsegments[j].end || coord < wallsegments[j].start - 2*resolution) {
-                continue;
-            }
-            // Check if compatible normal
-            Eigen::Vector3f normal(it->normal_x,
-                                   it->normal_y,
-                                   it->normal_z);
-            Eigen::Vector3f axis = (horiz?Eigen::Vector3f::UnitZ():Eigen::Vector3f::UnitX());
-            axis *= -wallsegments[j].norm;
-            if (normal.dot(axis) > cos(anglethreshold)) {
+            Vector3f p(it->x, it->y, it->z);
+            Vector3f n(it->normal_x, it->normal_y, it->normal_z);
+            if (wallsegments[j].pointOnSegment(p, n, 2*resolution)) {
                 labels[i] = LABEL_WALL;
-                segmentcoords[j] += horiz?it->z:it->x;
+                segmentcoords[j] += wallsegments[j].direction?it->z:it->x;
                 segmentcounts[j]++;
                 break;
             }
@@ -561,6 +548,16 @@ void WallFinder::findWalls(
             wallsegments[i].coord = (wallsegments[i].coord*il + wallsegments[j].coord*jl)/(il+jl);
             wallsegments.erase(wallsegments.begin()+j);
             --i;
+        }
+    }
+    for (it = of->getCloud()->begin(), i=0; it != of->getCloud()->end(); ++it, ++i) {
+        for (int j = 0; j < wallsegments.size(); ++j) {
+            Vector3f p(it->x, it->y, it->z);
+            Vector3f n(it->normal_x, it->normal_y, it->normal_z);
+            if (wallsegments[j].pointOnSegment(p, n, 2*resolution)) {
+                labels[i] = LABEL_WALL;
+                break;
+            }
         }
     }
 }

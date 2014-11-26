@@ -35,6 +35,21 @@ class Segment {
         if (direction) return std::make_pair(s, coord);
         else           return std::make_pair(coord, s);
     }
+    bool pointOnSegment(Eigen::Vector3f p, double threshold) {
+        // Check if on plane
+        double c = direction?p(2):p(0);
+        if (coord + threshold < c || coord - threshold > c) return false;
+        // Check if within bounds
+        c = direction?p(0):p(2);
+        if (c > threshold + end || c < start - threshold) return false;
+        return true;
+    }
+    bool pointOnSegment(Eigen::Vector3f p, Eigen::Vector3f n, double threshold) {
+        if (!pointOnSegment(p, threshold)) return false;
+        Eigen::Vector3f axis = direction?Eigen::Vector3f::UnitZ():Eigen::Vector3f::UnitX();
+        axis *= -norm;
+        return n.dot(axis) > cos(M_PI/4);
+    }
 
     int direction;
     double start;
