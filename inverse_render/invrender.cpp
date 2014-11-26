@@ -101,7 +101,14 @@ int main(int argc, char* argv[]) {
         if (input) {
             cout << "Loading reprojection input files..." << endl;
             loader.readCameraFile(camfile);
-            numlights = m.readSamples(infile);
+            if (do_wallfinding) {
+                vector<char> tmp;
+                swap(tmp, m.types);
+                numlights = m.readSamples(infile);
+                swap (m.types, tmp);
+            } else {
+                numlights = m.readSamples(infile);
+            }
             cout << "Done loading reprojection files" << endl;
             if (hdr_threshold > 0) {
                 numlights = clusterLights(m, hdr_threshold, minlightsize);
