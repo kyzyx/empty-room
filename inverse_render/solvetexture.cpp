@@ -1,9 +1,9 @@
 #include "solver.h"
 #include "wall_finder.h"
-#include "rectify.h"
-#include "R2ImageOld.h"
 #include <deque>
+#include <opencv2/imgproc/imgproc.hpp>
 
+using namespace cv;
 using namespace std;
 using namespace Eigen;
 
@@ -138,7 +138,7 @@ void InverseRender::solveTexture(
     generateBinaryMask(cam, isfloor, WallFinder::LABEL_FLOOR);
     reduceToLargestCluster(isfloor, w);
 
-    vector<Vector2d> from, to;
+    vector<Point2f> from, to;
     // Find corners of cluster in image
     int minx = w, miny = h, maxx = 0, maxy = 0;
     for (int i = 0; i < h; ++i) {
@@ -156,16 +156,15 @@ void InverseRender::solveTexture(
     }
     // Crop image to cluster
     float* uncropped = (float*) colorhelper->getImage(bestimage);
-    R2Image_Old::R2Image cropped(maxx-minx+1, maxy-miny+1);
+    Mat cropped(maxy-miny+1, maxx-minx+1, CV_32FC4);
     for (int i = miny; i <= maxy; ++i) {
         for (int j = minx; j <= maxx; ++j) {
-            R2Pixel pix(
+            cropped.at<Vec4f>(i-miny, j-minx) = Vec4f(
                     uncropped[3*((h-i-1)*w+j)],
                     uncropped[3*((h-i-1)*w+j)+1],
                     uncropped[3*((h-i-1)*w+j)+2],
                     isfloor[i*w+j]
             );
-            cropped.SetPixel(j-minx, i-miny, pix);
         }
     }
 
@@ -176,7 +175,7 @@ void InverseRender::solveTexture(
     points.push_back(Vector3d(maxx, maxy, 0));
     points.push_back(Vector3d(maxx, miny, 0));
     for (int i = 0; i < points.size(); ++i) {
-        from.push_back(points[i].head(2) - Vector2d(minx, miny));
+        from.push_back(Point2f(points[i](0) - minx, points[i](1) - miny));
         R3Point p = cam->pos + cam->focal_length*cam->towards;
         p += (points[i](0) - (w-1)/2.)*cam->right;
         p -= (points[i](1) - (h-1)/2.)*cam->up;
@@ -198,25 +197,37 @@ void InverseRender::solveTexture(
     // Project points onto new coordinate system
     for (int i = 0; i < points.size(); ++i) {
         Vector3d p = points[i] - origin;
-        to.push_back(Vector2d(p.dot(v2), p.dot(v1)));
+        to.push_back(Point2f(p.dot(v2), p.dot(v1)));
     }
 
     // Rectify
-    Matrix3d t = getRectificationMatrix(from, to);
-    rectify(t, &cropped);
+    int xx[] = {0,w,w,0};
+    int yy[] = {0,0,h,h};
+    int neww = 0;
+    int newh = 0;
+    Mat rectification = getAffineTransform(from, to);
+    Mat invrectification;
+    invertAffineTransform(rectification, invrectification);
+    for (int i = 0; i < 4; ++i) {
+        Point2f corner(xx[i], yy[i]);
+        Mat src = invrectification*Mat(corner, false);
+        if (src.at<double>(0) > neww) neww = src.at<double>(0);
+        if (src.at<double>(1) > newh) newh = src.at<double>(1);
+    }
+    warpAffine(cropped, cropped, rectification, Size(neww, newh));
 
     // Find square region
     int best = 0;
     int bestr = -1;
     int bestc = -1;
-    w = cropped.Width();
-    h = cropped.Height();
+    w = neww;
+    h = newh;
     int* largest = new int[w*h];
-    for (int i = 0; i < w; ++i) largest[i] = cropped.Pixel(i,0).Alpha() > 0;
+    for (int i = 0; i < w; ++i) largest[i] = cropped.at<Vec4f>(0,i)[3] > 0;
     for (int i = 1; i < h; ++i) {
-        largest[i*w] = cropped.Pixel(0,i).Alpha() > 0;
+        largest[i*w] = cropped.at<Vec4f>(i,0)[3] > 0;
         for (int j = 1; j < w; ++j) {
-            if (cropped.Pixel(j,i).Alpha() > 0) {
+            if (cropped.at<Vec4f>(i,j)[3] > 0) {
                 largest[i*w+j] = min(largest[i*w+j-1], min(largest[(i-1)*w+j], largest[(i-1)*w+j-1])) + 1;
                 if (largest[i*w+j] > best) {
                     best = largest[i*w+j];
@@ -238,7 +249,7 @@ void InverseRender::solveTexture(
     for (int i = bestr-best+1; i <= bestr; ++i) {
         for (int j = bestc-best+1; j <= bestc; ++j) {
             for (int k = 0; k < 3; ++k) {
-                *(next++) = cropped.Pixel(j,i)[k];
+                *(next++) = cropped.at<Vec4f>(i,j)[k];
             }
         }
     }
