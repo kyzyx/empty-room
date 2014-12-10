@@ -12,21 +12,59 @@
 
 #include "rgbe.h"
 #include <png.h>
+#include <sys/stat.h>
+#include <pcl/range_image/range_image_planar.h>
+#include <pcl/io/pcd_io.h>
+#include <pcl/point_types.h>
 
 //#define OUTPUT_RADIANCE_CAMERAS
 
 using namespace std;
-using namespace Imf_2_2;
-using namespace Imath_2_2;
+using namespace pcl;
+using namespace Imf;
+using namespace Imath;
 
-bool ColorHelper::load(string cameraFile, bool read_confidence_file) {
-    readCameraFile(cameraFile);
+inline bool fileexists(const string& filename) {
+    struct stat buffer;
+    return (stat (filename.c_str(), &buffer) == 0);
+}
+string replaceExtension(const string& s, string newext) {
+    size_t i = s.find_last_of(".");
+    if (i == string::npos) return s + newext;
+    else return s.substr(0,i+1) + newext;
+}
+
+bool ColorHelper::load(string cameraFile, int flags) {
+    if (filenames.empty()) readCameraFile(cameraFile);
+    depth.resize(filenames.size(), NULL);
+    conf.resize(filenames.size(), NULL);
+    data.resize(filenames.size(), NULL);
     for (int i = 0; i < filenames.size(); ++i) {
-        if (!readImage(filenames[i], read_confidence_file)) {
+        if (!load(i, flags)) return false;
+    }
+    return true;
+}
+bool ColorHelper::load(int i, int flags) {
+    if (flags & READ_CONFIDENCE) {
+        conf[i] = (float*) readConfidenceFile(i);
+        if (!conf[i]) {
+            cerr << "Error reading confidence file!" << endl;
+            return false;
+        }
+    }
+    if (flags & READ_DEPTH) {
+        if (fileexists(replaceExtension(filenames[i], "pcd"))) {
+            depth[i] = (float*) readDepthMap(i);
+        }
+    }
+    if (flags & READ_COLOR) {
+        data[i] = (char*) readImage(i);
+        if (!data[i]) {
             cerr << "Error reading image " << filenames[i] << endl;
             return false;
         }
     }
+    return true;
 }
 bool endswith(const string& s, string e) {
     if (s.length() > e.length())
@@ -34,45 +72,60 @@ bool endswith(const string& s, string e) {
     else
         return false;
 }
-string replaceExtension(const string& s, string newext) {
-    size_t i = s.find_last_of(".");
-    if (i == string::npos) return s + newext;
-    else return s.substr(0,i+1) + newext;
 
-}
-
-bool ColorHelper::readImage(const string& filename, bool read_confidence_file) {
-    if (read_confidence_file) {
-        if (!readConfidenceFile(replaceExtension(filename, "conf"))) {
-            cerr << "Error reading confidence file!" << endl;
-            return false;
-        }
-    }
+void* ColorHelper::readImage(int idx) {
+    string filename = filenames[idx];
     if (endswith(filename, ".png"))
-        return readPngImage(filename);
+        return readPngImage(idx);
     else if (endswith(filename, ".hdr") || endswith(filename, ".pic"))
-        return readHdrImage(filename);
+        return readHdrImage(idx);
     else if (endswith(filename, ".exr"))
-        return readExrImage(filename);
+        return readExrImage(idx);
     else
-        return false;
+        return NULL;
 }
 
-bool ColorHelper::readConfidenceFile(const string& filename) {
+void* ColorHelper::readDepthMap(int idx) {
+    string filename = replaceExtension(filenames[idx], "pcd");
     try {
-        int w = cameras[conf.size()]->width;
-        int h = cameras[conf.size()]->height;
+        PointCloud<PointXYZ>::Ptr cloud (new PointCloud<PointXYZ>);
+        if (io::loadPCDFile<PointXYZ>(filename, *cloud) == -1) {
+            return NULL;
+        }
+        int w = cameras[idx]->width;
+        int h = cameras[idx]->height;
+        float* f = new float[w*h];
+        for (int i = 0; i < h; ++i) {
+            for (int j = 0; j < w; ++j) {
+                PointXYZ p = cloud->at(j,i);
+                if (isnan(p.x) || isnan(p.y) || isnan(p.z)) {
+                    f[(h-i-1)*w+j] = numeric_limits<float>::infinity();
+                } else {
+                    f[(h-i-1)*w+j] = sqrt(p.x*p.x+p.y*p.y+p.z*p.z);
+                }
+            }
+        }
+        return f;
+    } catch(...) {
+        return NULL;
+    }
+}
+
+void* ColorHelper::readConfidenceFile(int idx) {
+    try {
+        string filename = replaceExtension(filenames[idx], "conf");
+        int w = cameras[idx]->width;
+        int h = cameras[idx]->height;
         float* confidences = new float[w*h];
 
         ifstream in(filename.c_str(), ifstream::binary);
         for (int i = 0; i < w*h; ++i) {
             in.read((char*) &confidences[i], sizeof(float));
         }
-        conf.push_back(confidences);
+        return confidences;
     } catch (...) {
-        return false;
+        return NULL;
     }
-    return true;
 }
 
 bool ColorHelper::writeExrImage(const string& filename,
@@ -96,8 +149,8 @@ bool ColorHelper::writeExrImage(const string& filename,
     delete pixels;
 }
 
-bool ColorHelper::readExrImage(const string& filename) {
-    RgbaInputFile f(filename.c_str());
+void* ColorHelper::readExrImage(int i) {
+    RgbaInputFile f(filenames[i].c_str());
     Box2i dw = f.dataWindow();
     int width, height;
     width = dw.max.x - dw.min.x + 1;
@@ -115,14 +168,13 @@ bool ColorHelper::readExrImage(const string& filename) {
             image[3*idx+2] = pixels[i][j].b;
         }
     }
-    data.push_back((char*) image);
-    return true;
+    return image;
 }
 
-bool ColorHelper::readHdrImage(const string& filename) {
+void* ColorHelper::readHdrImage(int idx) {
     int width, height;
     rgbe_header_info info;
-    FILE* file = fopen(filename.c_str(), "rb");
+    FILE* file = fopen(filenames[idx].c_str(), "rb");
 
     RGBE_ReadHeader(file, &width, &height, &info);
     float* image = new float[3*width*height];
@@ -139,12 +191,11 @@ bool ColorHelper::readHdrImage(const string& filename) {
         memcpy(image+3*((height-i-1)*width), row, 3*width*sizeof(float));
     }
     delete [] row;
-    data.push_back((char*)image);
     fclose(file);
-    return true;
+    return image;
 }
 // From http://blog.nobel-joergensen.com/2010/11/07/loading-a-png-as-texture-in-opengl-using-libpng/
-bool ColorHelper::readPngImage(const string& filename)
+void* ColorHelper::readPngImage(int idx)
 {
     png_structp png_ptr;
     png_infop info_ptr;
@@ -152,26 +203,26 @@ bool ColorHelper::readPngImage(const string& filename)
     int color_type, interlace_type;
     FILE *fp;
 
-    if ((fp = fopen(filename.c_str(), "rb")) == NULL)
-        return false;
+    if ((fp = fopen(filenames[idx].c_str(), "rb")) == NULL)
+        return NULL;
 
     png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
     if (png_ptr == NULL) {
         fclose(fp);
-        return false;
+        return NULL;
     }
 
     info_ptr = png_create_info_struct(png_ptr);
     if (info_ptr == NULL) {
         fclose(fp);
         png_destroy_read_struct(&png_ptr, NULL, NULL);
-        return false;
+        return NULL;
     }
 
     if (setjmp(png_jmpbuf(png_ptr))) {
         png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
         fclose(fp);
-        return false;
+        return NULL;
     }
     png_init_io(png_ptr, fp);
     png_set_sig_bytes(png_ptr, sig_read);
@@ -190,11 +241,9 @@ bool ColorHelper::readPngImage(const string& filename)
         memcpy(imagedata+(row_bytes * (height-1-i)), row_pointers[i], row_bytes);
     }
 
-    data.push_back(imagedata);
-
     png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
     fclose(fp);
-    return true;
+    return imagedata;
 }
 
 bool ColorHelper::readCameraFile(const string& filename)
@@ -253,8 +302,8 @@ bool ColorHelper::readCameraFile(const string& filename)
             ifstream xformin(camxform.c_str());
             double m[16];
             for (int i = 0; i < 16; ++i) xformin >> m[i];
-            R4Matrix mat(m);
-            transformAllCameras(m);
+            depth2rgb = R4Matrix(m);
+            transformAllCameras(depth2rgb);
         }
     } catch (...) {
         return false;
