@@ -26,14 +26,21 @@ class ColorHelper {
             for (int i = 0; i < data.size(); ++i) delete data[i];
             for (int i = 0; i < cameras.size(); ++i) delete cameras[i];
         }
+        enum {
+            READ_COLOR = 1,
+            READ_CONFIDENCE = 2,
+            READ_DEPTH = 4,
+        };
 
-        bool load(std::string cameraFile, bool read_confidence_file=false);
+        bool load(std::string cameraFile, int flags=READ_COLOR);
+        bool load(int i, int flags=READ_COLOR);
 
-        bool readImage(const std::string& filename, bool read_confidence_file=false);
-        bool readConfidenceFile(const std::string& filename);
-        bool readPngImage(const std::string& filename);
-        bool readExrImage(const std::string& filename);
-        bool readHdrImage(const std::string& filename);
+        void* readImage(int idx);
+        void* readDepthMap(int idx);
+        void* readConfidenceFile(int idx);
+        void* readPngImage(int idx);
+        void* readExrImage(int idx);
+        void* readHdrImage(int idx);
         bool readCameraFile(const std::string& filename);
 
         static bool writeExrImage(const std::string& filename,
@@ -49,14 +56,20 @@ class ColorHelper {
             if (n >= conf.size()) return NULL;
             return conf[n];
         }
+        const float* getDepthMap(int n) {
+            if (n >= depth.size()) return NULL;
+            return depth[n];
+        }
         const CameraParams* getCamera(int n) { return cameras[n]; }
     protected:
         void transformAllCameras(const R4Matrix& m);
 
     private:
+        R4Matrix depth2rgb;
         std::vector<std::string> filenames;
         std::vector<char*> data;
         std::vector<float*> conf;
+        std::vector<float*> depth;
         std::vector<CameraParams*> cameras;
 };
 

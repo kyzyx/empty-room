@@ -115,20 +115,35 @@ int main(int argc, char* argv[]) {
                 cout << "Done clustering " << numlights << " lights" << endl;
             }
         } else {
-            cout << "Reading input files..." << endl;
-            loader.load(camfile, use_confidence_files);
-            cout << "Done reading " << loader.size() << " color images; reprojecting..." << endl;
             if (hdr_threshold < 0) hdr_threshold = 10.0;
             if (all_project) {
+                cout << "Reading input files..." << endl;
+                loader.load(camfile, ColorHelper::READ_COLOR | ColorHelper::READ_DEPTH);
+                if (use_confidence_files) {
+                    loader.load(camfile, ColorHelper::READ_CONFIDENCE);
+                }
+                cout << "Done reading " << loader.size() << " color images" << endl;
+                cout << "Reprojecting..." << endl;
                 reproject(loader, m, hdr_threshold, image_flip_x, image_flip_y);
             } else {
-                reproject((float*) loader.getImage(project), loader.getConfidenceMap(project), loader.getCamera(project), m, hdr_threshold, image_flip_x, image_flip_y);
+                loader.load(camfile, 0);
+                loader.load(project, ColorHelper::READ_COLOR | ColorHelper::READ_DEPTH);
+                if (use_confidence_files) {
+                    loader.load(project, ColorHelper::READ_CONFIDENCE);
+                }
+                cout << "Reprojecting..." << endl;
+                reproject((const float*) loader.getImage(project),
+                          loader.getConfidenceMap(project),
+                          loader.getDepthMap(project),
+                          loader.getCamera(project),
+                          m, hdr_threshold, image_flip_x, image_flip_y);
             }
             cout << "Done reprojecting; clustering lights..." << endl;
             numlights = clusterLights(m, hdr_threshold, minlightsize);
             cout << "Done clustering " << numlights << " lights" << endl;
         }
         if (output_reprojection) m.writeSamples(outfile);
+        if (coloredfile.length()) m.writeColoredMesh(coloredfile, displayscale);
         m.computeColorsOGL();
         hemicuberesolution = max(hemicuberesolution, loader.getCamera(0)->width);
         hemicuberesolution = max(hemicuberesolution, loader.getCamera(0)->height);

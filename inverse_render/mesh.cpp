@@ -72,7 +72,7 @@ void Mesh::addSample(int n, Sample s) {
     samples[n].push_back(s);
 }
 
-void Mesh::writeColoredMesh(std::string filename) {
+void Mesh::writeColoredMesh(std::string filename, double scalefactor) {
     ofstream out(filename);
     int n = mesh->NVertices();
     int f = mesh->NFaces();
@@ -92,7 +92,7 @@ void Mesh::writeColoredMesh(std::string filename) {
         R3Point p = mesh->VertexPosition(mesh->Vertex(i));
         out << p[0] << " " << p[1] << " " << p[2] << " ";
         Material m = getVertexColor(i);
-        m *= 195;
+        m *= scalefactor;
         out << min((int)m.r,255) << " " << min((int)m.g,255) << " " << min((int)m.b,255) << endl;
     }
     for (int i = 0; i < f; ++i) {

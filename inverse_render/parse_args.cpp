@@ -16,6 +16,7 @@ bool read_eq = false;
 int project;
 int camera;
 string outfile, infile, camfile, walloutfile, wallfile, samplefile, sampleoutfile;
+string coloredfile = "";
 string radfile = "";
 string plyfile = "";
 string pbrtfile = "";
@@ -69,6 +70,8 @@ bool parseargs(int argc, char** argv) {
              "      -plyfile file: output geometry in PLY format to specified file\n" \
              "      -pbrtfile file: output geometry in PBRT format to specified file\n" \
              "      -texfile file: output floor texture as EXR file to specified file\n" \
+             "      -outputcoloredmesh file: output a PLY mesh colored with \n" \
+             "           the reprojected images\n" \
              "  Partial Execution Arguments:\n" \
              "      -wallfind_only: only perform wallfinding\n" \
              "      -reproject_only: only perform reprojection\n" \
@@ -208,6 +211,9 @@ bool parseargs(int argc, char** argv) {
     }
     if (console::find_argument(argc, argv, "-texfile") >= 0) {
         console::parse_argument(argc, argv, "-texfile", texfile);
+    }
+    if (console::find_argument(argc, argv, "-outputcoloredmesh") >= 0) {
+        console::parse_argument(argc, argv, "-outputcoloredmesh", coloredfile);
     }
     if (console::find_argument(argc, argv, "-outputmatlabfile") >= 0) {
         console::parse_argument(argc, argv, "-outputmatlabfile", matlabsamplefile);
