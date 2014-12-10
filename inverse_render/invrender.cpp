@@ -126,7 +126,11 @@ int main(int argc, char* argv[]) {
                     loader.load(project, ColorHelper::READ_CONFIDENCE);
                 }
                 cout << "Reprojecting..." << endl;
-                reproject((float*) loader.getImage(project), loader.getConfidenceMap(project), loader.getCamera(project), m, hdr_threshold, image_flip_x, image_flip_y);
+                reproject((const float*) loader.getImage(project),
+                          loader.getConfidenceMap(project),
+                          loader.getDepthMap(project),
+                          loader.getCamera(project),
+                          m, hdr_threshold, image_flip_x, image_flip_y);
             }
             cout << "Done reprojecting; clustering lights..." << endl;
             numlights = clusterLights(m, hdr_threshold, minlightsize);

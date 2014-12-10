@@ -1,6 +1,11 @@
 #include "reproject.h"
 
+#include <limits>
 #include <iostream>
+using namespace std;
+
+const float DEPTHTOLERANCE = 0.6;
+
 inline bool isBlack(int idx, const char* data) {
     return data[3*idx] == 0 && data[3*idx+1] == 0 && data[3*idx+2] == 0;
 }
@@ -75,6 +80,7 @@ void reproject(const char* color, const char* light, const CameraParams* cam, Me
 void reproject(
         const float* hdrimage,
         const float* confidencemap,
+        const float* depthmap,
         const CameraParams* cam,
         Mesh& mesh,
         double threshold,
@@ -110,11 +116,20 @@ void reproject(
         if (flip_x) xx = cam->width - xx - 1;
         int yy = vy*cam->focal_length + cam->height/2;
         if (flip_y) yy = cam->height - yy - 1;
+        int idx = xx + yy*cam->width;
+        // Check if depth map is consistent with projection
+        if (depthmap) {
+            float f = depthmap[idx];
+            if (!isnan(f) && f != numeric_limits<float>::infinity()) {
+                if (abs(f-d) > DEPTHTOLERANCE)
+                    continue;
+            }
+        }
+        mesh.labels[j] = 5;
         // If light, label light
         // Compute direction, add sample
         Sample s;
         s.label = 0;
-        int idx = xx + yy*cam->width;
         if (isLight(idx, hdrimage, confidencemap, threshold)) {
             s.label = 1;
         }
@@ -137,12 +152,12 @@ void reproject(
 void reproject(ColorHelper& ch, ColorHelper& lights, Mesh& mesh) {
     for (int i = 0; i < ch.size(); ++i) {
         reproject(ch.getImage(i), lights.getImage(i), ch.getCamera(i), mesh);
-        std::cout << "Finished projecting image " << i << std::endl;
+        cout << "Finished projecting image " << i << endl;
     }
 }
 void reproject(ColorHelper& hdr, Mesh& mesh, double threshold, bool flip_x, bool flip_y) {
     for (int i = 0; i < hdr.size(); ++i) {
-        reproject((float*)hdr.getImage(i), hdr.getConfidenceMap(i), hdr.getCamera(i), mesh, threshold, flip_x, flip_y);
-        std::cout << "Finished projecting image " << i << std::endl;
+        reproject((float*)hdr.getImage(i), hdr.getConfidenceMap(i), hdr.getDepthMap(i), hdr.getCamera(i), mesh, threshold, flip_x, flip_y);
+        cout << "Finished projecting image " << i << endl;
     }
 }
