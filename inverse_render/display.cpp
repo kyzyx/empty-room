@@ -9,30 +9,10 @@
 using namespace std;
 using namespace pcl;
 
-void VisualizeCamera(const CameraParams* cam, visualization::PCLVisualizer& viewer,
-        string name, double f=0, bool axes=true);
-
-void recalculateColors(PointCloud<PointXYZRGB>::Ptr cloud, int labeltype, Mesh& m);
-void VisualizeSamplePoint(Mesh& m, SampleData& s, visualization::PCLVisualizer& viewer);
-
-int previouscube = 0;
-int currcube = 0;
-int x = 0;
-bool change = true;
-bool updatepointcloud = true;
-visualization::ImageViewer* imvu = NULL;
-
-class kbdhelper {
-    public:
-        InverseRender* ivr;
-        vector<SampleData>* data;
-        PointCloud<PointXYZRGB>::Ptr cloud;
-};
-
-void showimage(InverseRender* ivr, int n, int x) {
+void InvRenderVisualizer::showimage(int n, int x) {
     int res = hemicuberesolution;
     unsigned char* im = new unsigned char[res*res*3];
-    float* currimage = ivr->images[2*n+x];
+    float* currimage = ir->images[2*n+x];
     for (int i = 0; i < res; ++i) {
         for (int j = 0; j < res; ++j) {
             for (int k = 0; k < 3; ++k) {
@@ -45,41 +25,36 @@ void showimage(InverseRender* ivr, int n, int x) {
     imvu->showRGBImage(im,res,res);
 }
 
-void pointcloud_kbd_cb_(const visualization::KeyboardEvent& event, void* helper) {
-    kbdhelper* kbd = (kbdhelper*) helper;
+void InvRenderVisualizer::pointcloud_kbd_cb_(const visualization::KeyboardEvent& event, void* helper) {
     if (event.keyDown()) {
         if (event.getKeyCode() == '[') {
             displayscale /= 2;
-            recalculateColors(kbd->cloud, LABEL_LIGHTS, *(kbd->ivr->mesh));
-            updatepointcloud = true;
+            recalculateColors(LABEL_LIGHTS);
         } else if (event.getKeyCode() == ']') {
             displayscale *= 2;
-            recalculateColors(kbd->cloud, LABEL_LIGHTS, *(kbd->ivr->mesh));
-            updatepointcloud = true;
+            recalculateColors(LABEL_LIGHTS);
         } else if (event.getKeyCode() == ' ') {
-            recalculateColors(kbd->cloud, LABEL_AF, *(kbd->ivr->mesh));
-            updatepointcloud = true;
+            recalculateColors(LABEL_AF);
         }
     }
 }
 
-void kbd_cb_(const visualization::KeyboardEvent& event, void* helper) {
-    kbdhelper* kbd = (kbdhelper*) helper;
+void InvRenderVisualizer::kbd_cb_(const visualization::KeyboardEvent& event, void* helper) {
     if (event.keyDown()) {
         if (event.getKeyCode() == ',') {
             currcube--;
-            if (currcube < 0) currcube += kbd->data->size();
+            if (currcube < 0) currcube += sampledata.size();
             change = true;
         } else if (event.getKeyCode() == '.') {
             currcube++;
-            if (currcube >= kbd->data->size()) currcube = 0;
+            if (currcube >= sampledata.size()) currcube = 0;
             change = true;
         }
         if (event.getKeyCode() == 'm') {
             x = 1-x;
         }
         cout << "Displaying " << (x?"light":"image") <<" " << currcube<<endl;
-        showimage(kbd->ivr, currcube, x);
+        showimage(currcube, x);
     }
 }
 
@@ -92,7 +67,8 @@ void intToCube(char c[5], int n) {
     }
 }
 
-void recalculateColors(PointCloud<PointXYZRGB>::Ptr cloud, int labeltype, Mesh& m) {
+void InvRenderVisualizer::recalculateColors(int labeltype) {
+    Mesh& m = *(ir->mesh);
     for (int i = 0; i < cloud->size(); ++i) {
         if (labeltype == LABEL_REPROJECT_DEBUG) {
             if (m.labels[i] == 3) {
@@ -150,27 +126,16 @@ void recalculateColors(PointCloud<PointXYZRGB>::Ptr cloud, int labeltype, Mesh& 
             }
         }
     }
+    updatepointcloud = true;
 }
 
-void visualize(PointCloud<PointXYZRGB>::Ptr cloud, ColorHelper& loader,
-        InverseRender& ir, WallFinder& wf,
-        int labeltype, int cameraid, vector<SampleData>& data) {
-    Mesh& m = *(ir.mesh);
-    kbdhelper kbdh;
-    kbdh.ivr = &ir;
-    kbdh.cloud = cloud;
-    if (data.size() > 0 && ir.images) {
-        kbdh.data = &data;
-        imvu = new visualization::ImageViewer("Hi");
-        imvu->registerKeyboardCallback(&kbd_cb_, (void*) &kbdh);
-        showimage(&ir, 0, 0);
-    }
-
+void InvRenderVisualizer::init() {
+    Mesh& m = *(ir->mesh);
     PointIndices::Ptr nonnull(new PointIndices());
     cloud->is_dense = false;
-    recalculateColors(cloud, labeltype, m);
+    recalculateColors(LABEL_LIGHTS);
     for (int i = 0; i < cloud->size(); ++i) {
-        if (labeltype != LABEL_REPROJECT_DEBUG && m.samples[i].size()) {
+        if (m.samples[i].size()) {
                 nonnull->indices.push_back(i);
         }
     }
@@ -181,16 +146,20 @@ void visualize(PointCloud<PointXYZRGB>::Ptr cloud, ColorHelper& loader,
         extract.setNegative(false);
         extract.filter(*cloud);
     }
-    visualization::PCLVisualizer viewer("Cloud viewer");
+
+    viewer = new visualization::PCLVisualizer("Cloud viewer");
     visualization::PointCloudColorHandlerRGBField<PointXYZRGB> rgb(cloud);
-    viewer.addPointCloud<PointXYZRGB>(cloud, rgb, "Mesh");
-    viewer.registerKeyboardCallback(&pointcloud_kbd_cb_, (void*) &kbdh);
+    viewer->addPointCloud<PointXYZRGB>(cloud, rgb, "Mesh");
+    viewer->registerKeyboardCallback(&InvRenderVisualizer::pointcloud_kbd_cb_, *this);
+}
+
+void InvRenderVisualizer::visualizeCameras(int cameraid){
     if (all_cameras) {
         char n[] = {'A', '0', '\0'};
         int inc = 1;
-        if (loader.size() > 400) inc = 2;
-        for (int i = 0; i < loader.size(); i+=inc) {
-            VisualizeCamera(loader.getCamera(i), viewer, n);
+        if (ch->size() > 400) inc = 2;
+        for (int i = 0; i < ch->size(); i+=inc) {
+            visualizeCamera(ch->getCamera(i), n);
             n[1]++;
             if (n[1] == 0) {
                 n[0]++;
@@ -198,52 +167,65 @@ void visualize(PointCloud<PointXYZRGB>::Ptr cloud, ColorHelper& loader,
             }
         }
     } else if (cameraid >= 0) {
-        VisualizeCamera(loader.getCamera(cameraid), viewer, "cam", show_frustrum?3:0);
+        visualizeCamera(ch->getCamera(cameraid), "cam", show_frustrum?3:0);
     }
-    char n[] = {'L', 'i', '0'};
-    for (int i = 0; i < wf.wallsegments.size(); ++i) {
-        Eigen::Vector3f p1 = wf.getWallEndpoint(i,0);
-        Eigen::Vector3f p2 = wf.getWallEndpoint(i,1);
+}
+
+void InvRenderVisualizer::visualizeWalls() {
+    static char n[] = {'L', 'i', '0'};
+    for (int i = 0; i < wf->wallsegments.size(); ++i) {
+        Eigen::Vector3f p1 = wf->getWallEndpoint(i,0);
+        Eigen::Vector3f p2 = wf->getWallEndpoint(i,1);
         PointXYZ start(p1[0], p1[1], p1[2]);
         PointXYZ end(p2[0], p2[1], p2[2]);
-        viewer.addLine(start, end, 1, 0, i/(double)wf.wallsegments.size(), n);
+        viewer->addLine(start, end, 1, 0, i/(double)wf->wallsegments.size(), n);
         n[2]++;
     }
-    for (int i = 0; i < data.size() && i < 100; ++i)
-        VisualizeSamplePoint(m, data[i], viewer);
+}
 
-    while (!viewer.wasStopped()) {
-        viewer.spinOnce(100);
+void InvRenderVisualizer::addSamples(vector<SampleData>& data) {
+    if (data.size() > 0 && ir->images && !imvu) {
+        imvu = new visualization::ImageViewer("Hi");
+        imvu->registerKeyboardCallback(&InvRenderVisualizer::kbd_cb_, *this);
+        showimage(0, 0);
+    }
+
+    for (int i = 0; i < data.size() && i < 100; ++i) {
+        VisualizeSamplePoint(*(ir->mesh), data[i]);
+        sampledata.push_back(data[i]);
+    }
+}
+void InvRenderVisualizer::loop() {
+    while (!viewer->wasStopped()) {
+        viewer->spinOnce(100);
         boost::this_thread::sleep(boost::posix_time::seconds(0.5));
         if (imvu && change) {
             char tmp[5];
             intToCube(tmp,previouscube);
             bool unlit = true;
-            for (int i = 0; i < data[previouscube].lightamount.size(); ++i) {
-                if (data[previouscube].lightamount[i] > 0) unlit = false;
+            for (int i = 0; i < sampledata[previouscube].lightamount.size(); ++i) {
+                if (sampledata[previouscube].lightamount[i] > 0) unlit = false;
             }
             if (unlit) {
-                viewer.setShapeRenderingProperties(visualization::PCL_VISUALIZER_COLOR, 0,1,0,tmp);
+                viewer->setShapeRenderingProperties(visualization::PCL_VISUALIZER_COLOR, 0,1,0,tmp);
             } else {
-                viewer.setShapeRenderingProperties(visualization::PCL_VISUALIZER_COLOR, 1,1,1,tmp);
+                viewer->setShapeRenderingProperties(visualization::PCL_VISUALIZER_COLOR, 1,1,1,tmp);
             }
             previouscube = currcube;
 
             intToCube(tmp,currcube);
-            viewer.setShapeRenderingProperties(visualization::PCL_VISUALIZER_COLOR, 1,0,1,tmp);
+            viewer->setShapeRenderingProperties(visualization::PCL_VISUALIZER_COLOR, 1,0,1,tmp);
             change = false;
         }
         if (updatepointcloud) {
             visualization::PointCloudColorHandlerRGBField<PointXYZRGB> rgb2(cloud);
-            viewer.updatePointCloud<PointXYZRGB>(cloud, rgb2, "Mesh");
+            viewer->updatePointCloud<PointXYZRGB>(cloud, rgb2, "Mesh");
             updatepointcloud = false;
         }
     }
 }
 
-int nextcubename = 0;
-void VisualizeSamplePoint(Mesh& m, SampleData& s,
-        visualization::PCLVisualizer& viewer) {
+void InvRenderVisualizer::VisualizeSamplePoint(Mesh& m, SampleData& s) {
     double boxsize = 0.1;
     R3Point p = m.getMesh()->VertexPosition(m.getMesh()->Vertex(s.vertexid));
     R3Vector v = m.getMesh()->VertexNormal(m.getMesh()->Vertex(s.vertexid));
@@ -258,18 +240,17 @@ void VisualizeSamplePoint(Mesh& m, SampleData& s,
 
     char cubename[5];
     intToCube(cubename, nextcubename++);
-    viewer.addCube(pos, rot, boxsize, boxsize, boxsize, cubename);
+    viewer->addCube(pos, rot, boxsize, boxsize, boxsize, cubename);
     bool unlit = true;
     for (int i = 0; i < s.lightamount.size(); ++i) {
         if (s.lightamount[i] > 0) unlit = false;
     }
     if (unlit) {
-        viewer.setShapeRenderingProperties(visualization::PCL_VISUALIZER_COLOR, 0,1,0,cubename);
+        viewer->setShapeRenderingProperties(visualization::PCL_VISUALIZER_COLOR, 0,1,0,cubename);
     }
 }
 
-void VisualizeCamera(const CameraParams* cam, visualization::PCLVisualizer& viewer,
-        string name, double f, bool axes)
+void InvRenderVisualizer::visualizeCamera(const CameraParams* cam, string name, double f, bool axes)
 {
     R3Point p = cam->pos;
     PointXYZ p1(cam->pos[0], cam->pos[1], cam->pos[2]);
@@ -278,8 +259,8 @@ void VisualizeCamera(const CameraParams* cam, visualization::PCLVisualizer& view
         R3Point v3 = p + cam->up*0.2;
         PointXYZ p2(v2[0], v2[1], v2[2]);
         PointXYZ p3(v3[0], v3[1], v3[2]);
-        viewer.addLine(p2, p1, 1, 0, 0, name+"towards");
-        viewer.addLine(p3, p1, 0, 0, 1, name+"up");
+        viewer->addLine(p2, p1, 1, 0, 0, name+"towards");
+        viewer->addLine(p3, p1, 0, 0, 1, name+"up");
     }
     if (f > 0) {
         PointCloud<PointXYZ>::Ptr left(new PointCloud<PointXYZ>());
@@ -313,9 +294,24 @@ void VisualizeCamera(const CameraParams* cam, visualization::PCLVisualizer& view
         right->push_back(urp);
         right->push_back(lrp);
 
-        viewer.addPolygon<PointXYZ>(PointCloud<PointXYZ>::ConstPtr(up), name+"up");
-        viewer.addPolygon<PointXYZ>(PointCloud<PointXYZ>::ConstPtr(down), name+"down");
-        viewer.addPolygon<PointXYZ>(PointCloud<PointXYZ>::ConstPtr(left), name+"left");
-        viewer.addPolygon<PointXYZ>(PointCloud<PointXYZ>::ConstPtr(right), name+"right");
+        viewer->addPolygon<PointXYZ>(PointCloud<PointXYZ>::ConstPtr(up), name+"up");
+        viewer->addPolygon<PointXYZ>(PointCloud<PointXYZ>::ConstPtr(down), name+"down");
+        viewer->addPolygon<PointXYZ>(PointCloud<PointXYZ>::ConstPtr(left), name+"left");
+        viewer->addPolygon<PointXYZ>(PointCloud<PointXYZ>::ConstPtr(right), name+"right");
     }
+}
+void InvRenderVisualizer::drawLine(int wallidx, double x, double starty, double endy) {
+    static char n[] = {'A', 'F','i', '0'};
+    double r = x/wf->wallsegments[wallidx].length();
+    bool f = wf->forwards[wallidx];
+    Eigen::Vector3f a1 = wf->getWallEndpoint(wallidx,!f,starty);
+    Eigen::Vector3f a2 = wf->getWallEndpoint(wallidx,f,starty);
+    Eigen::Vector3f a = a1*r + a2*(1-r);
+    Eigen::Vector3f b1 = wf->getWallEndpoint(wallidx,!f,endy);
+    Eigen::Vector3f b2 = wf->getWallEndpoint(wallidx,f,endy);
+    Eigen::Vector3f b = b1*r + b2*(1-r);
+    PointXYZ start(a[0], a[1], a[2]);
+    PointXYZ end(b[0], b[1], b[2]);
+    viewer->addLine(start, end, 1, 0, 0, n);
+    n[3]++;
 }

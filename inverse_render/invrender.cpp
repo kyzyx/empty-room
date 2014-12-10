@@ -214,9 +214,12 @@ int main(int argc, char* argv[]) {
     cout << "DONE PROCESSING" << endl;
 
     if (display) {
-        int labeltype = LABEL_LIGHTS;
-        if (project_debug) labeltype = LABEL_REPROJECT_DEBUG;
-        visualize(cloud, loader, ir, wf, labeltype, camera, walldata);
+        InvRenderVisualizer irv(cloud, loader, wf, ir);
+        if (project_debug) irv.recalculateColors(InvRenderVisualizer::LABEL_REPROJECT_DEBUG);
+        irv.visualizeCameras(camera);
+        irv.visualizeWalls();
+        irv.addSamples(walldata);
+        irv.loop();
     }
     return 0;
 }
