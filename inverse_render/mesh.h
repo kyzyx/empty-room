@@ -36,7 +36,7 @@ class Mesh {
         ~Mesh();
         void addSample(int n, Sample s);
 
-        void writeColoredMesh(std::string filename);
+        void writeColoredMesh(std::string filename, double scalefactor=10);
         void writeSamples(std::string filename);
         int readSamples(std::string filename);
 

@@ -133,6 +133,7 @@ int main(int argc, char* argv[]) {
             cout << "Done clustering " << numlights << " lights" << endl;
         }
         if (output_reprojection) m.writeSamples(outfile);
+        if (coloredfile.length()) m.writeColoredMesh(coloredfile, displayscale);
         m.computeColorsOGL();
         hemicuberesolution = max(hemicuberesolution, loader.getCamera(0)->width);
         hemicuberesolution = max(hemicuberesolution, loader.getCamera(0)->height);

@@ -16,6 +16,7 @@ bool read_eq = false;
 int project;
 int camera;
 string outfile, infile, camfile, walloutfile, wallfile, samplefile, sampleoutfile;
+string coloredfile = "";
 string radfile = "";
 string plyfile = "";
 string matlabsamplefile = "samples.m";
@@ -65,6 +66,8 @@ bool parseargs(int argc, char** argv) {
              "           specified file f\n" \
              "      -radfile file: output geometry for RADIANCE to specified file\n" \
              "      -plyfile file: output geometry in PLY format to specified file\n" \
+             "      -outputcoloredmesh file: output a PLY mesh colored with \n" \
+             "           the reprojected images\n" \
              "  Partial Execution Arguments:\n" \
              "      -wallfind_only: only perform wallfinding\n" \
              "      -reproject_only: only perform reprojection\n" \
@@ -198,6 +201,9 @@ bool parseargs(int argc, char** argv) {
     }
     if (console::find_argument(argc, argv, "-plyfile") >= 0) {
         console::parse_argument(argc, argv, "-plyfile", plyfile);
+    }
+    if (console::find_argument(argc, argv, "-outputcoloredmesh") >= 0) {
+        console::parse_argument(argc, argv, "-outputcoloredmesh", coloredfile);
     }
     if (console::find_argument(argc, argv, "-outputmatlabfile") >= 0) {
         console::parse_argument(argc, argv, "-outputmatlabfile", matlabsamplefile);
