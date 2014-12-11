@@ -102,7 +102,10 @@ int main(int argc, char* argv[]) {
             cout << "Loading reprojection input files..." << endl;
             loader.readCameraFile(camfile);
             cout << "Reading input files..." << endl;
-            loader.load(camfile, use_confidence_files);
+            loader.load(camfile, ColorHelper::READ_COLOR);
+            if (use_confidence_files) {
+                loader.load(camfile, ColorHelper::READ_CONFIDENCE);
+            }
             cout << "Done reading " << loader.size() << " color images" << endl;
             if (do_wallfinding) {
                 vector<char> tmp;
