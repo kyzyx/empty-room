@@ -45,16 +45,20 @@ bool ColorHelper::load(string cameraFile, int flags) {
     return true;
 }
 bool ColorHelper::load(int i, int flags) {
+    int w = cameras[i]->width;
+    int h = cameras[i]->height;
     if (flags & READ_CONFIDENCE) {
         conf[i] = (float*) readConfidenceFile(i);
         if (!conf[i]) {
             cerr << "Error reading confidence file!" << endl;
             return false;
         }
+        flip((char*)conf[i], w, h, sizeof(float));
     }
     if (flags & READ_DEPTH) {
         if (fileexists(replaceExtension(filenames[i], "pcd"))) {
             depth[i] = (float*) readDepthMap(i);
+            if (depth[i]) flip((char*)depth[i], w, h, sizeof(float));
         }
     }
     if (flags & READ_COLOR) {
@@ -63,6 +67,7 @@ bool ColorHelper::load(int i, int flags) {
             cerr << "Error reading image " << filenames[i] << endl;
             return false;
         }
+        flip(data[i], w, h, 3*sizeof(float));
     }
     return true;
 }
@@ -319,4 +324,27 @@ void ColorHelper::transformAllCameras(const R4Matrix& m) {
         cam->towards = m*cam->towards;
         cam->right = m*cam->right;
     }
+}
+
+void ColorHelper::flip(char* a, int w, int h, size_t bytes) {
+    char* tmp = new char[bytes];
+    if (flip_x) {
+        for (int i = 0; i < h; ++i) {
+            for (int j = 0; j < w/2; ++j) {
+                memcpy(tmp, a+(i*w+j)*bytes, bytes);
+                memcpy(a+(i*w+j)*bytes, a+(i*w+w-j-1)*bytes, bytes);
+                memcpy(a+(i*w+w-j-1)*bytes, tmp, bytes);
+            }
+        }
+    }
+    delete tmp;
+    tmp = new char[bytes*w];
+    if (flip_y) {
+        for (int i = 0; i < h/2; ++i) {
+            memcpy(tmp, a+i*w*bytes, bytes*w);
+            memcpy(a+i*w*bytes, a+(h-i-1)*w*bytes, bytes*w);
+            memcpy(a+(h-i-1)*w*bytes, tmp, bytes*w);
+        }
+    }
+    delete tmp;
 }

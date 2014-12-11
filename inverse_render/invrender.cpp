@@ -59,7 +59,7 @@ int main(int argc, char* argv[]) {
 
     vector<int> wallindices;
     vector<int> floorindices;
-    ColorHelper loader;
+    ColorHelper loader(image_flip_x, image_flip_y);
     WallFinder wf(&of, resolution);
 
     if (do_wallfinding) {
@@ -130,7 +130,7 @@ int main(int argc, char* argv[]) {
                 }
                 cout << "Done reading " << loader.size() << " color images" << endl;
                 cout << "Reprojecting..." << endl;
-                reproject(loader, m, hdr_threshold, image_flip_x, image_flip_y);
+                reproject(loader, m, hdr_threshold);
             } else {
                 loader.load(camfile, 0);
                 loader.load(project, ColorHelper::READ_COLOR | ColorHelper::READ_DEPTH);
@@ -142,7 +142,7 @@ int main(int argc, char* argv[]) {
                           loader.getConfidenceMap(project),
                           loader.getDepthMap(project),
                           loader.getCamera(project),
-                          m, hdr_threshold, image_flip_x, image_flip_y);
+                          m, hdr_threshold);
             }
             cout << "Done reprojecting; clustering lights..." << endl;
             numlights = clusterLights(m, hdr_threshold, minlightsize);

@@ -20,11 +20,19 @@ struct CameraParams {
 
 class ColorHelper {
     public:
-        ColorHelper() {
+        ColorHelper()
+            : flip_x(false), flip_y(false)
+        {
+        }
+        ColorHelper(bool image_flip_x, bool image_flip_y)
+            : flip_x(image_flip_x), flip_y(image_flip_y)
+        {
         }
         ~ColorHelper() {
             for (int i = 0; i < data.size(); ++i) delete data[i];
             for (int i = 0; i < cameras.size(); ++i) delete cameras[i];
+            for (int i = 0; i < conf.size(); ++i) delete conf[i];
+            for (int i = 0; i < depth.size(); ++i) delete depth[i];
         }
         enum {
             READ_COLOR = 1,
@@ -48,7 +56,7 @@ class ColorHelper {
                 int width,
                 int height);
         int size() const { return data.size(); }
-        const char* getImage(int n) {
+        char* getImage(int n) {
             if (n >= data.size()) return NULL;
             return data[n];
         }
@@ -63,8 +71,10 @@ class ColorHelper {
         const CameraParams* getCamera(int n) { return cameras[n]; }
     protected:
         void transformAllCameras(const R4Matrix& m);
+        void flip(char* a, int w, int h, size_t bytes);
 
     private:
+        bool flip_x, flip_y;
         R4Matrix depth2rgb;
         std::vector<std::string> filenames;
         std::vector<char*> data;
