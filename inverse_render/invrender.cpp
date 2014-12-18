@@ -54,28 +54,28 @@ int main(int argc, char* argv[]) {
     }
     PlaneOrientationFinder of(mesh, resolution/2);
     of.computeNormals(ccw);
+    Mesh m(mesh,true);
     cout << "Done loading mesh geometry" << endl;
 
     vector<int> wallindices;
     vector<int> floorindices;
     ColorHelper loader;
-    Mesh m(mesh,true);
     WallFinder wf(&of, resolution);
 
     if (do_wallfinding) {
-        cout << "Analyzing geometry..." << endl;
-        if (!of.computeOrientation()) {
-            cout << "Error computing orientation! Non-triangle mesh!" << endl;
-        }
-        of.normalize();
-        cout << "Done analyzing geometry" << endl;
-
         cout << "===== WALLFINDING =====" << endl;
         if (wallinput) {
             cout << "Loading wall files..." << endl;
             wf.loadWalls(wallfile, m.types);
             cout << "Done loading wall files..." << endl;
+            of.normalize();
         } else {
+            cout << "Analyzing geometry..." << endl;
+            if (!of.computeOrientation()) {
+                cout << "Error computing orientation! Non-triangle mesh!" << endl;
+            }
+            cout << "Done analyzing geometry" << endl;
+            of.normalize();
             cout << "Finding walls..." << endl;
             wf.findFloorAndCeiling(m.types, anglethreshold);
             wf.findWalls(m.types, wallthreshold, minlength, anglethreshold);

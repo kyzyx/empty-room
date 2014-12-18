@@ -586,6 +586,14 @@ void WallFinder::loadWalls(string filename, vector<char>& labels) {
     }
     in.read((char*) &floorplane, sizeof(double));
     in.read((char*) &ceilplane, sizeof(double));
+    double x,y,z;
+    of->axes.resize(3);
+    for (int i = 0; i < 3; ++i) {
+        in.read((char*) &x, sizeof(double));
+        in.read((char*) &y, sizeof(double));
+        in.read((char*) &z, sizeof(double));
+        of->axes[i] = Vector3f(x,y,z);
+    }
 }
 void WallFinder::saveWalls(string filename, vector<char>& labels) {
     ofstream out(filename.c_str(), ofstream::binary);
@@ -608,6 +616,14 @@ void WallFinder::saveWalls(string filename, vector<char>& labels) {
     }
     out.write((char*) &floorplane, sizeof(double));
     out.write((char*) &ceilplane, sizeof(double));
+    for (int i = 0; i < 3; ++i) {
+        double x = of->axes[i][0];
+        double y = of->axes[i][1];
+        double z = of->axes[i][2];
+        out.write((char*) &x, sizeof(double));
+        out.write((char*) &y, sizeof(double));
+        out.write((char*) &z, sizeof(double));
+    }
 }
 
 Eigen::Vector3f WallFinder::getWallEndpoint(int i, bool lo, double height) const {

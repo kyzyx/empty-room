@@ -32,6 +32,7 @@ class OrientationFinder {
         pcl::PointCloud<pcl::PointNormal>::ConstPtr getCloud() const {
             return pcl::PointCloud<pcl::PointNormal>::ConstPtr(cloud);
         }
+        friend class WallFinder;
     protected:
         void addNormToHistogram(double x, double y, double z, int resolution, double weight);
         virtual bool prepareComputeOrientation() { return true; }
