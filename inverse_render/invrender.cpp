@@ -15,6 +15,7 @@
 #include "wall_finder.h"
 #include "clusterlights.h"
 
+#include "linefinder.h"
 #include "parse_args.h"
 #include "display.h"
 #include "solver.h"
@@ -57,6 +58,7 @@ int main(int argc, char* argv[]) {
     Mesh m(mesh,true);
     cout << "Done loading mesh geometry" << endl;
 
+    vector<WallLine> lines;
     vector<int> wallindices;
     vector<int> floorindices;
     ColorHelper loader(image_flip_x, image_flip_y);
@@ -153,6 +155,11 @@ int main(int argc, char* argv[]) {
         m.computeColorsOGL();
         hemicuberesolution = max(hemicuberesolution, loader.getCamera(0)->width);
         hemicuberesolution = max(hemicuberesolution, loader.getCamera(0)->height);
+        if (do_linefinding) {
+            cout << "Finding lines" << endl;
+            findWallLines(loader, wf, lines);
+            cout << "Done finding lines" << endl;
+        }
         cout << "========================" << endl;
     }
     InverseRender ir(&m, numlights, hemicuberesolution);
@@ -222,6 +229,13 @@ int main(int argc, char* argv[]) {
         irv.visualizeCameras(camera);
         irv.visualizeWalls();
         irv.addSamples(walldata);
+        for (int i = 0; i < lines.size(); ++i) {
+            double sy = lines[i].starty - wf.floorplane;
+            double ey = lines[i].endy - wf.floorplane;
+            sy /= wf.ceilplane - wf.floorplane;
+            ey /= wf.ceilplane - wf.floorplane;
+            irv.drawLine(lines[i].wallindex, lines[i].p, sy, ey);
+        }
         irv.loop();
     }
     return 0;

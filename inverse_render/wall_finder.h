@@ -35,6 +35,7 @@ class Segment {
         if (direction) return std::make_pair(s, coord);
         else           return std::make_pair(coord, s);
     }
+    double length() const { return end - start; }
     bool pointOnSegment(Eigen::Vector3f p, double threshold) {
         // Check if on plane
         double c = direction?p(2):p(0);
