@@ -157,7 +157,7 @@ int main(int argc, char* argv[]) {
         hemicuberesolution = max(hemicuberesolution, loader.getCamera(0)->height);
         if (do_linefinding) {
             cout << "Finding lines" << endl;
-            findWallLines(loader, wf, lines);
+            findWallLines(loader, wf, lines, 0.03);
             cout << "Done finding lines" << endl;
         }
         cout << "========================" << endl;

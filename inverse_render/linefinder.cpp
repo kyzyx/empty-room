@@ -13,9 +13,12 @@ void findLines(char* image, int w, int h, std::vector<Eigen::Vector4d>& lines) {
     Mat img(h, w, CV_32FC3, image);
     Mat gray, edges;
     cvtColor(img, gray, CV_BGR2GRAY);
-    Canny(gray, edges, 0.005, 0.015, 3);
+    blur(gray, gray, Size(5,5));
+    double ratio = 3;
+    double lo = 7.4;
+    Canny(gray, edges, lo, ratio*lo, 7);
     vector<Vec4i> houghlines;
-    HoughLinesP(edges, houghlines, 1, CV_PI/90, 50, 50, 10);
+    HoughLinesP(edges, houghlines, 1, CV_PI/90, 40, 25, 10);
     for(int i = 0; i < houghlines.size(); ++i) {
         Vec4i l = houghlines[i];
         lines.push_back(Vector4d(l[0], l[1], l[2], l[3]));
@@ -113,7 +116,7 @@ void findPeaks(vector<Vector3d>& votes, vector<Vector3d>& results, double resolu
     }
 
     //int mincount = min(1,(int)(threshold*votes.size()));
-    int mincount = 2;
+    int mincount = 3;
     for (int i = 0; i < len; ++i) {
         if (ismax[i] && histogram[i] > mincount) {
             results.push_back(Vector3d(avg[i]/histogram[i], top[i], bot[i]));
