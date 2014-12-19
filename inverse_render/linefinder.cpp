@@ -9,14 +9,11 @@ using namespace cv;
 using namespace Eigen;
 using namespace std;
 
-Mat tmp;
-
 void findLines(char* image, int w, int h, std::vector<Eigen::Vector4d>& lines) {
     Mat img(h, w, CV_32FC3, image);
     Mat gray, edges;
     cvtColor(img, gray, CV_BGR2GRAY);
     Canny(gray, edges, 0.005, 0.015, 3);
-    cvtColor(edges, tmp, COLOR_GRAY2BGR);
     vector<Vec4i> houghlines;
     HoughLinesP(edges, houghlines, 1, CV_PI/90, 50, 50, 10);
     for(int i = 0; i < houghlines.size(); ++i) {
@@ -57,7 +54,6 @@ void findWallLinesInImage(
     findLines(image, cam.width, cam.height, imglines);
 
     for (int j = 0; j < votes.size(); ++j) {
-        //int j = 0;
         for (int k = 0; k < imglines.size(); ++k) {
             // Project endpoints onto wall
             Vector2d aa = projectOntoWall(
@@ -73,47 +69,54 @@ void findWallLinesInImage(
                     );
             double b = bb(0);
             // Prune lines that don't intersect the wall
-            Vector4d l = imglines[k];
-            line( tmp, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(50,0,0), 1, CV_AA);
-            if (a < 0 || b < 0) continue;
-            if (a > wf.wallsegments[j].length() || b > wf.wallsegments[j].length())
+            // Also prune lines that correspond to wall edges
+            double margin = 0.04;
+            if (a < margin || b < margin) continue;
+            if (a > wf.wallsegments[j].length()-margin || b > wf.wallsegments[j].length()-margin)
                 continue;
-            line( tmp, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(110,0,0), 2, CV_AA);
             // Prune non-manhattan lines
             if (abs(a-b) > 1.5*resolution) continue;
-            int rr = (j&4)?255:128;
-            int gg = (j&1)?255:0;
-            int bbb = (j&2)?255:0;
-            line( tmp, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(bbb,gg,rr), 3, CV_AA);
             votes[j].push_back(Vector3d((a+b)/2,aa[1],bb[1]));
         }
     }
 }
 
-void findPeaks(vector<double>& votes, vector<double>& results, double resolution, double threshold) {
-    sort(votes.begin(), votes.end());
-    int len = 1 + (votes.back() - votes[0])/resolution;
+bool veccmp(Vector3d a, Vector3d b) {
+    return a[0] < b[0];
+}
+
+void findPeaks(vector<Vector3d>& votes, vector<Vector3d>& results, double resolution, double threshold) {
+    sort(votes.begin(), votes.end(), veccmp);
+    int len = 1 + (votes.back()[0] - votes[0][0])/resolution;
     vector<int> histogram(len,0);
     vector<double> avg(len,0);
+    vector<double> top(len,-numeric_limits<double>::infinity());
+    vector<double> bot(len,numeric_limits<double>::infinity());
     for (int i = 0; i < votes.size(); ++i) {
-        int idx = (votes[i]-votes[0])/resolution;
+        int idx = (votes[i][0]-votes[0][0])/resolution;
         histogram[idx]++;
-        avg[idx] += votes[i];
+        avg[idx] += votes[i][0];
+        if (votes[i][1] > votes[i][2]) {
+            top[idx] = max(top[idx], votes[i][1]);
+            bot[idx] = min(bot[idx], votes[i][2]);
+        } else {
+            top[idx] = max(top[idx], votes[i][2]);
+            bot[idx] = min(bot[idx], votes[i][1]);
+        }
     }
 
     // Non-maximum suppression
     vector<bool> ismax(len, true);
-    //for (int i = 0; i < len; ++i) {
-        //if (i < len-1 && histogram[i] < histogram[i+1]) ismax[i] = false;
-        //else if (i > 0 && histogram[i] < histogram[i-1]) ismax[i] = false;
-    //}
+    for (int i = 0; i < len; ++i) {
+        if (i < len-1 && histogram[i] < histogram[i+1]) ismax[i] = false;
+        else if (i > 0 && histogram[i] < histogram[i-1]) ismax[i] = false;
+    }
 
-    int mincount = min(1,(int)(threshold*votes.size()));
-    mincount = 2;
+    //int mincount = min(1,(int)(threshold*votes.size()));
+    int mincount = 2;
     for (int i = 0; i < len; ++i) {
         if (ismax[i] && histogram[i] > mincount) {
-            cout << (avg[i]/histogram[i]) << " " << histogram[i] << endl;
-            results.push_back(avg[i]/histogram[i]);
+            results.push_back(Vector3d(avg[i]/histogram[i], top[i], bot[i]));
         }
     }
 }
@@ -129,25 +132,16 @@ void findWallLines(ColorHelper& ch, WallFinder& wf, vector<WallLine>& lines, dou
     );
     for (int i = 0; i < ch.size(); ++i) {
         findWallLinesInImage(*(ch.getCamera(i)), ch.getImage(i), wf, resolution, norm, votes);
-        char fn[20];
-        sprintf(fn, "edges_%d.jpg", i);
-        flip(tmp, tmp, -1);
-        imwrite(fn, tmp);
     }
     for (int i = 0; i < votes.size(); ++i) {
         if (votes[i].empty()) continue;
-        for (int j = 0; j < votes[i].size(); j++) {
-            WallLine wl(i, votes[i][j][0]);
-            wl.starty = votes[i][j][1];
-            wl.endy = votes[i][j][2];
+        vector<Vector3d> results;
+        findPeaks(votes[i], results, resolution, 0.25);
+        for (int j = 0; j < results.size(); ++j) {
+            WallLine wl(i, results[j][0]);
+            wl.starty = results[j][1];
+            wl.endy = results[j][2];
             lines.push_back(wl);
         }
-        //vector<double> results;
-        //cout << "Wall " << i << endl;
-        //findPeaks(votes[i], results, resolution, 0.25);
-        //cout << "============================" << endl;
-        //for (int j = 0; j < results.size(); ++j) {
-            //lines.push_back(WallLine(i, results[j]));
-        //}
     }
 }
