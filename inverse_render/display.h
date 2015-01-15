@@ -46,7 +46,7 @@ class InvRenderVisualizer {
 
         void loop();
         void recalculateColors(int labeltype);
-        void drawLine(int wallidx, double x, double starty=0, double endy=1);
+        void drawLine(int wallidx, double x, double r, double g, double b, double starty=0, double endy=1);
 
         void visualizeWalls();
         void addSamples(std::vector<SampleData>& data);

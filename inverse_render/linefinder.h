@@ -23,6 +23,6 @@ void findWallLinesInImage(
         R4Matrix norm,
         std::vector<std::vector<double> >& votes
 );
-void findWallLines(ColorHelper& ch, WallFinder& wf, std::vector<WallLine>& lines, double resolution=0.02);
+void findWallLines(ColorHelper& ch, WallFinder& wf, std::vector<WallLine>& lines, double resolution=0.02, bool getvotes=false);
 
 #endif

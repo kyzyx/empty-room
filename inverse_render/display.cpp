@@ -300,18 +300,19 @@ void InvRenderVisualizer::visualizeCamera(const CameraParams* cam, string name, 
         viewer->addPolygon<PointXYZ>(PointCloud<PointXYZ>::ConstPtr(right), name+"right");
     }
 }
-void InvRenderVisualizer::drawLine(int wallidx, double x, double starty, double endy) {
-    static char n[] = {'A', 'F','i', '0'};
-    double r = x/wf->wallsegments[wallidx].length();
+void InvRenderVisualizer::drawLine(int wallidx, double x, double r, double g, double b, double starty, double endy) {
+    static char n[] = {'A', 'F','i', 'x', '0'};
+    n[3] = wallidx;
+    double p = x/wf->wallsegments[wallidx].length();
     bool f = wf->forwards[wallidx];
     Eigen::Vector3f a1 = wf->getWallEndpoint(wallidx,!f,starty);
     Eigen::Vector3f a2 = wf->getWallEndpoint(wallidx,f,starty);
-    Eigen::Vector3f a = a1*r + a2*(1-r);
+    Eigen::Vector3f aa = a1*p + a2*(1-p);
     Eigen::Vector3f b1 = wf->getWallEndpoint(wallidx,!f,endy);
     Eigen::Vector3f b2 = wf->getWallEndpoint(wallidx,f,endy);
-    Eigen::Vector3f b = b1*r + b2*(1-r);
-    PointXYZ start(a[0], a[1], a[2]);
-    PointXYZ end(b[0], b[1], b[2]);
-    viewer->addLine(start, end, 1, 0, 0, n);
-    n[3]++;
+    Eigen::Vector3f bb = b1*p + b2*(1-p);
+    PointXYZ start(aa[0], aa[1], aa[2]);
+    PointXYZ end(bb[0], bb[1], bb[2]);
+    viewer->addLine(start, end, r, g, b, n);
+    n[4]++;
 }

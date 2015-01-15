@@ -124,7 +124,7 @@ void findPeaks(vector<Vector3d>& votes, vector<Vector3d>& results, double resolu
     }
 }
 
-void findWallLines(ColorHelper& ch, WallFinder& wf, vector<WallLine>& lines, double resolution) {
+void findWallLines(ColorHelper& ch, WallFinder& wf, vector<WallLine>& lines, double resolution, bool getvotes) {
     vector<vector<Vector3d> > votes(wf.wallsegments.size());
     Matrix4f m4dn = wf.getNormalizationTransform();
     R4Matrix norm(
@@ -138,13 +138,22 @@ void findWallLines(ColorHelper& ch, WallFinder& wf, vector<WallLine>& lines, dou
     }
     for (int i = 0; i < votes.size(); ++i) {
         if (votes[i].empty()) continue;
-        vector<Vector3d> results;
-        findPeaks(votes[i], results, resolution, 0.25);
-        for (int j = 0; j < results.size(); ++j) {
-            WallLine wl(i, results[j][0]);
-            wl.starty = results[j][1];
-            wl.endy = results[j][2];
-            lines.push_back(wl);
+        if (getvotes) {
+            for (int j = 0; j < votes[i].size(); ++j) {
+                WallLine wl(i, votes[i][j][0]);
+                wl.starty = votes[i][j][1];
+                wl.endy = votes[i][j][2];
+                lines.push_back(wl);
+            }
+        } else {
+            vector<Vector3d> results;
+            findPeaks(votes[i], results, resolution, 0.25);
+            for (int j = 0; j < results.size(); ++j) {
+                WallLine wl(i, results[j][0]);
+                wl.starty = results[j][1];
+                wl.endy = results[j][2];
+                lines.push_back(wl);
+            }
         }
     }
 }

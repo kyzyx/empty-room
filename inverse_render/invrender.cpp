@@ -59,6 +59,7 @@ int main(int argc, char* argv[]) {
     cout << "Done loading mesh geometry" << endl;
 
     vector<WallLine> lines;
+    vector<WallLine> allvotes;
     vector<int> wallindices;
     vector<int> floorindices;
     ColorHelper loader(image_flip_x, image_flip_y);
@@ -158,6 +159,7 @@ int main(int argc, char* argv[]) {
         if (do_linefinding) {
             cout << "Finding lines" << endl;
             findWallLines(loader, wf, lines, 0.03);
+            findWallLines(loader, wf, allvotes, 0.03, true);
             cout << "Done finding lines" << endl;
         }
         cout << "========================" << endl;
@@ -234,7 +236,14 @@ int main(int argc, char* argv[]) {
             double ey = lines[i].endy - wf.floorplane;
             sy /= wf.ceilplane - wf.floorplane;
             ey /= wf.ceilplane - wf.floorplane;
-            irv.drawLine(lines[i].wallindex, lines[i].p, sy, ey);
+            irv.drawLine(lines[i].wallindex, lines[i].p, 1, 0, 0, sy, ey);
+        }
+        for (int i = 0; i < allvotes.size(); ++i) {
+            double sy = allvotes[i].starty - wf.floorplane;
+            double ey = allvotes[i].endy - wf.floorplane;
+            sy /= wf.ceilplane - wf.floorplane;
+            ey /= wf.ceilplane - wf.floorplane;
+            irv.drawLine(allvotes[i].wallindex, allvotes[i].p, 0.5, 0, 1, sy, ey);
         }
         irv.loop();
     }
