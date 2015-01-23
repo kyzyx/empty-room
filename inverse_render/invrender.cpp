@@ -159,7 +159,7 @@ int main(int argc, char* argv[]) {
         if (do_linefinding) {
             cout << "Finding lines" << endl;
             findWallLines(loader, wf, lines, 0.03);
-            findWallLines(loader, wf, allvotes, 0.03, true);
+            //findWallLines(loader, wf, allvotes, 0.03, true);
             cout << "Done finding lines" << endl;
         }
         cout << "========================" << endl;

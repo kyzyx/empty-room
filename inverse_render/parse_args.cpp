@@ -77,6 +77,7 @@ bool parseargs(int argc, char** argv) {
              "      -wallfind_only: only perform wallfinding\n" \
              "      -reproject_only: only perform reprojection\n" \
              "      -solve_only: only perform solving; requires -samplefile\n" \
+             "      -do_linefinding: perform linefinding operations\n" \
              "      -nosolve: do not perform solving (default off)\n" \
              "      -notexture: do not perform texture recovery (default off)\n" \
              "  Display Arguments:\n" \
