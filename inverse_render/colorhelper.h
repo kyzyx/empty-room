@@ -51,10 +51,15 @@ class ColorHelper {
         void* readHdrImage(int idx);
         bool readCameraFile(const std::string& filename);
 
+        static bool readExrImage(const std::string& filename,
+                float*& image,
+                int& width,
+                int& height);
         static bool writeExrImage(const std::string& filename,
                 const float* image,
                 int width,
-                int height);
+                int height,
+                int channels=3);
         int size() const { return data.size(); }
         char* getImage(int n) {
             if (n >= data.size()) return NULL;

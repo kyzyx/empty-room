@@ -136,16 +136,26 @@ void* ColorHelper::readConfidenceFile(int idx) {
 bool ColorHelper::writeExrImage(const string& filename,
         const float* image,
         int width,
-        int height)
+        int height,
+        int channels)
 {
     Rgba* pixels = new Rgba[width*height];
     for (int i = 0; i < height; ++i) {
         for (int j = 0; j < width; ++j) {
             int idx = j + (height-i-1)*width;
-            pixels[idx].r = image[3*idx];
-            pixels[idx].g = image[3*idx+1];
-            pixels[idx].b = image[3*idx+2];
-            pixels[idx].a = 1;
+            pixels[idx].r = image[channels*idx];
+            if (channels > 1) {
+                pixels[idx].g = image[channels*idx+1];
+                pixels[idx].b = image[channels*idx+2];
+            } else {
+                pixels[idx].g = image[idx];
+                pixels[idx].b = image[idx];
+            }
+            if (channels > 3) {
+                pixels[idx].a = image[channels*idx+3];
+            } else {
+                pixels[idx].a = 1;
+            }
         }
     }
     RgbaOutputFile file(filename.c_str(), width, height, WRITE_RGBA);
@@ -155,16 +165,22 @@ bool ColorHelper::writeExrImage(const string& filename,
 }
 
 void* ColorHelper::readExrImage(int i) {
-    RgbaInputFile f(filenames[i].c_str());
-    Box2i dw = f.dataWindow();
+    float* image;
     int width, height;
+    ColorHelper::readExrImage(filenames[i], image, width, height);
+    return image;
+}
+
+bool ColorHelper::readExrImage(const string& filename, float*& image, int& width, int& height) {
+    RgbaInputFile f(filename.c_str());
+    Box2i dw = f.dataWindow();
     width = dw.max.x - dw.min.x + 1;
     height = dw.max.y - dw.min.y + 1;
     Array2D<Rgba> pixels;
     pixels.resizeErase(height, width);
     f.setFrameBuffer(&pixels[0][0] - dw.min.x - dw.min.y * width, 1, width);
     f.readPixels(dw.min.y, dw.max.y);
-    float* image = new float[3*width*height];
+    image = new float[3*width*height];
     for (int i = 0; i < height; ++i) {
         for (int j = 0; j < width; ++j) {
             int idx = width*(height-i-1) + j;
@@ -173,7 +189,7 @@ void* ColorHelper::readExrImage(int i) {
             image[3*idx+2] = pixels[i][j].b;
         }
     }
-    return image;
+    return true;
 }
 
 void* ColorHelper::readHdrImage(int idx) {
