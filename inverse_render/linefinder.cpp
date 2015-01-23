@@ -31,6 +31,209 @@ cv::Vec3f getPixel(const cv::Mat& img, double px, double py) {
     return cv::Vec3f(b, g, r);
 }
 
+class HoughLookup {
+    public:
+        HoughLookup(int width, int height, Vector3d vanishingpoint)
+            : w(width), h(height), vp(vanishingpoint)
+        {
+            int dim = min(w,h)/3;
+            weights.resize(dim,0);
+            total.resize(dim,0);
+            distances.resize(dim);
+            sorted.resize(dim,false);
+        }
+
+        virtual void addVote(double w, int x, int y, double minweight=numeric_limits<double>::infinity()) {
+            // FIXME
+        }
+
+        void traceLines(int bin, vector<Vector4d>& lines, double minlength = 20, double skip=1.5) {
+            sortDistances(bin);
+            sortDistances(bin+1);
+            vector<pair<double, int> > d(distances[bin].size() + distances[bin+1].size());
+            merge(distances[bin].begin(), distances[bin].end(),
+                  distances[bin+1].begin(), distances[bin+1].end(),
+                  d.begin());
+            double start = 0;
+            for (int i = 1; i < d.size(); ++i) {
+                if (d[i].first - d[i-1].first > skip) {
+                    if (d[i-1].first - d[start].first > minlength) {
+                        int x1 = d[start].second%w;
+                        int y1 = d[start].second/w;
+                        int x2 = d[i-1].second%w;
+                        int y2 = d[i-1].second/w;
+                        Vector4d line(x1,y1,x2,y2);
+                        double err = lineToVp(line);
+                        double linelength = (x2-x1)*(x2-x1) + (y2-y1)*(y2-y1);
+                        if (err*err < linelength) {
+                            //if (true) {
+                            lines.push_back(line);
+                            cout << "Line " << x1 << "," << y1<< " to " << x2 << "," << y2 << " with error " << err << " and length " << sqrt(linelength) << endl;
+                        }
+                    }
+                    start = i;
+                }
+            }
+            if (d.back().first - d[start].first > minlength) {
+                int x1 = d[start].second%w;
+                int y1 = d[start].second/w;
+                int x2 = d.back().second%w;
+                int y2 = d.back().second/w;
+                Vector4d line(x1,y1,x2,y2);
+                double err = lineToVp(line);
+                double linelength = (x2-x1)*(x2-x1) + (y2-y1)*(y2-y1);
+                if (err*err < linelength) {
+                    //if (true) {
+                    lines.push_back(line);
+                    cout << "Line " << x1 << "," << y1<< " to " << x2 << "," << y2 << " with error " << err << " and length " << sqrt(linelength) << endl;
+                }
+            }
+        }
+
+        int size() const { return weights.size()-1; }
+        double getWeight(int i) const {
+            if (i < 0 || i >= weights.size()) return 0;
+            return weights[i]+weights[i+1];
+        }
+        double getTotal(int i) const { return total[i] + total[i+1]; }
+        double getBinAvg(int i) const { return (total[i]+total[i+1])/(weights[i]+weights[i+1]); }
+
+        int getBinCount(int bin) const { return distances[bin].size(); }
+        Vector2d getPointInBin(int bin, int idx) {
+            sortDistances(bin);
+            int i = idx<0?distances[bin].size()+idx:idx;
+            int n = distances[bin][i].second;
+            return Vector2d(n%w, (int) (n/w));
+        }
+
+    protected:
+        double lineToVp(Vector4d line) {
+            return R3Distance(R3Line(line[0], line[1], 0, line[2], line[3], 0),R3Point(vp[0],vp[1],0));
+
+        }
+        void sortDistances(int bin) {
+            if (!sorted[bin]) {
+                sorted[bin] = true;
+                sort(distances[bin].begin(), distances[bin].end());
+            }
+        }
+        Vector3d vp;
+        int w, h;
+        vector<vector<pair<double,int> > > distances;
+        vector<bool> sorted;
+        vector<double> weights;
+        vector<double> total;
+};
+
+class HoughAngleLookup : public HoughLookup {
+    public:
+        HoughAngleLookup(int width, int height, Vector3d vanishingpoint)
+            : HoughLookup(width, height, vanishingpoint)
+        {
+            int dim = min(w,h)/6;
+            weights.resize(dim,0);
+            total.resize(dim,0);
+            distances.resize(dim);
+            calculateMinMax();
+        }
+        void addVote(double wt, int x, int y, double minweight=numeric_limits<double>::infinity()) {
+            if (wt < minweight) return;
+            vector<double> angles;
+            double a = getAngle(x,y);
+            angles.push_back(getAngle(x-0.5,y-0.5));
+            angles.push_back(getAngle(x+0.5,y-0.5));
+            angles.push_back(getAngle(x+0.5,y+0.5));
+            angles.push_back(getAngle(x-0.5,y+0.5));
+            int start = getBinForAngle(*(max_element(angles.begin(), angles.end())));
+            int end = getBinForAngle(*(min_element(angles.begin(), angles.end())));
+            if (wt > minweight*minweight) wt = minweight*minweight;
+            for (int i = start; i <= end; ++i) {
+                weights[i] += wt;
+                total[i] += a*wt;
+                if (wt > minweight) {
+                    double d = (vp.head(2) - Vector2d(x,y)).norm();
+                    distances[i].push_back(make_pair(d,y*w+x));
+                }
+            }
+        }
+
+        double getBinCenter(int i) const {
+            static double inc = (maxa-mina)/(weights.size()-1);
+            return inc*i+mina;
+        }
+
+    private:
+        void calculateMinMax() {
+            vector<double> angles;
+            angles.push_back(getAngle( -0.5,-0.5));
+            angles.push_back(getAngle(w+0.5,-0.5));
+            angles.push_back(getAngle(w+0.5,h+0.5));
+            angles.push_back(getAngle( -0.5,h+0.5));
+            maxa = *(max_element(angles.begin(), angles.end()));
+            mina = *(min_element(angles.begin(), angles.end()));
+        }
+        double getAngle(double x, double y) {
+            Vector2d d = vp.head(2) - Vector2d(x,y);
+            d /= d.norm();
+            double a = atan2(d[1], d[0]);
+            if (a < 0) a += 2*M_PI;
+            return a;
+        }
+        int getBinForAngle(double a) {
+            return (int) ((a-mina)/(maxa-mina)*(weights.size()-1)+0.5);
+        }
+
+        double maxa;
+        double mina;
+};
+void VPHough(float* image, int w, int h, Vector3d vp, vector<Vector4d>& lines) {
+    HoughLookup* lookup;
+    if (vp[2] == 0) lookup = new HoughLookup(w,h,vp);
+    else            lookup = new HoughAngleLookup(w,h,vp);
+    Mat candidates(h,w,CV_8UC3,Scalar(0,0,0));
+
+    // Vote for angles
+    double minw = 5;
+    double minlength = 50;
+    for (int i = 0; i < h; ++i) {
+        for (int j = 0; j < w; ++j) {
+            lookup->addVote(image[i*w+j], j, i, minw);
+        }
+    }
+
+    // Find local maxima
+    vector<bool> localmax(lookup->size(),false);
+    for (int i = 0; i < lookup->size(); ++i) {
+        double currw = lookup->getWeight(i);
+        if (currw >= 2*minw*minlength) {
+            if (currw > lookup->getWeight(i-1) && currw > lookup->getWeight(i+1)) {
+                cout << "MAX ";
+                localmax[i] = true;
+            }
+            if (lookup->getBinCount(i) > 2) {
+                Vector2d v1 = lookup->getPointInBin(i, 0);
+                Vector2d v2 = lookup->getPointInBin(i, -1);
+                cout << v1[0] << "," << v1[1] << " to " << v2[0] << "," << v2[1] << " ";
+                Point p1(v1[0], v1[1]);
+                Point p2(v2[0], v2[1]);
+                line(candidates, p1, p2, Scalar(100+i,0,0));
+            }
+        }
+        cout << currw << endl;
+    }
+    for (int i = 0; i < lookup->size(); ++i) {
+        //if (localmax[i]) {
+        if (lookup->getWeight(i) > 2*minw*minlength) {
+            cout << "Tracing lines " << i << endl;
+            lookup->traceLines(i, lines, minlength);
+        }
+    }
+    for (int i = 0; i < lines.size(); ++i) {
+        line(candidates, Point(lines[i][0], lines[i][1]), Point(lines[i][2], lines[i][3]), Scalar(0,0,255));
+    }
+    imwrite("candidates.jpg", candidates);
+}
+
 void orientedEdgeFilterVP(char* image, int w, int h, Vector3d vp, vector<Vector4d>& lines, int windowy = 21, int windowx=5) {
     double** window[2];
     for (int k = 0; k < 2; ++k) {
@@ -91,6 +294,7 @@ void orientedEdgeFilterVP(char* image, int w, int h, Vector3d vp, vector<Vector4
         }
     }
     ColorHelper::writeExrImage("edges.exr", edges, w, h, 1);
+    VPHough(edges, w, h, vp, lines);
 }
 
 void findVanishingPoints(const CameraParams& cam, R4Matrix normalization, vector<Eigen::Vector3d>& vps) {
