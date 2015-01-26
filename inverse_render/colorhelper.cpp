@@ -39,6 +39,7 @@ bool ColorHelper::load(string cameraFile, int flags) {
     depth.resize(filenames.size(), NULL);
     conf.resize(filenames.size(), NULL);
     data.resize(filenames.size(), NULL);
+    labels.resize(filenames.size(), NULL);
     for (int i = 0; i < filenames.size(); ++i) {
         if (!load(i, flags)) return false;
     }

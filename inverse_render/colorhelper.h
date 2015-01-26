@@ -29,10 +29,11 @@ class ColorHelper {
         {
         }
         ~ColorHelper() {
-            for (int i = 0; i < data.size(); ++i) delete data[i];
+            for (int i = 0; i < data.size(); ++i) delete [] data[i];
             for (int i = 0; i < cameras.size(); ++i) delete cameras[i];
-            for (int i = 0; i < conf.size(); ++i) delete conf[i];
-            for (int i = 0; i < depth.size(); ++i) delete depth[i];
+            for (int i = 0; i < conf.size(); ++i) delete [] conf[i];
+            for (int i = 0; i < depth.size(); ++i) delete [] depth[i];
+            for (int i = 0; i < labels.size(); ++i) delete [] depth[i];
         }
         enum {
             READ_COLOR = 1,
@@ -65,6 +66,13 @@ class ColorHelper {
             if (n >= data.size()) return NULL;
             return data[n];
         }
+        void setLabelImage(int n, char* im) {
+            labels[n] = im;
+        }
+        const char* getLabelImage(int n) {
+            if (n >= labels.size()) return NULL;
+            return labels[n];
+        }
         const float* getConfidenceMap(int n) {
             if (n >= conf.size()) return NULL;
             return conf[n];
@@ -85,6 +93,7 @@ class ColorHelper {
         std::vector<char*> data;
         std::vector<float*> conf;
         std::vector<float*> depth;
+        std::vector<char*> labels;
         std::vector<CameraParams*> cameras;
 };
 
