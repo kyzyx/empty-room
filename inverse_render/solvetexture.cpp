@@ -78,15 +78,13 @@ Material InverseRender::computeAverageMaterial(vector<SampleData>& data, vector<
     return avg/data.size();
 }
 
-double InverseRender::generateBinaryMask(const CameraParams* cam, vector<bool>& mask, int label) {
+double InverseRender::generateBinaryMask(const CameraParams* cam, const char* labelimage, vector<bool>& mask, int label) {
     int w = cam->width;
     int h = cam->height;
-    float labelimage[w*h*3];
     mask.resize(w*h, false);
-    hr.render(cam->pos, cam->towards, cam->up, cam->fov, w, h, labelimage, false);
     int numlabelled = 0;
     for (int i = 0; i < w*h; ++i) {
-        mask[i] = (labelimage[3*i+1] == label/128.);
+        mask[i] = (labelimage[i] == label);
         if (mask[i]) numlabelled++;
     }
     return numlabelled / (double) (w*h);
@@ -111,8 +109,7 @@ void InverseRender::solveTexture(
     for (int i = 0; i < imagemanager->size(); ++i) {
         const CameraParams* cam = imagemanager->getCamera(i);
         if (cam->towards.Dot(surface.Normal()) < -cos(threshold)) {
-            double p;
-            p = generateBinaryMask(cam, isfloor, WallFinder::LABEL_FLOOR);
+            double p = generateBinaryMask(cam, (const char*)imagemanager->getImage("labels", i), isfloor, WallFinder::LABEL_FLOOR);
             if (p == 0) continue;
             int n = reduceToLargestCluster(isfloor, cam->width);
             p = 0;
@@ -136,7 +133,7 @@ void InverseRender::solveTexture(
     const CameraParams* cam = imagemanager->getCamera(bestimage);
     int w = cam->width;
     int h = cam->height;
-    generateBinaryMask(cam, isfloor, WallFinder::LABEL_FLOOR);
+    generateBinaryMask(cam, (const char*) imagemanager->getImage("labels",bestimage), isfloor, WallFinder::LABEL_FLOOR);
     reduceToLargestCluster(isfloor, w);
 
     vector<Point2f> from, to;

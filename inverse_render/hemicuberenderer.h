@@ -2,8 +2,10 @@
 #define _HEMICUBE_RENDERER_H
 #include <GL/gl.h>
 
+#include "camparams.h"
 #include "material.h"
 #include "meshmanager.h"
+#include "imagemanager.h"
 
 class SampleData {
     public:
@@ -27,9 +29,9 @@ class HemicubeRenderer {
                 Material& m, std::vector<float>& lightareas, float* color,
                 float* light);
         int getHemicubeResolution() const { return res; }
-
         void renderMeshOGL(bool light) const;
 
+        void render(const CameraParams* cam, float* image, bool colorimage);
         void render(
             const R3Point& p,
             const R3Vector& towards,
@@ -39,6 +41,11 @@ class HemicubeRenderer {
             const int height,
             float* image,
             bool colorimage);
+
+        void createLabelImage(const CameraParams* cam, void* image);
+        void createAllLabelImages(
+                ImageManager* imgr,
+                boost::function<void(int)> cb=NULL);
     private:
         void renderFace(const R3Point& p,
                 const R3Vector& towards, const R3Vector& up,
