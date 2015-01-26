@@ -44,7 +44,7 @@ class InverseRender {
         Material computeAverageMaterial(
                 std::vector<SampleData>& data,
                 std::vector<Material>& lightintensies);
-        double generateBinaryMask(const CameraParams* cam, std::vector<bool>& mask, int label);
+        double generateBinaryMask(const CameraParams* cam, const char* labelimage, std::vector<bool>& mask, int label);
 
         HemicubeRenderer& hr;
 

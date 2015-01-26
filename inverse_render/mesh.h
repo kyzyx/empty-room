@@ -31,6 +31,9 @@ class Sample {
         // mesh element on the pixel is greater and therefore is more
 };
 
+inline float charLabelToFloat(char l) { return l/128.; }
+inline float floatLabelToChar(float l) { return (char) (l*128+0.5); }
+
 class Mesh {
     public:
         Mesh(pcl::PolygonMesh::Ptr mesh, bool initOGL=false);

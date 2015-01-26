@@ -156,16 +156,21 @@ int main(int argc, char* argv[]) {
         m.computeColorsOGL();
         hemicuberesolution = max(hemicuberesolution, loader.getCamera(0)->width);
         hemicuberesolution = max(hemicuberesolution, loader.getCamera(0)->height);
+        cout << "========================" << endl;
+    }
+    HemicubeRenderer hr(&m, hemicuberesolution);
+    if ((input || all_project) && (wallinput || do_wallfinding)) {
+        cout << "Generating label maps for input images..." << endl;
+        hr.createAllLabelImages(&loader);
+        cout << "Done generating label maps" << endl;
         if (do_linefinding) {
             cout << "Finding lines" << endl;
             findWallLines(loader, wf, lines, 0.03);
             //findWallLines(loader, wf, allvotes, 0.03, true);
             cout << "Done finding lines" << endl;
         }
-        cout << "========================" << endl;
     }
 
-    HemicubeRenderer hr(&m, hemicuberesolution);
     InverseRender ir(hr, numlights);
     vector<SampleData> walldata, floordata;
     // Only do inverse rendering with full reprojection and wall labels

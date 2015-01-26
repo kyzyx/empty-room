@@ -2,6 +2,7 @@
 #define _HEMICUBE_RENDERER_H
 #include <GL/gl.h>
 
+#include "colorhelper.h"
 #include "material.h"
 #include "mesh.h"
 
@@ -27,6 +28,7 @@ class HemicubeRenderer {
                 Material& m, std::vector<float>& lightareas, float* color,
                 float* light);
         int getHemicubeResolution() const { return res; }
+        void render(const CameraParams* cam, float* image, bool colorimage);
         void render(
             const R3Point& p,
             const R3Vector& towards,
@@ -37,6 +39,11 @@ class HemicubeRenderer {
             float* image,
             bool colorimage);
 
+
+        // Utility functions for ColorHelper: Renders and extracts an 8-bit label
+        // image for each viewpoint
+        char* createLabelImage(const CameraParams* cam);
+        void createAllLabelImages(ColorHelper* ch);
         const Mesh* getMesh() const { return mesh; }
     private:
         void renderFace(const R3Point& p,

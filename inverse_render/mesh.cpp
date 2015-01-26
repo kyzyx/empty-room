@@ -196,7 +196,7 @@ void Mesh::computeColorsOGL() {
         for (int j = 0; j < 3; ++j) {
             int n = mesh->VertexID(mesh->VertexOnFace(mesh->Face(i), j));
             int ind = 6*(3*i + j);
-            vertices[ind+1] = types[n]/128.;
+            vertices[ind+1] = charLabelToFloat(types[n]);
             vertices[ind+2] = 1;
             if (samples[n].size() == 0) {
                 valid = false;

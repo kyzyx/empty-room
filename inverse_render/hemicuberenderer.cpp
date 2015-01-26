@@ -148,6 +148,10 @@ void HemicubeRenderer::renderFace(const R3Point& p,
 {
     render(p, towards, up, 90, res, res, image, colorimage);
 }
+void HemicubeRenderer::render(const CameraParams* cam, float* image, bool colorimage)
+{
+    render(cam->pos, cam->towards, cam->up, cam->fov, cam->width, cam->height, image, colorimage);
+}
 void HemicubeRenderer::render(
         const R3Point& p,
         const R3Vector& towards,
@@ -219,4 +223,22 @@ void HemicubeRenderer::computeSamples(
         if (i%10 == 9) cout << "Rendered " << i+1 << "/" << numsamples << endl;
     }
     cout << "Done sampling" << endl;
+}
+
+char* HemicubeRenderer::createLabelImage(const CameraParams* cam) {
+    int w = cam->width;
+    int h = cam->height;
+    char* ret = new char[w*h];
+    float* image = new float[w*h*3];
+    render(cam, image, false);
+    for (int i = 0; i < w*h; ++i) {
+        ret[i] = floatLabelToChar(image[3*i+1]);
+    }
+    delete [] image;
+    return ret;
+}
+void HemicubeRenderer::createAllLabelImages(ColorHelper* ch) {
+    for (int i = 0; i < ch->size(); ++i) {
+        ch->setLabelImage(i, createLabelImage(ch->getCamera(i)));
+    }
 }
