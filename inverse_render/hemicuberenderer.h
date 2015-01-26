@@ -36,6 +36,8 @@ class HemicubeRenderer {
             const int height,
             float* image,
             bool colorimage);
+
+        const Mesh* getMesh() const { return mesh; }
     private:
         void renderFace(const R3Point& p,
                 const R3Vector& towards, const R3Vector& up,

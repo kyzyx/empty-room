@@ -63,7 +63,7 @@ class InvRenderVisualizer {
         void pointcloud_kbd_cb_(const pcl::visualization::KeyboardEvent& event, void*);
         void kbd_cb_(const pcl::visualization::KeyboardEvent& event, void*);
 
-        void VisualizeSamplePoint(Mesh& m, SampleData& s);
+        void VisualizeSamplePoint(SampleData& s);
 
         WallFinder* wf;
         InverseRender* ir;

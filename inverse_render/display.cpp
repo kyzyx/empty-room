@@ -68,7 +68,7 @@ void intToCube(char c[5], int n) {
 }
 
 void InvRenderVisualizer::recalculateColors(int labeltype) {
-    Mesh& m = *(ir->mesh);
+    const Mesh& m = *(ir->mesh);
     for (int i = 0; i < cloud->size(); ++i) {
         if (labeltype == LABEL_REPROJECT_DEBUG) {
             if (m.labels[i] == 3) {
@@ -130,7 +130,7 @@ void InvRenderVisualizer::recalculateColors(int labeltype) {
 }
 
 void InvRenderVisualizer::init() {
-    Mesh& m = *(ir->mesh);
+    const Mesh& m = *(ir->mesh);
     PointIndices::Ptr nonnull(new PointIndices());
     cloud->is_dense = false;
     recalculateColors(LABEL_LIGHTS);
@@ -191,7 +191,7 @@ void InvRenderVisualizer::addSamples(vector<SampleData>& data) {
     }
 
     for (int i = 0; i < data.size() && i < 100; ++i) {
-        VisualizeSamplePoint(*(ir->mesh), data[i]);
+        VisualizeSamplePoint(data[i]);
         sampledata.push_back(data[i]);
     }
 }
@@ -225,7 +225,8 @@ void InvRenderVisualizer::loop() {
     }
 }
 
-void InvRenderVisualizer::VisualizeSamplePoint(Mesh& m, SampleData& s) {
+void InvRenderVisualizer::VisualizeSamplePoint(SampleData& s) {
+    const Mesh& m = *(ir->mesh);
     double boxsize = 0.1;
     R3Point p = m.getMesh()->VertexPosition(m.getMesh()->Vertex(s.vertexid));
     R3Vector v = m.getMesh()->VertexNormal(m.getMesh()->Vertex(s.vertexid));

@@ -164,7 +164,9 @@ int main(int argc, char* argv[]) {
         }
         cout << "========================" << endl;
     }
-    InverseRender ir(&m, numlights, hemicuberesolution);
+
+    HemicubeRenderer hr(&m, hemicuberesolution);
+    InverseRender ir(hr, numlights);
     vector<SampleData> walldata, floordata;
     // Only do inverse rendering with full reprojection and wall labels
     if (do_sampling && (input || all_project) && (wallinput || do_wallfinding)) {

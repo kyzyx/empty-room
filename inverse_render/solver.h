@@ -10,8 +10,8 @@
 
 class InverseRender {
     public:
-        InverseRender(Mesh* m, int nlights, int hemicubeResolution=150)
-            : hr(m, hemicubeResolution), mesh(m), numlights(nlights), images(NULL),
+        InverseRender(HemicubeRenderer& renderer, int nlights)
+            : hr(renderer), mesh(renderer.getMesh()), numlights(nlights), images(NULL),
               maxPercentErr(0.1), numRansacIters(1000)
         {
             lights.resize(numlights);
@@ -46,13 +46,13 @@ class InverseRender {
                 std::vector<Material>& lightintensies);
         double generateBinaryMask(const CameraParams* cam, std::vector<bool>& mask, int label);
 
-        HemicubeRenderer hr;
+        HemicubeRenderer& hr;
 
         int numRansacIters;
         double maxPercentErr;
     public:
         float** images;
-        Mesh* mesh;
+        const Mesh* mesh;
         int numlights;
         std::vector<Material> lights;
         Material wallMaterial;
