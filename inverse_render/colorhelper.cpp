@@ -385,6 +385,6 @@ void ColorHelper::writeEdgeImages() {
     for (int i = 0; i < edges.size(); ++i) {
         if (edges[i])
             writeExrImage(replaceExtension(filenames[i], "edges.exr"),
-                          edges[i], cameras[i]->width, cameras[i]->height, 1);
+                          edges[i], cameras[i]->width, cameras[i]->height, 3);
     }
 }

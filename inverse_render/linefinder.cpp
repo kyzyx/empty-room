@@ -11,7 +11,7 @@ using namespace cv;
 using namespace Eigen;
 using namespace std;
 
-const double margin = 0.04;
+const double margin = 0.08;
 const double EPSILON = 1e-5;
 // ---------------------------------------------------------------------------
 // Edge- and line-finding functions for single images
@@ -173,7 +173,8 @@ class HoughAngleLookup : public HoughLookup {
         double maxa;
         double mina;
 };
-void VPHough(const float* image, const char* labelimage, int w, int h, Vector3d vp, vector<Vector4d>& lines) {
+void VPHough(const float* image, const char* labelimage, int w, int h, vector<Vector3d>& vps, int v, vector<Vector4d>& lines) {
+    Vector3d vp = vps[v];
     HoughLookup* lookup;
     if (vp[2] == 0) lookup = new HoughLookup(w,h,vp);
     else            lookup = new HoughAngleLookup(w,h,vp);
@@ -183,7 +184,7 @@ void VPHough(const float* image, const char* labelimage, int w, int h, Vector3d 
     double minlength = 50;
     for (int i = 0; i < h; ++i) {
         for (int j = 0; j < w; ++j) {
-            if (!labelimage || labelimage[i*w+j] == WallFinder::LABEL_WALL) {
+            if (!labelimage || labelimage[3*(i*w+j)+v] == WallFinder::LABEL_WALL) {
                 lookup->addVote(image[(h-i-1)*w+j], j, i, minw);
             }
         }
@@ -208,7 +209,7 @@ void VPHough(const float* image, const char* labelimage, int w, int h, Vector3d 
 }
 
 // Note: returns edge image
-float* orientedEdgeFilterVP(char* image, int w, int h, Vector3d vp, vector<Vector4d>& lines, int windowy = 21, int windowx=5) {
+float* orientedEdgeFilterVP(char* image, int w, int h, vector<Vector3d>& vps, int windowy = 21, int windowx=5) {
     double** window[2];
     for (int k = 0; k < 2; ++k) {
         window[k] = new double*[windowx];
@@ -216,55 +217,58 @@ float* orientedEdgeFilterVP(char* image, int w, int h, Vector3d vp, vector<Vecto
     }
     Mat img(h, w, CV_32FC3, image);
     flip(img, img, 0);
-    float* edges = new float[w*h];
+    float* edges = new float[3*w*h];
 
     cvtColor(img, img, CV_BGR2HSV);
     for (int i = 0; i < h; ++i) {
         for (int j = 0; j < w; ++j) {
-            float maxresponse = 0;
-            // Determine window orientation
-            Vector2d lk;
-            Vector2d p(j,i);
-            if (vp[2] == 0) {
-                lk = vp.head(2);
-            } else {
-                lk = vp.head(2) - p;
-            }
-            if (lk.norm() == 0) {
-                maxresponse = numeric_limits<float>::infinity();
-            } else {
-                lk /= lk.norm();
-                Vector2d lpk(lk(1), -lk(0));
-                // Get window pixels
-                for (int x = 0; x < windowx; ++x) {
-                    for (int y = 0; y < windowy; ++y) {
-                        double xx = x - windowx/2.;
-                        double yy = y - windowy/2.;
-                        Vector2d pp = p + xx*lpk + yy*lk;
-                        Vec3f pix = getPixel(img, pp[0], pp[1]);
-                        for (int k = 0; k < 2; ++k) {
-                            window[k][x][y] = pix.val[2*k];
+            for (int v = 0; v < vps.size(); ++v) {
+                Vector3d vp = vps[v];
+                float maxresponse = 0;
+                // Determine window orientation
+                Vector2d lk;
+                Vector2d p(j,i);
+                if (vp[2] == 0) {
+                    lk = vp.head(2);
+                } else {
+                    lk = vp.head(2) - p;
+                }
+                if (lk.norm() == 0) {
+                    maxresponse = numeric_limits<float>::infinity();
+                } else {
+                    lk /= lk.norm();
+                    Vector2d lpk(lk(1), -lk(0));
+                    // Get window pixels
+                    for (int x = 0; x < windowx; ++x) {
+                        for (int y = 0; y < windowy; ++y) {
+                            double xx = x - windowx/2.;
+                            double yy = y - windowy/2.;
+                            Vector2d pp = p + xx*lpk + yy*lk;
+                            Vec3f pix = getPixel(img, pp[0], pp[1]);
+                            for (int k = 0; k < 2; ++k) {
+                                window[k][x][y] = pix.val[2*k];
+                            }
+                        }
+                    }
+                    // Get aggregate filter responses
+                    for (int k = 0; k < 2; ++k) {
+                        float response = 0;
+                        float presponse = 0;
+                        for (int x = 1; x < windowx-1; ++x) {
+                            for (int y = 1; y < windowy-1; ++y) {
+                                response += abs(window[k][x+1][y] - window[k][x-1][y]);
+                                presponse += abs(window[k][x][y+1] - window[k][x][y-1]);
+                            }
+                        }
+                        if (response > 0) {
+                            if (presponse == 0) maxresponse = numeric_limits<double>::infinity();
+                            else maxresponse = max(maxresponse, response/presponse);
                         }
                     }
                 }
-                // Get aggregate filter responses
-                for (int k = 0; k < 2; ++k) {
-                    float response = 0;
-                    float presponse = 0;
-                    for (int x = 1; x < windowx-1; ++x) {
-                        for (int y = 1; y < windowy-1; ++y) {
-                            response += abs(window[k][x+1][y] - window[k][x-1][y]);
-                            presponse += abs(window[k][x][y+1] - window[k][x][y-1]);
-                        }
-                    }
-                    if (response > 0) {
-                        if (presponse == 0) maxresponse = numeric_limits<double>::infinity();
-                        else maxresponse = max(maxresponse, response/presponse);
-                    }
-                }
+                int idx = (h-i-1)*w+j;
+                edges[3*idx+v] = maxresponse;
             }
-            int idx = (h-i-1)*w+j;
-            edges[idx] = maxresponse;
         }
     }
     return edges;
@@ -336,46 +340,46 @@ void findWallLinesInImage(
 {
     const CameraParams& cam = *(ch.getCamera(idx));
     char* image = ch.getImage(idx);
-    vector<Vector4d> imglines;
+    vector<Vector4d> verticallines;
     vector<Vector3d> vps;
 
     findVanishingPoints(cam, norm, vps);
     if (!ch.getEdges(idx)) {
-        float* edges = orientedEdgeFilterVP(image, cam.width, cam.height, vps[1], imglines);
+        float* edges = orientedEdgeFilterVP(image, cam.width, cam.height, vps);
         ch.setEdges(idx, edges);
     }
-    VPHough(ch.getEdges(idx), ch.getLabelImage(idx), cam.width, cam.height, vps[1], imglines);
+    VPHough(ch.getEdges(idx), ch.getLabelImage(idx), cam.width, cam.height, vps, 1, verticallines);
 
-    for (int k = 0; k < imglines.size(); ++k) {
-        Vector3d bestsegment;
-        int bestwall = -1;
-        double closest = numeric_limits<double>::infinity();
+    for (int k = 0; k < verticallines.size(); ++k) {
+        Vector3d bestpt[2];
+        int bestwall[2];
+        bestwall[0] = -1;
+        bestwall[1] = -1;
+        double closest[2];
+        closest[0] = numeric_limits<double>::infinity();
+        closest[1] = numeric_limits<double>::infinity();
         for (int j = 0; j < votes.size(); ++j) {
-            // Project endpoints onto wall
-            Vector3d aa = projectOntoWall(
-                    imglines[k][0], imglines[k][1],
-                    cam, wf.ceilplane, wf.floorplane,
-                    norm, wf.wallsegments[j]
-                    );
-            double a = aa(0);
-            Vector3d bb = projectOntoWall(
-                    imglines[k][2], imglines[k][3],
-                    cam, wf.ceilplane, wf.floorplane,
-                    norm, wf.wallsegments[j]
-                    );
-            double b = bb(0);
-            double p = (a+b)/2.;
-            // Prune lines that don't intersect the wall
-            if (p < margin || p > wf.wallsegments[j].length() - margin) continue;
-            double d = (aa(2) + bb(2))/2;
-            if (d < closest) {
-                bestsegment = Vector3d((a+b)/2,aa[1],bb[1]);
-                bestwall = j;
-                closest = d;
+            for (int i = 0; i < 2; ++i) {
+                Vector3d x = projectOntoWall(
+                        verticallines[k][2*i], verticallines[k][2*i+1],
+                        cam, wf.ceilplane, wf.floorplane,
+                        norm, wf.wallsegments[j]
+                        );
+                // Prune points that don't intersect the wall
+                if (x[0] < margin || x[0] > wf.wallsegments[j].length() - margin)
+                    continue;
+                if (x[2] < closest[i]) {
+                    bestpt[i] = x;
+                    bestwall[i] = j;
+                    closest[i] = x[2];
+                }
             }
         }
-        if (bestwall >= 0) {
-            votes[bestwall].push_back(bestsegment);
+        if (bestwall[0] == bestwall[1] && bestwall[0] >= 0) {
+            Vector3d seg((bestpt[0][0]+bestpt[1][0])/2,
+                         bestpt[0][1],
+                         bestpt[1][1]);
+            votes[bestwall[0]].push_back(seg);
         }
     }
 }
