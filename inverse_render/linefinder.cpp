@@ -11,6 +11,7 @@ using namespace cv;
 using namespace Eigen;
 using namespace std;
 
+const double margin = 0.04;
 const double EPSILON = 1e-5;
 // ---------------------------------------------------------------------------
 // Edge- and line-finding functions for single images
@@ -56,6 +57,7 @@ class HoughLookup {
                   distances[bin+1].begin(), distances[bin+1].end(),
                   d.begin());
             double start = 0;
+            d.push_back(make_pair(numeric_limits<double>::infinity(), -1));
             for (int i = 1; i < d.size(); ++i) {
                 if (d[i].first - d[i-1].first > skip) {
                     if (d[i-1].first - d[start].first > minlength) {
@@ -71,18 +73,6 @@ class HoughLookup {
                         }
                     }
                     start = i;
-                }
-            }
-            if (d.back().first - d[start].first > minlength) {
-                int x1 = d[start].second%w;
-                int y1 = d[start].second/w;
-                int x2 = d.back().second%w;
-                int y2 = d.back().second/w;
-                Vector4d line(x1,y1,x2,y2);
-                double err = lineToVp(line);
-                double linelength = (x2-x1)*(x2-x1) + (y2-y1)*(y2-y1);
-                if (err*err < linelength) {
-                    lines.push_back(line);
                 }
             }
         }
@@ -183,7 +173,7 @@ class HoughAngleLookup : public HoughLookup {
         double maxa;
         double mina;
 };
-void VPHough(const float* image, int w, int h, Vector3d vp, vector<Vector4d>& lines) {
+void VPHough(const float* image, const char* labelimage, int w, int h, Vector3d vp, vector<Vector4d>& lines) {
     HoughLookup* lookup;
     if (vp[2] == 0) lookup = new HoughLookup(w,h,vp);
     else            lookup = new HoughAngleLookup(w,h,vp);
@@ -193,7 +183,9 @@ void VPHough(const float* image, int w, int h, Vector3d vp, vector<Vector4d>& li
     double minlength = 50;
     for (int i = 0; i < h; ++i) {
         for (int j = 0; j < w; ++j) {
-            lookup->addVote(image[i*w+j], j, i, minw);
+            if (!labelimage || labelimage[i*w+j] == WallFinder::LABEL_WALL) {
+                lookup->addVote(image[(h-i-1)*w+j], j, i, minw);
+            }
         }
     }
 
@@ -271,7 +263,7 @@ float* orientedEdgeFilterVP(char* image, int w, int h, Vector3d vp, vector<Vecto
                     }
                 }
             }
-            int idx = i*w+j;
+            int idx = (h-i-1)*w+j;
             edges[idx] = maxresponse;
         }
     }
@@ -306,11 +298,19 @@ void findVanishingPoints(const CameraParams& cam, R4Matrix normalization, vector
     }
 }
 
-Vector2d projectOntoWall(double x, double y, const CameraParams& cam, double ceilingplane, double floorplane, R4Matrix normalization, Segment& s) {
+// ---------------------------------------------------------------------------
+// Line consensus functions
+Vector3d projectOntoWall(
+        double x, double y,
+        const CameraParams& cam,
+        double ceilingplane, double floorplane,
+        R4Matrix normalization,
+        Segment& s)
+{
     R3Point p1 = cam.pos;
     R3Vector v = cam.focal_length*cam.towards
-               + (x - cam.width/2 - 0.5)*cam.right
-               + (y - cam.height/2 - 0.5)*cam.up;
+               - (x - cam.width/2 - 0.5)*cam.right
+               - (y - cam.height/2 - 0.5)*cam.up;
     R3Point p2 = p1+v;
     p1 = normalization*p1;
     p2 = normalization*p2;
@@ -318,11 +318,11 @@ Vector2d projectOntoWall(double x, double y, const CameraParams& cam, double cei
     R3Vector n = s.direction?R3posz_vector:R3posx_vector;
     R3Plane plane(n*s.norm, -s.coord*s.norm);
     R3Point hit;
-    if (R3Intersects(R3Ray(p1,p2), plane, &hit) && hit.Y() < ceilingplane && hit.Y() > floorplane) {
+    if (R3Intersects(R3Ray(p1,p2), plane, &hit) && hit.Y() < ceilingplane+margin && hit.Y() > floorplane-margin) {
         double x = s.direction?hit.X():hit.Z();
-        return Vector2d(x - s.start, hit.Y());
+        return Vector3d(x - s.start, hit.Y(), (hit-cam.pos).Length());
     } else {
-        return Vector2d(-numeric_limits<double>::infinity(), 0);
+        return Vector3d(-numeric_limits<double>::infinity(), 0, numeric_limits<double>::infinity());
     }
 }
 
@@ -338,37 +338,44 @@ void findWallLinesInImage(
     char* image = ch.getImage(idx);
     vector<Vector4d> imglines;
     vector<Vector3d> vps;
+
     findVanishingPoints(cam, norm, vps);
     if (!ch.getEdges(idx)) {
         float* edges = orientedEdgeFilterVP(image, cam.width, cam.height, vps[1], imglines);
         ch.setEdges(idx, edges);
     }
-    VPHough(ch.getEdges(idx), cam.width, cam.height, vps[1], imglines);
+    VPHough(ch.getEdges(idx), ch.getLabelImage(idx), cam.width, cam.height, vps[1], imglines);
 
-    for (int j = 0; j < votes.size(); ++j) {
-        for (int k = 0; k < imglines.size(); ++k) {
+    for (int k = 0; k < imglines.size(); ++k) {
+        Vector3d bestsegment;
+        int bestwall = -1;
+        double closest = numeric_limits<double>::infinity();
+        for (int j = 0; j < votes.size(); ++j) {
             // Project endpoints onto wall
-            Vector2d aa = projectOntoWall(
+            Vector3d aa = projectOntoWall(
                     imglines[k][0], imglines[k][1],
                     cam, wf.ceilplane, wf.floorplane,
                     norm, wf.wallsegments[j]
                     );
             double a = aa(0);
-            Vector2d bb = projectOntoWall(
+            Vector3d bb = projectOntoWall(
                     imglines[k][2], imglines[k][3],
                     cam, wf.ceilplane, wf.floorplane,
                     norm, wf.wallsegments[j]
                     );
             double b = bb(0);
+            double p = (a+b)/2.;
             // Prune lines that don't intersect the wall
-            // Also prune lines that correspond to wall edges
-            double margin = 0.04;
-            if (a < margin || b < margin) continue;
-            if (a > wf.wallsegments[j].length()-margin || b > wf.wallsegments[j].length()-margin)
-                continue;
-            // Prune non-manhattan lines
-            if (abs(a-b) > 1.5*resolution) continue;
-            votes[j].push_back(Vector3d((a+b)/2,aa[1],bb[1]));
+            if (p < margin || p > wf.wallsegments[j].length() - margin) continue;
+            double d = (aa(2) + bb(2))/2;
+            if (d < closest) {
+                bestsegment = Vector3d((a+b)/2,aa[1],bb[1]);
+                bestwall = j;
+                closest = d;
+            }
+        }
+        if (bestwall >= 0) {
+            votes[bestwall].push_back(bestsegment);
         }
     }
 }
@@ -405,7 +412,7 @@ void findPeaks(vector<Vector3d>& votes, vector<Vector3d>& results, double resolu
     }
 
     //int mincount = min(1,(int)(threshold*votes.size()));
-    int mincount = 3;
+    int mincount = 5;
     for (int i = 0; i < len; ++i) {
         if (ismax[i] && histogram[i] > mincount) {
             results.push_back(Vector3d(avg[i]/histogram[i], top[i], bot[i]));
