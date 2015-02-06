@@ -33,12 +33,14 @@ class ColorHelper {
             for (int i = 0; i < cameras.size(); ++i) delete cameras[i];
             for (int i = 0; i < conf.size(); ++i) delete [] conf[i];
             for (int i = 0; i < depth.size(); ++i) delete [] depth[i];
-            for (int i = 0; i < labels.size(); ++i) delete [] depth[i];
+            for (int i = 0; i < labels.size(); ++i) delete [] labels[i];
+            for (int i = 0; i < edges.size(); ++i) delete [] edges[i];
         }
         enum {
             READ_COLOR = 1,
             READ_CONFIDENCE = 2,
             READ_DEPTH = 4,
+            READ_EDGES = 4,
         };
 
         bool load(std::string cameraFile, int flags=READ_COLOR);
@@ -52,10 +54,13 @@ class ColorHelper {
         void* readHdrImage(int idx);
         bool readCameraFile(const std::string& filename);
 
+        void writeEdgeImages();
+
         static bool readExrImage(const std::string& filename,
                 float*& image,
                 int& width,
-                int& height);
+                int& height,
+                int channels=3);
         static bool writeExrImage(const std::string& filename,
                 const float* image,
                 int width,
@@ -68,6 +73,13 @@ class ColorHelper {
         }
         void setLabelImage(int n, char* im) {
             labels[n] = im;
+        }
+        void setEdges(int n, float* im) {
+            edges[n] = im;
+        }
+        const float* getEdges(int n) {
+            if (n >= edges.size()) return NULL;
+            return edges[n];
         }
         const char* getLabelImage(int n) {
             if (n >= labels.size()) return NULL;
@@ -90,10 +102,11 @@ class ColorHelper {
         bool flip_x, flip_y;
         R4Matrix depth2rgb;
         std::vector<std::string> filenames;
-        std::vector<char*> data;
-        std::vector<float*> conf;
-        std::vector<float*> depth;
-        std::vector<char*> labels;
+        std::vector<char*> data;   // Raw RGB images, as triples of 32-bit floats
+        std::vector<float*> conf;  // Confidence of each image pixel, as floats
+        std::vector<float*> depth; // Distance from the camera at each pixel, in mm
+        std::vector<char*> labels; // Label of pixel as wall, floor, etc.
+        std::vector<float*> edges;
         std::vector<CameraParams*> cameras;
 };
 

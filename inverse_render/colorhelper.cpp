@@ -40,6 +40,7 @@ bool ColorHelper::load(string cameraFile, int flags) {
     conf.resize(filenames.size(), NULL);
     data.resize(filenames.size(), NULL);
     labels.resize(filenames.size(), NULL);
+    edges.resize(filenames.size(), NULL);
     for (int i = 0; i < filenames.size(); ++i) {
         if (!load(i, flags)) return false;
     }
@@ -69,6 +70,15 @@ bool ColorHelper::load(int i, int flags) {
             return false;
         }
         flip(data[i], w, h, 3*sizeof(float));
+    }
+    if (flags & READ_EDGES) {
+        if (fileexists(replaceExtension(filenames[i], "edges.exr"))) {
+            readExrImage(replaceExtension(filenames[i], "edges.exr"), edges[i], w, h, 1);
+            if (!edges[i]) {
+                cerr << "Error reading image " << filenames[i] << endl;
+                return false;
+            }
+        }
     }
     return true;
 }
@@ -144,18 +154,19 @@ bool ColorHelper::writeExrImage(const string& filename,
     for (int i = 0; i < height; ++i) {
         for (int j = 0; j < width; ++j) {
             int idx = j + (height-i-1)*width;
-            pixels[idx].r = image[channels*idx];
+            int fidx = j + i*width;
+            pixels[fidx].r = image[channels*idx];
             if (channels > 1) {
-                pixels[idx].g = image[channels*idx+1];
-                pixels[idx].b = image[channels*idx+2];
+                pixels[fidx].g = image[channels*idx+1];
+                pixels[fidx].b = image[channels*idx+2];
             } else {
-                pixels[idx].g = image[idx];
-                pixels[idx].b = image[idx];
+                pixels[fidx].g = image[idx];
+                pixels[fidx].b = image[idx];
             }
             if (channels > 3) {
-                pixels[idx].a = image[channels*idx+3];
+                pixels[fidx].a = image[channels*idx+3];
             } else {
-                pixels[idx].a = 1;
+                pixels[fidx].a = 1;
             }
         }
     }
@@ -172,7 +183,7 @@ void* ColorHelper::readExrImage(int i) {
     return image;
 }
 
-bool ColorHelper::readExrImage(const string& filename, float*& image, int& width, int& height) {
+bool ColorHelper::readExrImage(const string& filename, float*& image, int& width, int& height, int channels) {
     RgbaInputFile f(filename.c_str());
     Box2i dw = f.dataWindow();
     width = dw.max.x - dw.min.x + 1;
@@ -181,13 +192,17 @@ bool ColorHelper::readExrImage(const string& filename, float*& image, int& width
     pixels.resizeErase(height, width);
     f.setFrameBuffer(&pixels[0][0] - dw.min.x - dw.min.y * width, 1, width);
     f.readPixels(dw.min.y, dw.max.y);
-    image = new float[3*width*height];
+    image = new float[channels*width*height];
     for (int i = 0; i < height; ++i) {
         for (int j = 0; j < width; ++j) {
             int idx = width*(height-i-1) + j;
-            image[3*idx] = pixels[i][j].r;
-            image[3*idx+1] = pixels[i][j].g;
-            image[3*idx+2] = pixels[i][j].b;
+            image[channels*idx] = pixels[i][j].r;
+            if (channels > 1) {
+                image[channels*idx+1] = pixels[i][j].g;
+                image[channels*idx+2] = pixels[i][j].b;
+                if (channels > 3)
+                    image[channels*idx+3] = pixels[i][j].a;
+            }
         }
     }
     return true;
@@ -364,4 +379,12 @@ void ColorHelper::flip(char* a, int w, int h, size_t bytes) {
         }
     }
     delete tmp;
+}
+
+void ColorHelper::writeEdgeImages() {
+    for (int i = 0; i < edges.size(); ++i) {
+        if (edges[i])
+            writeExrImage(replaceExtension(filenames[i], "edges.exr"),
+                          edges[i], cameras[i]->width, cameras[i]->height, 1);
+    }
 }

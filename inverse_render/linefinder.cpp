@@ -186,7 +186,7 @@ class HoughAngleLookup : public HoughLookup {
         double maxa;
         double mina;
 };
-void VPHough(float* image, int w, int h, Vector3d vp, vector<Vector4d>& lines) {
+void VPHough(const float* image, int w, int h, Vector3d vp, vector<Vector4d>& lines) {
     HoughLookup* lookup;
     if (vp[2] == 0) lookup = new HoughLookup(w,h,vp);
     else            lookup = new HoughAngleLookup(w,h,vp);
@@ -234,7 +234,8 @@ void VPHough(float* image, int w, int h, Vector3d vp, vector<Vector4d>& lines) {
     imwrite("candidates.jpg", candidates);
 }
 
-void orientedEdgeFilterVP(char* image, int w, int h, Vector3d vp, vector<Vector4d>& lines, int windowy = 21, int windowx=5) {
+// Note: returns edge image
+float* orientedEdgeFilterVP(char* image, int w, int h, Vector3d vp, vector<Vector4d>& lines, int windowy = 21, int windowx=5) {
     double** window[2];
     for (int k = 0; k < 2; ++k) {
         window[k] = new double*[windowx];
@@ -293,8 +294,7 @@ void orientedEdgeFilterVP(char* image, int w, int h, Vector3d vp, vector<Vector4
             edges[idx] = maxresponse;
         }
     }
-    ColorHelper::writeExrImage("edges.exr", edges, w, h, 1);
-    VPHough(edges, w, h, vp, lines);
+    return edges;
 }
 
 void findVanishingPoints(const CameraParams& cam, R4Matrix normalization, vector<Eigen::Vector3d>& vps) {
@@ -346,18 +346,23 @@ Vector2d projectOntoWall(double x, double y, const CameraParams& cam, double cei
 }
 
 void findWallLinesInImage(
-        const CameraParams& cam,
-        char* image,
+        ColorHelper& ch,
+        int idx,
         WallFinder& wf,
         double resolution,
         R4Matrix norm,
         vector<vector<Vector3d> >& votes)
 {
+    const CameraParams& cam = *(ch.getCamera(idx));
+    char* image = ch.getImage(idx);
     vector<Vector4d> imglines;
     vector<Vector3d> vps;
     findVanishingPoints(cam, norm, vps);
-    orientedEdgeFilterVP(image, cam.width, cam.height, vps[1], imglines);
-    return;
+    if (!ch.getEdges(idx)) {
+        float* edges = orientedEdgeFilterVP(image, cam.width, cam.height, vps[1], imglines);
+        ch.setEdges(idx, edges);
+    }
+    VPHough(ch.getEdges(idx), cam.width, cam.height, vps[1], imglines);
 
     for (int j = 0; j < votes.size(); ++j) {
         for (int k = 0; k < imglines.size(); ++k) {
@@ -437,7 +442,8 @@ void findWallLines(ColorHelper& ch, WallFinder& wf, vector<WallLine>& lines, dou
         m4dn(3,0), m4dn(3,1), m4dn(3,2), m4dn(3,3)
     );
     for (int i = 0; i < ch.size(); ++i) {
-        findWallLinesInImage(*(ch.getCamera(i)), ch.getImage(i), wf, resolution, norm, votes);
+        findWallLinesInImage(ch, i, wf, resolution, norm, votes);
+        cout << "Done linefinding image " << i << endl;
     }
     for (int i = 0; i < votes.size(); ++i) {
         if (votes[i].empty()) continue;

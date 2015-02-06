@@ -164,10 +164,12 @@ int main(int argc, char* argv[]) {
         hr.createAllLabelImages(&loader);
         cout << "Done generating label maps" << endl;
         if (do_linefinding) {
+            loader.load(camfile, ColorHelper::READ_EDGES);
             cout << "Finding lines" << endl;
             findWallLines(loader, wf, lines, 0.03);
             //findWallLines(loader, wf, allvotes, 0.03, true);
             cout << "Done finding lines" << endl;
+            loader.writeEdgeImages();
         }
     }
 
