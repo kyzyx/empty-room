@@ -12,7 +12,8 @@ using namespace Eigen;
 using namespace std;
 
 const double EPSILON = 1e-5;
-
+// ---------------------------------------------------------------------------
+// Edge- and line-finding functions for single images
 cv::Vec3f getPixel(const cv::Mat& img, double px, double py) {
     int x = (int)px;
     int y = (int)py;
@@ -66,9 +67,7 @@ class HoughLookup {
                         double err = lineToVp(line);
                         double linelength = (x2-x1)*(x2-x1) + (y2-y1)*(y2-y1);
                         if (err*err < linelength) {
-                            //if (true) {
                             lines.push_back(line);
-                            cout << "Line " << x1 << "," << y1<< " to " << x2 << "," << y2 << " with error " << err << " and length " << sqrt(linelength) << endl;
                         }
                     }
                     start = i;
@@ -83,9 +82,7 @@ class HoughLookup {
                 double err = lineToVp(line);
                 double linelength = (x2-x1)*(x2-x1) + (y2-y1)*(y2-y1);
                 if (err*err < linelength) {
-                    //if (true) {
                     lines.push_back(line);
-                    cout << "Line " << x1 << "," << y1<< " to " << x2 << "," << y2 << " with error " << err << " and length " << sqrt(linelength) << endl;
                 }
             }
         }
@@ -190,7 +187,6 @@ void VPHough(const float* image, int w, int h, Vector3d vp, vector<Vector4d>& li
     HoughLookup* lookup;
     if (vp[2] == 0) lookup = new HoughLookup(w,h,vp);
     else            lookup = new HoughAngleLookup(w,h,vp);
-    Mat candidates(h,w,CV_8UC3,Scalar(0,0,0));
 
     // Vote for angles
     double minw = 5;
@@ -207,31 +203,16 @@ void VPHough(const float* image, int w, int h, Vector3d vp, vector<Vector4d>& li
         double currw = lookup->getWeight(i);
         if (currw >= 2*minw*minlength) {
             if (currw > lookup->getWeight(i-1) && currw > lookup->getWeight(i+1)) {
-                cout << "MAX ";
                 localmax[i] = true;
             }
-            if (lookup->getBinCount(i) > 2) {
-                Vector2d v1 = lookup->getPointInBin(i, 0);
-                Vector2d v2 = lookup->getPointInBin(i, -1);
-                cout << v1[0] << "," << v1[1] << " to " << v2[0] << "," << v2[1] << " ";
-                Point p1(v1[0], v1[1]);
-                Point p2(v2[0], v2[1]);
-                line(candidates, p1, p2, Scalar(100+i,0,0));
-            }
         }
-        cout << currw << endl;
     }
     for (int i = 0; i < lookup->size(); ++i) {
         //if (localmax[i]) {
         if (lookup->getWeight(i) > 2*minw*minlength) {
-            cout << "Tracing lines " << i << endl;
             lookup->traceLines(i, lines, minlength);
         }
     }
-    for (int i = 0; i < lines.size(); ++i) {
-        line(candidates, Point(lines[i][0], lines[i][1]), Point(lines[i][2], lines[i][3]), Scalar(0,0,255));
-    }
-    imwrite("candidates.jpg", candidates);
 }
 
 // Note: returns edge image
