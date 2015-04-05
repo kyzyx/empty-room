@@ -7,8 +7,11 @@ include_directories(${PCL_INCLUDE_DIRS} . ../GAPS/)
 link_directories(${PCL_LIBRARY_DIRS} ../GAPS/R3Graphics/ ../GAPS/R3Shapes/
     ../GAPS/RNBasics/ ../GAPS/R2Shapes/
     ../GAPS/jpeg/)
-add_library(memory imagemanager.cpp imagemanager.h)
 add_definitions(${PCL_DEFINITIONS})
+add_library(memory 
+    imagemanager.cpp imagemanager.h
+    imageserver.cpp imageserver.h
+    imageio.cpp imageio.h)
 add_executable(invrender rgbe.cpp rgbe.h invrender.cpp colorhelper.h
     colorhelper.cpp reproject.h reproject.cpp mesh.h mesh.cpp
     wall_finder.h wall_finder.cpp material.h

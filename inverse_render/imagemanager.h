@@ -4,8 +4,11 @@
 #include "R3Shapes/R3Shapes.h"
 #include <string>
 #include <vector>
+#include <opencv2/core/types_c.h>
 
-struct CameraParams {
+#include <boost/interprocess/sync/interprocess_upgradable_mutex.hpp>
+
+struct CamParams {
     R3Point pos;
     R3Vector up;
     R3Vector towards;
@@ -25,37 +28,69 @@ struct CameraParams {
  */
 class ImageType {
     public:
-        ImageType(std::string name, int size)
-            : n(name), s(size) {;}
-        const std::string getName() const { return n; }
-        int getSize() const { return s; }
+        ImageType(const std::string& name, const std::string& extension, int sizetype, int fileformat=IT_IMAGE)
+            : n(name), ext(extension), s(sizetype), img(fileformat){;}
+        const std::string& getName() const { return n; }
+        const std::string& getExtension() const { return ext; }
+        int getSize() const {
+            int cn = 1+(s >> CV_CN_SHIFT);
+            int sz = 1 << (CV_MAT_DEPTH(s) >> 1);
+            return cn*sz;
+        }
+        int getType() const { return s; }
+        int getFileFormat() const { return img; }
+        enum {
+            IT_IMAGE,
+            IT_SCALAR,
+            IT_DEPTHMAP,
+        };
     private:
         std::string n;
+        std::string ext;
         int s;
+        int img;
 };
 
 class ImageManager {
     public:
-        ImageManager(int width, int height, int numImages);
+        typedef boost::interprocess::interprocess_upgradable_mutex shmutex;
 
+        ImageManager(int width, int height, int numImages);
+        ImageManager(const std::string& camfile);
+
+        const CamParams* getCamera(int n) const;
+        unsigned char getFlags(const std::string& type, int n) const;
+        void setFlags(const std::string& type, int n, unsigned char value);
         const void* getImage(const std::string& type, int n) const;
-        const CameraParams* getCamera(int n) const;
-        void setImage(const std::string& type, int n, void* ptr);
+        void* getImageWriteable(const std::string& type, int n);
 
         int width() const { return w; }
         int height() const { return h; }
         int size() const { return sz; }
-    private:
-        bool initializeSharedMemory();
+
+        enum {
+           DF_NONE=0,
+           DF_INITIALIZED=1,
+           DF_ERROR=128,
+        };
+    protected:
         void initializeImageTypes();
+
+        void defaultinit(const std::string& camfile);
+        bool initializeSharedMemory();
+
         int computeSize() const;
         int nameToIndex(const std::string& type) const;
+        shmutex* getMutex(int t, int n);
 
         std::vector<ImageType> imagetypes;
-        std::vector<std::vector<void*> > images;
-        std::vector<CameraParams*> cameras;
+
         int w, h, sz;
-        // FIXME: Locks?
-        // FIXME: initialized flags?
+        std::vector<std::vector<void*> > images;
+
+        CamParams* cameras;
+        unsigned char* flags;
+        shmutex* mutexes;
+        std::string shmname;
 };
 #endif
