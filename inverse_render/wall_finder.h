@@ -44,6 +44,7 @@ class Segment {
         if (c > threshold + end || c < start - threshold) return false;
         return true;
     }
+    double length() const { return end-start; }
     bool pointOnSegment(Eigen::Vector3f p, Eigen::Vector3f n, double threshold) {
         if (!pointOnSegment(p, threshold)) return false;
         Eigen::Vector3f axis = direction?Eigen::Vector3f::UnitZ():Eigen::Vector3f::UnitX();

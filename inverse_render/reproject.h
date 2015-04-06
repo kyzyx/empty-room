@@ -1,11 +1,11 @@
 #ifndef _REPROJECT_H
 #define _REPROJECT_H
 #include "mesh.h"
-#include "colorhelper.h"
+#include "imagemanager.h"
 
-void reproject(ColorHelper& ch, ColorHelper& lights, Mesh& mesh);
+void reproject(ImageManager& ch, ImageManager& lights, Mesh& mesh);
 void reproject(
-        ColorHelper& hdr,
+        ImageManager& hdr,
         Mesh& mesh,
         double threshold,
         bool flip_x=false,

@@ -53,7 +53,7 @@ bool ImageServer::readCameraFile(const string& filename)
         double foc = h/(2*tan(vfov*M_PI/360));
         double a,b,c;
         string s;
-        CamParams* curr = cameras;
+        CameraParams* curr = cameras;
         for (int i = 0; i < sz; ++i, ++curr) {
             in >> s >> a >> b >> c;
             filenames.push_back(s);
@@ -84,7 +84,7 @@ bool ImageServer::readCameraFile(const string& filename)
 }
 
 void ImageServer::transformAllCameras(const R4Matrix& m) {
-    CamParams* cam = cameras;
+    CameraParams* cam = cameras;
     for (int i = 0; i < sz; ++i, ++cam) {
         cam->pos = m*cam->pos;
         cam->up = m*cam->up;

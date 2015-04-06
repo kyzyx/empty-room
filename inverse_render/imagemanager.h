@@ -1,24 +1,13 @@
 #ifndef _IMAGE_MANAGER_H
 #define _IMAGE_MANAGER_H
 
-#include "R3Shapes/R3Shapes.h"
 #include <string>
 #include <vector>
 #include <opencv2/core/types_c.h>
 
 #include <boost/interprocess/sync/interprocess_upgradable_mutex.hpp>
 
-struct CamParams {
-    R3Point pos;
-    R3Vector up;
-    R3Vector towards;
-    R3Vector right;
-
-    int width;
-    int height;
-    double focal_length;
-    double fov;
-};
+#include "camparams.h"
 
 /*
  * Class describing image data that exists for each camera,
@@ -58,10 +47,11 @@ class ImageManager {
         ImageManager(int width, int height, int numImages);
         ImageManager(const std::string& camfile);
 
-        const CamParams* getCamera(int n) const;
+        const CameraParams* getCamera(int n) const;
         unsigned char getFlags(const std::string& type, int n) const;
         void setFlags(const std::string& type, int n, unsigned char value);
         const void* getImage(const std::string& type, int n) const;
+        const void* getImage(int n) const;
         void* getImageWriteable(const std::string& type, int n);
 
         int width() const { return w; }
@@ -88,7 +78,7 @@ class ImageManager {
         int w, h, sz;
         std::vector<std::vector<void*> > images;
 
-        CamParams* cameras;
+        CameraParams* cameras;
         unsigned char* flags;
         shmutex* mutexes;
         std::string shmname;

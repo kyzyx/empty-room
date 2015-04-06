@@ -3,7 +3,7 @@
 #include "wall_finder.h"
 #include "mesh.h"
 #include "solver.h"
-#include "colorhelper.h"
+#include "camparams.h"
 
 #include <string>
 

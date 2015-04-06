@@ -26,7 +26,7 @@ bool writeExrImage(const std::string& filename,
         const float* image,
         int width,
         int height,
-        int channels);
+        int channels=3);
 bool readHdrImage(const std::string& filename,
         float** image,
         int& width,

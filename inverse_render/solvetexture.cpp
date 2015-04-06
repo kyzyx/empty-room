@@ -94,7 +94,7 @@ double InverseRender::generateBinaryMask(const CameraParams* cam, vector<bool>& 
 
 void InverseRender::solveTexture(
         vector<SampleData>& data,
-        ColorHelper* colorhelper,
+        ImageManager* imagemanager,
         const R3Plane& surface,
         Texture& tex)
 {
@@ -108,16 +108,17 @@ void InverseRender::solveTexture(
     double bestproportion = 0;
     const double threshold = 5*M_PI/12;
     vector<bool> isfloor;
-    for (int i = 0; i < colorhelper->size(); ++i) {
-        const CameraParams* cam = colorhelper->getCamera(i);
+    for (int i = 0; i < imagemanager->size(); ++i) {
+        const CameraParams* cam = imagemanager->getCamera(i);
         if (cam->towards.Dot(surface.Normal()) < -cos(threshold)) {
             double p;
             p = generateBinaryMask(cam, isfloor, WallFinder::LABEL_FLOOR);
             if (p == 0) continue;
             int n = reduceToLargestCluster(isfloor, cam->width);
             p = 0;
+            const float* conf = (const float*) imagemanager->getImage("confidence", i);
             for (int j = 0; j < isfloor.size(); ++j) {
-                if (isfloor[j]) p += colorhelper->getConfidenceMap(i)[j];
+                if (isfloor[j]) p += conf[j];
             }
             if (p > 0) cout << i << ": Floor proportion " << p << endl;
             if (p > bestproportion) {
@@ -132,7 +133,7 @@ void InverseRender::solveTexture(
     } else {
         cout << "Using image index " << bestimage << " to obtain texture" << endl;
     }
-    const CameraParams* cam = colorhelper->getCamera(bestimage);
+    const CameraParams* cam = imagemanager->getCamera(bestimage);
     int w = cam->width;
     int h = cam->height;
     generateBinaryMask(cam, isfloor, WallFinder::LABEL_FLOOR);
@@ -155,7 +156,7 @@ void InverseRender::solveTexture(
         cerr << "Error solving for texture!" << endl;
     }
     // Crop image to cluster
-    float* uncropped = (float*) colorhelper->getImage(bestimage);
+    const float* uncropped = (const float*) imagemanager->getImage(bestimage);
     Mat cropped(maxy-miny+1, maxx-minx+1, CV_32FC4);
     for (int i = miny; i <= maxy; ++i) {
         for (int j = minx; j <= maxx; ++j) {

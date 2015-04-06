@@ -7,7 +7,8 @@
 #include <boost/thread/thread.hpp>
 #include <iostream>
 
-#include "colorhelper.h"
+#include "imageserver.h"
+#include "imageio.h"
 #include "mesh.h"
 #include "reproject.h"
 #include "rerender.h"
@@ -59,7 +60,8 @@ int main(int argc, char* argv[]) {
 
     vector<int> wallindices;
     vector<int> floorindices;
-    ColorHelper loader(image_flip_x, image_flip_y);
+    ImageServer imgr(camfile, image_flip_x, image_flip_y);
+    // if (use_confidence_files)
     WallFinder wf(&of, resolution);
 
     if (do_wallfinding) {
@@ -99,14 +101,6 @@ int main(int argc, char* argv[]) {
     if (do_reprojection) {
         cout << "===== REPROJECTING =====" << endl;
         if (input) {
-            cout << "Loading reprojection input files..." << endl;
-            loader.readCameraFile(camfile);
-            cout << "Reading input files..." << endl;
-            loader.load(camfile, ColorHelper::READ_COLOR);
-            if (use_confidence_files) {
-                loader.load(camfile, ColorHelper::READ_CONFIDENCE);
-            }
-            cout << "Done reading " << loader.size() << " color images" << endl;
             if (do_wallfinding) {
                 vector<char> tmp;
                 swap(tmp, m.types);
@@ -123,25 +117,14 @@ int main(int argc, char* argv[]) {
         } else {
             if (hdr_threshold < 0) hdr_threshold = 10.0;
             if (all_project) {
-                cout << "Reading input files..." << endl;
-                loader.load(camfile, ColorHelper::READ_COLOR | ColorHelper::READ_DEPTH);
-                if (use_confidence_files) {
-                    loader.load(camfile, ColorHelper::READ_CONFIDENCE);
-                }
-                cout << "Done reading " << loader.size() << " color images" << endl;
                 cout << "Reprojecting..." << endl;
-                reproject(loader, m, hdr_threshold);
+                reproject(imgr, m, hdr_threshold);
             } else {
-                loader.load(camfile, 0);
-                loader.load(project, ColorHelper::READ_COLOR | ColorHelper::READ_DEPTH);
-                if (use_confidence_files) {
-                    loader.load(project, ColorHelper::READ_CONFIDENCE);
-                }
                 cout << "Reprojecting..." << endl;
-                reproject((const float*) loader.getImage(project),
-                          loader.getConfidenceMap(project),
-                          loader.getDepthMap(project),
-                          loader.getCamera(project),
+                reproject((const float*) imgr.getImage(project),
+                          (const float*) imgr.getImage("confidence", project),
+                          (const float*) imgr.getImage("depth", project),
+                          imgr.getCamera(project),
                           m, hdr_threshold);
             }
             cout << "Done reprojecting; clustering lights..." << endl;
@@ -151,8 +134,8 @@ int main(int argc, char* argv[]) {
         if (output_reprojection) m.writeSamples(outfile);
         if (coloredfile.length()) m.writeColoredMesh(coloredfile, displayscale);
         m.computeColorsOGL();
-        hemicuberesolution = max(hemicuberesolution, loader.getCamera(0)->width);
-        hemicuberesolution = max(hemicuberesolution, loader.getCamera(0)->height);
+        hemicuberesolution = max(hemicuberesolution, imgr.getCamera(0)->width);
+        hemicuberesolution = max(hemicuberesolution, imgr.getCamera(0)->height);
         cout << "========================" << endl;
     }
     InverseRender ir(&m, numlights, hemicuberesolution);
@@ -195,13 +178,11 @@ int main(int argc, char* argv[]) {
             floorpoint = t*floorpoint;
             R3Plane floorplane(eigen2gaps(floorpoint.head(3)).Point(), eigen2gaps(floornormal));
 
-            loader.load(camfile, use_confidence_files);
-
             cout << "Solving texture..." << endl;
-            ir.solveTexture(floordata, &loader, floorplane, tex);
+            ir.solveTexture(floordata, &imgr, floorplane, tex);
             cout << "Done solving texture..." << endl;
             if (tex.size > 0) {
-                ColorHelper::writeExrImage(texfile, tex.texture, tex.size, tex.size);
+                ImageIO::writeExrImage(texfile, tex.texture, tex.size, tex.size);
             }
         }
         if (radfile != "") {
@@ -211,13 +192,13 @@ int main(int argc, char* argv[]) {
             outputPlyFile(plyfile, wf, m, ir);
         }
         if (pbrtfile != "") {
-            outputPbrtFile(pbrtfile, wf, m, ir, tex, loader.getCamera(0), do_texture?texfile:"");
+            outputPbrtFile(pbrtfile, wf, m, ir, tex, imgr.getCamera(0), do_texture?texfile:"");
         }
     }
     cout << "DONE PROCESSING" << endl;
 
     if (display) {
-        InvRenderVisualizer irv(cloud, loader, wf, ir);
+        InvRenderVisualizer irv(cloud, imgr, wf, ir);
         if (project_debug) irv.recalculateColors(InvRenderVisualizer::LABEL_REPROJECT_DEBUG);
         irv.visualizeCameras(camera);
         irv.visualizeWalls();

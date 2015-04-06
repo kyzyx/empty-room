@@ -9,11 +9,12 @@ link_directories(${PCL_LIBRARY_DIRS} ../GAPS/R3Graphics/ ../GAPS/R3Shapes/
     ../GAPS/jpeg/)
 add_definitions(${PCL_DEFINITIONS})
 add_library(memory 
+    camparams.h
     imagemanager.cpp imagemanager.h
     imageserver.cpp imageserver.h
     imageio.cpp imageio.h)
-add_executable(invrender rgbe.cpp rgbe.h invrender.cpp colorhelper.h
-    colorhelper.cpp reproject.h reproject.cpp mesh.h mesh.cpp
+add_executable(invrender rgbe.cpp rgbe.h invrender.cpp
+    reproject.h reproject.cpp mesh.h mesh.cpp
     wall_finder.h wall_finder.cpp material.h
     hemicuberenderer.h hemicuberenderer.cpp
     orientation_finder.cpp orientation_finder.h
@@ -22,5 +23,5 @@ add_executable(invrender rgbe.cpp rgbe.h invrender.cpp colorhelper.h
     solver.cpp solvetexture.cpp solver.h clusterlights.cpp clusterlights.h
     display.cpp display.h parse_args.cpp parse_args.h rerender.cpp rerender.h)
 target_link_libraries(invrender ${PCL_LIBRARIES} ${OpenCV_LIBS} R3Graphics.a RNBasics.a
-    R3Shapes.a R2Shapes.a jpeg.a GL glut GLU GLEW IlmImf Half)
+    R3Shapes.a R2Shapes.a jpeg.a GL glut GLU GLEW IlmImf Half memory)
 set(CMAKE_CXX_FLAGS "-Wno-deprecated -std=c++0x")

@@ -3,7 +3,7 @@
 #include <vector>
 
 #include "R3Shapes/R3Shapes.h"
-#include "colorhelper.h"
+#include "imagemanager.h"
 #include "hemicuberenderer.h"
 #include "material.h"
 #include "mesh.h"
@@ -19,7 +19,7 @@ class InverseRender {
         void solve(std::vector<SampleData>& data);
         void solveTexture(
                 std::vector<SampleData>& data,
-                ColorHelper* colorhelper,
+                ImageManager* imagemanager,
                 const R3Plane& surface,
                 Texture& tex);
         void computeSamples(

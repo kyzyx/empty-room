@@ -149,15 +149,19 @@ void reproject(
     }
 }
 
-void reproject(ColorHelper& ch, ColorHelper& lights, Mesh& mesh) {
+void reproject(ImageManager& ch, ImageManager& lights, Mesh& mesh) {
     for (int i = 0; i < ch.size(); ++i) {
-        reproject(ch.getImage(i), lights.getImage(i), ch.getCamera(i), mesh);
+        reproject((const char*) ch.getImage(i), (const char*) lights.getImage(i), ch.getCamera(i), mesh);
         cout << "Finished projecting image " << i << endl;
     }
 }
-void reproject(ColorHelper& hdr, Mesh& mesh, double threshold, bool flip_x, bool flip_y) {
+void reproject(ImageManager& hdr, Mesh& mesh, double threshold, bool flip_x, bool flip_y) {
     for (int i = 0; i < hdr.size(); ++i) {
-        reproject((float*)hdr.getImage(i), hdr.getConfidenceMap(i), hdr.getDepthMap(i), hdr.getCamera(i), mesh, threshold, flip_x, flip_y);
+        reproject(
+                (const float*)hdr.getImage(i),
+                (const float*) hdr.getImage("confidence", i),
+                (const float*) hdr.getImage("depth", i),
+                hdr.getCamera(i), mesh, threshold, flip_x, flip_y);
         cout << "Finished projecting image " << i << endl;
     }
 }

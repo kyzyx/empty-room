@@ -20,7 +20,7 @@ using namespace std;
  * Memory layout:
  * All mutexes
  * All initialization flags
- * All CamParams
+ * All CameraParams
  * All images for imagetypes[0]
  * All images for imagetypes[1]
  * All images for imagetypes[2]
@@ -58,6 +58,7 @@ void ImageManager::defaultinit(const string& camfile) {
 void ImageManager::initializeImageTypes() {
     // Raw input data
     imagetypes.push_back(ImageType("color",      "",     CV_32FC3));
+    // Custom types begin here
     imagetypes.push_back(ImageType("confidence", "conf", CV_32FC1, ImageType::IT_SCALAR));
     imagetypes.push_back(ImageType("depth",      "pcd",  CV_32FC1, ImageType::IT_DEPTHMAP));
     // Processed results
@@ -78,8 +79,8 @@ bool ImageManager::initializeSharedMemory() {
     s += imagetypes.size()*sizeof(shmutex);
     flags = (unsigned char*)(s);
     s += sz*imagetypes.size();
-    cameras = (CamParams*)(s);
-    s += sz*sizeof(CamParams);
+    cameras = (CameraParams*)(s);
+    s += sz*sizeof(CameraParams);
     for (int i = 0; i < imagetypes.size(); ++i) {
         images[i].resize(sz);
         for (int j = 0; j < sz; ++j) {
@@ -100,7 +101,7 @@ int ImageManager::computeSize() const {
     }
     return imagetypes.size()*sizeof(shmutex)      // Mutexes
          + sz*imagetypes.size()                   // Initialization flags
-         + sz*sizeof(CamParams)                // Camera parameters
+         + sz*sizeof(CameraParams)                // Camera parameters
          + sz*w*h*sum;                            // Image data
 }
 
@@ -124,6 +125,10 @@ const void* ImageManager::getImage(const string& type, int n) const {
     //boost::interprocess::shareable_lock<shmutex> lock(*getMutex(i,n));
     return images[i][n];
 }
+const void* ImageManager::getImage(int n) const {
+    //boost::interprocess::shareable_lock<shmutex> lock(*getMutex(0,n));
+    return images[0][n];
+}
 
 void* ImageManager::getImageWriteable(const string& type, int n) {
     int i = nameToIndex(type);
@@ -133,7 +138,7 @@ void* ImageManager::getImageWriteable(const string& type, int n) {
     return NULL;
 }
 
-const CamParams* ImageManager::getCamera(int n) const {
+const CameraParams* ImageManager::getCamera(int n) const {
     if (n < 0 || n >= sz) return NULL;
     return &cameras[n];
 }

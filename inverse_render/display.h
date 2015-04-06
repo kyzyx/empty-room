@@ -1,7 +1,7 @@
 #ifndef _DISPLAY_H
 #define _DISPLAY_H
 #include "mesh.h"
-#include "colorhelper.h"
+#include "imagemanager.h"
 #include "solver.h"
 #include "wall_finder.h"
 #include <pcl/point_types.h>
@@ -25,7 +25,7 @@ class InvRenderVisualizer {
         };
 
         InvRenderVisualizer(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud,
-                ColorHelper& helper,
+                ImageManager& helper,
                 WallFinder& wallfinder,
                 InverseRender& invrender)
         {
@@ -67,7 +67,7 @@ class InvRenderVisualizer {
 
         WallFinder* wf;
         InverseRender* ir;
-        ColorHelper* ch;
+        ImageManager* ch;
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud;
         int previouscube;
         int currcube;
