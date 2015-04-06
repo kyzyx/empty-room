@@ -12,13 +12,16 @@ using namespace std;
 // --------------------------------------------------------------
 using namespace boost::interprocess;
 ImageServer::ImageServer(const string& camfile, bool flipx, bool flipy)
-    : ImageManager(camfile), flip_x(flipx), flip_y(flipy)
+    : flip_x(flipx), flip_y(flipy)
 {
-    readCameraFile(camfile);
+    ifstream in(camfile.c_str());
+    in >> sz >> w >> h;
+    in.close();
 
     defaultinit(camfile);
     shared_memory_object::remove(shmname.c_str());
     initializeSharedMemory();
+    readCameraFile(camfile);
     loadAllFiles();
 }
 

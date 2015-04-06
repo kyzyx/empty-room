@@ -5,6 +5,7 @@
 #include <vector>
 #include <opencv2/core/types_c.h>
 
+#include <boost/interprocess/mapped_region.hpp>
 #include <boost/interprocess/sync/interprocess_upgradable_mutex.hpp>
 
 #include "camparams.h"
@@ -65,6 +66,7 @@ class ImageManager {
            DF_ERROR=128,
         };
     protected:
+        ImageManager() { ; }
         void initializeImageTypes();
 
         void defaultinit(const std::string& camfile);
@@ -84,5 +86,7 @@ class ImageManager {
         unsigned char* flags;
         shmutex* mutexes;
         std::string shmname;
+
+        boost::interprocess::mapped_region mregion;
 };
 #endif

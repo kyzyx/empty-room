@@ -1,5 +1,4 @@
 #include "imagemanager.h"
-#include <boost/interprocess/mapped_region.hpp>
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/sync/scoped_lock.hpp>
 #include <boost/interprocess/sync/sharable_lock.hpp>
@@ -70,11 +69,15 @@ void ImageManager::initializeImageTypes() {
 
 using namespace boost::interprocess;
 bool ImageManager::initializeSharedMemory() {
-    shared_memory_object shm(open_or_create, shmname.c_str(), read_write);
-    shm.truncate(computeSize());
-    mapped_region region(shm, read_write);
+    try {
+        shared_memory_object shm(open_or_create, shmname.c_str(), read_write);
+        shm.truncate(computeSize());
+        mregion = mapped_region(shm, read_write);
+    } catch(...) {
+        return false;
+    }
 
-    char* s = static_cast<char*>(region.get_address());
+    char* s = static_cast<char*>(mregion.get_address());
     mutexes = (shmutex*)(s);
     s += imagetypes.size()*sizeof(shmutex);
     flags = (unsigned char*)(s);
@@ -90,6 +93,7 @@ bool ImageManager::initializeSharedMemory() {
             s += w*h*imagetypes[i].getSize();
         }
     }
+    return true;
 }
 
 
@@ -103,6 +107,7 @@ int ImageManager::computeSize() const {
     }
     return imagetypes.size()*sizeof(shmutex)      // Mutexes
          + sz*imagetypes.size()                   // Initialization flags
+         + sizeof(R4Matrix)                       // Depth to RGB Transform
          + sz*sizeof(CameraParams)                // Camera parameters
          + sz*w*h*sum;                            // Image data
 }
@@ -125,11 +130,13 @@ const void* ImageManager::getImage(const string& type, int n) const {
     int i = nameToIndex(type);
     if (i < 0) return NULL;
     //boost::interprocess::shareable_lock<shmutex> lock(*getMutex(i,n));
-    return images[i][n];
+    if (flags[i*sz+n] & DF_INITIALIZED) return images[i][n];
+    else return NULL;
 }
 const void* ImageManager::getImage(int n) const {
     //boost::interprocess::shareable_lock<shmutex> lock(*getMutex(0,n));
-    return images[0][n];
+    if (flags[n] & DF_INITIALIZED) return images[0][n];
+    else return NULL;
 }
 
 void* ImageManager::getImageWriteable(const string& type, int n) {
