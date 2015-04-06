@@ -16,7 +16,6 @@ class ImageServer : public ImageManager {
 
         std::vector<std::string> filenames;
 
-        R4Matrix depth2rgb;
         bool flip_x, flip_y;
 };
 #endif

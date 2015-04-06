@@ -14,12 +14,12 @@ using namespace std;
 #define SHM_IMAGEDATA_ID "SHM_IMAGEDATA_ID"
 // TODO: Read imagetypes from config
 // TODO: Proper locking mechanism
-// TODO: Add depth to rgb transform
 
 /*
  * Memory layout:
  * All mutexes
  * All initialization flags
+ * Depth2RGB, if any
  * All CameraParams
  * All images for imagetypes[0]
  * All images for imagetypes[1]
@@ -79,6 +79,8 @@ bool ImageManager::initializeSharedMemory() {
     s += imagetypes.size()*sizeof(shmutex);
     flags = (unsigned char*)(s);
     s += sz*imagetypes.size();
+    depth2rgb = (R4Matrix*)(s);
+    s += sizeof(R4Matrix);
     cameras = (CameraParams*)(s);
     s += sz*sizeof(CameraParams);
     for (int i = 0; i < imagetypes.size(); ++i) {
@@ -156,4 +158,7 @@ void ImageManager::setFlags(const string& type, int n, unsigned char value) {
     if (n < 0 || n >= sz) return;
     //boost::interprocess::scoped_lock<shmutex> lock(*getMutex(i,n));
     flags[i*sz + n] = value;
+}
+const R4Matrix& ImageManager::getDepthToRgbTransform() const {
+    return *depth2rgb;
 }

@@ -53,6 +53,7 @@ class ImageManager {
         const void* getImage(const std::string& type, int n) const;
         const void* getImage(int n) const;
         void* getImageWriteable(const std::string& type, int n);
+        const R4Matrix& getDepthToRgbTransform() const;
 
         int width() const { return w; }
         int height() const { return h; }
@@ -78,6 +79,7 @@ class ImageManager {
         int w, h, sz;
         std::vector<std::vector<void*> > images;
 
+        R4Matrix* depth2rgb;
         CameraParams* cameras;
         unsigned char* flags;
         shmutex* mutexes;

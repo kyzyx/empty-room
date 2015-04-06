@@ -74,8 +74,10 @@ bool ImageServer::readCameraFile(const string& filename)
             ifstream xformin(camxform.c_str());
             double m[16];
             for (int i = 0; i < 16; ++i) xformin >> m[i];
-            depth2rgb = R4Matrix(m);
-            transformAllCameras(depth2rgb);
+            *depth2rgb = R4Matrix(m);
+            transformAllCameras(*depth2rgb);
+        } else {
+            *depth2rgb = R4identity_matrix;
         }
     } catch (...) {
         return false;
