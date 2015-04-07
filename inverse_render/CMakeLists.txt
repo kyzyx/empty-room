@@ -10,6 +10,8 @@ link_directories(${PCL_LIBRARY_DIRS} ../GAPS/R3Graphics/ ../GAPS/R3Shapes/
 add_definitions(${PCL_DEFINITIONS})
 add_library(memory 
     camparams.h
+    meshmanager.cpp meshmanager.h
+    meshserver.cpp meshserver.h
     imagemanager.cpp imagemanager.h
     imageserver.cpp imageserver.h
     imageio.cpp imageio.h)
