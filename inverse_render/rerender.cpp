@@ -11,16 +11,17 @@ using namespace Eigen;
 const double EPSILON = 0.0001;
 const double CIRCLETOLERANCE = 1.2;
 
-int getFaceLightID(R3MeshFace* f, R3Mesh* m, vector<char>& labels) {
+int getFaceLightID(MeshManager& m, int f) {
     int lightid = -1;
     for (int j = 0; j < 3; ++j) {
-        int n = m->VertexID(m->VertexOnFace(f, j));
-        if (labels[n] <= 0) {
+        int n = m.VertexOnFace(f,j);
+        char l = m.getLabel(n);
+        if (l <= 0) {
             lightid = -1;
             break;
         } else {
-            if (lightid <= 0) lightid = labels[n];
-            else if (lightid != labels[n]) {
+            if (lightid <= 0) lightid = l;
+            else if (lightid != l) {
                 lightid = -1;
                 break;
             }
@@ -29,16 +30,14 @@ int getFaceLightID(R3MeshFace* f, R3Mesh* m, vector<char>& labels) {
     return lightid;
 }
 
-void estimateLightShape(Mesh& m, int id, vector<R3Point>& points, vector<int>& indices) {
-    vector<int> vid2point(m.getMesh()->NVertices(), -1);
+void estimateLightShape(MeshManager& m, int id, vector<R3Point>& points, vector<int>& indices) {
+    vector<int> vid2point(m.NVertices(), -1);
     R3Point mean(0,0,0);
-    for (int i = 0; i < m.getMesh()->NVertices(); ++i) {
-        R3MeshVertex* v = m.getMesh()->Vertex(i);
-        int vid = m.getMesh()->VertexID(v);
-        if (m.labels[vid] == id) {
-            points.push_back(m.getMesh()->VertexPosition(v));
+    for (int i = 0; i < m.NVertices(); ++i) {
+        if (m.getLabel(i) == id) {
+            points.push_back(m.VertexPosition(i));
             mean += points.back();
-            vid2point[vid] = points.size()-1;
+            vid2point[i] = points.size()-1;
         }
     }
     mean /= points.size();
@@ -60,13 +59,12 @@ void estimateLightShape(Mesh& m, int id, vector<R3Point>& points, vector<int>& i
             v.p = points[i] - R3null_point;
             Simplify::vertices.push_back(v);
         }
-        for (int i = 0; i < m.getMesh()->NFaces(); ++i) {
-            R3MeshFace* f = m.getMesh()->Face(i);
-            int lightid = getFaceLightID(f, m.getMesh(), m.labels);
+        for (int i = 0; i < m.NFaces(); ++i) {
+            int lightid = getFaceLightID(m,i);
             if (lightid != id) continue;
             Simplify::Triangle t;
             for (int j = 0; j < 3; ++j) {
-                int n = m.getMesh()->VertexID(m.getMesh()->VertexOnFace(f, j));
+                int n = m.VertexOnFace(i,j);
                 t.v[j] = vid2point[n];
             }
             Simplify::triangles.push_back(t);
@@ -150,7 +148,7 @@ void estimateLightShape(Mesh& m, int id, vector<R3Point>& points, vector<int>& i
     }
 }
 
-void outputRadianceFile(string filename, WallFinder& wf, Mesh& m, InverseRender& ir) {
+void outputRadianceFile(string filename, WallFinder& wf, MeshManager& m, InverseRender& ir) {
     ofstream out(filename);
     // output wall material
     out << "void plastic wallmat" << endl << 0 << endl << 0 << endl << 5 << " ";
@@ -221,7 +219,7 @@ void outputRadianceFile(string filename, WallFinder& wf, Mesh& m, InverseRender&
     out << xmin << " " << lo << " " << zmin << " " << xmax << " " << lo << " " << zmin << " ";
     out << xmax << " " << lo << " " << zmax << " " << xmin << " " << lo << " " << zmax << endl << endl;
 }
-void outputPlyFile(string filename, WallFinder& wf, Mesh& m, InverseRender& ir) {
+void outputPlyFile(string filename, WallFinder& wf, MeshManager& m, InverseRender& ir) {
     ofstream out(filename);
     int n = wf.wallsegments.size()*2+8;
     int f = (wf.wallsegments.size()+2)*2;
@@ -278,7 +276,7 @@ void outputPlyFile(string filename, WallFinder& wf, Mesh& m, InverseRender& ir) 
     out << "3 " << n+5 << " " << n+7 << " " << n+6 << endl;
 
 }
-void outputPbrtFile(string filename, WallFinder& wf, Mesh& m, InverseRender& ir, Texture floortex, const CameraParams* cam, string floortexfilename) {
+void outputPbrtFile(string filename, WallFinder& wf, MeshManager& m, InverseRender& ir, Texture floortex, const CameraParams* cam, string floortexfilename) {
     ofstream out(filename);
 
     // Basic rendering info

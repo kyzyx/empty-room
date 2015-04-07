@@ -7,9 +7,9 @@
 #include <boost/thread/thread.hpp>
 #include <iostream>
 
+#include "meshserver.h"
 #include "imageserver.h"
 #include "imageio.h"
-#include "mesh.h"
 #include "reproject.h"
 #include "rerender.h"
 #include "orientation_finder.h"
@@ -39,38 +39,32 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     if (!parseargs(argc, argv)) return 1;
-    PolygonMesh::Ptr mesh(new PolygonMesh());
+
     cout << "Loading mesh geometry...." << endl;
+    PolygonMesh::Ptr mesh(new PolygonMesh());
     io::loadPolygonFile(argv[1], *mesh);
-    PointCloud<PointXYZRGB>::Ptr cloud(new PointCloud<PointXYZRGB>());
-    {
-        PointCloud<PointXYZ> tmp;
-        fromPCLPointCloud2(mesh->cloud, tmp);
-        cloud->points.resize(tmp.size());
-        for (size_t i = 0; i < tmp.size(); ++i) {
-            cloud->points[i].x = tmp[i].x;
-            cloud->points[i].y = tmp[i].y;
-            cloud->points[i].z = tmp[i].z;
-        }
-    }
-    PlaneOrientationFinder of(mesh, resolution/2);
-    of.computeNormals(ccw);
-    Mesh m(mesh,true);
+    MeshServer mmgr(mesh, ccw);
     cout << "Done loading mesh geometry" << endl;
+
+    ImageServer imgr(camfile, image_flip_x, image_flip_y);
+    // if (use_confidence_files)
+
 
     vector<int> wallindices;
     vector<int> floorindices;
-    ImageServer imgr(camfile, image_flip_x, image_flip_y);
-    // if (use_confidence_files)
-    WallFinder wf(&of, resolution);
+    WallFinder wf(resolution);
 
     if (do_wallfinding) {
         cout << "===== WALLFINDING =====" << endl;
+        vector<char> types(mmgr.NVertices());
+        PlaneOrientationFinder of(mesh, resolution/2);
+        of.computeNormals(ccw);
         if (wallinput) {
             cout << "Loading wall files..." << endl;
-            wf.loadWalls(wallfile, m.types);
+            wf.loadWalls(wallfile, types, of);
             cout << "Done loading wall files..." << endl;
             of.normalize();
+            wf.setNormalizationTransform(of.getNormalizationTransform());
         } else {
             cout << "Analyzing geometry..." << endl;
             if (!of.computeOrientation()) {
@@ -78,22 +72,25 @@ int main(int argc, char* argv[]) {
             }
             cout << "Done analyzing geometry" << endl;
             of.normalize();
+            wf.setNormalizationTransform(of.getNormalizationTransform());
             cout << "Finding walls..." << endl;
-            wf.findFloorAndCeiling(m.types, anglethreshold);
-            wf.findWalls(m.types, wallthreshold, minlength, anglethreshold);
+            wf.findFloorAndCeiling(&of, types, anglethreshold);
+            cout << "Done finding floor/ceiling" << endl;
+            wf.findWalls(&of, types, wallthreshold, minlength, anglethreshold);
             cout << "Done finding walls" << endl;
         }
         if (flipfloorceiling) {
-            for (int i = 0; i < m.types.size(); ++i) {
-                if (m.types[i] == WallFinder::LABEL_CEILING) m.types[i] = WallFinder::LABEL_FLOOR;
-                else if (m.types[i] == WallFinder::LABEL_FLOOR) m.types[i] = WallFinder::LABEL_CEILING;
+            for (int i = 0; i < types.size(); ++i) {
+                if (types[i] == WallFinder::LABEL_CEILING) types[i] = WallFinder::LABEL_FLOOR;
+                else if (types[i] == WallFinder::LABEL_FLOOR) types[i] = WallFinder::LABEL_CEILING;
             }
         }
-        for (int i = 0; i < m.types.size(); ++i) {
-            if (m.types[i] == WallFinder::LABEL_WALL) wallindices.push_back(i);
-            else if (m.types[i] == WallFinder::LABEL_FLOOR) floorindices.push_back(i);
+        for (int i = 0; i < types.size(); ++i) {
+            mmgr.setLabel(i, types[i], 1);
+            if (types[i] == WallFinder::LABEL_WALL) wallindices.push_back(i);
+            else if (types[i] == WallFinder::LABEL_FLOOR) floorindices.push_back(i);
         }
-        if (output_wall) wf.saveWalls(walloutfile, m.types);
+        if (output_wall) wf.saveWalls(walloutfile, types, of);
         cout << "=======================" << endl;
     }
 
@@ -101,44 +98,37 @@ int main(int argc, char* argv[]) {
     if (do_reprojection) {
         cout << "===== REPROJECTING =====" << endl;
         if (input) {
-            if (do_wallfinding) {
-                vector<char> tmp;
-                swap(tmp, m.types);
-                numlights = m.readSamples(infile);
-                swap (m.types, tmp);
-            } else {
-                numlights = m.readSamples(infile);
-            }
+            // READ SAMPLES FROM infile
             cout << "Done loading reprojection files" << endl;
             if (hdr_threshold > 0) {
-                numlights = clusterLights(m, hdr_threshold, minlightsize);
+                numlights = clusterLights(mmgr, hdr_threshold, minlightsize);
                 cout << "Done clustering " << numlights << " lights" << endl;
             }
         } else {
             if (hdr_threshold < 0) hdr_threshold = 10.0;
             if (all_project) {
                 cout << "Reprojecting..." << endl;
-                reproject(imgr, m, hdr_threshold);
+                reproject(imgr, mmgr, hdr_threshold);
             } else {
                 cout << "Reprojecting..." << endl;
                 reproject((const float*) imgr.getImage(project),
                           (const float*) imgr.getImage("confidence", project),
                           (const float*) imgr.getImage("depth", project),
                           imgr.getCamera(project),
-                          m, hdr_threshold);
+                          mmgr, hdr_threshold);
             }
+            mmgr.commitSamples();
             cout << "Done reprojecting; clustering lights..." << endl;
-            numlights = clusterLights(m, hdr_threshold, minlightsize);
+            numlights = clusterLights(mmgr, hdr_threshold, minlightsize);
             cout << "Done clustering " << numlights << " lights" << endl;
         }
-        if (output_reprojection) m.writeSamples(outfile);
-        if (coloredfile.length()) m.writeColoredMesh(coloredfile, displayscale);
-        m.computeColorsOGL();
+        //if (output_reprojection) FIXME.writeSamples(outfile);
+        //if (coloredfile.length()) FIXME.writeColoredMesh(coloredfile, displayscale);
         hemicuberesolution = max(hemicuberesolution, imgr.getCamera(0)->width);
         hemicuberesolution = max(hemicuberesolution, imgr.getCamera(0)->height);
         cout << "========================" << endl;
     }
-    InverseRender ir(&m, numlights, hemicuberesolution);
+    InverseRender ir(&mmgr, numlights, hemicuberesolution);
     vector<SampleData> walldata, floordata;
     // Only do inverse rendering with full reprojection and wall labels
     if (do_sampling && (input || all_project) && (wallinput || do_wallfinding)) {
@@ -171,7 +161,7 @@ int main(int argc, char* argv[]) {
         Texture tex;
         if (do_texture) {
             // Prepare floor plane
-            Eigen::Matrix4f t = of.getNormalizationTransform().inverse();
+            Eigen::Matrix4f t = wf.getNormalizationTransform().inverse();
             Eigen::Vector3f floornormal(0,flipfloorceiling?-1:1,0);
             floornormal = t.topLeftCorner(3,3)*floornormal;
             Eigen::Vector4f floorpoint(0, wf.floorplane, 0, 1);
@@ -186,18 +176,30 @@ int main(int argc, char* argv[]) {
             }
         }
         if (radfile != "") {
-            outputRadianceFile(radfile, wf, m, ir);
+            outputRadianceFile(radfile, wf, mmgr, ir);
         }
         if (plyfile != "") {
-            outputPlyFile(plyfile, wf, m, ir);
+            outputPlyFile(plyfile, wf, mmgr, ir);
         }
         if (pbrtfile != "") {
-            outputPbrtFile(pbrtfile, wf, m, ir, tex, imgr.getCamera(0), do_texture?texfile:"");
+            outputPbrtFile(pbrtfile, wf, mmgr, ir, tex, imgr.getCamera(0), do_texture?texfile:"");
         }
     }
     cout << "DONE PROCESSING" << endl;
 
     if (display) {
+        PointCloud<PointXYZRGB>::Ptr cloud(new PointCloud<PointXYZRGB>());
+        {
+            PointCloud<PointXYZ> tmp;
+            fromPCLPointCloud2(mesh->cloud, tmp);
+            cloud->points.resize(tmp.size());
+            for (size_t i = 0; i < tmp.size(); ++i) {
+                cloud->points[i].x = tmp[i].x;
+                cloud->points[i].y = tmp[i].y;
+                cloud->points[i].z = tmp[i].z;
+            }
+        }
+
         InvRenderVisualizer irv(cloud, imgr, wf, ir);
         if (project_debug) irv.recalculateColors(InvRenderVisualizer::LABEL_REPROJECT_DEBUG);
         irv.visualizeCameras(camera);

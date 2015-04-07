@@ -1,6 +1,6 @@
 #ifndef _DISPLAY_H
 #define _DISPLAY_H
-#include "mesh.h"
+#include "meshmanager.h"
 #include "imagemanager.h"
 #include "solver.h"
 #include "wall_finder.h"
@@ -63,7 +63,7 @@ class InvRenderVisualizer {
         void pointcloud_kbd_cb_(const pcl::visualization::KeyboardEvent& event, void*);
         void kbd_cb_(const pcl::visualization::KeyboardEvent& event, void*);
 
-        void VisualizeSamplePoint(Mesh& m, SampleData& s);
+        void VisualizeSamplePoint(MeshManager& m, SampleData& s);
 
         WallFinder* wf;
         InverseRender* ir;

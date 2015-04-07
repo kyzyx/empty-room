@@ -6,11 +6,11 @@
 #include "imagemanager.h"
 #include "hemicuberenderer.h"
 #include "material.h"
-#include "mesh.h"
+#include "meshmanager.h"
 
 class InverseRender {
     public:
-        InverseRender(Mesh* m, int nlights, int hemicubeResolution=150)
+        InverseRender(MeshManager* m, int nlights, int hemicubeResolution=150)
             : hr(m, hemicubeResolution), mesh(m), numlights(nlights), images(NULL),
               maxPercentErr(0.1), numRansacIters(1000)
         {
@@ -52,7 +52,7 @@ class InverseRender {
         double maxPercentErr;
     public:
         float** images;
-        Mesh* mesh;
+        MeshManager* mesh;
         int numlights;
         std::vector<Material> lights;
         Material wallMaterial;

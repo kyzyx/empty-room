@@ -178,6 +178,7 @@ double WallFinder::findExtremalNormal(
 }
 
 double WallFinder::findFloorAndCeiling(
+        OrientationFinder* of,
         vector<char>& labels,
         double anglethreshold)
 {
@@ -243,6 +244,7 @@ class Grid {
 };
 
 void WallFinder::findWalls(
+        OrientationFinder* of,
         vector<char>& labels,
         int wallthreshold,
         double minlength,
@@ -562,7 +564,7 @@ void WallFinder::findWalls(
     }
 }
 
-void WallFinder::loadWalls(string filename, vector<char>& labels) {
+void WallFinder::loadWalls(string filename, vector<char>& labels, OrientationFinder& of) {
     ifstream in(filename.c_str(), ifstream::binary);
     uint32_t sz;
     in.read((char*) &sz, 4);
@@ -587,15 +589,15 @@ void WallFinder::loadWalls(string filename, vector<char>& labels) {
     in.read((char*) &floorplane, sizeof(double));
     in.read((char*) &ceilplane, sizeof(double));
     double x,y,z;
-    of->axes.resize(3);
+    of.axes.resize(3);
     for (int i = 0; i < 3; ++i) {
         in.read((char*) &x, sizeof(double));
         in.read((char*) &y, sizeof(double));
         in.read((char*) &z, sizeof(double));
-        of->axes[i] = Vector3f(x,y,z);
+        of.axes[i] = Vector3f(x,y,z);
     }
 }
-void WallFinder::saveWalls(string filename, vector<char>& labels) {
+void WallFinder::saveWalls(string filename, vector<char>& labels, OrientationFinder& of) {
     ofstream out(filename.c_str(), ofstream::binary);
     uint32_t sz = labels.size();
     out.write((char*) &sz, 4);
@@ -617,9 +619,9 @@ void WallFinder::saveWalls(string filename, vector<char>& labels) {
     out.write((char*) &floorplane, sizeof(double));
     out.write((char*) &ceilplane, sizeof(double));
     for (int i = 0; i < 3; ++i) {
-        double x = of->axes[i][0];
-        double y = of->axes[i][1];
-        double z = of->axes[i][2];
+        double x = of.axes[i][0];
+        double y = of.axes[i][1];
+        double z = of.axes[i][2];
         out.write((char*) &x, sizeof(double));
         out.write((char*) &y, sizeof(double));
         out.write((char*) &z, sizeof(double));
@@ -635,7 +637,7 @@ Eigen::Vector3f WallFinder::getWallEndpoint(int i, bool lo, double height) const
     p[1] = height*ceilplane + (1-height)*floorplane;
     p[2] = x.second;
     p[3] = 1;
-    p = of->getNormalizationTransform().inverse()*p;
+    p = normalization.inverse()*p;
     return Eigen::Vector3f(p[0]/p[3], p[1]/p[3], p[2]/p[3]);
 }
 

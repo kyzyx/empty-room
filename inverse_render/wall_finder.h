@@ -69,14 +69,8 @@ class WallFinder {
             LABEL_FLOOR,
             LABEL_CORNER
         };
-        WallFinder(OrientationFinder* orfinder, double gridsize=0.01)
-            : of(orfinder), resolution(gridsize){;}
-        WallFinder(pcl::PolygonMesh::Ptr mesh, double gridsize=0.01)
-            : of(new PlaneOrientationFinder(mesh)), resolution(gridsize) {
-                of->computeNormals();
-                of->computeOrientation();
-                of->normalize();
-            }
+        WallFinder(double gridsize=0.01)
+            : resolution(gridsize){;}
         /**
          * resolution denotes the threshold beyond which points are not
          * considered on the same plane
@@ -84,6 +78,7 @@ class WallFinder {
          * Returns the floor plane level
          */
         double findFloorAndCeiling(
+                OrientationFinder* of,
                 std::vector<char>& labels,
                 double anglethreshold=M_PI/40);
         /**
@@ -93,17 +88,19 @@ class WallFinder {
          *
          */
         void findWalls(
+                OrientationFinder* of,
                 std::vector<char>& labels,
                 int wallthreshold=200,
                 double minlength=0.2,
                 double anglethreshold=M_PI/40);
 
-        void loadWalls(std::string filename, std::vector<char>& labels);
-        void saveWalls(std::string filename, std::vector<char>& labels);
+        void loadWalls(std::string filename, std::vector<char>& labels, OrientationFinder& of);
+        void saveWalls(std::string filename, std::vector<char>& labels, OrientationFinder& of);
         double getResolution() const { return resolution; }
         Eigen::Vector3f getWallEndpoint(int i, bool lo, double height=0) const;
         Eigen::Vector3f getNormalizedWallEndpoint(int i, bool lo, double height=0) const;
-        Eigen::Matrix4f getNormalizationTransform() const { return of->getNormalizationTransform(); }
+        Eigen::Matrix4f getNormalizationTransform() const { return normalization; }
+        void setNormalizationTransform(Eigen::Matrix4f t) { normalization = t; }
 
         double floorplane;
         double ceilplane;
@@ -111,7 +108,7 @@ class WallFinder {
         std::vector<bool> forwards;
     private:
         double resolution;
-        OrientationFinder* of;
+        Eigen::Matrix4f normalization;
         double findExtremalHistogram(
             pcl::PointCloud<pcl::PointNormal>::ConstPtr cloud,
             Eigen::Vector3f dir,

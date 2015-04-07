@@ -3,7 +3,7 @@
 #include <GL/gl.h>
 
 #include "material.h"
-#include "mesh.h"
+#include "meshmanager.h"
 
 class SampleData {
     public:
@@ -16,7 +16,7 @@ class SampleData {
 
 class HemicubeRenderer {
     public:
-        HemicubeRenderer(const Mesh* m, int hemicubeResolution=150);
+        HemicubeRenderer(const MeshManager* m, int hemicubeResolution=150);
         void computeSamples(
                 std::vector<SampleData>& data,
                 std::vector<int> indices,
@@ -27,6 +27,9 @@ class HemicubeRenderer {
                 Material& m, std::vector<float>& lightareas, float* color,
                 float* light);
         int getHemicubeResolution() const { return res; }
+
+        void renderMeshOGL(bool light) const;
+
         void render(
             const R3Point& p,
             const R3Vector& towards,
@@ -41,9 +44,14 @@ class HemicubeRenderer {
                 const R3Vector& towards, const R3Vector& up,
                 float* image, bool colorimage);
 
-        const Mesh* mesh;
+        const MeshManager* mesh;
+        GLuint vbo, ibo, cbo;
+
         void computeHemicubeFF();
         bool setupRasterizer();
+        bool setupMesh();
+        bool setupMeshColors();
+
         GLuint fbo, tex, fbo_rgb, fbo_z;
         int res;
         float** topHemicubeFF;

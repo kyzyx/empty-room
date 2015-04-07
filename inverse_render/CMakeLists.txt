@@ -16,7 +16,7 @@ add_library(memory
     imageserver.cpp imageserver.h
     imageio.cpp imageio.h)
 add_executable(invrender rgbe.cpp rgbe.h invrender.cpp
-    reproject.h reproject.cpp mesh.h mesh.cpp
+    reproject.h reproject.cpp
     wall_finder.h wall_finder.cpp material.h
     hemicuberenderer.h hemicuberenderer.cpp
     orientation_finder.cpp orientation_finder.h

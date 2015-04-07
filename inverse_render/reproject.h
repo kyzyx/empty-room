@@ -1,12 +1,11 @@
 #ifndef _REPROJECT_H
 #define _REPROJECT_H
-#include "mesh.h"
+#include "meshmanager.h"
 #include "imagemanager.h"
 
-void reproject(ImageManager& ch, ImageManager& lights, Mesh& mesh);
 void reproject(
         ImageManager& hdr,
-        Mesh& mesh,
+        MeshManager& mesh,
         double threshold,
         bool flip_x=false,
         bool flip_y=false
@@ -16,10 +15,10 @@ void reproject(
         const float* confidencemap,
         const float* depthmap,
         const CameraParams* cam,
-        Mesh& mesh,
+        MeshManager& mesh,
         double threshold,
         bool flip_x=false,
-        bool flip_y=false
+        bool flip_y=false,
+        R3MeshSearchTree* searchtree=NULL
 );
-void reproject(const char* color, const char* light, const CameraParams* cam, Mesh& mesh);
 #endif

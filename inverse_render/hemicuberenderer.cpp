@@ -4,14 +4,22 @@
 #include <iostream>
 #include <stdexcept>
 
+#define MAX_LIGHTS 127
+
 using namespace std;
 
-HemicubeRenderer::HemicubeRenderer(const Mesh* m, int hemicubeResolution)
+HemicubeRenderer::HemicubeRenderer(const MeshManager* m, int hemicubeResolution)
     : mesh(m), res(hemicubeResolution)
 {
     computeHemicubeFF();
     if (!setupRasterizer()) {
         throw runtime_error("Error initializing OpenGL textures!");
+    }
+    if (!setupMesh()) {
+        throw runtime_error("Error initializing OpenGL mesh!");
+    }
+    if (!setupMeshColors()) {
+        throw runtime_error("Error initializing OpenGL mesh colors!");
     }
 }
 void HemicubeRenderer::computeHemicubeFF() {
@@ -49,6 +57,76 @@ void HemicubeRenderer::computeHemicubeFF() {
         }
     }
 }
+bool HemicubeRenderer::setupMesh() {
+    int varraysize = 3*3*mesh->NFaces();
+    float* vertices = new float[varraysize];
+    glGenBuffers(1, &vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    int v = 0;
+    for (int i = 0; i < mesh->NFaces(); ++i) {
+        R3Point p = mesh->VertexPosition(mesh->VertexOnFace(i,0));
+        vertices[v++] = p[0];
+        vertices[v++] = p[1];
+        vertices[v++] = p[2];
+        p = mesh->VertexPosition(mesh->VertexOnFace(i,1));
+        vertices[v++] = p[0];
+        vertices[v++] = p[1];
+        vertices[v++] = p[2];
+        p = mesh->VertexPosition(mesh->VertexOnFace(i,2));
+        vertices[v++] = p[0];
+        vertices[v++] = p[1];
+        vertices[v++] = p[2];
+    }
+    glBufferData(GL_ARRAY_BUFFER,
+            varraysize*sizeof(float),
+            vertices, GL_STATIC_DRAW);
+    delete [] vertices;
+    return true;
+}
+bool HemicubeRenderer::setupMeshColors() {
+    glGenBuffers(1, &cbo);
+    glBindBuffer(GL_ARRAY_BUFFER, cbo);
+    float* vertices = new float[6*3*mesh->NFaces()];
+    memset(vertices, 0, sizeof(float)*6*3*mesh->NFaces());
+    for (int i = 0; i < mesh->NFaces(); ++i) {
+        // If any vertex has no samples, discard this face
+        bool valid = true;
+        // If all vertices are the same light vertices, this is a light face
+        int light = 0;
+        for (int j = 0; j < 3; ++j) {
+            int n = mesh->VertexOnFace(i, j);
+            char l = mesh->getLabel(n);
+            int ind = 6*(3*i + j);
+            vertices[ind+1] = mesh->getLabel(n,1)/128.;
+            vertices[ind+2] = 1;
+            if (mesh->getVertexSampleCount(n) == 0) {
+                valid = false;
+            }
+            if (light == 0 && l > 0) light = l;
+            else if (light > 0 && l == 0) light = -1; // Half light
+            else if (light > 0 && l != light) light = -2; // Differing lights, should never happen
+        }
+        if (!valid) continue;
+        for (int j = 0; j < 3; ++j) {
+            int ind = 6*(3*i + j);
+            if (light > 0) {
+                vertices[ind+0] = light/(float)MAX_LIGHTS;
+                vertices[ind+2] = 0;
+            } else if (light != -1) {
+                vertices[ind+2] = 0;
+                int n = mesh->VertexOnFace(i,j);
+                Material m = mesh->getVertexColor(n);
+                vertices[ind+3] = m.r;
+                vertices[ind+4] = m.g;
+                vertices[ind+5] = m.b;
+            }
+        }
+    }
+    glBufferData(GL_ARRAY_BUFFER, 6*3*mesh->NFaces()*sizeof(float),
+            vertices, GL_STATIC_DRAW);
+    delete [] vertices;
+    return true;
+}
 bool HemicubeRenderer::setupRasterizer() {
     glClampColor(GL_CLAMP_READ_COLOR, GL_FALSE);
     glClampColor(GL_CLAMP_VERTEX_COLOR, GL_FALSE);
@@ -78,6 +156,23 @@ bool HemicubeRenderer::setupRasterizer() {
     }
     glBindFramebuffer(GL_FRAMEBUFFER_EXT, 0);
     return true;
+}
+
+void HemicubeRenderer::renderMeshOGL(bool light) const {
+    glDepthMask(true);
+    glClearColor(0.,0.,0.,0.);
+    glDisable(GL_LIGHTING);
+    glEnable(GL_DEPTH_TEST);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glEnableClientState(GL_COLOR_ARRAY);
+    glBindBuffer(GL_ARRAY_BUFFER, cbo);
+    glColorPointer(3, GL_FLOAT, 6*sizeof(float), (void*) (light?3*sizeof(float):0));
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glVertexPointer(3, GL_FLOAT, 3*sizeof(float), 0);
+    glDrawArrays(GL_TRIANGLES, 0, mesh->NFaces()*3);
+    glDisableClientState(GL_VERTEX_ARRAY);
+    glDisableClientState(GL_COLOR_ARRAY);
 }
 
 float HemicubeRenderer::renderHemicube(
@@ -168,7 +263,7 @@ void HemicubeRenderer::render(
     R3Point at = p + towards;
     gluLookAt(p[0], p[1], p[2], at[0], at[1], at[2], -up[0], -up[1], -up[2]); // OpenGL is lower left origin
     glBindFramebuffer(GL_FRAMEBUFFER_EXT, fbo);
-    mesh->renderOGL(colorimage);
+    renderMeshOGL(colorimage);
     glReadPixels(0,0,width,height,GL_RGB,GL_FLOAT,(void*)image);
     glBindFramebuffer(GL_FRAMEBUFFER_EXT, 0);
 }
@@ -197,7 +292,7 @@ void HemicubeRenderer::computeSamples(
         int n;
         do {
             n = dist(generator);
-        } while (mesh->labels[indices[n]] > 0 || mesh->samples[indices[n]].size() == 0);
+        } while (mesh->getLabel(indices[n]) > 0 || mesh->getVertexSampleCount(indices[n]) == 0);
 
         SampleData sd;
         sd.vertexid = indices[n];
@@ -207,8 +302,8 @@ void HemicubeRenderer::computeSamples(
             lightimage = images[2*i+1];
         }
         sd.fractionUnknown = renderHemicube(
-                mesh->getMesh()->VertexPosition(mesh->getMesh()->Vertex(indices[n])),
-                mesh->getMesh()->VertexNormal(mesh->getMesh()->Vertex(indices[n])),
+                mesh->VertexPosition(indices[n]),
+                mesh->VertexNormal(indices[n]),
                 sd.netIncoming, sd.lightamount, radimage, lightimage
         );
         if (sd.fractionUnknown > discardthreshold) {

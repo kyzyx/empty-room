@@ -68,22 +68,24 @@ void intToCube(char c[5], int n) {
 }
 
 void InvRenderVisualizer::recalculateColors(int labeltype) {
-    Mesh& m = *(ir->mesh);
+    MeshManager& m = *(ir->mesh);
     for (int i = 0; i < cloud->size(); ++i) {
+        char l = m.getLabel(i);
+        char t = m.getLabel(i, 1);
         if (labeltype == LABEL_REPROJECT_DEBUG) {
-            if (m.labels[i] == 3) {
+            if (l == 3) {
                 cloud->at(i).r = 255;
                 cloud->at(i).g = 0;
                 cloud->at(i).b = 255;
-            } else if (m.labels[i] == 2) {
+            } else if (l == 2) {
                 cloud->at(i).r = 255;
                 cloud->at(i).g = 0;
                 cloud->at(i).b = 0;
-            } else if (m.labels[i] == 4) {
+            } else if (l == 4) {
                 cloud->at(i).r = 255;
                 cloud->at(i).g = 255;
                 cloud->at(i).b = 255;
-            } else if (m.labels[i] == 1) {
+            } else if (l == 1) {
                 cloud->at(i).r = 255;
                 cloud->at(i).g = 255;
                 cloud->at(i).b = 0;
@@ -92,23 +94,23 @@ void InvRenderVisualizer::recalculateColors(int labeltype) {
             cloud->at(i).r = 0;
             cloud->at(i).g = 0;
             cloud->at(i).b = 0;
-            if (m.types[i] == WallFinder::LABEL_WALL) {
+            if (t == WallFinder::LABEL_WALL) {
                 cloud->at(i).g = 255;
-            } else if (m.types[i] == WallFinder::LABEL_CEILING) {
+            } else if (t == WallFinder::LABEL_CEILING) {
                 cloud->at(i).b = 255;
-            } else if (m.types[i] == WallFinder::LABEL_FLOOR) {
+            } else if (t == WallFinder::LABEL_FLOOR) {
                 cloud->at(i).r = 255;
             }
         } else {
             int mult = 255;
-            if (m.samples[i].size()) {
-                if (labeltype == LABEL_LIGHTS && m.labels[i] > 0) {
+            if (m.getVertexSampleCount(i)) {
+                if (labeltype == LABEL_LIGHTS && l > 0) {
                     cloud->at(i).r = 0;
                     cloud->at(i).g = 0;
                     cloud->at(i).b = 0;
-                    if (m.labels[i]&1) cloud->at(i).r = 255;
-                    if (m.labels[i]&2) cloud->at(i).g = 255;
-                    if (m.labels[i]&4) cloud->at(i).b = 255;
+                    if (l&1) cloud->at(i).r = 255;
+                    if (l&2) cloud->at(i).g = 255;
+                    if (l&4) cloud->at(i).b = 255;
                 } else {
                     Material mat = m.getVertexColor(i);
                     mat *= mult*displayscale;
@@ -130,13 +132,13 @@ void InvRenderVisualizer::recalculateColors(int labeltype) {
 }
 
 void InvRenderVisualizer::init() {
-    Mesh& m = *(ir->mesh);
+    MeshManager& m = *(ir->mesh);
     PointIndices::Ptr nonnull(new PointIndices());
     cloud->is_dense = false;
     recalculateColors(LABEL_LIGHTS);
     for (int i = 0; i < cloud->size(); ++i) {
-        if (m.samples[i].size()) {
-                nonnull->indices.push_back(i);
+        if (m.getVertexSampleCount(i)) {
+            nonnull->indices.push_back(i);
         }
     }
     if (prune) {
@@ -225,10 +227,10 @@ void InvRenderVisualizer::loop() {
     }
 }
 
-void InvRenderVisualizer::VisualizeSamplePoint(Mesh& m, SampleData& s) {
+void InvRenderVisualizer::VisualizeSamplePoint(MeshManager& m, SampleData& s) {
     double boxsize = 0.1;
-    R3Point p = m.getMesh()->VertexPosition(m.getMesh()->Vertex(s.vertexid));
-    R3Vector v = m.getMesh()->VertexNormal(m.getMesh()->Vertex(s.vertexid));
+    R3Point p = m.VertexPosition(s.vertexid);
+    R3Vector v = m.VertexNormal(s.vertexid);
     R3Point pp = p+0.1*v;
     R3Vector n = v[0]>v[1]?R3xaxis_vector:R3yaxis_vector;
     double amt = acos(v.Dot(n));
