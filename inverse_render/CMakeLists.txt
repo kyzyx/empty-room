@@ -3,6 +3,8 @@ cmake_policy(SET CMP0015 NEW)
 project(EMPTY_ROOM)
 find_package(PCL 1.7 REQUIRED)
 find_package(OpenCV REQUIRED)
+find_package(Boost 1.54.0 COMPONENTS system REQUIRED)
+include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${PCL_INCLUDE_DIRS} . ../GAPS/)
 link_directories(${PCL_LIBRARY_DIRS} ../GAPS/R3Graphics/ ../GAPS/R3Shapes/
     ../GAPS/RNBasics/ ../GAPS/R2Shapes/
@@ -10,12 +12,19 @@ link_directories(${PCL_LIBRARY_DIRS} ../GAPS/R3Graphics/ ../GAPS/R3Shapes/
 add_definitions(${PCL_DEFINITIONS})
 add_library(memory 
     camparams.h
+    rgbe.h rgbe.cpp
     meshmanager.cpp meshmanager.h
     meshserver.cpp meshserver.h
     imagemanager.cpp imagemanager.h
     imageserver.cpp imageserver.h
     imageio.cpp imageio.h)
-add_executable(invrender rgbe.cpp rgbe.h invrender.cpp
+target_link_libraries(memory ${PCL_LIBRARIES} ${Boost_LIBRARIES}
+    R3Graphics.a R3Shapes.a R2Shapes.a RNBasics.a jpeg.a
+    GL GLU IlmImf Half rt)
+add_executable(dataserver dataserver.cpp)
+target_link_libraries(dataserver ${PCL_LIBRARIES} memory)
+
+add_executable(invrender invrender.cpp
     reproject.h reproject.cpp
     wall_finder.h wall_finder.cpp material.h
     hemicuberenderer.h hemicuberenderer.cpp
@@ -24,6 +33,7 @@ add_executable(invrender rgbe.cpp rgbe.h invrender.cpp
     Simplify.h eigen_nnls.h
     solver.cpp solvetexture.cpp solver.h clusterlights.cpp clusterlights.h
     display.cpp display.h parse_args.cpp parse_args.h rerender.cpp rerender.h)
-target_link_libraries(invrender ${PCL_LIBRARIES} ${OpenCV_LIBS} R3Graphics.a RNBasics.a
-    R3Shapes.a R2Shapes.a jpeg.a GL glut GLU GLEW IlmImf Half memory)
+target_link_libraries(invrender ${PCL_LIBRARIES} ${OpenCV_LIBS}
+    R3Graphics.a R3Shapes.a R2Shapes.a RNBasics.a
+    jpeg.a GL glut GLU GLEW IlmImf Half memory)
 set(CMAKE_CXX_FLAGS "-Wno-deprecated -std=c++0x")
