@@ -52,6 +52,7 @@ void MeshManager::defaultinit(const string& meshfie) {
     stringstream ss;
     ss << setbase(16) << SHM_MESHDATA_ID << str_hash(meshfie);
     shmname = ss.str();
+    shmsamplename = ss.str() + SAMPLE_SUFFIX;
 
     sampleinit = false;
 }
@@ -127,7 +128,7 @@ bool MeshManager::initializeSharedMemory() {
 bool MeshManager::initializeSharedSampleMemory() {
     if (*numsamples == 0) return false;
     try {
-        shared_memory_object shm(open_or_create, (shmname + SAMPLE_SUFFIX).c_str(), read_write);
+        shared_memory_object shm(open_or_create, shmsamplename.c_str(), read_write);
         int shmsize = nvertices*sizeof(int) + (*numsamples)*sizeof(Sample);
         shm.truncate(shmsize);
         sampleregion = mapped_region(shm, read_write);

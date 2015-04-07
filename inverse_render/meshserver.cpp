@@ -22,18 +22,32 @@ MeshServer::MeshServer(const string& meshfile, bool ccw)
     defaultinit(meshfile);
     shared_memory_object::remove(shmname.c_str());
     initializeSharedMemory();
-    loadMesh(meshfile, ccw);
+
+    PolygonMesh::Ptr mesh(new PolygonMesh());
+    io::loadPolygonFile(meshfile.c_str(), *mesh);
+    loadMesh(mesh, ccw);
+}
+MeshServer::MeshServer(PolygonMesh::ConstPtr mesh, bool ccw)
+{
+    nfaces = mesh->polygons.size();
+    nvertices = mesh->cloud.width * mesh->cloud.height;
+    wsamples.resize(nvertices);
+
+    defaultinit(boost::lexical_cast<string>(mesh->header.stamp));
+    shared_memory_object::remove(shmname.c_str());
+    shared_memory_object::remove(shmsamplename.c_str());
+    initializeSharedMemory();
+
+    loadMesh(mesh, ccw);
 }
 
 MeshServer::~MeshServer() {
     shared_memory_object::remove(shmname.c_str());
+    shared_memory_object::remove(shmsamplename.c_str());
 }
 
-bool MeshServer::loadMesh(const string& meshfile, bool ccw) {
-    PolygonMesh::Ptr mesh(new PolygonMesh());
+bool MeshServer::loadMesh(PolygonMesh::ConstPtr mesh, bool ccw) {
     PointCloud<PointXYZ>::Ptr cloud(new PointCloud<PointXYZ>());
-
-    io::loadPolygonFile(meshfile.c_str(), *mesh);
     fromPCLPointCloud2(mesh->cloud, *cloud);
 
     for (int i = 0; i < nvertices; ++i) {

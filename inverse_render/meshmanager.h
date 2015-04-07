@@ -104,6 +104,7 @@ class MeshManager {
 
         shmutex* mutexes;
         std::string shmname;
+        std::string shmsamplename;
 
         boost::interprocess::mapped_region mregion;
         boost::interprocess::mapped_region sampleregion;
