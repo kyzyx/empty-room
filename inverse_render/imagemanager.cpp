@@ -3,6 +3,7 @@
 #include <boost/interprocess/sync/scoped_lock.hpp>
 #include <boost/interprocess/sync/sharable_lock.hpp>
 #include <boost/interprocess/sync/upgradable_lock.hpp>
+#include <boost/filesystem.hpp>
 
 #include <functional>
 #include <iostream>
@@ -47,9 +48,10 @@ ImageManager::ImageManager(const string& camfile)
 void ImageManager::defaultinit(const string& camfile) {
     initializeImageTypes();
 
+    string fullpath = boost::filesystem::canonical(boost::filesystem::path(camfile)).string();
     hash<string> str_hash;
     stringstream ss;
-    ss << setbase(16) << SHM_IMAGEDATA_ID << str_hash(camfile);
+    ss << setbase(16) << SHM_IMAGEDATA_ID << str_hash(fullpath);
     shmname = ss.str();
 }
 
