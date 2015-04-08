@@ -2,6 +2,7 @@
 #include "ui_mainwindow.h"
 #include <QKeyEvent>
 #include <QFileDialog>
+#include <QIntValidator>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -49,6 +50,12 @@ void MainWindow::updateImage(int idx, int type)
         default:
             return;
     }
+
+    if (imageindex == 0) ui->prevImageButton->setEnabled(false);
+    else ui->prevImageButton->setEnabled(true);
+    if (imageindex == imgr->size() - 1) ui->nextImageButton->setEnabled(false);
+    else ui->nextImageButton->setEnabled(true);
+    ui->imageNumBox->setText(QString::number(imageindex));
 }
 
 void MainWindow::on_actionQuit_triggered()
@@ -69,5 +76,40 @@ void MainWindow::on_actionOpen_Images_triggered()
     QString camfilename = QFileDialog::getOpenFileName(this,"Open Camera File", "", "Camera Files (*.cam)");
     // Trigger server thread, add progress bar, then
     imgr = new ImageManager(camfilename.toStdString());
-    updateImage(0,0);
+    ui->imageTypeComboBox->setEnabled(true);
+    ui->nextImageButton->setEnabled(true);
+    ui->imageNumBox->setEnabled(true);
+    ui->loadImageButton->setEnabled(true);
+
+    ui->imageNumBox->setValidator(new QIntValidator(0, imgr->size()-1, this));
+
+    ui->imageTypeComboBox->clear();
+    for (int i = 0; i < imgr->getNumImageTypes(); ++i) {
+        ui->imageTypeComboBox->insertItem(i, QString::fromStdString(imgr->getImageType(i).getName()));
+    }
+    updateImage(0, typeindex);
+}
+
+void MainWindow::on_prevImageButton_clicked()
+{
+    updateImage(--imageindex, typeindex);
+    ui->nextImageButton->setEnabled(true);
+    if (imageindex == 0) ui->prevImageButton->setEnabled(false);
+}
+
+void MainWindow::on_nextImageButton_clicked()
+{
+    updateImage(++imageindex, typeindex);
+    ui->prevImageButton->setEnabled(true);
+    if (imageindex == imgr->size()-1) ui->nextImageButton->setEnabled(false);
+}
+void MainWindow::on_imageTypeComboBox_currentIndexChanged(int index)
+{
+    updateImage(imageindex, index);
+}
+
+void MainWindow::on_loadImageButton_clicked()
+{
+    int n = ui->imageNumBox->text().toInt();
+    updateImage(n, typeindex);
 }

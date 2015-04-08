@@ -28,6 +28,14 @@ private slots:
 
     void on_actionOpen_Images_triggered();
 
+    void on_prevImageButton_clicked();
+
+    void on_imageTypeComboBox_currentIndexChanged(int index);
+
+    void on_loadImageButton_clicked();
+
+    void on_nextImageButton_clicked();
+
 private:
     Ui::MainWindow *ui;
     ImageManager* imgr;

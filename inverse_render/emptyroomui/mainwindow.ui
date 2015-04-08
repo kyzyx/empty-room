@@ -34,6 +34,86 @@
      </rect>
     </property>
    </widget>
+   <widget class="QPushButton" name="prevImageButton">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>660</x>
+      <y>530</y>
+      <width>150</width>
+      <height>30</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Previous Image</string>
+    </property>
+    <property name="icon">
+     <iconset theme="go-previous"/>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="nextImageButton">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>940</x>
+      <y>530</y>
+      <width>150</width>
+      <height>30</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Next Image</string>
+    </property>
+    <property name="icon">
+     <iconset theme="go-next"/>
+    </property>
+   </widget>
+   <widget class="QComboBox" name="imageTypeComboBox">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>1100</x>
+      <y>530</y>
+      <width>200</width>
+      <height>30</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="loadImageButton">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>890</x>
+      <y>530</y>
+      <width>40</width>
+      <height>29</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Go</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="imageNumBox">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>820</x>
+      <y>530</y>
+      <width>60</width>
+      <height>30</height>
+     </rect>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
@@ -50,6 +130,8 @@
     </property>
     <addaction name="actionOpen_Mesh"/>
     <addaction name="actionOpen_Images"/>
+    <addaction name="separator"/>
+    <addaction name="actionQuit"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">

@@ -130,10 +130,12 @@ void HDRViewer::setFloatImage(const float* data, int w, int h, int channels) {
         if (image[i] > maxi) maxi = image[i];
         if (image[i] < mini) mini = image[i];
     }
-    tmo->setEnabled(true);
-    slider->setEnabled(true);
-    slider->setUpperValue(LOGTOLIN(mini));
-    slider->setLowerValue(LOGTOLIN(maxi));
+    if (!slider->isEnabled()) {
+        tmo->setEnabled(true);
+        slider->setEnabled(true);
+        slider->setUpperValue(LOGTOLIN(mini));
+        slider->setLowerValue(LOGTOLIN(maxi));
+    }
     updateSize(w,h);
     updateImage();
 }
