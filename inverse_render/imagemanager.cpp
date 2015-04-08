@@ -135,6 +135,12 @@ const void* ImageManager::getImage(const string& type, int n) const {
     if (flags[i*sz+n] & DF_INITIALIZED) return images[i][n];
     else return NULL;
 }
+const void* ImageManager::getImage(int i, int n) const {
+    if (i < 0) return NULL;
+    //boost::interprocess::shareable_lock<shmutex> lock(*getMutex(i,n));
+    if (flags[i*sz+n] & DF_INITIALIZED) return images[i][n];
+    else return NULL;
+}
 const void* ImageManager::getImage(int n) const {
     //boost::interprocess::shareable_lock<shmutex> lock(*getMutex(0,n));
     if (flags[n] & DF_INITIALIZED) return images[0][n];

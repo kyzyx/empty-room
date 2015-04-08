@@ -52,9 +52,13 @@ class ImageManager {
         unsigned char getFlags(const std::string& type, int n) const;
         void setFlags(const std::string& type, int n, unsigned char value);
         const void* getImage(const std::string& type, int n) const;
+        const void* getImage(int i, int n) const;
         const void* getImage(int n) const;
         void* getImageWriteable(const std::string& type, int n);
         const R4Matrix& getDepthToRgbTransform() const;
+
+        ImageType getImageType(int n) const { return imagetypes[n]; }
+        int getNumImageTypes() const { return imagetypes.size(); }
 
         int width() const { return w; }
         int height() const { return h; }
