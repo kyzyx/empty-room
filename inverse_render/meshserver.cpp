@@ -16,27 +16,33 @@ using namespace pcl;
 // Constructors and initialization
 // --------------------------------------------------------------
 using namespace boost::interprocess;
-MeshServer::MeshServer(const string& meshfile, bool ccw)
+MeshServer::MeshServer(const string& meshfile, bool ccw, void(*progress_callback)(int))
+    : progress_cb(progress_callback)
 {
     readHeader(meshfile);
     defaultinit(meshfile);
     shared_memory_object::remove(shmname.c_str());
     initializeSharedMemory();
+    if (progress_cb) progress_cb(5);
 
     PolygonMesh::Ptr mesh(new PolygonMesh());
     io::loadPolygonFile(meshfile.c_str(), *mesh);
+    if (progress_cb) progress_cb(33);
     loadMesh(mesh, ccw);
 }
-MeshServer::MeshServer(PolygonMesh::ConstPtr mesh, bool ccw)
+MeshServer::MeshServer(PolygonMesh::ConstPtr mesh, bool ccw, void(*progress_callback)(int))
+    : progress_cb(progress_callback)
 {
     nfaces = mesh->polygons.size();
     nvertices = mesh->cloud.width * mesh->cloud.height;
     wsamples.resize(nvertices);
+    if (progress_cb) progress_cb(2);
 
     defaultinit(boost::lexical_cast<string>(mesh->header.stamp));
     shared_memory_object::remove(shmname.c_str());
     shared_memory_object::remove(shmsamplename.c_str());
     initializeSharedMemory();
+    if (progress_cb) progress_cb(33);
 
     loadMesh(mesh, ccw);
 }
@@ -49,12 +55,14 @@ MeshServer::~MeshServer() {
 bool MeshServer::loadMesh(PolygonMesh::ConstPtr mesh, bool ccw) {
     PointCloud<PointXYZ>::Ptr cloud(new PointCloud<PointXYZ>());
     fromPCLPointCloud2(mesh->cloud, *cloud);
+    if (progress_cb) progress_cb(50);
 
     for (int i = 0; i < nvertices; ++i) {
         pos[i] = R3Point(cloud->points[i].x,
                          cloud->points[i].y,
                          cloud->points[i].z);
     }
+    if (progress_cb) progress_cb(70);
 
     for (int i = 0; i < nfaces; ++i) {
         int* f = faces+3*i;
@@ -73,6 +81,7 @@ bool MeshServer::loadMesh(PolygonMesh::ConstPtr mesh, bool ccw) {
             norm[f[j]] += c;
         }
     }
+    if (progress_cb) progress_cb(90);
 
     // Normalize normals
     for (int i = 0; i < nvertices; ++i) {

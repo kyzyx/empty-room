@@ -252,3 +252,59 @@ Material MeshManager::getVertexColor(int n) const {
     }
     return m;
 }
+void MeshManager::readSamplesFromFile(const std::string& samplesfile, void (*cb)(int)) {
+    ifstream in(samplesfile.c_str(), ifstream::binary);
+    uint32_t n, sz;
+    in.read((char*) &n, 4);
+    for (int i = 0; i < n; ++i) {
+        char c;
+        in.read(&c, 1);
+        setLabel(i, c, 0);
+        in.read(&c, 1);
+        setLabel(i, c, 1);
+        in.read((char*) &sz, 4);
+        for (int j = 0; j < sz; ++j) {
+            Sample s;
+            in.read((char*) &s.label, 1);
+            in.read((char*) &s.r, sizeof(float));
+            in.read((char*) &s.g, sizeof(float));
+            in.read((char*) &s.b, sizeof(float));
+            in.read((char*) &s.x, sizeof(float));
+            in.read((char*) &s.y, sizeof(float));
+            in.read((char*) &s.z, sizeof(float));
+            in.read((char*) &s.confidence, sizeof(float));
+            in.read((char*) &s.dA, sizeof(float));
+            addSample(i, s);
+        }
+        if (cb && (i+1) % (nvertices/100) == 0) cb((int) 80*(i/(float)nvertices));
+    }
+    commitSamples();
+    if (cb) cb(100);
+}
+void MeshManager::writeSamplesToFile(const std::string& samplesfile, void (*cb)(int)) {
+    ofstream out(samplesfile.c_str(), ofstream::binary);
+    uint32_t sz = nvertices;
+    out.write((char*) &sz, 4);
+    for (int i = 0; i < nvertices; ++i) {
+        char c = getLabel(i,0);
+        char t = getLabel(i,1);
+        out.write(&c, 1);
+        out.write(&t, 1);
+        sz = getVertexSampleCount(i);
+        out.write((char*) &sz, 4);
+        for (int j = 0; j < sz; ++j) {
+            Sample s = getSample(i,j);
+            out.write((char*) &s.label, 1);
+            out.write((char*) &s.r, sizeof(float));
+            out.write((char*) &s.g, sizeof(float));
+            out.write((char*) &s.b, sizeof(float));
+            out.write((char*) &s.x, sizeof(float));
+            out.write((char*) &s.y, sizeof(float));
+            out.write((char*) &s.z, sizeof(float));
+            out.write((char*) &s.confidence, sizeof(float));
+            out.write((char*) &s.dA, sizeof(float));
+        }
+        if (cb && (i+1) % (nvertices/100) == 0) cb((int) 100*(i/(float)nvertices));
+    }
+    if (cb) cb(100);
+}

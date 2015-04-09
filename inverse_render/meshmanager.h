@@ -63,6 +63,8 @@ class MeshManager {
         void addSample(int n, Sample s);
         void commitSamples();
         void loadSamples();
+        void readSamplesFromFile(const std::string& samplesfile, void (*cb)(int)=NULL);
+        void writeSamplesToFile(const std::string& samplesfile, void (*cb)(int)=NULL);
 
         enum {
             LABEL_CHANNEL,

@@ -4,6 +4,7 @@
 #include <fstream>
 #include <cstdio>
 #include <boost/interprocess/shared_memory_object.hpp>
+#include <boost/filesystem.hpp>
 
 using namespace std;
 
@@ -11,8 +12,8 @@ using namespace std;
 // Constructors and initialization
 // --------------------------------------------------------------
 using namespace boost::interprocess;
-ImageServer::ImageServer(const string& camfile, bool flipx, bool flipy)
-    : flip_x(flipx), flip_y(flipy)
+ImageServer::ImageServer(const string& camfile, bool flipx, bool flipy, void(*progress_callback)(int))
+    : flip_x(flipx), flip_y(flipy), progress_cb(progress_callback)
 {
     ifstream in(camfile.c_str());
     in >> sz >> w >> h;
@@ -21,7 +22,9 @@ ImageServer::ImageServer(const string& camfile, bool flipx, bool flipy)
     defaultinit(camfile);
     shared_memory_object::remove(shmname.c_str());
     initializeSharedMemory();
+    if (progress_cb) progress_cb(2);
     readCameraFile(camfile);
+    if (progress_cb) progress_cb(5);
     loadAllFiles();
 }
 
@@ -32,6 +35,7 @@ ImageServer::~ImageServer() {
 // --------------------------------------------------------------
 // Camera File Wrangling
 // --------------------------------------------------------------
+typedef boost::filesystem::path bfpath;
 bool ImageServer::readCameraFile(const string& filename)
 {
     // Format:
@@ -59,7 +63,10 @@ bool ImageServer::readCameraFile(const string& filename)
         CameraParams* curr = cameras;
         for (int i = 0; i < sz; ++i, ++curr) {
             in >> s >> a >> b >> c;
-            filenames.push_back(s);
+            bfpath filepath = bfpath(filename).parent_path();
+            filepath /= bfpath(s);
+            string fullpath = boost::filesystem::canonical(filepath).string();
+            filenames.push_back(fullpath);
             curr->pos.Reset(a,b,c);
             in >> a >> b >> c;
             curr->up.Reset(a,b,c);
@@ -113,8 +120,8 @@ string replaceExtension(const string& s, string newext) {
 // File load
 // --------------------------------------------------------------
 bool ImageServer::loadAllFiles() {
-    for (int n = 0; n < imagetypes.size(); ++n) {
-        for (int i = 0; i < sz; ++i) {
+    for (int i = 0; i < sz; ++i) {
+        for (int n = 0; n < imagetypes.size(); ++n) {
             string f = filenames[i];
             if (imagetypes[n].getExtension() != "") {
                 f = replaceExtension(f, imagetypes[n].getExtension());
@@ -143,6 +150,15 @@ bool ImageServer::loadAllFiles() {
                     flip((char*) im, w, h, imagetypes[n].getSize());
                     flags[n*sz+i] |= DF_INITIALIZED;
                 }
+            }
+            if (progress_cb) {
+                float prevprop = (i*imagetypes.size()+n-1)/(float) (sz*imagetypes.size());
+                float prop = (i*imagetypes.size()+n)/(float) (sz*imagetypes.size());
+                //float prevprop = (n*sz+i-1)/(float) (sz*imagetypes.size());
+                //float prop = (n*sz+i)/(float) (sz*imagetypes.size());
+                int pp = 5+(int)(95*prevprop);
+                int p = 5+(int)(95*prop);
+                if (p > pp) progress_cb(p);
             }
         }
     }

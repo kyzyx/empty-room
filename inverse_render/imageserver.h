@@ -4,7 +4,10 @@
 
 class ImageServer : public ImageManager {
     public:
-        ImageServer(const std::string& camfile, bool flipx=false, bool flipy=false);
+        ImageServer(const std::string& camfile,
+                bool flipx=false,
+                bool flipy=false,
+                void (*progress_callback)(int)=NULL);
         ~ImageServer();
 
     protected:
@@ -17,5 +20,7 @@ class ImageServer : public ImageManager {
         std::vector<std::string> filenames;
 
         bool flip_x, flip_y;
+
+        void (*progress_cb)(int);
 };
 #endif

@@ -98,7 +98,7 @@ int main(int argc, char* argv[]) {
     if (do_reprojection) {
         cout << "===== REPROJECTING =====" << endl;
         if (input) {
-            // READ SAMPLES FROM infile
+            mmgr.readSamplesFromFile(infile);
             cout << "Done loading reprojection files" << endl;
             if (hdr_threshold > 0) {
                 numlights = clusterLights(mmgr, hdr_threshold, minlightsize);
