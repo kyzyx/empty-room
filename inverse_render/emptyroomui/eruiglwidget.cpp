@@ -82,8 +82,19 @@ void ERUIGLWidget::setupMeshColors()
 {
     glGenBuffers(1, &cbo);
     glBindBuffer(GL_ARRAY_BUFFER, cbo);
-    float* vertices = new float[6*3*mmgr->NFaces()];
-    memset(vertices, 0, sizeof(float)*6*3*mmgr->NFaces());
+    int varraysize = 2*3*mmgr->NVertices();
+    float* vertices = new float[varraysize];
+    memset(vertices, 0, sizeof(float)*varraysize);
+    int v = 0;
+    for (int i = 0; i < mmgr->NVertices(); ++i) {
+        vertices[v++] = 0;
+        vertices[v++] = mmgr->getLabel(i,1)/128.;
+        vertices[v++] = 0;
+        Material m = mmgr->getVertexColor(i);
+        vertices[v++] = m.r*0.06;
+        vertices[v++] = m.g*0.06;
+        vertices[v++] = m.b*0.06;
+    }
     for (int i = 0; i < mmgr->NFaces(); ++i) {
         // If any vertex has no samples, discard this face
         bool valid = true;
@@ -102,23 +113,22 @@ void ERUIGLWidget::setupMeshColors()
             else if (light > 0 && l == 0) light = -1; // Half light
             else if (light > 0 && l != light) light = -2; // Differing lights, should never happen
         }
-        if (!valid) continue;
-        for (int j = 0; j < 3; ++j) {
-            int ind = 6*(3*i + j);
-            if (light > 0) {
-                vertices[ind+0] = light/(float)MAX_LIGHTS;
-                vertices[ind+2] = 0;
-            } else if (light != -1) {
-                vertices[ind+2] = 0;
+        if (!valid) {
+            for (int j = 0; j < 3; ++j) {
                 int n = mmgr->VertexOnFace(i,j);
-                Material m = mmgr->getVertexColor(n);
-                vertices[ind+3] = m.r;
-                vertices[ind+4] = m.g;
-                vertices[ind+5] = m.b;
+                int ind = 6*n;
+                vertices[ind+2] = 1;
+            }
+        }
+        if (light > 0) {
+            for (int j = 0; j < 3; ++j) {
+                int n = mmgr->VertexOnFace(i,j);
+                int ind = 6*n;
+                vertices[ind+0] = light/(float) MAX_LIGHTS;
             }
         }
     }
-    glBufferData(GL_ARRAY_BUFFER, 6*3*mmgr->NFaces()*sizeof(float),
+    glBufferData(GL_ARRAY_BUFFER, varraysize*sizeof(float),
             vertices, GL_STATIC_DRAW);
     delete [] vertices;
     hasColors = true;
@@ -184,7 +194,7 @@ void ERUIGLWidget::draw()
         }
         glEnd();
     } else {
-        bool light = false;
+        bool light = true;
         glDepthMask(true);
         glClearColor(0.,0.,0.,0.);
         glEnable(GL_DEPTH_TEST);
@@ -195,6 +205,7 @@ void ERUIGLWidget::draw()
             glBindBuffer(GL_ARRAY_BUFFER, cbo);
             glColorPointer(3, GL_FLOAT, 6*sizeof(float), (void*) (light?3*sizeof(float):0));
         } else {
+            glEnable(GL_LIGHTING);
             glColor3f(1,1,1);
             b.Draw();
         }
@@ -215,6 +226,6 @@ void ERUIGLWidget::draw()
         //glDrawArrays(GL_TRIANGLES, 0, mesh->NFaces()*3);
         glDisableClientState(GL_VERTEX_ARRAY);
         if (hasColors) glDisableClientState(GL_COLOR_ARRAY);
-        l.Draw(0);
+        else l.Draw(0);
     }
 }

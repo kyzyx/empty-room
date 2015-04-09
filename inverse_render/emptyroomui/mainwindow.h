@@ -42,6 +42,8 @@ private slots:
     void meshLoaded();
     void imagesLoaded();
 
+    void on_loadReprojectButton_clicked();
+
 private:
     Ui::MainWindow *ui;
     ImageManager* imgr;

@@ -172,6 +172,12 @@ void MainWindow::on_actionOpen_Mesh_triggered()
 }
 
 void MainWindow::meshLoaded() {
+    ui->wallfindButton->setEnabled(true);
+    ui->loadWallsButton->setEnabled(true);
+    ui->loadReprojectButton->setEnabled(true);
+    if (imgr) {
+        ui->reprojectButton->setEnabled(true);
+    }
     mmgr = new MeshManager(meshfilename.toStdString());
     ui->meshWidget->setMeshManager(mmgr);
 }
@@ -201,6 +207,9 @@ void MainWindow::on_actionOpen_Images_triggered()
     }
 }
 void MainWindow::imagesLoaded() {
+    if (mmgr) {
+        ui->reprojectButton->setEnabled(true);
+    }
     imgr = new ImageManager(camfilename.toStdString());
     ui->imageTypeComboBox->setEnabled(true);
     ui->nextImageButton->setEnabled(true);
@@ -238,4 +247,13 @@ void MainWindow::on_loadImageButton_clicked()
 {
     int n = ui->imageNumBox->text().toInt();
     updateImage(n, typeindex);
+}
+
+void MainWindow::on_loadReprojectButton_clicked()
+{
+    if (mmgr) {
+        QString samplesfile = QFileDialog::getOpenFileName(this, "Open Reprojection Samples");
+        mmgr->readSamplesFromFile(samplesfile.toStdString());
+        ui->meshWidget->setupMeshColors();
+    }
 }

@@ -11,14 +11,14 @@ class ERUIGLWidget : public QGLViewer
 public:
     explicit ERUIGLWidget(QWidget *parent = 0);
     void setMeshManager(MeshManager* manager);
-
+    void setupMeshColors();
 protected:
     virtual void draw();
     virtual void init();
     virtual QString helpString() const;
 
     void setupMeshGeometry();
-    void setupMeshColors();
+
 
     MeshManager* mmgr;
 
