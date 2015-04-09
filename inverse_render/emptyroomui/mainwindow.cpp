@@ -3,6 +3,79 @@
 #include <QKeyEvent>
 #include <QFileDialog>
 #include <QIntValidator>
+#include <QCheckBox>
+
+class MeshDialog : public QFileDialog
+{
+public:
+ explicit MeshDialog(QWidget *parent=0) :
+     QFileDialog( parent ),
+     ccw(0)
+    {
+     QGridLayout* mainLayout = dynamic_cast<QGridLayout*>(layout());
+
+     if ( ! mainLayout ) {
+      assert(0); // in case of future changes
+     } else {
+      QHBoxLayout *hbl = new QHBoxLayout();
+
+      // add some widgets
+      ccw = new QCheckBox(QString("Flip Normals"), this);
+      hbl->addWidget(ccw);
+      ccw->setChecked(true);
+
+      int numRows = mainLayout->rowCount();
+
+      // add the new layout to the bottom of mainLayout
+      // and span all columns
+      mainLayout->addLayout( hbl, numRows,0,1,-1);
+      }
+    }
+ bool isCcw() const {
+     if (ccw) return ccw->isChecked();
+     return false;
+ }
+private:
+ QCheckBox *ccw;
+};
+class ImageDialog : public QFileDialog
+{
+public:
+ explicit ImageDialog(QWidget *parent=0) :
+     QFileDialog( parent ),
+     flipx(0), flipy(0)
+    {
+     QGridLayout* mainLayout = dynamic_cast<QGridLayout*>(layout());
+
+     if ( ! mainLayout ) {
+      assert(0); // in case of future changes
+     } else {
+      QHBoxLayout *hbl = new QHBoxLayout();
+
+      // add some widgets
+      flipx = new QCheckBox(QString("Flip horizontally"), this);
+      flipy = new QCheckBox(QString("Flip vertically"), this);
+        hbl->addWidget(flipx);
+        hbl->addWidget(flipy);
+      int numRows = mainLayout->rowCount();
+
+      // add the new layout to the bottom of mainLayout
+      // and span all columns
+      mainLayout->addLayout( hbl, numRows,0,1,-1);
+      }
+    }
+ bool isFlipX() const {
+     if (flipx) return flipx->isChecked();
+     return false;
+ }
+ bool isFlipY() const {
+     if (flipy) return flipy->isChecked();
+     return false;
+ }
+private:
+ QCheckBox *flipx;
+ QCheckBox *flipy;
+};
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -71,30 +144,41 @@ void MainWindow::on_actionQuit_triggered()
 
 void MainWindow::on_actionOpen_Mesh_triggered()
 {
-    QString meshfilename = QFileDialog::getOpenFileName(this,"Open Mesh", "", "PLY Meshes (*.ply)");
-    // Trigger server thread, add progress bar, then
-    mmgr = new MeshManager(meshfilename.toStdString());
-    ui->meshWidget->setMeshManager(mmgr);
-    // Render mesh
+    MeshDialog mdialog(this);
+    mdialog.setNameFilter("PLY Meshes (*.ply)");
+    mdialog.setFileMode(QFileDialog::ExistingFile);
+    mdialog.setOption(QFileDialog::DontUseNativeDialog);
+    if (mdialog.exec()) {
+        QString meshfilename = mdialog.selectedFiles().first();
+                // QFileDialog::getOpenFileName(this,"Open Mesh", "", "PLY Meshes (*.ply)");
+        mmgr = new MeshManager(meshfilename.toStdString());
+        ui->meshWidget->setMeshManager(mmgr);
+    }
 }
 
 void MainWindow::on_actionOpen_Images_triggered()
 {
-    QString camfilename = QFileDialog::getOpenFileName(this,"Open Camera File", "", "Camera Files (*.cam)");
-    // Trigger server thread, add progress bar, then
-    imgr = new ImageManager(camfilename.toStdString());
-    ui->imageTypeComboBox->setEnabled(true);
-    ui->nextImageButton->setEnabled(true);
-    ui->imageNumBox->setEnabled(true);
-    ui->loadImageButton->setEnabled(true);
+    ImageDialog idialog(this);
+    idialog.setNameFilter("Camera Files (*.cam)");
+    idialog.setFileMode(QFileDialog::ExistingFile);
+    idialog.setOption(QFileDialog::DontUseNativeDialog);
+    if (idialog.exec()) {
+        QString camfilename = idialog.selectedFiles().first(); // QFileDialog::getOpenFileName(this,"Open Camera File", "", "Camera Files (*.cam)");
+        // , idialog.isFlipX(), idialog.isFlipY()
+        imgr = new ImageManager(camfilename.toStdString());
+        ui->imageTypeComboBox->setEnabled(true);
+        ui->nextImageButton->setEnabled(true);
+        ui->imageNumBox->setEnabled(true);
+        ui->loadImageButton->setEnabled(true);
 
-    ui->imageNumBox->setValidator(new QIntValidator(0, imgr->size()-1, this));
+        ui->imageNumBox->setValidator(new QIntValidator(0, imgr->size()-1, this));
 
-    ui->imageTypeComboBox->clear();
-    for (int i = 0; i < imgr->getNumImageTypes(); ++i) {
-        ui->imageTypeComboBox->insertItem(i, QString::fromStdString(imgr->getImageType(i).getName()));
+        ui->imageTypeComboBox->clear();
+        for (int i = 0; i < imgr->getNumImageTypes(); ++i) {
+            ui->imageTypeComboBox->insertItem(i, QString::fromStdString(imgr->getImageType(i).getName()));
+        }
+        updateImage(0, typeindex);
     }
-    updateImage(0, typeindex);
 }
 
 void MainWindow::on_prevImageButton_clicked()
