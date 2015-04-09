@@ -5,6 +5,7 @@
 #include <csignal>
 #include <errno.h>
 #include <sys/wait.h>
+#include <QStringList>
 
 SubprocessWorker::SubprocessWorker(QObject *parent) :
     QObject(parent)
@@ -17,7 +18,7 @@ SubprocessWorker::SubprocessWorker(QObject *parent, QString cmd) :
 }
 
 
-pid_t popen2(const char *command, int *outfp)
+pid_t popen2(char * const command[], int *outfp)
 {
     int p_stdout[2];
     pid_t pid;
@@ -36,8 +37,8 @@ pid_t popen2(const char *command, int *outfp)
             close(p_stdout[1]);
         }
         close(p_stdout[0]);
-
-        execl("/bin/sh", "sh", "-c", command, NULL);
+        execvp(command[0], command);
+        //execl("/bin/sh", "sh", "-c", command, NULL);
         perror("execl");
         exit(1);
     }
@@ -62,24 +63,40 @@ int pclose2(pid_t pid) {
     return p==-1?-1:pstat.w_status;
 }
 
+void SubprocessWorker::terminate() {
+    if (pid) {
+        int r = kill(pid, SIGTERM);
+        pid = 0;
+    }
+}
+
 const int SZ = 256;
 void SubprocessWorker::run() {
     int output;
-    //qDebug(command.toStdString().c_str());
-    pid_t pid = popen2(command.toStdString().c_str(), &output);
+    qDebug(command.toStdString().c_str());
+    QStringList args = command.split(" ");
+    char** arguments = new char*[args.size()+1];
+    for (int i = 0; i < args.size(); ++i) {
+        arguments[i] = new char [args[i].length()+1];
+        strcpy(arguments[i], args[i].toStdString().c_str());
+    }
+    arguments[args.size()] = NULL;
+    pid = popen2(arguments, &output);
+    delete [] arguments;
     FILE* fp = fdopen(output, "r");
     char buf[SZ];
     while (fgets(buf, SZ, fp) != NULL) {
-        //qDebug(buf);
+        qDebug(buf);
         if (buf[0] == '>') {
             int n = atoi(buf+1);
             emit percentChanged(n);
             if (n == 100) {
                 emit done();
-                break;
+                //break;
             }
         }
     }
     fclose(fp);
     pclose2(pid);
+    pid = 0;
 }

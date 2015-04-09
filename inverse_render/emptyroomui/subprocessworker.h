@@ -2,6 +2,7 @@
 #define SUBPROCESSWORKER_H
 
 #include <QObject>
+#include <cstdio>
 
 class SubprocessWorker : public QObject
 {
@@ -11,12 +12,14 @@ public:
     SubprocessWorker(QObject *parent, QString cmd);
 protected:
     QString command;
+    pid_t pid;
 signals:
     void percentChanged(int percent);
     void done();
 
 public slots:
     void run();
+    void terminate();
 };
 
 #endif // SUBPROCESSWORKER_H

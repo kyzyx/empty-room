@@ -1,6 +1,5 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-#include "subprocessworker.h"
 #include <QKeyEvent>
 #include <QFileDialog>
 #include <QIntValidator>
@@ -97,6 +96,9 @@ MainWindow::MainWindow(QWidget *parent) :
 MainWindow::~MainWindow()
 {
     delete ui;
+    for (int i = 0; i < workers.size(); ++i) {
+        workers[i]->terminate();
+    }
     if (mmgr) delete mmgr;
     if (imgr) delete imgr;
 }
@@ -157,13 +159,15 @@ void MainWindow::on_actionOpen_Mesh_triggered()
         QString cmd = settings->value("loadmesh_binary", "dataserver -meshfile %1 -p").toString();
         cmd = cmd.arg(meshfilename);
         if (mdialog.isCcw()) cmd = cmd + " -ccw";
-        SubprocessWorker w(NULL, cmd);
-        QThread thread;
-        w.moveToThread(&thread);
-        connect(&thread, SIGNAL(started()), &w, SLOT(run()));
-        connect(&w, SIGNAL(percentChanged(int)), progressbar, SLOT(setValue(int)));
-        connect(&w, SIGNAL(done()), this, SLOT(meshLoaded()));
-        thread.start();
+
+        SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
+        workers.push_back(w);
+        QThread* thread = new QThread;
+        connect(thread, SIGNAL(started()), w, SLOT(run()));
+        connect(w, SIGNAL(percentChanged(int)), progressbar, SLOT(setValue(int)));
+        connect(w, SIGNAL(done()), this, SLOT(meshLoaded()));
+        w->moveToThread(thread);
+        thread->start();
     }
 }
 
@@ -186,14 +190,14 @@ void MainWindow::on_actionOpen_Images_triggered()
         cmd = cmd.arg(camfilename);
         if (idialog.isFlipX()) cmd = cmd + " -flip_x";
         if (idialog.isFlipY()) cmd = cmd + " -flip_y";
-
-        SubprocessWorker w(NULL, cmd);
-        QThread thread;
-        w.moveToThread(&thread);
-        connect(&thread, SIGNAL(started()), &w, SLOT(run()));
-        connect(&w, SIGNAL(percentChanged(int)), progressbar, SLOT(setValue(int)));
-        connect(&w, SIGNAL(done()), this, SLOT(meshLoaded()));
-        thread.start();
+        SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
+        workers.push_back(w);
+        QThread* thread = new QThread;
+        connect(thread, SIGNAL(started()), w, SLOT(run()));
+        connect(w, SIGNAL(percentChanged(int)), progressbar, SLOT(setValue(int)));
+        connect(w, SIGNAL(done()), this, SLOT(imagesLoaded()));
+        w->moveToThread(thread);
+        thread->start();
     }
 }
 void MainWindow::imagesLoaded() {

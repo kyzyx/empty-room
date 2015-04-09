@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include "meshmanager.h"
 #include "imagemanager.h"
+#include "subprocessworker.h"
 #include <QProgressBar>
 #include <QSettings>
 
@@ -46,6 +47,7 @@ private:
     ImageManager* imgr;
     MeshManager* mmgr;
 
+    std::vector<SubprocessWorker*> workers;
     QProgressBar* progressbar;
 
     QString meshfilename;
