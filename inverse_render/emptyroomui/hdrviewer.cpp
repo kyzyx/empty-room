@@ -38,6 +38,7 @@ HDRViewer::HDRViewer(QWidget *parent) :
 
     layout = new QGridLayout(this);
     layout->addWidget(imagelabel,0,0,1,2);
+    layout->setAlignment(imagelabel,Qt::AlignTop);
     layout->addWidget(slider,1,0);
     layout->addWidget(tmo,1,1);
     layout->setColumnStretch(0,2);
