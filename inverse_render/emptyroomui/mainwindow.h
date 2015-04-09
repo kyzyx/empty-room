@@ -38,12 +38,18 @@ private slots:
 
     void on_nextImageButton_clicked();
 
+    void meshLoaded();
+    void imagesLoaded();
+
 private:
     Ui::MainWindow *ui;
     ImageManager* imgr;
     MeshManager* mmgr;
 
     QProgressBar* progressbar;
+
+    QString meshfilename;
+    QString camfilename;
 
     QSettings* settings;
     QString settingsfilename;

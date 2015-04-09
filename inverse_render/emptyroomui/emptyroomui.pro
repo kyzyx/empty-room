@@ -15,14 +15,16 @@ SOURCES += main.cpp\
         mainwindow.cpp \
         eruiglwidget.cpp \
     hdrviewer.cpp \
-    qxtspanslider.cpp
+    qxtspanslider.cpp \
+    subprocessworker.cpp
 
 HEADERS  += mainwindow.h \
             eruiglwidget.h \
             ../imagemanager.h \
             ../meshmanager.h \
     hdrviewer.h \
-    qxtspanslider.h
+    qxtspanslider.h \
+    subprocessworker.h
 
 FORMS    += mainwindow.ui
 

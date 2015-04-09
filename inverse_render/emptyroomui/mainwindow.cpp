@@ -1,9 +1,11 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "subprocessworker.h"
 #include <QKeyEvent>
 #include <QFileDialog>
 #include <QIntValidator>
 #include <QCheckBox>
+#include <QThread>
 
 class MeshDialog : public QFileDialog
 {
@@ -148,12 +150,26 @@ void MainWindow::on_actionOpen_Mesh_triggered()
     mdialog.setNameFilter("PLY Meshes (*.ply)");
     mdialog.setFileMode(QFileDialog::ExistingFile);
     mdialog.setOption(QFileDialog::DontUseNativeDialog);
+    mdialog.selectFile(settings->value("lastmeshfile", "").toString());
     if (mdialog.exec()) {
-        QString meshfilename = mdialog.selectedFiles().first();
-                // QFileDialog::getOpenFileName(this,"Open Mesh", "", "PLY Meshes (*.ply)");
-        mmgr = new MeshManager(meshfilename.toStdString());
-        ui->meshWidget->setMeshManager(mmgr);
+        meshfilename = mdialog.selectedFiles().first();
+        settings->setValue("lastmeshfile", meshfilename);
+        QString cmd = settings->value("loadmesh_binary", "dataserver -meshfile %1 -p").toString();
+        cmd = cmd.arg(meshfilename);
+        if (mdialog.isCcw()) cmd = cmd + " -ccw";
+        SubprocessWorker w(NULL, cmd);
+        QThread thread;
+        w.moveToThread(&thread);
+        connect(&thread, SIGNAL(started()), &w, SLOT(run()));
+        connect(&w, SIGNAL(percentChanged(int)), progressbar, SLOT(setValue(int)));
+        connect(&w, SIGNAL(done()), this, SLOT(meshLoaded()));
+        thread.start();
     }
+}
+
+void MainWindow::meshLoaded() {
+    mmgr = new MeshManager(meshfilename.toStdString());
+    ui->meshWidget->setMeshManager(mmgr);
 }
 
 void MainWindow::on_actionOpen_Images_triggered()
@@ -162,23 +178,38 @@ void MainWindow::on_actionOpen_Images_triggered()
     idialog.setNameFilter("Camera Files (*.cam)");
     idialog.setFileMode(QFileDialog::ExistingFile);
     idialog.setOption(QFileDialog::DontUseNativeDialog);
+    idialog.selectFile(settings->value("lastcamfile", "").toString());
     if (idialog.exec()) {
-        QString camfilename = idialog.selectedFiles().first(); // QFileDialog::getOpenFileName(this,"Open Camera File", "", "Camera Files (*.cam)");
-        // , idialog.isFlipX(), idialog.isFlipY()
-        imgr = new ImageManager(camfilename.toStdString());
-        ui->imageTypeComboBox->setEnabled(true);
-        ui->nextImageButton->setEnabled(true);
-        ui->imageNumBox->setEnabled(true);
-        ui->loadImageButton->setEnabled(true);
+        camfilename = idialog.selectedFiles().first();
+        settings->setValue("lastcamerafile", camfilename);
+        QString cmd = settings->value("loadimage_binary", "dataserver -camfile %1 -p").toString();
+        cmd = cmd.arg(camfilename);
+        if (idialog.isFlipX()) cmd = cmd + " -flip_x";
+        if (idialog.isFlipY()) cmd = cmd + " -flip_y";
 
-        ui->imageNumBox->setValidator(new QIntValidator(0, imgr->size()-1, this));
-
-        ui->imageTypeComboBox->clear();
-        for (int i = 0; i < imgr->getNumImageTypes(); ++i) {
-            ui->imageTypeComboBox->insertItem(i, QString::fromStdString(imgr->getImageType(i).getName()));
-        }
-        updateImage(0, typeindex);
+        SubprocessWorker w(NULL, cmd);
+        QThread thread;
+        w.moveToThread(&thread);
+        connect(&thread, SIGNAL(started()), &w, SLOT(run()));
+        connect(&w, SIGNAL(percentChanged(int)), progressbar, SLOT(setValue(int)));
+        connect(&w, SIGNAL(done()), this, SLOT(meshLoaded()));
+        thread.start();
     }
+}
+void MainWindow::imagesLoaded() {
+    imgr = new ImageManager(camfilename.toStdString());
+    ui->imageTypeComboBox->setEnabled(true);
+    ui->nextImageButton->setEnabled(true);
+    ui->imageNumBox->setEnabled(true);
+    ui->loadImageButton->setEnabled(true);
+
+    ui->imageNumBox->setValidator(new QIntValidator(0, imgr->size()-1, this));
+
+    ui->imageTypeComboBox->clear();
+    for (int i = 0; i < imgr->getNumImageTypes(); ++i) {
+        ui->imageTypeComboBox->insertItem(i, QString::fromStdString(imgr->getImageType(i).getName()));
+    }
+    updateImage(0, typeindex);
 }
 
 void MainWindow::on_prevImageButton_clicked()
