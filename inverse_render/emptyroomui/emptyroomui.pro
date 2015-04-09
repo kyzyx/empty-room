@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui opengl
+QT       += core gui opengl xml
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -26,9 +26,15 @@ HEADERS  += mainwindow.h \
 
 FORMS    += mainwindow.ui
 
-unix: LIBS += -L$$PWD/../build/ -L$$PWD/../../GAPS/R3Graphics/ -L$$PWD/../../GAPS/R3Shapes/ -L$$PWD/../../GAPS/RNBasics/ -L$$PWD/../../GAPS/R2Shapes/ \
-              -lmemory -lR3Graphics -lR3Shapes -lR2Shapes -lRNBasics -ljpeg -lGLU -lGLEW -lrt -lboost_system -lboost_filesystem
-
+unix: LIBS += -L$$PWD/../build/ \
+        -L$$PWD/../../GAPS/R3Graphics/ -L$$PWD/../../GAPS/R3Shapes/ -L$$PWD/../../GAPS/RNBasics/ -L$$PWD/../../GAPS/R2Shapes/ \
+        -lmemory \
+        -lR3Graphics -lR3Shapes -lR2Shapes -lRNBasics -ljpeg \
+        -lGLU -lGLEW -lrt -lboost_system -lboost_filesystem \
+        -lQGLViewer
+#-L$$PWD/../../GAPS/R3Graphics/ -L$$PWD/../../GAPS/R3Shapes/ -L$$PWD/../../GAPS/RNBasics/ -L$$PWD/../../GAPS/R2Shapes/ \
+              #-lR3Graphics -lR3Shapes -lR2Shapes -lRNBasics -ljpeg \
+#-lGAPS -ljpeg \
 INCLUDEPATH += $$PWD/../
 INCLUDEPATH += $$PWD/../../GAPS/
 DEPENDPATH += $$PWD/../

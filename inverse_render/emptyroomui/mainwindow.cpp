@@ -68,6 +68,7 @@ void MainWindow::on_actionOpen_Mesh_triggered()
     QString meshfilename = QFileDialog::getOpenFileName(this,"Open Mesh", "", "PLY Meshes (*.ply)");
     // Trigger server thread, add progress bar, then
     mmgr = new MeshManager(meshfilename.toStdString());
+    ui->meshWidget->setMeshManager(mmgr);
     // Render mesh
 }
 

@@ -2,18 +2,28 @@
 #define ERUIGLWIDGET_H
 
 #include <QGLWidget>
+#include <QGLViewer/qglviewer.h>
+#include "meshmanager.h"
 
-class ERUIGLWidget : public QGLWidget
+class ERUIGLWidget : public QGLViewer
 {
     Q_OBJECT
 public:
     explicit ERUIGLWidget(QWidget *parent = 0);
-protected:
-    void initializeGL();
-    void paintGL();
-    void resizeGL(int width, int height);
-    void draw();
+    void setMeshManager(MeshManager* manager);
 
+protected:
+    virtual void draw();
+    virtual void init();
+    virtual QString helpString() const;
+
+    void setupMeshGeometry();
+    void setupMeshColors();
+
+    MeshManager* mmgr;
+
+    bool hasColors, hasGeometry;
+    GLuint vbo, ibo, cbo;
 signals:
 
 public slots:
