@@ -4,6 +4,8 @@
 #include <QMainWindow>
 #include "meshmanager.h"
 #include "imagemanager.h"
+#include <QProgressBar>
+#include <QSettings>
 
 namespace Ui {
 class MainWindow;
@@ -41,6 +43,10 @@ private:
     ImageManager* imgr;
     MeshManager* mmgr;
 
+    QProgressBar* progressbar;
+
+    QSettings* settings;
+    QString settingsfilename;
 
     int imageindex;
     int typeindex;

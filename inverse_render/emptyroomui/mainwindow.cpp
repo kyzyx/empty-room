@@ -11,6 +11,12 @@ MainWindow::MainWindow(QWidget *parent) :
     typeindex(0), imageindex(0)
 {
     ui->setupUi(this);
+    progressbar = new QProgressBar(ui->statusBar);
+    progressbar->setMaximumSize(200,ui->statusBar->height());
+    ui->statusBar->addPermanentWidget(progressbar);
+    progressbar->setValue(100);
+    settingsfilename = QApplication::applicationDirPath() + "/settings.ini";
+    settings = new QSettings(settingsfilename, QSettings::NativeFormat);
 }
 
 MainWindow::~MainWindow()
