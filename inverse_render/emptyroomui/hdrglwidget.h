@@ -10,6 +10,7 @@ enum {
     TMO_LINEAR,
     TMO_LOG,
     TMO_GAMMA22,
+    NUM_TMOS,
 };
 
 class HDRGlWidget : public QGLWidget
@@ -43,7 +44,18 @@ protected:
     GLuint fbo, fbo_z, fbo_tex;
 
     GLuint vbo_fbo_vertices;
-    GLuint program_postproc, attribute_v_coord_postproc, uniform_fbo_texture;
+
+    enum {
+        UNIFORM_FBO_TEXTURE,
+        UNIFORM_HDR_BOUNDS,
+        NUM_UNIFORMS
+    };
+    struct HDRShaderProgram {
+        GLuint progid, v_coord;
+        GLuint uniform_ids[NUM_UNIFORMS];
+    };
+    HDRShaderProgram progs[NUM_TMOS];
+
 signals:
     void suggestRange(int lo, int hi);
     void fixParams(int lo, int hi, int v);

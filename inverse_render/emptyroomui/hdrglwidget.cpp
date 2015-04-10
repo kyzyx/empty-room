@@ -33,12 +33,16 @@ HDRGlWidget::~HDRGlWidget()
 }
 
 void HDRGlWidget::setMapping(int v) {
-    mapping = v;
+    if (v != mapping) {
+        mapping = v;
+        updateGL();
+    }
 }
 
 void HDRGlWidget::setScale(int lo, int hi) {
     mini = LINTOLOG(lo);
     maxi = LINTOLOG(hi);
+    updateGL();
 }
 
 std::string readFile(const char *filePath) {
@@ -170,22 +174,33 @@ void HDRGlWidget::initializeGL() {
     glBufferData(GL_ARRAY_BUFFER, sizeof(fbo_vertices), fbo_vertices, GL_STATIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-    // Initialize HDR shader
-    program_postproc = LoadShader("hdr.v.glsl", "hdr.f.glsl");
+    const char* shadername[NUM_TMOS] = {
+        "hdr.f.glsl",
+        "hdr_log.f.glsl",
+        "hdr_gamma.f.glsl",
+    };
 
+    GLchar* uniforms[NUM_UNIFORMS] = {
+        "rendered_image",
+        "hdr_bounds",
+    };
     GLchar* attribute_name = "v_coord";
-    attribute_v_coord_postproc = glGetAttribLocation(program_postproc, attribute_name);
-    if (attribute_v_coord_postproc == -1) {
-        qDebug("Error binding attribute %s", attribute_name);
-        cout << "Error binding attribute " << attribute_name << endl;
-        return;
+    for (int i = 0; i < NUM_TMOS; ++i) {
+        progs[i].progid = LoadShader("hdr.v.glsl", shadername[i]);
+        progs[i].v_coord = glGetAttribLocation(progs[i].progid, attribute_name);
+        if (progs[i].v_coord == -1) {
+            qDebug("Error binding attribute %s in shader %s", attribute_name, shadername[i]);
+            return;
+        }
+        for (int j = 0; j < NUM_UNIFORMS; ++j) {
+            progs[i].uniform_ids[j] = glGetUniformLocation(progs[i].progid, uniforms[j]);
+            if (progs[i].uniform_ids[j] == -1) {
+                qDebug("Error binding uniform %s in shader %s", uniforms[j], shadername[i]);
+                return;
+            }
+        }
     }
-    GLchar* uniform_name = "rendered_image";
-    uniform_fbo_texture = glGetUniformLocation(program_postproc, uniform_name);
-    if (uniform_fbo_texture == -1) {
-        qDebug("Error binding uniform %s", uniform_name);
-        return;
-    }
+
     _dosetup();
 }
 
@@ -199,13 +214,15 @@ void HDRGlWidget::paintGL() {
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
     glDisable(GL_LIGHTING);
 
-    glUseProgram(program_postproc);
+    HDRShaderProgram& p = progs[mapping];
+    glUseProgram(p.progid);
     glBindTexture(GL_TEXTURE_2D, fbo_tex);
-    glUniform1i(uniform_fbo_texture, 0);
-    glEnableVertexAttribArray(attribute_v_coord_postproc);
+    glUniform1i(p.uniform_ids[UNIFORM_FBO_TEXTURE], 0);
+    glUniform3f(p.uniform_ids[UNIFORM_HDR_BOUNDS], mini, maxi, 2.2);
+    glEnableVertexAttribArray(p.v_coord);
     glBindBuffer(GL_ARRAY_BUFFER, vbo_fbo_vertices);
     glVertexAttribPointer(
-      attribute_v_coord_postproc,  // attribute
+      p.v_coord,  // attribute
       2,                  // number of elements per vertex, here (x,y)
       GL_FLOAT,           // the type of each element
       GL_FALSE,           // take our values as-is
@@ -213,7 +230,7 @@ void HDRGlWidget::paintGL() {
       0                   // offset of first element
     );
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glDisableVertexAttribArray(attribute_v_coord_postproc);
+    glDisableVertexAttribArray(p.v_coord);
 }
 
 void HDRGlWidget::resizeGL(int width, int height) {

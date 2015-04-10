@@ -49,4 +49,6 @@ unix: PRE_TARGETDEPS += $$PWD/../build/libmemory.a
 
 OTHER_FILES += \
     hdr.v.glsl \
-    hdr.f.glsl
+    hdr.f.glsl \
+    hdr_log.f.glsl \
+    hdr_gamma.f.glsl
