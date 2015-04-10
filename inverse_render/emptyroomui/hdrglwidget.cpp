@@ -5,20 +5,54 @@
 
 using namespace std;
 
-/*
-char floatToColor(float f, float lo, float hi, int mapping) {
-    int r = 0;
-    if (mapping == TMO_LINEAR) {
-        r = (int) (255*(f-lo)/(hi-lo));
-    } else if (mapping == TMO_LOG) {
-        r = (int) (255*(log(f) - log(lo))/(log(hi) - log(lo)));
-    } else if (mapping == TMO_GAMMA22) {
-        r = (int) (255*pow((f-lo)/(hi-lo), 2.2));
-    }
-    if (r > 255) return 255;
-    if (r < 0) return 0;
-    return (char) r;
-}*/
+const char* shadername[NUM_TMOS] = {
+    "linear shader",
+    "logarithmic shader",
+    "gamma shader",
+};
+const char* vertexshadertext =
+"#version 400\n" \
+"in vec2 v_coord;\n" \
+"uniform sampler2D rendered_image;\n" \
+"out vec2 f_texcoord;\n" \
+"void main(void) {\n" \
+  "gl_Position = vec4(v_coord, 0.0, 1.0);\n" \
+  "f_texcoord = (v_coord + 1.0) / 2.0;\n" \
+"}";
+
+const char* shadertext[NUM_TMOS] = {
+    // linear shader
+    "#version 400\n" \
+    "uniform sampler2D rendered_image;\n" \
+    "in vec2 f_texcoord;\n" \
+    "uniform vec3 hdr_bounds;\n" \
+    "out vec4 color;\n" \
+    "void main(void) {\n" \
+        "vec4 f = texture2D(rendered_image, f_texcoord);\n" \
+        "color = clamp((f-hdr_bounds[0])/(hdr_bounds[1]-hdr_bounds[0]), 0, 1);\n" \
+    "}",
+    // Logarithmic shader
+    "#version 400\n" \
+    "uniform sampler2D rendered_image;\n" \
+    "in vec2 f_texcoord;\n" \
+    "uniform vec3 hdr_bounds;\n" \
+    "out vec4 color;\n" \
+    "void main(void) {\n" \
+        "vec4 f = log(texture2D(rendered_image, f_texcoord));\n" \
+        "vec3 lb = log(hdr_bounds);\n" \
+        "color = clamp((f-lb[0])/(lb[1]-lb[0]), 0, 1);\n" \
+    "}",
+    // Gamma shader
+    "#version 400\n" \
+    "uniform sampler2D rendered_image;\n" \
+    "in vec2 f_texcoord;\n" \
+    "uniform vec3 hdr_bounds;\n" \
+    "out vec4 color;\n" \
+    "void main(void) {\n" \
+        "vec4 f = texture2D(rendered_image, f_texcoord);\n" \
+        "color = clamp(pow((f-hdr_bounds[0])/(hdr_bounds[1]-hdr_bounds[0]),hdr_bounds[2]*vec4(1,1,1,1)), 0, 1);\n" \
+    "}",
+};
 
 
 HDRGlWidget::HDRGlWidget(QWidget *parent) :
@@ -65,15 +99,9 @@ std::string readFile(const char *filePath) {
 }
 
 
-GLuint LoadShader(const char *vertex_path, const char *fragment_path) {
+GLuint LoadShader(const char *vertShaderSrc, const char *fragShaderSrc) {
     GLuint vertShader = glCreateShader(GL_VERTEX_SHADER);
     GLuint fragShader = glCreateShader(GL_FRAGMENT_SHADER);
-
-    // Read shaders
-    std::string vertShaderStr = readFile(vertex_path);
-    std::string fragShaderStr = readFile(fragment_path);
-    const char *vertShaderSrc = vertShaderStr.c_str();
-    const char *fragShaderSrc = fragShaderStr.c_str();
 
     GLint result = GL_FALSE;
     int logLength;
@@ -128,6 +156,16 @@ GLuint LoadShader(const char *vertex_path, const char *fragment_path) {
     return program;
 }
 
+GLuint LoadShaderFromFiles(const char *vertex_path, const char *fragment_path) {
+    // Read shaders
+    std::string vertShaderStr = readFile(vertex_path);
+    std::string fragShaderStr = readFile(fragment_path);
+    const char *vertShaderSrc = vertShaderStr.c_str();
+    const char *fragShaderSrc = fragShaderStr.c_str();
+    return LoadShader(vertShaderSrc, fragShaderSrc);
+}
+
+
 void HDRGlWidget::initializeGL() {
     int w = 640;
     int h = 480;
@@ -174,28 +212,22 @@ void HDRGlWidget::initializeGL() {
     glBufferData(GL_ARRAY_BUFFER, sizeof(fbo_vertices), fbo_vertices, GL_STATIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-    const char* shadername[NUM_TMOS] = {
-        "hdr.f.glsl",
-        "hdr_log.f.glsl",
-        "hdr_gamma.f.glsl",
-    };
-
     GLchar* uniforms[NUM_UNIFORMS] = {
         "rendered_image",
         "hdr_bounds",
     };
     GLchar* attribute_name = "v_coord";
     for (int i = 0; i < NUM_TMOS; ++i) {
-        progs[i].progid = LoadShader("hdr.v.glsl", shadername[i]);
+        progs[i].progid = LoadShader(vertexshadertext, shadertext[i]);
         progs[i].v_coord = glGetAttribLocation(progs[i].progid, attribute_name);
         if (progs[i].v_coord == -1) {
-            qDebug("Error binding attribute %s in shader %s", attribute_name, shadername[i]);
+            qDebug("Error binding attribute %s in %s", attribute_name, shadername[i]);
             return;
         }
         for (int j = 0; j < NUM_UNIFORMS; ++j) {
             progs[i].uniform_ids[j] = glGetUniformLocation(progs[i].progid, uniforms[j]);
             if (progs[i].uniform_ids[j] == -1) {
-                qDebug("Error binding uniform %s in shader %s", uniforms[j], shadername[i]);
+                qDebug("Error binding uniform %s in %s", uniforms[j], shadername[i]);
                 return;
             }
         }
