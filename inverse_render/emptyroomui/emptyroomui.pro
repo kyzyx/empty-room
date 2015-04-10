@@ -16,7 +16,9 @@ SOURCES += main.cpp\
         eruiglwidget.cpp \
     hdrviewer.cpp \
     qxtspanslider.cpp \
-    subprocessworker.cpp
+    subprocessworker.cpp \
+    hdrglwidget.cpp \
+    hdrimageviewer.cpp
 
 HEADERS  += mainwindow.h \
             eruiglwidget.h \
@@ -24,7 +26,9 @@ HEADERS  += mainwindow.h \
             ../meshmanager.h \
     hdrviewer.h \
     qxtspanslider.h \
-    subprocessworker.h
+    subprocessworker.h \
+    hdrglwidget.h \
+    hdrimageviewer.h
 
 FORMS    += mainwindow.ui
 
@@ -42,3 +46,7 @@ INCLUDEPATH += $$PWD/../../GAPS/
 DEPENDPATH += $$PWD/../
 
 unix: PRE_TARGETDEPS += $$PWD/../build/libmemory.a
+
+OTHER_FILES += \
+    hdr.v.glsl \
+    hdr.f.glsl

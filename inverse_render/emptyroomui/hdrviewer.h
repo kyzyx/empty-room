@@ -2,47 +2,76 @@
 #define HDRVIEWER_H
 
 #include <QWidget>
-#include <QLabel>
 #include "qxtspanslider.h"
+#include "hdrglwidget.h"
 #include <QComboBox>
 #include <QGridLayout>
+#include <QGLWidget>
+#include "hdrimageviewer.h"
 
 class HDRViewer : public QWidget
 {
     Q_OBJECT
 public:
-    explicit HDRViewer(QWidget *parent = 0);
+    explicit HDRViewer(QWidget *parent=0) : QWidget(parent), state(STATE_FIXED) {;}
+    explicit HDRViewer(QWidget *parent, HDRGlWidget* renderer);
     ~HDRViewer();
 
-    void setFloatImage(const float* data, int w, int h, int channels=3);
-    void setRGBImage(const unsigned char* data, int w, int h, int channels=3);
-
-    void saveCurrentImage(QString filename);
-    void updateImage();
-    void updateSize(int w, int h);
+protected:
+    void init();
 signals:
+    void updateMappingType(int v);
+    void updateRange(int lo, int hi);
 
-public slots:
-    void setMapping(int v);
-    void setScale(int lo, int hi);
+protected slots:
+    void userEditRange(int lo, int hi);
+    void setSuggestRange(int lo, int hi);
+    void fixRange(int lo, int hi, int v);
 
-private:
-    char floatToColor(float f) const;
-    QLabel* imagelabel;
+    void notifyUpdateMappingType(int v) { emit updateMappingType(v); }
+    void notifyUpdateRange(int lo, int hi) { emit updateRange(lo, hi); }
+
+protected:
+    HDRGlWidget* render;
     QxtSpanSlider* slider;
     QComboBox* tmo;
     QGridLayout* layout;
-
     enum {
-        TMO_LINEAR,
-        TMO_LOG,
-        TMO_GAMMA22,
+        STATE_SUGGESTED,
+        STATE_FIXED,
+        STATE_EDITED,
     };
-    int mapping;
-    bool isfloatimage;
-    float* image;
-    int currw, currh, currch;
-    int currsz;
+    int state;
+};
+
+
+
+class HDRImageViewerWidget : public HDRViewer {
+    Q_OBJECT
+public:
+    explicit HDRImageViewerWidget(QWidget *parent = 0) :
+    HDRViewer(parent)
+    {
+        v = new HDRImageViewer(this);
+        v->resize(640,480);
+        render = v;
+        init();
+    }
+
+    ~HDRImageViewerWidget() {
+        if (v) delete v;
+    }
+
+    bool setFloatImage(const float* data, int w, int h, int channels) {
+        v->setFloatImage(data, w, h, channels);
+    }
+
+    bool setRGBImage(const unsigned char* data, int w, int h, int channels) {
+        v->setRGBImage(data, w, h, channels);
+    }
+
+protected:
+    HDRImageViewer* v;
 };
 
 #endif // HDRVIEWER_H

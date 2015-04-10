@@ -85,6 +85,7 @@ MainWindow::MainWindow(QWidget *parent) :
     typeindex(0), imageindex(0)
 {
     ui->setupUi(this);
+
     progressbar = new QProgressBar(ui->statusBar);
     progressbar->setMaximumSize(200,ui->statusBar->height());
     ui->statusBar->addPermanentWidget(progressbar);

@@ -208,6 +208,7 @@ void ERUIGLWidget::draw()
             glEnable(GL_LIGHTING);
             glColor3f(1,1,1);
             b.Draw();
+            l.Draw(0);
         }
         glEnableClientState(GL_VERTEX_ARRAY);
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -226,6 +227,5 @@ void ERUIGLWidget::draw()
         //glDrawArrays(GL_TRIANGLES, 0, mesh->NFaces()*3);
         glDisableClientState(GL_VERTEX_ARRAY);
         if (hasColors) glDisableClientState(GL_COLOR_ARRAY);
-        else l.Draw(0);
     }
 }
