@@ -55,7 +55,7 @@
         <number>10</number>
        </property>
        <item>
-        <widget class="ERUIGLWidget" name="meshWidget" native="true">
+        <widget class="ERUIGLViewer" name="meshWidget" native="true">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
            <horstretch>0</horstretch>
@@ -472,15 +472,15 @@
  <layoutdefault spacing="6" margin="11"/>
  <customwidgets>
   <customwidget>
-   <class>ERUIGLWidget</class>
-   <extends>QWidget</extends>
-   <header>eruiglwidget.h</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
    <class>HDRImageViewerWidget</class>
    <extends>QWidget</extends>
    <header location="global">hdrviewer.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ERUIGLViewer</class>
+   <extends>QWidget</extends>
+   <header>eruiglwidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

@@ -2,8 +2,10 @@
 #define HDRGLWIDGET_H
 
 #include <QGLWidget>
-
+#include <QGLViewer/qglviewer.h>
 #include <cmath>
+#include <boost/bind.hpp>
+#include <boost/function.hpp>
 
 
 enum {
@@ -13,12 +15,12 @@ enum {
     NUM_TMOS,
 };
 
-class HDRGlWidget : public QGLWidget
+class HDRGlHelper : public QObject
 {
     Q_OBJECT
 public:
-    explicit HDRGlWidget(QWidget *parent = 0);
-    ~HDRGlWidget();
+    HDRGlHelper();
+    ~HDRGlHelper();
 
     static int LOGTOLIN(double v)
     {
@@ -29,17 +31,21 @@ public:
     static double LINTOLOG(int v) {
         return pow(10,(v-50)/10.);
     }
+
+    void initializeHelper();
+    void paintHelper();
+    void resizeHelper(int width, int height);
+    void emitSuggestRange(float lo, float hi) { emit suggestRange(LOGTOLIN(lo), LOGTOLIN(hi)); }
+    void emitFixParams(float lo, float hi, int v) { emit fixParams(LOGTOLIN(lo), LOGTOLIN(hi), v); }
+
+    void setRenderFunction(boost::function<void()> f) { renderfunc = f; }
+
 protected:
-    void initializeGL();
-    void paintGL();
-    void resizeGL(int width, int height);
-
-    virtual void _dosetup() {;}
-    virtual void _dorender() = 0;
-    virtual void _doresize(int width, int height) {;}
-
+    boost::function<void()> renderfunc;
     int mapping;
     float mini, maxi;
+
+    int currw, currh;
 
     GLuint fbo, fbo_z, fbo_tex;
 
@@ -56,13 +62,70 @@ protected:
     };
     HDRShaderProgram progs[NUM_TMOS];
 
-signals:
-    void suggestRange(int lo, int hi);
-    void fixParams(int lo, int hi, int v);
-
 public slots:
     void setMapping(int v);
     void setScale(int lo, int hi);
+
+signals:
+    void suggestRange(int lo, int hi);
+    void fixParams(int lo, int hi, int v);
+    void update();
+    void _render();
+
+};
+
+class HDRGlWidget : public QGLWidget {
+    Q_OBJECT
+public:
+    explicit HDRGlWidget(QWidget *parent = 0) : QGLWidget(parent)
+    {
+        connect(&helper, SIGNAL(update()), this, SLOT(callupdate()));
+        helper.setRenderFunction(boost::bind(&HDRGlWidget::calldorender, this));
+    }
+
+    HDRGlHelper* getHelper() { return &helper; }
+protected:
+    virtual void _dosetup() {;}
+    void calldorender() { _dorender(); }
+    virtual void _dorender() = 0;
+    virtual void _doresize(int width, int height) { ;}
+    void initializeGL() { helper.initializeHelper(); _dosetup(); }
+    void paintGL() { helper.paintHelper(); }
+    void resizeGL(int width, int height) { helper.resizeHelper(width, height); _doresize(width, height);}
+    HDRGlHelper helper;
+protected slots:
+        void callupdate() { updateGL(); }
+};
+
+class HDRQGlViewerWidget : public QGLViewer {
+    Q_OBJECT
+    public:
+    explicit HDRQGlViewerWidget(QWidget* parent = 0) : QGLViewer(parent)
+    {
+        connect(&helper, SIGNAL(update()), this, SLOT(callupdate()));
+        helper.setRenderFunction(boost::bind(&HDRQGlViewerWidget::calldorender, this));
+    }
+
+    HDRGlHelper* getHelper() { return &helper; }
+protected:
+    virtual void _dosetup() {;}
+    void calldorender() { _dorender(); }
+    virtual void _dorender() { QGLViewer::paintGL(); }
+    virtual void _doresize(int width, int height) {;}
+    void initializeGL() {
+        QGLViewer::initializeGL();
+        helper.initializeHelper();
+        _dosetup();
+    }
+    void paintGL() {
+        helper.paintHelper();
+    }
+    void resizeGL(int width, int height);
+
+    HDRGlHelper helper;
+protected slots:
+        void callupdate() { updateGL(); }
+
 };
 
 #endif // HDRGLWIDGET_H

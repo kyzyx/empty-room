@@ -55,28 +55,30 @@ const char* shadertext[NUM_TMOS] = {
 };
 
 
-HDRGlWidget::HDRGlWidget(QWidget *parent) :
-    QGLWidget(parent), mapping(TMO_LINEAR), mini(0), maxi(1)
+HDRGlHelper::HDRGlHelper() :
+    mapping(TMO_LINEAR), mini(0), maxi(1)
 {
 }
 
-HDRGlWidget::~HDRGlWidget()
+HDRGlHelper::~HDRGlHelper()
 {
     glDeleteBuffers(1, &vbo_fbo_vertices);
     glDeleteBuffers(1, &fbo);
+    glDeleteRenderbuffers(1, &fbo_z);
+    glDeleteTextures(1, &fbo_tex);
 }
 
-void HDRGlWidget::setMapping(int v) {
+void HDRGlHelper::setMapping(int v) {
     if (v != mapping) {
         mapping = v;
-        updateGL();
+        emit update();
     }
 }
 
-void HDRGlWidget::setScale(int lo, int hi) {
+void HDRGlHelper::setScale(int lo, int hi) {
     mini = LINTOLOG(lo);
     maxi = LINTOLOG(hi);
-    updateGL();
+    emit update();
 }
 
 std::string readFile(const char *filePath) {
@@ -166,7 +168,7 @@ GLuint LoadShaderFromFiles(const char *vertex_path, const char *fragment_path) {
 }
 
 
-void HDRGlWidget::initializeGL() {
+void HDRGlHelper::initializeHelper() {
     int w = 640;
     int h = 480;
 
@@ -232,20 +234,20 @@ void HDRGlWidget::initializeGL() {
             }
         }
     }
-
-    _dosetup();
 }
 
-void HDRGlWidget::paintGL() {
+void HDRGlHelper::paintHelper() {
     glEnable(GL_TEXTURE_2D);
     glUseProgram(0);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    _dorender();
+    glPopAttrib();
+    if (renderfunc) renderfunc();
+    glPushAttrib(GL_ALL_ATTRIB_BITS-GL_VIEWPORT_BIT);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glClearColor(0.0, 0.0, 0.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
     glDisable(GL_LIGHTING);
-
+    glEnable(GL_TEXTURE_2D);
     HDRShaderProgram& p = progs[mapping];
     glUseProgram(p.progid);
     glBindTexture(GL_TEXTURE_2D, fbo_tex);
@@ -265,13 +267,21 @@ void HDRGlWidget::paintGL() {
     glDisableVertexAttribArray(p.v_coord);
 }
 
-void HDRGlWidget::resizeGL(int width, int height) {
+void HDRGlHelper::resizeHelper(int width, int height) {
+    currw = width;
+    currh = height;
     glBindTexture(GL_TEXTURE_2D, fbo_tex);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, width, height, 0, GL_RGB, GL_FLOAT, NULL);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindRenderbuffer(GL_RENDERBUFFER, fbo_z);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, width, height);
     glBindRenderbuffer(GL_RENDERBUFFER, 0);
-    updateGL();
-    _doresize(width, height);
+    emit update();
 }
+
+void HDRQGlViewerWidget::resizeGL(int width, int height)
+{
+        QGLViewer::resizeGL(width, height);
+        helper.resizeHelper(width, height);
+        _doresize(width, height);
+    }

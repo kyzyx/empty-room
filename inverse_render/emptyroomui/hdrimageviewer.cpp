@@ -13,7 +13,6 @@ bool HDRImageViewer::setFloatImage(const float* data, int w, int h, int channels
     if (data == NULL) return false;
     makeCurrent();
     setMinimumSize(w,h);
-    glBindTexture(GL_TEXTURE_2D, tex);
 //    if (w != currw || h != currh)
 //        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, w, h, 0, GL_RGB, GL_FLOAT, 0);
 
@@ -43,9 +42,10 @@ bool HDRImageViewer::setFloatImage(const float* data, int w, int h, int channels
         if (image[i] > ihi) ihi = image[i];
         if (image[i] < ilo) ilo = image[i];
     }
-    emit suggestRange(HDRGlWidget::LOGTOLIN(ilo), HDRGlWidget::LOGTOLIN(ihi));
+    glBindTexture(GL_TEXTURE_2D, tex);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h, GL_RGB, GL_FLOAT, (GLvoid*) image);
     glBindTexture(GL_TEXTURE_2D, 0);
+    helper.emitSuggestRange(ilo, ihi);
     updateGL();
     return true;
 }
@@ -78,7 +78,8 @@ bool HDRImageViewer::setRGBImage(const unsigned char* data, int w, int h, int ch
             if (channels != 3) ++curr;
         }
     }
-    emit fixParams(HDRGlWidget::LOGTOLIN(0), HDRGlWidget::LOGTOLIN(1), TMO_LINEAR);
+    helper.emitFixParams(0, 1, TMO_LINEAR);
+    glBindTexture(GL_TEXTURE_2D, tex);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h, GL_RGB, GL_FLOAT, (GLvoid*) image);
     glBindTexture(GL_TEXTURE_2D, 0);
     updateGL();

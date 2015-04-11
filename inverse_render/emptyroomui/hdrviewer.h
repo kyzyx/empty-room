@@ -14,7 +14,7 @@ class HDRViewer : public QWidget
     Q_OBJECT
 public:
     explicit HDRViewer(QWidget *parent=0) : QWidget(parent), state(STATE_FIXED) {;}
-    explicit HDRViewer(QWidget *parent, HDRGlWidget* renderer);
+    explicit HDRViewer(QWidget *parent, QWidget* renderwidget, HDRGlHelper* rendercontrol);
     ~HDRViewer();
 
 protected:
@@ -28,11 +28,12 @@ protected slots:
     void setSuggestRange(int lo, int hi);
     void fixRange(int lo, int hi, int v);
 
-    void notifyUpdateMappingType(int v) { emit updateMappingType(v); }
+    void notifyUpdateMappingType(int v) { rendercontrol->setMapping(v); emit updateMappingType(v); }
     void notifyUpdateRange(int lo, int hi) { emit updateRange(lo, hi); }
 
 protected:
-    HDRGlWidget* render;
+    HDRGlHelper* rendercontrol;
+    QWidget* renderwidget;
     QxtSpanSlider* slider;
     QComboBox* tmo;
     QGridLayout* layout;
@@ -54,7 +55,8 @@ public:
     {
         v = new HDRImageViewer(this);
         v->resize(640,480);
-        render = v;
+        renderwidget = v;
+        rendercontrol = v->getHelper();
         init();
     }
 

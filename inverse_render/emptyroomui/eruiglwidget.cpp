@@ -4,17 +4,13 @@
 #define MAX_LIGHTS 127
 
 ERUIGLWidget::ERUIGLWidget(QWidget *parent) :
-    QGLViewer(parent), mmgr(NULL), hasColors(false), hasGeometry(false)
+    HDRQGlViewerWidget(parent), mmgr(NULL), hasColors(false), hasGeometry(false)
 {
 }
 
 void ERUIGLWidget::setMeshManager(MeshManager* manager) {
     mmgr = manager;
     setupMeshGeometry();
-
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
-    glDisable(GL_LIGHT0);
 }
 
 void ERUIGLWidget::setupMeshGeometry()
@@ -195,10 +191,15 @@ void ERUIGLWidget::draw()
         glEnd();
     } else {
         bool light = true;
+
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_BACK);
+        glDisable(GL_LIGHT0);
         glDepthMask(true);
         glClearColor(0.,0.,0.,0.);
         glEnable(GL_DEPTH_TEST);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
         if (hasColors) {
             glDisable(GL_LIGHTING);
             glEnableClientState(GL_COLOR_ARRAY);

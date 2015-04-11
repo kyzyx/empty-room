@@ -11,7 +11,6 @@ public:
     bool setFloatImage(const float* data, int w, int h, int channels);
     bool setRGBImage(const unsigned char* data, int w, int h, int channels);
 protected:
-    virtual void _dorender();
     virtual void _dosetup();
     virtual void _doresize(int width, int height);
 
@@ -20,5 +19,8 @@ protected:
     float* image;
 
     GLuint tex;
+protected slots:
+    virtual void _dorender();
+
 };
 #endif // HDRIMAGEVIEWER_H

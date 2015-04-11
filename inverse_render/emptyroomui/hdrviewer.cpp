@@ -1,13 +1,13 @@
 #include "hdrviewer.h"
 
-HDRViewer::HDRViewer(QWidget *parent, HDRGlWidget* renderer) :
-    QWidget(parent), state(STATE_FIXED), render(renderer)
+HDRViewer::HDRViewer(QWidget *parent, QWidget* hdrwidget, HDRGlHelper* hdrcontrol) :
+    QWidget(parent), state(STATE_FIXED), renderwidget(hdrwidget), rendercontrol(hdrcontrol)
 {
     init();
 }
 void HDRViewer::init() {
-    connect(render, SIGNAL(fixParams(int,int,int)), this, SLOT(fixRange(int,int,int)));
-    connect(render, SIGNAL(suggestRange(int,int)), this, SLOT(setSuggestRange(int,int)));
+    connect(rendercontrol, SIGNAL(fixParams(int,int,int)), this, SLOT(fixRange(int,int,int)));
+    connect(rendercontrol, SIGNAL(suggestRange(int,int)), this, SLOT(setSuggestRange(int,int)));
 
     slider = new QxtSpanSlider(Qt::Horizontal, this);
     slider->setEnabled(false);
@@ -16,7 +16,7 @@ void HDRViewer::init() {
     slider->setMinimumHeight(30);
     slider->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     connect(slider, SIGNAL(spanChanged(int, int)), this, SLOT(userEditRange(int, int)));
-    connect(slider, SIGNAL(spanChanged(int,int)), render, SLOT(setScale(int,int)));
+    connect(slider, SIGNAL(spanChanged(int,int)), rendercontrol, SLOT(setScale(int,int)));
     connect(slider, SIGNAL(spanChanged(int, int)), this, SLOT(notifyUpdateRange(int,int)));
 
     tmo = new QComboBox(this);
@@ -27,12 +27,13 @@ void HDRViewer::init() {
     tmo->setEnabled(false);
     tmo->setMinimumHeight(30);
     tmo->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-    connect(tmo, SIGNAL(activated(int)), render, SLOT(setMapping(int)));
+    connect(tmo, SIGNAL(activated(int)), rendercontrol, SLOT(setMapping(int)));
     connect(tmo, SIGNAL(activated(int)), this, SLOT(notifyUpdateMappingType(int)));
 
     layout = new QGridLayout(this);
-    layout->addWidget(render,0,0,1,2);
-    layout->setAlignment(render,Qt::AlignTop);
+    layout->addWidget(renderwidget,0,0,1,2);
+    layout->setAlignment(renderwidget,Qt::AlignTop);
+    renderwidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     layout->addWidget(slider,1,0);
     layout->addWidget(tmo,1,1);
     layout->setColumnStretch(0,2);
