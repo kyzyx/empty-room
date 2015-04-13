@@ -13,8 +13,7 @@ bool HDRImageViewer::setFloatImage(const float* data, int w, int h, int channels
     if (data == NULL) return false;
     makeCurrent();
     setMinimumSize(w,h);
-//    if (w != currw || h != currh)
-//        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, w, h, 0, GL_RGB, GL_FLOAT, 0);
+    setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 
     currw = w;
     currh = h;
@@ -54,9 +53,8 @@ bool HDRImageViewer::setRGBImage(const unsigned char* data, int w, int h, int ch
     if (data == NULL) return false;
     makeCurrent();
     setMinimumSize(w,h);
+    setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     glBindTexture(GL_TEXTURE_2D, tex);
-//    if (w != currw || h != currh)
-//        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, w, h, 0, GL_RGB, GL_FLOAT, 0);
 
     currw = w;
     currh = h;

@@ -153,10 +153,14 @@ void MainWindow::on_actionOpen_Mesh_triggered()
     mdialog.setNameFilter("PLY Meshes (*.ply)");
     mdialog.setFileMode(QFileDialog::ExistingFile);
     mdialog.setOption(QFileDialog::DontUseNativeDialog);
+    mdialog.setDirectory(settings->value("lastworkingdirectory", "").toString());
     mdialog.selectFile(settings->value("lastmeshfile", "").toString());
     if (mdialog.exec()) {
         meshfilename = mdialog.selectedFiles().first();
         settings->setValue("lastmeshfile", meshfilename);
+        QDir cwd = QDir(meshfilename);
+        cwd.cdUp();
+        settings->setValue("lastworkingdirectory", cwd.canonicalPath());
         QString cmd = settings->value("loadmesh_binary", "dataserver -meshfile %1 -p").toString();
         cmd = cmd.arg(meshfilename);
         if (mdialog.isCcw()) cmd = cmd + " -ccw";
@@ -190,10 +194,14 @@ void MainWindow::on_actionOpen_Images_triggered()
     idialog.setNameFilter("Camera Files (*.cam)");
     idialog.setFileMode(QFileDialog::ExistingFile);
     idialog.setOption(QFileDialog::DontUseNativeDialog);
-    idialog.selectFile(settings->value("lastcamfile", "").toString());
+    idialog.setDirectory(settings->value("lastworkingdirectory", "").toString());
+    idialog.selectFile(settings->value("lastcamerafile", "").toString());
     if (idialog.exec()) {
         camfilename = idialog.selectedFiles().first();
         settings->setValue("lastcamerafile", camfilename);
+        QDir cwd = QDir(camfilename);
+        cwd.cdUp();
+        settings->setValue("lastworkingdirectory", cwd.canonicalPath());
         QString cmd = settings->value("loadimage_binary", "dataserver -camfile %1 -p").toString();
         cmd = cmd.arg(camfilename);
         if (idialog.isFlipX()) cmd = cmd + " -flip_x";
@@ -254,7 +262,7 @@ void MainWindow::on_loadImageButton_clicked()
 void MainWindow::on_loadReprojectButton_clicked()
 {
     if (mmgr) {
-        QString samplesfile = QFileDialog::getOpenFileName(this, "Open Reprojection Samples");
+        QString samplesfile = QFileDialog::getOpenFileName(this, "Open Reprojection Samples",settings->value("lastworkingdirectory", "").toString());
         mmgr->readSamplesFromFile(samplesfile.toStdString());
         ui->meshWidget->setupMeshColors();
     }

@@ -1,4 +1,6 @@
 #include "hdrviewer.h"
+#include <QHBoxLayout>
+#include <QVBoxLayout>
 
 HDRViewer::HDRViewer(QWidget *parent, QWidget* hdrwidget, HDRGlHelper* hdrcontrol) :
     QWidget(parent), state(STATE_FIXED), renderwidget(hdrwidget), rendercontrol(hdrcontrol)
@@ -30,20 +32,22 @@ void HDRViewer::init() {
     connect(tmo, SIGNAL(activated(int)), rendercontrol, SLOT(setMapping(int)));
     connect(tmo, SIGNAL(activated(int)), this, SLOT(notifyUpdateMappingType(int)));
 
-    layout = new QGridLayout(this);
-    layout->addWidget(renderwidget,0,0,1,2);
-    layout->setAlignment(renderwidget,Qt::AlignTop);
+    QWidget* container = new QWidget(this);
+    QHBoxLayout* ll = new QHBoxLayout(container);
+    ll->addWidget(slider);
+    ll->addWidget(tmo);
+    container->setLayout(ll);
+
+    QVBoxLayout* layout = new QVBoxLayout(this);
+    layout->addWidget(renderwidget);
     renderwidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    layout->addWidget(slider,1,0);
-    layout->addWidget(tmo,1,1);
-    layout->setColumnStretch(0,2);
-    layout->setColumnStretch(1,1);
+    container->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    layout->addWidget(container);
     setLayout(layout);
 }
 HDRViewer::~HDRViewer() {
     delete slider;
     delete tmo;
-    delete layout;
 }
 
 void HDRViewer::setSuggestRange(int lo, int hi) {

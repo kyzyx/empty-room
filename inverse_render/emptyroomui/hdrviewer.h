@@ -5,7 +5,6 @@
 #include "qxtspanslider.h"
 #include "hdrglwidget.h"
 #include <QComboBox>
-#include <QGridLayout>
 #include <QGLWidget>
 #include "hdrimageviewer.h"
 
@@ -36,7 +35,6 @@ protected:
     QWidget* renderwidget;
     QxtSpanSlider* slider;
     QComboBox* tmo;
-    QGridLayout* layout;
     enum {
         STATE_SUGGESTED,
         STATE_FIXED,
