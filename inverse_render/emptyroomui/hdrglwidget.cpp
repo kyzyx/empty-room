@@ -234,6 +234,7 @@ void HDRGlHelper::initializeHelper() {
             }
         }
     }
+    glPushAttrib(GL_ALL_ATTRIB_BITS - GL_VIEWPORT_BIT);
 }
 
 void HDRGlHelper::paintHelper() {

@@ -42,12 +42,13 @@ public:
         rendercontrol = v->getHelper();
         init();
     }
-
     ~ERUIGLViewer() {
         if (v) delete v;
     }
 
-    void setMeshManager(MeshManager* manager) { v->setMeshManager(manager); setSuggestRange(0,1); }
+    void setMeshManager(MeshManager* manager) {
+        v->setMeshManager(manager);
+    }
     void setupMeshColors() { v->setupMeshColors(); }
 
 protected:

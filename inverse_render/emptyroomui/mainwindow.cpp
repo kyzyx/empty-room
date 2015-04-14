@@ -185,7 +185,6 @@ void MainWindow::meshLoaded() {
     }
     mmgr = new MeshManager(meshfilename.toStdString());
     ui->meshWidget->setMeshManager(mmgr);
-    ui->meshWidget->repaint();
 }
 
 void MainWindow::on_actionOpen_Images_triggered()

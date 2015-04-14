@@ -11,10 +11,12 @@ ERUIGLWidget::ERUIGLWidget(QWidget *parent) :
 void ERUIGLWidget::setMeshManager(MeshManager* manager) {
     mmgr = manager;
     setupMeshGeometry();
+    helper.emitSuggestRange(0,1);
 }
 
 void ERUIGLWidget::setupMeshGeometry()
 {
+    makeCurrent();
     //int varraysize = 3*3*mmgr->NFaces();
     int varraysize = 2*3*mmgr->NVertices();
     float* vertices = new float[varraysize];
@@ -72,10 +74,12 @@ void ERUIGLWidget::setupMeshGeometry()
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     delete [] indices;
     hasGeometry = true;
+    updateGL();
 }
 
 void ERUIGLWidget::setupMeshColors()
 {
+    makeCurrent();
     glGenBuffers(1, &cbo);
     glBindBuffer(GL_ARRAY_BUFFER, cbo);
     int varraysize = 2*3*mmgr->NVertices();
@@ -128,6 +132,7 @@ void ERUIGLWidget::setupMeshColors()
             vertices, GL_STATIC_DRAW);
     delete [] vertices;
     hasColors = true;
+    updateGL();
 }
 void ERUIGLWidget::init()
 {
@@ -191,7 +196,6 @@ void ERUIGLWidget::draw()
         glEnd();
     } else {
         bool light = true;
-
         glEnable(GL_CULL_FACE);
         glCullFace(GL_BACK);
         glDisable(GL_LIGHT0);
@@ -212,21 +216,16 @@ void ERUIGLWidget::draw()
             l.Draw(0);
         }
         glEnableClientState(GL_VERTEX_ARRAY);
+        glEnableClientState(GL_NORMAL_ARRAY);
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glVertexPointer(3, GL_FLOAT, 6*sizeof(float), 0);
-        glEnableVertexAttribArray(2);
-        glVertexAttribPointer(
-            2,                               // attribute
-            3,                               // size
-            GL_FLOAT,                        // type
-            GL_FALSE,                        // normalized?
-            6*sizeof(float),                 // stride
-            (void*)(3*sizeof(float))         // array buffer offset
-        );
+        glNormalPointer(GL_FLOAT, 6*sizeof(float), (void*)(3*sizeof(float)));
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
         glDrawElements(GL_TRIANGLES, mmgr->NFaces()*3, GL_UNSIGNED_INT, 0);
-        //glDrawArrays(GL_TRIANGLES, 0, mesh->NFaces()*3);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
         glDisableClientState(GL_VERTEX_ARRAY);
+        glDisableClientState(GL_NORMAL_ARRAY);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
         if (hasColors) glDisableClientState(GL_COLOR_ARRAY);
     }
 }

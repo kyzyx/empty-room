@@ -11,7 +11,9 @@ void HDRViewer::init() {
     connect(rendercontrol, SIGNAL(fixParams(int,int,int)), this, SLOT(fixRange(int,int,int)));
     connect(rendercontrol, SIGNAL(suggestRange(int,int)), this, SLOT(setSuggestRange(int,int)));
 
-    slider = new QxtSpanSlider(Qt::Horizontal, this);
+    QWidget* container = new QWidget(this);
+
+    slider = new QxtSpanSlider(Qt::Horizontal, container);
     slider->setEnabled(false);
     slider->setMinimum(0);
     slider->setMaximum(100);
@@ -21,7 +23,7 @@ void HDRViewer::init() {
     connect(slider, SIGNAL(spanChanged(int,int)), rendercontrol, SLOT(setScale(int,int)));
     connect(slider, SIGNAL(spanChanged(int, int)), this, SLOT(notifyUpdateRange(int,int)));
 
-    tmo = new QComboBox(this);
+    tmo = new QComboBox(container);
     tmo->insertItem(TMO_LINEAR, "Linear Mapping");
     tmo->insertItem(TMO_LOG, "Logarithmic Mapping");
     tmo->insertItem(TMO_GAMMA22, "Gamma 2.2");
@@ -32,7 +34,6 @@ void HDRViewer::init() {
     connect(tmo, SIGNAL(activated(int)), rendercontrol, SLOT(setMapping(int)));
     connect(tmo, SIGNAL(activated(int)), this, SLOT(notifyUpdateMappingType(int)));
 
-    QWidget* container = new QWidget(this);
     QHBoxLayout* ll = new QHBoxLayout(container);
     ll->addWidget(slider);
     ll->addWidget(tmo);
