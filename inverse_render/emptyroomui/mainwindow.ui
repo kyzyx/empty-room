@@ -413,6 +413,9 @@
     <addaction name="actionOpen_Mesh"/>
     <addaction name="actionOpen_Images"/>
     <addaction name="separator"/>
+    <addaction name="actionLoad_Last_Mesh_Camera_File"/>
+    <addaction name="actionLoad_Last_Intermediates"/>
+    <addaction name="separator"/>
     <addaction name="actionQuit"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
@@ -432,6 +435,7 @@
    </attribute>
    <addaction name="actionOpen_Mesh"/>
    <addaction name="actionOpen_Images"/>
+   <addaction name="separator"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
   <action name="actionOpen_Mesh">
@@ -466,6 +470,19 @@
    </property>
    <property name="shortcut">
     <string>Q</string>
+   </property>
+  </action>
+  <action name="actionLoad_Last_Mesh_Camera_File">
+   <property name="text">
+    <string>Load Last Mesh and Camera File</string>
+   </property>
+  </action>
+  <action name="actionLoad_Last_Intermediates">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Load Last Intermediates</string>
    </property>
   </action>
  </widget>

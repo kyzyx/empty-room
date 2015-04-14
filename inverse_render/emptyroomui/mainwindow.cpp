@@ -164,7 +164,10 @@ void MainWindow::on_actionOpen_Mesh_triggered()
         settings->setValue("lastworkingdirectory", cwd.canonicalPath());
         QString cmd = settings->value("loadmesh_binary", "dataserver -meshfile %1 -p").toString();
         cmd = cmd.arg(meshfilename);
-        if (mdialog.isCcw()) cmd = cmd + " -ccw";
+        if (mdialog.isCcw()) {
+            cmd = cmd + " -ccw";
+            settings->setValue("lastmeshflags", " -ccw");
+        }
 
         SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
         workers.push_back(w);
@@ -181,11 +184,10 @@ void MainWindow::meshLoaded() {
     ui->wallfindButton->setEnabled(true);
     ui->loadWallsButton->setEnabled(true);
     ui->loadReprojectButton->setEnabled(true);
-    if (imgr) {
-        ui->reprojectButton->setEnabled(true);
-    }
+    ui->actionLoad_Last_Intermediates->setEnabled(true);
     mmgr = new MeshManager(meshfilename.toStdString());
     ui->meshWidget->setMeshManager(mmgr);
+    allLoaded();
 }
 
 void MainWindow::on_actionOpen_Images_triggered()
@@ -204,8 +206,11 @@ void MainWindow::on_actionOpen_Images_triggered()
         settings->setValue("lastworkingdirectory", cwd.canonicalPath());
         QString cmd = settings->value("loadimage_binary", "dataserver -camfile %1 -p").toString();
         cmd = cmd.arg(camfilename);
-        if (idialog.isFlipX()) cmd = cmd + " -flip_x";
-        if (idialog.isFlipY()) cmd = cmd + " -flip_y";
+        QString extraflags = "";
+        if (idialog.isFlipX()) extraflags = extraflags + " -flip_x";
+        if (idialog.isFlipY()) extraflags = extraflags + " -flip_y";
+        cmd += extraflags;
+        settings->setValue("lastimageflags", extraflags);
         SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
         workers.push_back(w);
         QThread* thread = new QThread;
@@ -217,9 +222,6 @@ void MainWindow::on_actionOpen_Images_triggered()
     }
 }
 void MainWindow::imagesLoaded() {
-    if (mmgr) {
-        ui->reprojectButton->setEnabled(true);
-    }
     imgr = new ImageManager(camfilename.toStdString());
     ui->imageTypeComboBox->setEnabled(true);
     ui->nextImageButton->setEnabled(true);
@@ -233,7 +235,15 @@ void MainWindow::imagesLoaded() {
         ui->imageTypeComboBox->insertItem(i, QString::fromStdString(imgr->getImageType(i).getName()));
     }
     updateImage(0, typeindex);
+    allLoaded();
 }
+
+void MainWindow::allLoaded() {
+    if (imgr && mmgr) {
+        ui->reprojectButton->setEnabled(true);
+    }
+}
+
 void MainWindow::vertexDataLoaded() {
     if (mmgr->loadSamples()) {
         ui->meshWidget->setupMeshColors();
@@ -267,16 +277,53 @@ void MainWindow::on_loadImageButton_clicked()
 void MainWindow::on_loadReprojectButton_clicked()
 {
     if (mmgr) {
-        QString datafilename = QFileDialog::getOpenFileName(this, "Open Reprojection Samples",settings->value("lastworkingdirectory", "").toString());
-        QString cmd = settings->value("loaddata_binary", "dataserver -meshfile %1 -datafile %2 -p").toString();
-        cmd = cmd.arg(meshfilename, datafilename);
-        SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
-        workers.push_back(w);
-        QThread* thread = new QThread;
-        connect(thread, SIGNAL(started()), w, SLOT(run()));
-        connect(w, SIGNAL(percentChanged(int)), progressbar, SLOT(setValue(int)));
-        connect(w, SIGNAL(done()), this, SLOT(vertexDataLoaded()));
-        w->moveToThread(thread);
-        thread->start();
+        QString lwd = settings->value("lastworkingdirectory", "").toString();
+        QString cfile = settings->value("lastreprojectfile", lwd).toString();
+        QString datafilename = QFileDialog::getOpenFileName(this, "Open Reprojection Samples", cfile);
+        QDir cwd = QDir(datafilename);
+        cwd.cdUp();
+        settings->setValue("lastworkingdirectory", cwd.canonicalPath());
+        settings->setValue("lastreprojectfile", datafilename);
+        loadVertexData(meshfilename, datafilename);
     }
+}
+
+void MainWindow::on_actionLoad_Last_Mesh_Camera_File_triggered()
+{
+    camfilename = settings->value("lastcamerafile", "").toString();
+    meshfilename = settings->value("lastmeshfile", "").toString();
+    QString cmd = settings->value("loadall_binary", "dataserver -camfile %1 -meshfile %2 -p").toString();
+    cmd = cmd.arg(camfilename, meshfilename);
+    QString extraflags = settings->value("lastimageflags", "").toString();
+    cmd += extraflags;
+    extraflags = settings->value("lastmeshflags", "").toString();
+    cmd += extraflags;
+
+    SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
+    workers.push_back(w);
+    QThread* thread = new QThread;
+    connect(thread, SIGNAL(started()), w, SLOT(run()));
+    connect(w, SIGNAL(percentChanged(int)), progressbar, SLOT(setValue(int)));
+    connect(w, SIGNAL(done()), this, SLOT(imagesLoaded()));
+    connect(w, SIGNAL(done()), this, SLOT(meshLoaded()));
+    w->moveToThread(thread);
+    thread->start();
+}
+
+void MainWindow::on_actionLoad_Last_Intermediates_triggered()
+{
+    loadVertexData(meshfilename, settings->value("lastreprojectfile", "").toString());
+}
+
+void MainWindow::loadVertexData(QString meshfile, QString datafile) {
+    QString cmd = settings->value("loaddata_binary", "dataserver -meshfile %1 -datafile %2 -p").toString();
+    cmd = cmd.arg(meshfile, datafile);
+    SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
+    workers.push_back(w);
+    QThread* thread = new QThread;
+    connect(thread, SIGNAL(started()), w, SLOT(run()));
+    connect(w, SIGNAL(percentChanged(int)), progressbar, SLOT(setValue(int)));
+    connect(w, SIGNAL(done()), this, SLOT(vertexDataLoaded()));
+    w->moveToThread(thread);
+    thread->start();
 }

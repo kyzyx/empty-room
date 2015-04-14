@@ -24,6 +24,7 @@ protected:
     void keyPressEvent(QKeyEvent *event);
     void updateImage(int idx, int type);
 
+    void loadVertexData(QString meshfile, QString datafile);
 private slots:
     void on_actionQuit_triggered();
 
@@ -41,9 +42,14 @@ private slots:
 
     void meshLoaded();
     void imagesLoaded();
+    void allLoaded();
     void vertexDataLoaded();
 
     void on_loadReprojectButton_clicked();
+
+    void on_actionLoad_Last_Mesh_Camera_File_triggered();
+
+    void on_actionLoad_Last_Intermediates_triggered();
 
 private:
     Ui::MainWindow *ui;
