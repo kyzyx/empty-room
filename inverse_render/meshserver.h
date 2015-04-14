@@ -7,14 +7,14 @@ class MeshServer : public MeshManager {
     public:
         MeshServer(const std::string& meshfile,
                 bool ccw=false,
-                void (*progress_callback)(int)=NULL);
+                cb_type cb=NULL);
         MeshServer(pcl::PolygonMesh::ConstPtr mesh,
                 bool ccw=false,
-                void (*progress_callback)(int)=NULL);
+                cb_type cb=NULL);
         ~MeshServer();
 
     protected:
         bool loadMesh(pcl::PolygonMesh::ConstPtr mesh, bool ccw=false);
-        void (*progress_cb)(int);
+        cb_type progress_cb;
 };
 #endif

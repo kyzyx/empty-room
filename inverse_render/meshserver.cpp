@@ -16,8 +16,8 @@ using namespace pcl;
 // Constructors and initialization
 // --------------------------------------------------------------
 using namespace boost::interprocess;
-MeshServer::MeshServer(const string& meshfile, bool ccw, void(*progress_callback)(int))
-    : progress_cb(progress_callback)
+MeshServer::MeshServer(const string& meshfile, bool ccw, cb_type cb)
+    : progress_cb(cb)
 {
     readHeader(meshfile);
     defaultinit(meshfile);
@@ -30,8 +30,8 @@ MeshServer::MeshServer(const string& meshfile, bool ccw, void(*progress_callback
     if (progress_cb) progress_cb(33);
     loadMesh(mesh, ccw);
 }
-MeshServer::MeshServer(PolygonMesh::ConstPtr mesh, bool ccw, void(*progress_callback)(int))
-    : progress_cb(progress_callback)
+MeshServer::MeshServer(PolygonMesh::ConstPtr mesh, bool ccw, cb_type cb)
+    : progress_cb(cb)
 {
     nfaces = mesh->polygons.size();
     nvertices = mesh->cloud.width * mesh->cloud.height;

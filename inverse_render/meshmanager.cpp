@@ -229,12 +229,19 @@ void MeshManager::commitSamples() {
     }
     wsamples.clear();
 }
-void MeshManager::loadSamples() {
+bool MeshManager::loadSamples() {
     boost::interprocess::scoped_lock<shmutex> lock(*getMutex(NUM_CHANNELS, 0));
     if (*numsamples > 0 && !hasSamples()) {
-        initializeSharedSampleMemory();
+        if (!initializeSharedSampleMemory()) return false;
+        Sample* s = sampleptr;
+        for (int i = 0; i < nvertices; ++i) {
+            samples[i] = s;
+            s += vertexsamples[i];
+        }
         wsamples.clear();
+        return true;
     }
+    return false;
 }
 
 Material MeshManager::getVertexColor(int n) const {
@@ -252,7 +259,7 @@ Material MeshManager::getVertexColor(int n) const {
     }
     return m;
 }
-void MeshManager::readSamplesFromFile(const std::string& samplesfile, void (*cb)(int)) {
+void MeshManager::readSamplesFromFile(const std::string& samplesfile, cb_type cb) {
     ifstream in(samplesfile.c_str(), ifstream::binary);
     uint32_t n, sz;
     in.read((char*) &n, 4);
@@ -281,7 +288,7 @@ void MeshManager::readSamplesFromFile(const std::string& samplesfile, void (*cb)
     commitSamples();
     if (cb) cb(100);
 }
-void MeshManager::writeSamplesToFile(const std::string& samplesfile, void (*cb)(int)) {
+void MeshManager::writeSamplesToFile(const std::string& samplesfile, cb_type cb) {
     ofstream out(samplesfile.c_str(), ofstream::binary);
     uint32_t sz = nvertices;
     out.write((char*) &sz, 4);

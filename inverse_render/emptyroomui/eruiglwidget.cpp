@@ -103,9 +103,6 @@ void ERUIGLWidget::setupMeshColors()
         for (int j = 0; j < 3; ++j) {
             int n = mmgr->VertexOnFace(i, j);
             char l = mmgr->getLabel(n);
-            int ind = 6*(3*i + j);
-            vertices[ind+1] = mmgr->getLabel(n,1)/128.;
-            vertices[ind+2] = 1;
             if (mmgr->getVertexSampleCount(n) == 0) {
                 valid = false;
             }

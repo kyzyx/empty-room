@@ -1,13 +1,15 @@
 #ifndef _IMAGE_SERVER_H
 #define _IMAGE_SERVER_H
 #include "imagemanager.h"
+#include <boost/function.hpp>
 
 class ImageServer : public ImageManager {
     public:
+        typedef boost::function<void(int)> cb_type;
         ImageServer(const std::string& camfile,
                 bool flipx=false,
                 bool flipy=false,
-                void (*progress_callback)(int)=NULL);
+                cb_type cb=NULL);
         ~ImageServer();
 
     protected:
@@ -21,6 +23,6 @@ class ImageServer : public ImageManager {
 
         bool flip_x, flip_y;
 
-        void (*progress_cb)(int);
+        cb_type progress_cb;
 };
 #endif

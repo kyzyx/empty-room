@@ -99,6 +99,7 @@ MainWindow::~MainWindow()
     delete ui;
     for (int i = 0; i < workers.size(); ++i) {
         workers[i]->terminate();
+        delete workers[i];
     }
     if (mmgr) delete mmgr;
     if (imgr) delete imgr;
@@ -233,6 +234,11 @@ void MainWindow::imagesLoaded() {
     }
     updateImage(0, typeindex);
 }
+void MainWindow::vertexDataLoaded() {
+    if (mmgr->loadSamples()) {
+        ui->meshWidget->setupMeshColors();
+    }
+}
 
 void MainWindow::on_prevImageButton_clicked()
 {
@@ -261,8 +267,16 @@ void MainWindow::on_loadImageButton_clicked()
 void MainWindow::on_loadReprojectButton_clicked()
 {
     if (mmgr) {
-        QString samplesfile = QFileDialog::getOpenFileName(this, "Open Reprojection Samples",settings->value("lastworkingdirectory", "").toString());
-        mmgr->readSamplesFromFile(samplesfile.toStdString());
-        ui->meshWidget->setupMeshColors();
+        QString datafilename = QFileDialog::getOpenFileName(this, "Open Reprojection Samples",settings->value("lastworkingdirectory", "").toString());
+        QString cmd = settings->value("loaddata_binary", "dataserver -meshfile %1 -datafile %2 -p").toString();
+        cmd = cmd.arg(meshfilename, datafilename);
+        SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
+        workers.push_back(w);
+        QThread* thread = new QThread;
+        connect(thread, SIGNAL(started()), w, SLOT(run()));
+        connect(w, SIGNAL(percentChanged(int)), progressbar, SLOT(setValue(int)));
+        connect(w, SIGNAL(done()), this, SLOT(vertexDataLoaded()));
+        w->moveToThread(thread);
+        thread->start();
     }
 }

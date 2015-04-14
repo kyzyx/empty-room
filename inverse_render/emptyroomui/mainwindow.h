@@ -41,6 +41,7 @@ private slots:
 
     void meshLoaded();
     void imagesLoaded();
+    void vertexDataLoaded();
 
     void on_loadReprojectButton_clicked();
 

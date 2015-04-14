@@ -9,6 +9,7 @@
 
 #include <boost/interprocess/mapped_region.hpp>
 #include <boost/interprocess/sync/interprocess_upgradable_mutex.hpp>
+#include <boost/function.hpp>
 /**
  * Stores a single sample of the outgoing radiance from a surface
  * at a particular direction.
@@ -33,6 +34,7 @@ class Sample {
 class MeshManager {
     public:
         typedef boost::interprocess::interprocess_upgradable_mutex shmutex;
+        typedef boost::function<void(int)> cb_type;
 
         MeshManager(int numvertices, int numfaces);
         MeshManager(const std::string& meshfile);
@@ -62,9 +64,9 @@ class MeshManager {
         // Sample setup functions
         void addSample(int n, Sample s);
         void commitSamples();
-        void loadSamples();
-        void readSamplesFromFile(const std::string& samplesfile, void (*cb)(int)=NULL);
-        void writeSamplesToFile(const std::string& samplesfile, void (*cb)(int)=NULL);
+        bool loadSamples();
+        void readSamplesFromFile(const std::string& samplesfile, cb_type cb=NULL);
+        void writeSamplesToFile(const std::string& samplesfile, cb_type cb=NULL);
 
         enum {
             LABEL_CHANNEL,
