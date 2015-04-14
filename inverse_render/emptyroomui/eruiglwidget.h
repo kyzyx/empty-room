@@ -19,11 +19,13 @@ public:
 protected:
     virtual void draw();
     virtual void init();
+    virtual void drawWithNames();
+    void postSelection(const QPoint &point);
     virtual QString helpString() const;
 
     void setupMeshGeometry();
 
-    void renderCamera(const CameraParams& cam);
+    void renderCamera(const CameraParams& cam, bool id_only=false);
 
     std::vector<CameraParams> cameras;
     std::vector<int> camids;
@@ -43,7 +45,7 @@ protected:
     // OpenGL buffer ids
     GLuint vbo, ibo, cbo;
 signals:
-
+    void cameraSelected(int cameraindex);
 public slots:
     void highlightCamera(int cameraindex);
 };
@@ -57,6 +59,7 @@ public:
         v = new ERUIGLWidget(this);
         renderwidget = v;
         rendercontrol = v->getHelper();
+        connect(v, SIGNAL(cameraSelected(int)), this, SLOT(emitCameraSelected(int)));
         init();
     }
     ~ERUIGLViewer() {
@@ -68,7 +71,10 @@ public:
     }
     void setupMeshColors() { v->setupMeshColors(); }
     void setupCameras(ImageManager* imgr) { v->setupCameras(imgr); }
-
+signals:
+    void cameraSelected(int cameraindex);
+protected slots:
+    void emitCameraSelected(int cameraindex) { emit cameraSelected(cameraindex); }
 public slots:
     void highlightCamera(int cameraindex) { v->highlightCamera(cameraindex); }
 protected:

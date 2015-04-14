@@ -38,6 +38,9 @@ public:
     void emitSuggestRange(float lo, float hi) { emit suggestRange(LOGTOLIN(lo), LOGTOLIN(hi)); }
     void emitFixParams(float lo, float hi, int v) { emit fixParams(LOGTOLIN(lo), LOGTOLIN(hi), v); }
 
+    void renderToTexture(boost::function<void()> f);
+    void readFromTexture(int x, int y, int w, int h, float* data);
+
     void setRenderFunction(boost::function<void()> f) { renderfunc = f; }
 
 protected:
@@ -107,6 +110,9 @@ class HDRQGlViewerWidget : public QGLViewer {
     }
 
     HDRGlHelper* getHelper() { return &helper; }
+
+    static int RGBToIndex(float* rgb);
+    static void IndexToRGB(int i, float* rgb);
 protected:
     virtual void _dosetup() {;}
     void calldorender() { _dorender(); }
@@ -117,6 +123,7 @@ protected:
         helper.initializeHelper();
         _dosetup();
     }
+    virtual void select(const QPoint& point);
     void paintGL() {
         helper.paintHelper();
     }

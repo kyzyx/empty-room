@@ -159,7 +159,7 @@ void ERUIGLWidget::highlightCamera(int cameraindex) {
 
 void ERUIGLWidget::init()
 {
-        glewInit();
+  glewInit();
   restoreStateFromFile();
   setShortcut(EXIT_VIEWER, 0);
   setShortcut(DRAW_GRID, 0);
@@ -266,8 +266,28 @@ void ERUIGLWidget::draw()
     }
 }
 
+void ERUIGLWidget::drawWithNames() {
+
+    glClearColor(0,0,0,1);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    if (cameraRenderFormat != CAMRENDER_NONE) {
+        float col[3];
+        for (int i = 0; i < cameras.size(); ++i) {
+            IndexToRGB(i, col);
+            glPushName(i);
+            glColor3fv(col);
+            renderCamera(cameras[i], true);
+            glPopName();
+        }
+    }
+}
+
+void ERUIGLWidget::postSelection(const QPoint &point) {
+    if (selectedName() >= 0) emit cameraSelected(selectedName());
+}
+
 #define GLEXPAND(x) (x)[0], (x)[1], (x)[2]
-void ERUIGLWidget::renderCamera(const CameraParams &cam) {
+void ERUIGLWidget::renderCamera(const CameraParams &cam, bool id_only) {
     R3Point p = cam.pos;
     float f = 0.1;
     glPushAttrib(GL_ALL_ATTRIB_BITS);
@@ -277,7 +297,7 @@ void ERUIGLWidget::renderCamera(const CameraParams &cam) {
         glBegin(GL_LINES);
             glVertex3f(GLEXPAND(p));
             glVertex3f(GLEXPAND(v2));
-            glColor3f(100,0,0);
+            if (!id_only) glColor3f(100,0,0);
             glVertex3f(GLEXPAND(p));
             glVertex3f(GLEXPAND(v3));
         glEnd();
@@ -291,7 +311,7 @@ void ERUIGLWidget::renderCamera(const CameraParams &cam) {
         R3Point ll = p + cam.towards*f - cam.right*f*w - cam.up*f*h;
         R3Point lr = p + cam.towards*f + cam.right*f*w - cam.up*f*h;
         glDisable(GL_CULL_FACE);
-        glEnable(GL_LIGHTING);
+        if (!id_only) glEnable(GL_LIGHTING);
         // glColor3f decided by caller!
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
             glBegin(GL_TRIANGLES);
@@ -308,24 +328,25 @@ void ERUIGLWidget::renderCamera(const CameraParams &cam) {
                 glVertex3f(GLEXPAND(ul));
                 glVertex3f(GLEXPAND(ll));
             glEnd();
-        glDisable(GL_LIGHTING);
-        glColor3f(0,0,0);
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-            glBegin(GL_TRIANGLES);
-                glVertex3f(GLEXPAND(p));
-                glVertex3f(GLEXPAND(ul));
-                glVertex3f(GLEXPAND(ur));
-                glVertex3f(GLEXPAND(p));
-                glVertex3f(GLEXPAND(ll));
-                glVertex3f(GLEXPAND(lr));
-                glVertex3f(GLEXPAND(p));
-                glVertex3f(GLEXPAND(ur));
-                glVertex3f(GLEXPAND(lr));
-                glVertex3f(GLEXPAND(p));
-                glVertex3f(GLEXPAND(ul));
-                glVertex3f(GLEXPAND(ll));
-            glEnd();
-
+        if (!id_only) {
+            glDisable(GL_LIGHTING);
+            glColor3f(0,0,0);
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+                glBegin(GL_TRIANGLES);
+                    glVertex3f(GLEXPAND(p));
+                    glVertex3f(GLEXPAND(ul));
+                    glVertex3f(GLEXPAND(ur));
+                    glVertex3f(GLEXPAND(p));
+                    glVertex3f(GLEXPAND(ll));
+                    glVertex3f(GLEXPAND(lr));
+                    glVertex3f(GLEXPAND(p));
+                    glVertex3f(GLEXPAND(ur));
+                    glVertex3f(GLEXPAND(lr));
+                    glVertex3f(GLEXPAND(p));
+                    glVertex3f(GLEXPAND(ul));
+                    glVertex3f(GLEXPAND(ll));
+                glEnd();
+        }
     }
     glPopAttrib();
 }

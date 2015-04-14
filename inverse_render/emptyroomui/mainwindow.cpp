@@ -244,6 +244,7 @@ void MainWindow::allLoaded() {
         ui->reprojectButton->setEnabled(true);
         // Render cameras
         ui->meshWidget->setupCameras(imgr);
+        connect(ui->meshWidget, SIGNAL(cameraSelected(int)), this, SLOT(updateImage(int)));
     }
 }
 
@@ -251,24 +252,6 @@ void MainWindow::vertexDataLoaded() {
     if (mmgr->loadSamples()) {
         ui->meshWidget->setupMeshColors();
     }
-}
-
-void MainWindow::on_prevImageButton_clicked()
-{
-    updateImage(--imageindex, typeindex);
-    ui->nextImageButton->setEnabled(true);
-    if (imageindex == 0) ui->prevImageButton->setEnabled(false);
-}
-
-void MainWindow::on_nextImageButton_clicked()
-{
-    updateImage(++imageindex, typeindex);
-    ui->prevImageButton->setEnabled(true);
-    if (imageindex == imgr->size()-1) ui->nextImageButton->setEnabled(false);
-}
-void MainWindow::on_imageTypeComboBox_currentIndexChanged(int index)
-{
-    updateImage(imageindex, index);
 }
 
 void MainWindow::on_loadImageButton_clicked()

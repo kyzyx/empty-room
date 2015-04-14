@@ -26,29 +26,25 @@ protected:
 
     void loadVertexData(QString meshfile, QString datafile);
 private slots:
+    void updateImage(int idx)         { updateImage(idx, typeindex); }
+    void on_prevImageButton_clicked() { updateImage(--imageindex, typeindex); }
+    void on_nextImageButton_clicked() { updateImage(++imageindex, typeindex); }
+    void on_imageTypeComboBox_currentIndexChanged(int index) { updateImage(imageindex, index); }
+    void on_loadImageButton_clicked();
+
     void on_actionQuit_triggered();
 
     void on_actionOpen_Mesh_triggered();
-
     void on_actionOpen_Images_triggered();
 
-    void on_prevImageButton_clicked();
-
-    void on_imageTypeComboBox_currentIndexChanged(int index);
-
-    void on_loadImageButton_clicked();
-
-    void on_nextImageButton_clicked();
+    void on_loadReprojectButton_clicked();
 
     void meshLoaded();
     void imagesLoaded();
     void allLoaded();
     void vertexDataLoaded();
 
-    void on_loadReprojectButton_clicked();
-
     void on_actionLoad_Last_Mesh_Camera_File_triggered();
-
     void on_actionLoad_Last_Intermediates_triggered();
 
 private:

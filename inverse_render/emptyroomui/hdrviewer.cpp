@@ -8,6 +8,7 @@ HDRViewer::HDRViewer(QWidget *parent, QWidget* hdrwidget, HDRGlHelper* hdrcontro
     init();
 }
 void HDRViewer::init() {
+    setFocusPolicy(Qt::StrongFocus);
     connect(rendercontrol, SIGNAL(fixParams(int,int,int)), this, SLOT(fixRange(int,int,int)));
     connect(rendercontrol, SIGNAL(suggestRange(int,int)), this, SLOT(setSuggestRange(int,int)));
 
@@ -41,6 +42,7 @@ void HDRViewer::init() {
 
     QVBoxLayout* layout = new QVBoxLayout(this);
     layout->addWidget(renderwidget);
+    renderwidget->setFocusPolicy(Qt::StrongFocus);
     renderwidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     container->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     layout->addWidget(container);

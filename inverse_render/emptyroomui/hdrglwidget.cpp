@@ -237,14 +237,18 @@ void HDRGlHelper::initializeHelper() {
     glPushAttrib(GL_ALL_ATTRIB_BITS - GL_VIEWPORT_BIT);
 }
 
-void HDRGlHelper::paintHelper() {
+void HDRGlHelper::renderToTexture(boost::function<void()> f) {
     glEnable(GL_TEXTURE_2D);
     glUseProgram(0);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glPopAttrib();
-    if (renderfunc) renderfunc();
+    if (f) f();
     glPushAttrib(GL_ALL_ATTRIB_BITS-GL_VIEWPORT_BIT);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void HDRGlHelper::paintHelper() {
+    renderToTexture(renderfunc);
     glClearColor(0.0, 0.0, 0.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
     glDisable(GL_LIGHTING);
@@ -268,6 +272,23 @@ void HDRGlHelper::paintHelper() {
     glDisableVertexAttribArray(p.v_coord);
 }
 
+void HDRGlHelper::readFromTexture(int x, int y, int w, int h, float* data) {
+    float* tmp = new float[w*h*3];
+    float* depth = new float[w*h];
+    float* currcolor = tmp;
+    float* currdepth = depth;
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glReadPixels(x,y,w,h,GL_RGB,GL_FLOAT,tmp);
+    glReadPixels(x,y,w,h,GL_DEPTH_COMPONENT,GL_FLOAT,depth);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    for (int i = 0; i < w*h; ++i) {
+        for (int j = 0; j < 3; ++j) *(data++) = *(currcolor++);
+        *(data++) = *(currdepth++);
+    }
+    delete [] tmp;
+    delete [] depth;
+}
+
 void HDRGlHelper::resizeHelper(int width, int height) {
     currw = width;
     currh = height;
@@ -280,9 +301,56 @@ void HDRGlHelper::resizeHelper(int width, int height) {
     emit update();
 }
 
-void HDRQGlViewerWidget::resizeGL(int width, int height)
-{
-        QGLViewer::resizeGL(width, height);
-        helper.resizeHelper(width, height);
-        _doresize(width, height);
+void HDRQGlViewerWidget::resizeGL(int width, int height) {
+    QGLViewer::resizeGL(width, height);
+    helper.resizeHelper(width, height);
+    _doresize(width, height);
+}
+
+void HDRQGlViewerWidget::select(const QPoint &point) {
+    makeCurrent();
+    camera()->loadProjectionMatrix();
+    camera()->loadModelViewMatrix();
+    glDisable(GL_LIGHTING);
+    glDisable(GL_CULL_FACE);
+    helper.renderToTexture(boost::bind(&HDRQGlViewerWidget::drawWithNames, this));
+
+    int w = selectRegionWidth();
+    int h = selectRegionHeight();
+    int x = point.x();
+    int y = height() - point.y() - 1;
+
+    float* data = new float[w*h*4];
+    helper.readFromTexture(x-w/2,y-h/2,w,h,data);
+    float closest = 1e8;
+    int closestid = -1;
+    for (int i = 0; i < w*h; ++i) {
+        int n = RGBToIndex(data+4*i);
+        if (data[4*i+3] < closest) {
+            closestid = n;
+            closest = data[4*i+3];
+        }
     }
+    setSelectedName(closestid);
+    postSelection(point);
+}
+
+static const int base = 17;
+
+int HDRQGlViewerWidget::RGBToIndex(float* rgb) {
+    int ret = 0;
+    int currpow = base-1;
+    for (int i = 0; i < 3; ++i) {
+        ret += rgb[i]*currpow + 0.5;
+        currpow *= base;
+    }
+    return ret-1;
+}
+
+void HDRQGlViewerWidget::IndexToRGB(int i, float* rgb) {
+    int v = i+1;
+    for (int i = 0; i < 3; ++i) {
+        rgb[i] = (v%base)/(float) (base-1);
+        v /= base;
+    }
+}
