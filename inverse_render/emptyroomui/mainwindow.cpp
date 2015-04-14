@@ -135,6 +135,7 @@ void MainWindow::updateImage(int idx, int type)
         default:
             return;
     }
+    ui->meshWidget->highlightCamera(idx);
 
     if (imageindex == 0) ui->prevImageButton->setEnabled(false);
     else ui->prevImageButton->setEnabled(true);
@@ -241,6 +242,8 @@ void MainWindow::imagesLoaded() {
 void MainWindow::allLoaded() {
     if (imgr && mmgr) {
         ui->reprojectButton->setEnabled(true);
+        // Render cameras
+        ui->meshWidget->setupCameras(imgr);
     }
 }
 

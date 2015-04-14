@@ -2,9 +2,12 @@
 #include "eruiglwidget.h"
 #include "R3Graphics/R3Graphics.h"
 #define MAX_LIGHTS 127
+#define MAX_CAMERAS 100
 
 ERUIGLWidget::ERUIGLWidget(QWidget *parent) :
-    HDRQGlViewerWidget(parent), mmgr(NULL), hasColors(false), hasGeometry(false)
+    HDRQGlViewerWidget(parent), mmgr(NULL),
+    hasColors(false), hasGeometry(false),
+    cameraRenderFormat(CAMRENDER_NONE), selectedCamera(0)
 {
 }
 
@@ -131,6 +134,29 @@ void ERUIGLWidget::setupMeshColors()
     hasColors = true;
     updateGL();
 }
+
+void ERUIGLWidget::setupCameras(ImageManager* imgr) {
+    int inc = 1;
+    if (imgr->size() > MAX_CAMERAS) {
+        inc = imgr->size()/MAX_CAMERAS + 1;
+    }
+    for (int i = 0; i < imgr->size(); i += inc) {
+        cameras.push_back(*imgr->getCamera(i));
+        camids.push_back(i);
+    }
+    cameraRenderFormat = CAMRENDER_FRUSTUM;
+}
+
+void ERUIGLWidget::highlightCamera(int cameraindex) {
+    std::vector<int>::iterator it = std::lower_bound(camids.begin(), camids.end(), cameraindex);
+    if (it == camids.end()) return;
+    int idx = *it;
+    if (camids[idx] == cameraindex) {
+        selectedCamera = idx;
+    }
+    updateGL();
+}
+
 void ERUIGLWidget::init()
 {
         glewInit();
@@ -224,5 +250,82 @@ void ERUIGLWidget::draw()
         glDisableClientState(GL_NORMAL_ARRAY);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         if (hasColors) glDisableClientState(GL_COLOR_ARRAY);
+
+        if (cameraRenderFormat != CAMRENDER_NONE) {
+            glEnable(GL_LIGHTING);
+            glColor3f(1,1,1);
+            b.Draw();
+            l.Draw(0);
+            for (int i = 0; i < cameras.size(); ++i) {
+                if (i == selectedCamera) glColor3f(0,100,100);
+                else glColor3f(0,100,0);
+                renderCamera(cameras[i]);
+            }
+            glDisable(GL_LIGHTING);
+        }
     }
+}
+
+#define GLEXPAND(x) (x)[0], (x)[1], (x)[2]
+void ERUIGLWidget::renderCamera(const CameraParams &cam) {
+    R3Point p = cam.pos;
+    float f = 0.1;
+    glPushAttrib(GL_ALL_ATTRIB_BITS);
+    if (cameraRenderFormat == CAMRENDER_AXES) {
+        R3Point v2 = p + cam.towards*f;
+        R3Point v3 = p + cam.up*f;
+        glBegin(GL_LINES);
+            glVertex3f(GLEXPAND(p));
+            glVertex3f(GLEXPAND(v2));
+            glColor3f(100,0,0);
+            glVertex3f(GLEXPAND(p));
+            glVertex3f(GLEXPAND(v3));
+        glEnd();
+    }
+    else if (cameraRenderFormat == CAMRENDER_FRUSTUM) {
+        double w = cam.width/(2*cam.focal_length);
+        double h = cam.height/(2*cam.focal_length);
+
+        R3Point ul = p + cam.towards*f - cam.right*f*w + cam.up*f*h;
+        R3Point ur = p + cam.towards*f + cam.right*f*w + cam.up*f*h;
+        R3Point ll = p + cam.towards*f - cam.right*f*w - cam.up*f*h;
+        R3Point lr = p + cam.towards*f + cam.right*f*w - cam.up*f*h;
+        glDisable(GL_CULL_FACE);
+        glEnable(GL_LIGHTING);
+        // glColor3f decided by caller!
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+            glBegin(GL_TRIANGLES);
+                glVertex3f(GLEXPAND(p));
+                glVertex3f(GLEXPAND(ul));
+                glVertex3f(GLEXPAND(ur));
+                glVertex3f(GLEXPAND(p));
+                glVertex3f(GLEXPAND(ll));
+                glVertex3f(GLEXPAND(lr));
+                glVertex3f(GLEXPAND(p));
+                glVertex3f(GLEXPAND(ur));
+                glVertex3f(GLEXPAND(lr));
+                glVertex3f(GLEXPAND(p));
+                glVertex3f(GLEXPAND(ul));
+                glVertex3f(GLEXPAND(ll));
+            glEnd();
+        glDisable(GL_LIGHTING);
+        glColor3f(0,0,0);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+            glBegin(GL_TRIANGLES);
+                glVertex3f(GLEXPAND(p));
+                glVertex3f(GLEXPAND(ul));
+                glVertex3f(GLEXPAND(ur));
+                glVertex3f(GLEXPAND(p));
+                glVertex3f(GLEXPAND(ll));
+                glVertex3f(GLEXPAND(lr));
+                glVertex3f(GLEXPAND(p));
+                glVertex3f(GLEXPAND(ur));
+                glVertex3f(GLEXPAND(lr));
+                glVertex3f(GLEXPAND(p));
+                glVertex3f(GLEXPAND(ul));
+                glVertex3f(GLEXPAND(ll));
+            glEnd();
+
+    }
+    glPopAttrib();
 }

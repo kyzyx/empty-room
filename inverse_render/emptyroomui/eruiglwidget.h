@@ -5,6 +5,7 @@
 #include "hdrglwidget.h"
 #include "meshmanager.h"
 #include "hdrviewer.h"
+#include "imagemanager.h"
 
 class ERUIGLWidget : public HDRQGlViewerWidget
 {
@@ -13,6 +14,8 @@ public:
     explicit ERUIGLWidget(QWidget *parent = 0);
     void setMeshManager(MeshManager* manager);
     void setupMeshColors();
+    void setupCameras(ImageManager* imgr);
+
 protected:
     virtual void draw();
     virtual void init();
@@ -20,15 +23,29 @@ protected:
 
     void setupMeshGeometry();
 
+    void renderCamera(const CameraParams& cam);
 
+    std::vector<CameraParams> cameras;
+    std::vector<int> camids;
     MeshManager* mmgr;
 
     bool hasColors, hasGeometry;
+
+    // Camera rendering variables
+    enum {
+        CAMRENDER_NONE,
+        CAMRENDER_AXES,
+        CAMRENDER_FRUSTUM,
+    };
+    int cameraRenderFormat;
+    int selectedCamera;
+
+    // OpenGL buffer ids
     GLuint vbo, ibo, cbo;
 signals:
 
 public slots:
-
+    void highlightCamera(int cameraindex);
 };
 
 class ERUIGLViewer : public HDRViewer {
@@ -50,7 +67,10 @@ public:
         v->setMeshManager(manager);
     }
     void setupMeshColors() { v->setupMeshColors(); }
+    void setupCameras(ImageManager* imgr) { v->setupCameras(imgr); }
 
+public slots:
+    void highlightCamera(int cameraindex) { v->highlightCamera(cameraindex); }
 protected:
     ERUIGLWidget* v;
 };
