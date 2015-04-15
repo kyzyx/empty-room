@@ -84,7 +84,10 @@ void ERUIGLWidget::setupMeshGeometry()
 void ERUIGLWidget::setupMeshColors()
 {
     makeCurrent();
-    glGenBuffers(1, &cbo);
+    static bool initialize = true;
+    if (initialize) {
+        glGenBuffers(1, &cbo);
+    }
     glBindBuffer(GL_ARRAY_BUFFER, cbo);
     int varraysize = 2*3*mmgr->NVertices();
     float* vertices = new float[varraysize];
@@ -129,8 +132,13 @@ void ERUIGLWidget::setupMeshColors()
             }
         }
     }
-    glBufferData(GL_ARRAY_BUFFER, varraysize*sizeof(float),
-            vertices, GL_STATIC_DRAW);
+    if (initialize) {
+        glBufferData(GL_ARRAY_BUFFER, varraysize*sizeof(float), vertices, GL_DYNAMIC_DRAW);
+        initialize = false;
+    }
+    else {
+        glBufferSubData(GL_ARRAY_BUFFER, 0, varraysize*sizeof(float), vertices);
+    }
     delete [] vertices;
     hasColors = true;
     updateGL();

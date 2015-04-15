@@ -189,6 +189,15 @@ int MeshManager::getVertexSampleCount(int n) const {
     if (!hasSamples()) return 0;
     return vertexsamples[n];
 }
+int MeshManager::getTotalSamples() {
+    if (!hasSamples()) {
+        return 0;
+    }
+    else {
+        boost::interprocess::sharable_lock<shmutex> lock(*getMutex(NUM_CHANNELS, 0));
+        return *numsamples;
+    }
+}
 
 char MeshManager::getLabel(int n, int ch) const {
     //boost::interprocess::shareable_lock<shmutex> lock(*getMutex(ch,n));
@@ -209,12 +218,12 @@ R3Mesh* MeshManager::getMesh() {
 // Sample Data Functions
 // --------------------------------------------------------------
 void MeshManager::addSample(int n, Sample s) {
-    if (hasSamples()) return;
     wsamples[n].push_back(s);
 }
-void MeshManager::commitSamples() {
+void MeshManager::commitSamples(bool finalcommit) {
     boost::interprocess::scoped_lock<shmutex> lock(*getMutex(NUM_CHANNELS, 0));
-    if (*numsamples > 0) return;
+    if (finalcommit && *numsamples > 0) return;
+    *numsamples = 0;
     for (int i = 0; i < nvertices; ++i) {
         *numsamples += wsamples[i].size();
     }
@@ -227,11 +236,11 @@ void MeshManager::commitSamples() {
             *s++ = wsamples[i][j];
         }
     }
-    wsamples.clear();
+    if (finalcommit) wsamples.clear();
 }
 bool MeshManager::loadSamples() {
-    boost::interprocess::scoped_lock<shmutex> lock(*getMutex(NUM_CHANNELS, 0));
-    if (*numsamples > 0 && !hasSamples()) {
+    boost::interprocess::sharable_lock<shmutex> lock(*getMutex(NUM_CHANNELS, 0));
+    if (*numsamples > 0) {
         if (!initializeSharedSampleMemory()) return false;
         Sample* s = sampleptr;
         for (int i = 0; i < nvertices; ++i) {

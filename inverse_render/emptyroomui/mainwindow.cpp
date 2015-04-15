@@ -255,9 +255,21 @@ void MainWindow::allLoaded() {
         connect(ui->meshWidget, SIGNAL(cameraSelected(int)), this, SLOT(onCameraSelection(int)));
     }
 }
-
+#include <boost/interprocess/sync/sharable_lock.hpp>
 void MainWindow::vertexDataLoaded() {
     if (mmgr->loadSamples()) {
+        boost::interprocess::sharable_lock<MeshManager::shmutex> lock(*(mmgr->getMutex(MeshManager::NUM_CHANNELS,0)));
+        ui->meshWidget->setupMeshColors();
+    }
+    ui->saveReprojectButton->setEnabled(true);
+}
+void MainWindow::partialVertexDataLoaded(int percent) {
+    if (percent == 100) {
+        vertexDataLoaded();
+        return;
+    }
+    if (mmgr->loadSamples()) {
+        boost::interprocess::sharable_lock<MeshManager::shmutex> lock(*(mmgr->getMutex(MeshManager::NUM_CHANNELS,0)));
         ui->meshWidget->setupMeshColors();
     }
 }
@@ -331,4 +343,36 @@ void MainWindow::on_showCameraCheckbox_toggled(bool checked)
 void MainWindow::on_showCurrentCameraCheckbox_toggled(bool checked)
 {
     ui->meshWidget->showCurrentCamera(checked);
+}
+
+void MainWindow::on_reprojectButton_clicked()
+{
+    QString cmd = settings->value("reproject_binary", "reprojectapp -camfile %1 -meshfile %2 -p").toString();
+    cmd = cmd.arg(camfilename, meshfilename);
+    QString extraflags;
+    cmd += extraflags;
+
+    SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
+    workers.push_back(w);
+    QThread* thread = new QThread;
+    connect(thread, SIGNAL(started()), w, SLOT(run()));
+    connect(w, SIGNAL(percentChanged(int)), progressbar, SLOT(setValue(int)));
+    connect(w, SIGNAL(percentChanged(int)), this, SLOT(partialVertexDataLoaded(int)));
+    w->moveToThread(thread);
+    thread->start();
+}
+
+void MainWindow::on_saveReprojectButton_clicked()
+{
+    if (mmgr) {
+        QString lwd = settings->value("lastworkingdirectory", "").toString();
+        QString cfile = settings->value("lastreprojectfile", lwd).toString();
+        QString datafilename = QFileDialog::getSaveFileName(this, "Open Reprojection Samples", cfile);
+        QDir cwd = QDir(datafilename);
+        cwd.cdUp();
+        settings->setValue("lastworkingdirectory", cwd.canonicalPath());
+        // settings->setValue("lastreprojectfile", datafilename);
+
+        mmgr->writeSamplesToFile(datafilename.toStdString(), boost::bind(&QProgressBar::setValue, progressbar, _1));
+    }
 }

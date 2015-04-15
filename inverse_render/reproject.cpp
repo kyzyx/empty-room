@@ -37,8 +37,6 @@ void reproject(
         double threshold,
         vector<int>& vids,
         vector<Sample>& samples,
-        bool flip_x,
-        bool flip_y,
         R3MeshSearchTree* searchtree)
 {
     if (!searchtree) {
@@ -67,9 +65,7 @@ void reproject(
         if (isect.t < d && isect.type != R3_MESH_NULL_TYPE) continue;
 
         int xx = vx*cam->focal_length + cam->width/2;
-        if (flip_x) xx = cam->width - xx - 1;
         int yy = vy*cam->focal_length + cam->height/2;
-        if (flip_y) yy = cam->height - yy - 1;
         int idx = xx + yy*cam->width;
         // Check if depth map is consistent with projection
         if (depthmap) {
@@ -110,26 +106,24 @@ void reproject(
         const CameraParams* cam,
         MeshManager& mesh,
         double threshold,
-        bool flip_x,
-        bool flip_y,
         R3MeshSearchTree* searchtree)
 {
     vector<int> vids;
     vector<Sample> samples;
-    reproject(hdrimage, confidencemap, depthmap, cam, mesh, threshold, vids, samples, flip_x, flip_y, searchtree);
+    reproject(hdrimage, confidencemap, depthmap, cam, mesh, threshold, vids, samples, searchtree);
     for (int i = 0; i < vids.size(); ++i) {
         mesh.addSample(vids[i],samples[i]);
     }
 }
 
-void reproject(ImageManager& hdr, MeshManager& mesh, double threshold, bool flip_x, bool flip_y) {
+void reproject(ImageManager& hdr, MeshManager& mesh, double threshold, boost::function<void(int)> cb) {
     R3MeshSearchTree searchtree(mesh.getMesh());
     for (int i = 0; i < hdr.size(); ++i) {
         reproject(
                 (const float*) hdr.getImage(i),
                 (const float*) hdr.getImage("confidence", i),
                 (const float*) hdr.getImage("depth", i),
-                hdr.getCamera(i), mesh, threshold, flip_x, flip_y, &searchtree);
-        cout << "Finished projecting image " << i << endl;
+                hdr.getCamera(i), mesh, threshold, &searchtree);
+        if (cb) cb(((i+1)*100)/hdr.size());
     }
 }

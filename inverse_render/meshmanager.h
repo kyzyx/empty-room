@@ -49,6 +49,7 @@ class MeshManager {
         Sample getSample(int n, int i) const;
         Material getVertexColor(int n) const;
         int getVertexSampleCount(int n) const;
+        int getTotalSamples();
 
         // Label i/o
         void setLabel(int n, char c, int ch=0);
@@ -63,10 +64,12 @@ class MeshManager {
 
         // Sample setup functions
         void addSample(int n, Sample s);
-        void commitSamples();
+        void commitSamples(bool finalcommit=true);
         bool loadSamples();
         void readSamplesFromFile(const std::string& samplesfile, cb_type cb=NULL);
         void writeSamplesToFile(const std::string& samplesfile, cb_type cb=NULL);
+
+        shmutex* getMutex(int t, int n);
 
         enum {
             LABEL_CHANNEL,
@@ -84,7 +87,6 @@ class MeshManager {
         int computeSize() const;
         bool initializeSharedSampleMemory();
 
-        shmutex* getMutex(int t, int n);
 
         // R3Mesh utilities
         bool initializeR3Mesh();

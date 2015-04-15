@@ -43,6 +43,7 @@ private slots:
     void imagesLoaded();
     void allLoaded();
     void vertexDataLoaded();
+    void partialVertexDataLoaded(int percent);
 
     void on_actionLoad_Last_Mesh_Camera_File_triggered();
     void on_actionLoad_Last_Intermediates_triggered();
@@ -52,6 +53,10 @@ private slots:
     void onCameraSelection(int selected);
 
     void on_showCurrentCameraCheckbox_toggled(bool checked);
+
+    void on_reprojectButton_clicked();
+
+    void on_saveReprojectButton_clicked();
 
 private:
     Ui::MainWindow *ui;

@@ -7,8 +7,7 @@ void reproject(
         ImageManager& hdr,
         MeshManager& mesh,
         double threshold,
-        bool flip_x=false,
-        bool flip_y=false
+        boost::function<void(int)> cb=NULL
 );
 void reproject(
         const float* hdrimage,
@@ -17,8 +16,6 @@ void reproject(
         const CameraParams* cam,
         MeshManager& mesh,
         double threshold,
-        bool flip_x=false,
-        bool flip_y=false,
         R3MeshSearchTree* searchtree=NULL
 );
 #endif

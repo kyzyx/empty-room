@@ -23,6 +23,9 @@ target_link_libraries(memory ${PCL_LIBRARIES} ${Boost_LIBRARIES}
     GL GLU IlmImf Half rt)
 add_executable(dataserver dataserver.cpp)
 target_link_libraries(dataserver ${PCL_LIBRARIES} memory)
+add_executable(reprojectapp reprojectapp.cpp invrenderapp.cpp invrenderapp.h
+    reproject.cpp reproject.h clusterlights.cpp clusterlights.h)
+target_link_libraries(reprojectapp ${PCL_LIBRARIES} memory)
 
 add_executable(invrender invrender.cpp
     reproject.h reproject.cpp
