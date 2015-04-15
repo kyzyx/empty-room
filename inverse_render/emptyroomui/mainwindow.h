@@ -47,6 +47,12 @@ private slots:
     void on_actionLoad_Last_Mesh_Camera_File_triggered();
     void on_actionLoad_Last_Intermediates_triggered();
 
+    void on_showCameraCheckbox_toggled(bool checked);
+
+    void onCameraSelection(int selected);
+
+    void on_showCurrentCameraCheckbox_toggled(bool checked);
+
 private:
     Ui::MainWindow *ui;
     ImageManager* imgr;

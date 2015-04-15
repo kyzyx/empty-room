@@ -16,6 +16,8 @@ public:
     void setupMeshColors();
     void setupCameras(ImageManager* imgr);
 
+    void lookThroughCamera(const CameraParams* cam);
+
 protected:
     virtual void draw();
     virtual void init();
@@ -39,6 +41,7 @@ protected:
         CAMRENDER_AXES,
         CAMRENDER_FRUSTUM,
     };
+    bool renderCurrent;
     int cameraRenderFormat;
     int selectedCamera;
 
@@ -48,6 +51,8 @@ signals:
     void cameraSelected(int cameraindex);
 public slots:
     void highlightCamera(int cameraindex);
+    void showCameras(bool show);
+    void showCurrentCamera(bool show);
 };
 
 class ERUIGLViewer : public HDRViewer {
@@ -71,12 +76,17 @@ public:
     }
     void setupMeshColors() { v->setupMeshColors(); }
     void setupCameras(ImageManager* imgr) { v->setupCameras(imgr); }
+    void lookThroughCamera(const CameraParams* cam) { v->lookThroughCamera(cam); }
+
 signals:
     void cameraSelected(int cameraindex);
 protected slots:
     void emitCameraSelected(int cameraindex) { emit cameraSelected(cameraindex); }
 public slots:
     void highlightCamera(int cameraindex) { v->highlightCamera(cameraindex); }
+    void showCameras(bool show) { v->showCameras(show); }
+    void showCurrentCamera(bool show) { v->showCurrentCamera(show); }
+
 protected:
     ERUIGLWidget* v;
 };

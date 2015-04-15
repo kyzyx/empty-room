@@ -7,7 +7,8 @@
 ERUIGLWidget::ERUIGLWidget(QWidget *parent) :
     HDRQGlViewerWidget(parent), mmgr(NULL),
     hasColors(false), hasGeometry(false),
-    cameraRenderFormat(CAMRENDER_NONE), selectedCamera(0)
+    cameraRenderFormat(CAMRENDER_NONE), selectedCamera(0),
+    renderCurrent(true)
 {
 }
 
@@ -147,6 +148,17 @@ void ERUIGLWidget::setupCameras(ImageManager* imgr) {
     cameraRenderFormat = CAMRENDER_FRUSTUM;
 }
 
+void ERUIGLWidget::showCameras(bool show) {
+    if (show) cameraRenderFormat = CAMRENDER_FRUSTUM;
+    else cameraRenderFormat = CAMRENDER_NONE;
+    updateGL();
+}
+
+void ERUIGLWidget::showCurrentCamera(bool show) {
+    renderCurrent = show;
+    updateGL();
+}
+
 void ERUIGLWidget::highlightCamera(int cameraindex) {
     std::vector<int>::iterator it = std::lower_bound(camids.begin(), camids.end(), cameraindex);
     if (it == camids.end()) return;
@@ -168,7 +180,6 @@ void ERUIGLWidget::init()
   setShortcut(FULL_SCREEN, 0);
   setShortcut(ANIMATION, 0);
   setShortcut(SNAPSHOT_TO_CLIPBOARD, 0);
-
   //help();
 }
 
@@ -251,15 +262,18 @@ void ERUIGLWidget::draw()
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         if (hasColors) glDisableClientState(GL_COLOR_ARRAY);
 
-        if (cameraRenderFormat != CAMRENDER_NONE) {
+        if (cameraRenderFormat != CAMRENDER_NONE || renderCurrent) {
             glEnable(GL_LIGHTING);
             glColor3f(1,1,1);
             b.Draw();
             l.Draw(0);
             for (int i = 0; i < cameras.size(); ++i) {
-                if (i == selectedCamera) glColor3f(0,100,100);
-                else glColor3f(0,100,0);
-                renderCamera(cameras[i]);
+                if (i == selectedCamera)
+                    glColor3f(0,100,100);
+                else
+                    glColor3f(0,100,0);
+                if (i == selectedCamera || cameraRenderFormat != CAMRENDER_NONE)
+                    renderCamera(cameras[i]);
             }
             glDisable(GL_LIGHTING);
         }
@@ -270,13 +284,13 @@ void ERUIGLWidget::drawWithNames() {
 
     glClearColor(0,0,0,1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    if (cameraRenderFormat != CAMRENDER_NONE) {
+    if (cameraRenderFormat != CAMRENDER_NONE || renderCurrent) {
         float col[3];
         for (int i = 0; i < cameras.size(); ++i) {
             IndexToRGB(i, col);
             glPushName(i);
             glColor3fv(col);
-            renderCamera(cameras[i], true);
+            if (i == selectedCamera || cameraRenderFormat != CAMRENDER_NONE) renderCamera(cameras[i], true);
             glPopName();
         }
     }
@@ -284,6 +298,25 @@ void ERUIGLWidget::drawWithNames() {
 
 void ERUIGLWidget::postSelection(const QPoint &point) {
     if (selectedName() >= 0) emit cameraSelected(selectedName());
+}
+
+void ERUIGLWidget::lookThroughCamera(const CameraParams* cam) {
+    makeCurrent();
+    double camratio = camera()->aspectRatio();
+    double ratio = cam->width/(double) cam->height;
+    double vfov = cam->fov*M_PI/180.;
+    if (ratio < camratio) {
+        // vertical fov is limiting
+        camera()->setFieldOfView(vfov);
+    } else {
+        double hfov = 2 * atan(tan(vfov/2) * ratio);
+        camera()->setHorizontalFieldOfView(hfov);
+    }
+
+    camera()->setPosition(qglviewer::Vec(cam->pos[0], cam->pos[1], cam->pos[2]));
+    camera()->setUpVector(qglviewer::Vec(cam->up[0], cam->up[1], cam->up[2]));
+    camera()->setViewDirection(qglviewer::Vec(cam->towards[0], cam->towards[1], cam->towards[2]));
+    updateGL();
 }
 
 #define GLEXPAND(x) (x)[0], (x)[1], (x)[2]
@@ -302,7 +335,8 @@ void ERUIGLWidget::renderCamera(const CameraParams &cam, bool id_only) {
             glVertex3f(GLEXPAND(v3));
         glEnd();
     }
-    else if (cameraRenderFormat == CAMRENDER_FRUSTUM) {
+    //else if (cameraRenderFormat == CAMRENDER_FRUSTUM) {
+    else {
         double w = cam.width/(2*cam.focal_length);
         double h = cam.height/(2*cam.focal_length);
 

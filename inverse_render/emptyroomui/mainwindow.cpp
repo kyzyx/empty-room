@@ -239,12 +239,20 @@ void MainWindow::imagesLoaded() {
     allLoaded();
 }
 
+void MainWindow::onCameraSelection(int selected) {
+    if (imageindex == selected) ui->meshWidget->lookThroughCamera(imgr->getCamera(selected));
+    updateImage(selected);
+
+}
+
 void MainWindow::allLoaded() {
     if (imgr && mmgr) {
         ui->reprojectButton->setEnabled(true);
+        ui->showCameraCheckbox->setEnabled(true);
+        ui->showCurrentCameraCheckbox->setEnabled(true);
         // Render cameras
         ui->meshWidget->setupCameras(imgr);
-        connect(ui->meshWidget, SIGNAL(cameraSelected(int)), this, SLOT(updateImage(int)));
+        connect(ui->meshWidget, SIGNAL(cameraSelected(int)), this, SLOT(onCameraSelection(int)));
     }
 }
 
@@ -312,4 +320,15 @@ void MainWindow::loadVertexData(QString meshfile, QString datafile) {
     connect(w, SIGNAL(done()), this, SLOT(vertexDataLoaded()));
     w->moveToThread(thread);
     thread->start();
+}
+
+void MainWindow::on_showCameraCheckbox_toggled(bool checked)
+{
+    ui->meshWidget->showCameras(checked);
+    if (checked) ui->showCurrentCameraCheckbox->setChecked(true);
+}
+
+void MainWindow::on_showCurrentCameraCheckbox_toggled(bool checked)
+{
+    ui->meshWidget->showCurrentCamera(checked);
 }
