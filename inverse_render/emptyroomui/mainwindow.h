@@ -5,8 +5,10 @@
 #include "meshmanager.h"
 #include "imagemanager.h"
 #include "subprocessworker.h"
+#include "roommodel.h"
 #include <QProgressBar>
 #include <QSettings>
+#include <QTemporaryFile>
 
 namespace Ui {
 class MainWindow;
@@ -39,6 +41,7 @@ private slots:
 
     void on_loadReprojectButton_clicked();
 
+    void wallfindingDone();
     void meshLoaded();
     void imagesLoaded();
     void allLoaded();
@@ -58,10 +61,16 @@ private slots:
 
     void on_saveReprojectButton_clicked();
 
+    void on_wallfindButton_clicked();
+
+    void showwfrestooltip(int v);
+    void showwfthresholdtooltip(int v);
+
 private:
     Ui::MainWindow *ui;
     ImageManager* imgr;
     MeshManager* mmgr;
+    roommodel::RoomModel* room;
 
     std::vector<SubprocessWorker*> workers;
     QProgressBar* progressbar;
@@ -71,6 +80,8 @@ private:
 
     QSettings* settings;
     QString settingsfilename;
+
+    QTemporaryFile* temproommodel;
 
     int imageindex;
     int typeindex;

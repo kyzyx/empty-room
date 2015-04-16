@@ -5,6 +5,7 @@
 #include <QIntValidator>
 #include <QCheckBox>
 #include <QThread>
+#include <QToolTip>
 
 class MeshDialog : public QFileDialog
 {
@@ -82,7 +83,7 @@ MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
     imgr(NULL), mmgr(NULL),
-    typeindex(0), imageindex(0)
+    typeindex(0), imageindex(0), room(NULL)
 {
     ui->setupUi(this);
 
@@ -92,6 +93,8 @@ MainWindow::MainWindow(QWidget *parent) :
     progressbar->setValue(100);
     settingsfilename = QApplication::applicationDirPath() + "/settings.ini";
     settings = new QSettings(settingsfilename, QSettings::NativeFormat);
+    connect(ui->wf_resolutionSlider, SIGNAL(sliderMoved(int)), this, SLOT(showwfrestooltip(int)));
+    connect(ui->wf_wallthresholdSlider, SIGNAL(sliderMoved(int)), this, SLOT(showwfthresholdtooltip(int)));
 }
 
 MainWindow::~MainWindow()
@@ -103,6 +106,7 @@ MainWindow::~MainWindow()
     }
     if (mmgr) delete mmgr;
     if (imgr) delete imgr;
+    if (room) delete room;
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *e)
@@ -186,6 +190,8 @@ void MainWindow::meshLoaded() {
     ui->loadWallsButton->setEnabled(true);
     ui->loadReprojectButton->setEnabled(true);
     ui->actionLoad_Last_Intermediates->setEnabled(true);
+    ui->wf_resolutionSlider->setEnabled(true);
+    ui->wf_wallthresholdSlider->setEnabled(true);
     mmgr = new MeshManager(meshfilename.toStdString());
     ui->meshWidget->setMeshManager(mmgr);
     allLoaded();
@@ -378,4 +384,41 @@ void MainWindow::on_saveReprojectButton_clicked()
 
         mmgr->writeSamplesToFile(datafilename.toStdString(), boost::bind(&QProgressBar::setValue, progressbar, _1));
     }
+}
+
+void MainWindow::on_wallfindButton_clicked()
+{
+    temproommodel = new QTemporaryFile();
+    temproommodel->open();
+    temproommodel->close();
+    QString cmd = settings->value("wallfind_binary", "wallfindapp -meshfile %1 -outputroommodel %2 -p").toString();
+    cmd = cmd.arg(meshfilename, temproommodel->fileName());
+    QString extraflags = "";
+    extraflags += " -resolution " + QString::number(ui->wf_resolutionSlider->value()*0.001);
+    extraflags += " -wallthreshold " + QString::number(ui->wf_wallthresholdSlider->value());
+    cmd += extraflags;
+
+    SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
+    workers.push_back(w);
+    QThread* thread = new QThread;
+    connect(thread, SIGNAL(started()), w, SLOT(run()));
+    connect(w, SIGNAL(percentChanged(int)), progressbar, SLOT(setValue(int)));
+    connect(w, SIGNAL(done()), this, SLOT(wallfindingDone()));
+    w->moveToThread(thread);
+    thread->start();
+}
+
+void MainWindow::wallfindingDone() {
+    room = new roommodel::RoomModel;
+    roommodel::load(*room, temproommodel->fileName().toStdString());
+    ui->meshWidget->setRoomModel(room);
+    //delete temproommodel;
+}
+
+void MainWindow::showwfrestooltip(int v) {
+    QToolTip::showText(QCursor::pos(), QString::number(v*0.001), ui->wf_resolutionSlider);
+}
+
+void MainWindow::showwfthresholdtooltip(int v) {
+    QToolTip::showText(QCursor::pos(), QString::number(v), ui->wf_wallthresholdSlider);
 }

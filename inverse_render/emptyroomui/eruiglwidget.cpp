@@ -1,5 +1,6 @@
 #include <GL/glew.h>
 #include "eruiglwidget.h"
+#include "geometrygenerator.h"
 #include "R3Graphics/R3Graphics.h"
 #define MAX_LIGHTS 127
 #define MAX_CAMERAS 100
@@ -7,7 +8,8 @@
 ERUIGLWidget::ERUIGLWidget(QWidget *parent) :
     HDRQGlViewerWidget(parent), mmgr(NULL),
     hasColors(false), hasGeometry(false),
-    selectedCamera(0), renderoptions(this)
+    selectedCamera(0), renderoptions(this),
+    room(NULL), numroomtriangles(0)
 {
 }
 
@@ -143,6 +145,15 @@ void ERUIGLWidget::setupMeshColors()
     updateGL();
 }
 
+void ERUIGLWidget::setupRoomGeometry(roommodel::RoomModel* model) {
+    if (!model) model = room;
+}
+
+void ERUIGLWidget::setRoomModel(roommodel::RoomModel* model) {
+    setupRoomGeometry(model);
+    room = model;
+}
+
 void ERUIGLWidget::setupCameras(ImageManager* imgr) {
     int inc = 1;
     if (imgr->size() > MAX_CAMERAS) {
@@ -229,6 +240,7 @@ void ERUIGLWidget::draw()
         glEnable(GL_DEPTH_TEST);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         if (renderoptions.shouldRenderMesh() && hasGeometry) renderMesh();
+        if (renderoptions.shouldRenderRoom() && room) renderRoom();
 
         if (renderoptions.shouldRenderAnyCameras()) {
             glEnable(GL_LIGHTING);
@@ -277,6 +289,30 @@ void ERUIGLWidget::renderMesh() {
     glDisableClientState(GL_NORMAL_ARRAY);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     if (hasColors) glDisableClientState(GL_COLOR_ARRAY);
+}
+
+void ERUIGLWidget::renderRoom() {
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    glDisable(GL_LIGHT0);
+    glEnable(GL_LIGHTING);
+    glColor3f(1,1,1);
+    b.Draw();
+    l.Draw(0);
+
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glEnableClientState(GL_NORMAL_ARRAY);
+    glEnableClientState(GL_COLOR_ARRAY);
+    glBindBuffer(GL_ARRAY_BUFFER, roomcbo);
+    glColorPointer(3, GL_FLOAT, 3*sizeof(float), 0);
+    glBindBuffer(GL_ARRAY_BUFFER, roomvbo);
+    glVertexPointer(3, GL_FLOAT, 6*sizeof(float), 0);
+    glNormalPointer(GL_FLOAT, 6*sizeof(float), (void*)(3*sizeof(float)));
+    glDrawArrays(GL_TRIANGLES, 0, numroomtriangles);
+    glDisableClientState(GL_VERTEX_ARRAY);
+    glDisableClientState(GL_NORMAL_ARRAY);
+    glDisableClientState(GL_COLOR_ARRAY);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 void ERUIGLWidget::drawWithNames() {

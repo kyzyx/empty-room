@@ -18,7 +18,10 @@ SOURCES += main.cpp\
     qxtspanslider.cpp \
     subprocessworker.cpp \
     hdrglwidget.cpp \
-    hdrimageviewer.cpp
+    hdrimageviewer.cpp \
+    geometrygenerator.cpp \
+    rectanglerenderer.cpp \
+    ../RoomModel.cpp
 
 HEADERS  += mainwindow.h \
             eruiglwidget.h \
@@ -28,16 +31,20 @@ HEADERS  += mainwindow.h \
     qxtspanslider.h \
     subprocessworker.h \
     hdrglwidget.h \
-    hdrimageviewer.h
+    hdrimageviewer.h \
+    geometrygenerator.h \
+    rectanglerenderer.h \
+    ../roommodel.h \
+    ../RoomModel_Internal.h
 
 FORMS    += mainwindow.ui
 
 unix: LIBS += -L$$PWD/../build/ \
         -L$$PWD/../../GAPS/R3Graphics/ -L$$PWD/../../GAPS/R3Shapes/ -L$$PWD/../../GAPS/RNBasics/ -L$$PWD/../../GAPS/R2Shapes/ \
-        -lmemory \
-        -lR3Graphics -lR3Shapes -lR2Shapes -lRNBasics -ljpeg \
+        -lmemory -lHalf -lIlmImf \
+        -lR3Graphics -lR3Shapes -lR2Shapes -lRNBasics -ljpeg -lpng \
         -lGLU -lGLEW -lrt -lboost_system -lboost_filesystem \
-        -lQGLViewer
+        -lQGLViewer -lpcl_common -lpcl_io -lpcl_io_ply
 #-L$$PWD/../../GAPS/R3Graphics/ -L$$PWD/../../GAPS/R3Shapes/ -L$$PWD/../../GAPS/RNBasics/ -L$$PWD/../../GAPS/R2Shapes/ \
               #-lR3Graphics -lR3Shapes -lR2Shapes -lRNBasics -ljpeg \
 #-lGAPS -ljpeg \

@@ -6,6 +6,7 @@
 #include "meshmanager.h"
 #include "hdrviewer.h"
 #include "imagemanager.h"
+#include "roommodel.h"
 
 class ERUIRenderOptions : public QObject {
 Q_OBJECT
@@ -81,6 +82,7 @@ public:
     void setupCameras(ImageManager* imgr);
 
     void lookThroughCamera(const CameraParams* cam);
+    void setRoomModel(roommodel::RoomModel* model);
     ERUIRenderOptions* renderOptions() { return &renderoptions; }
 protected:
     virtual void draw();
@@ -90,21 +92,26 @@ protected:
     virtual QString helpString() const;
 
     void setupMeshGeometry();
+    void setupRoomGeometry(roommodel::RoomModel* model);
 
+    void renderRoom();
     void renderMesh();
     void renderCamera(const CameraParams& cam, bool id_only=false);
 
     std::vector<CameraParams> cameras;
     std::vector<int> camids;
     MeshManager* mmgr;
+    roommodel::RoomModel* room;
 
     bool hasColors, hasGeometry;
 
     ERUIRenderOptions renderoptions;
     int selectedCamera;
+    int numroomtriangles;
 
     // OpenGL buffer ids
     GLuint vbo, ibo, cbo;
+    GLuint roomvbo, roomcbo;
 signals:
     void cameraSelected(int cameraindex);
 public slots:
@@ -134,6 +141,7 @@ public:
     void setupMeshColors() { v->setupMeshColors(); }
     void setupCameras(ImageManager* imgr) { v->setupCameras(imgr); }
     void lookThroughCamera(const CameraParams* cam) { v->lookThroughCamera(cam); }
+    void setRoomModel(roommodel::RoomModel* model) { v->setRoomModel(model); }
 signals:
     void cameraSelected(int cameraindex);
 protected slots:
