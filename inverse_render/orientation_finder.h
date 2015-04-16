@@ -3,7 +3,7 @@
 
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
-#include <pcl/PolygonMesh.h>
+#include "meshmanager.h"
 
 /**
  * OrientationFinder encapsulates an algorithm to find the
@@ -14,9 +14,9 @@
  */
 class OrientationFinder {
     public:
-        OrientationFinder(pcl::PolygonMesh::Ptr m);
+        OrientationFinder(MeshManager* m);
 
-        bool computeNormals(bool ccw=false);
+        bool computeNormals();
         /**
          * Computes the dominant three axes based on face normals.
          * resolution lists how many buckets per M_PI/4 radians
@@ -44,7 +44,7 @@ class OrientationFinder {
         std::vector<std::vector<double> > histogramweights;
 
         // Basic geometry info
-        pcl::PolygonMesh::Ptr mesh;
+        MeshManager* mesh;
         pcl::PointCloud<pcl::PointNormal>::Ptr cloud;
         std::vector<Eigen::Vector3f> facenormals;
 
@@ -56,16 +56,16 @@ class OrientationFinder {
 
 class NormalOrientationFinder : public OrientationFinder {
     public:
-        NormalOrientationFinder(pcl::PolygonMesh::Ptr m) : OrientationFinder(m) {;}
+        NormalOrientationFinder(MeshManager* m) : OrientationFinder(m) {;}
     protected:
         virtual bool prepareComputeOrientation();
         virtual void fillHistogram(int resolution);
 };
 class PlaneOrientationFinder : public OrientationFinder {
     public:
-        PlaneOrientationFinder(pcl::PolygonMesh::Ptr m)
+        PlaneOrientationFinder(MeshManager* m)
             : OrientationFinder(m), planeDistance(0.01) {;}
-        PlaneOrientationFinder(pcl::PolygonMesh::Ptr m, double distanceThreshold)
+        PlaneOrientationFinder(MeshManager* m, double distanceThreshold)
             : OrientationFinder(m), planeDistance(distanceThreshold) {;}
     protected:
         virtual void fillHistogram(int resolution);

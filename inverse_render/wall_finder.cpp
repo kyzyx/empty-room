@@ -651,3 +651,38 @@ Eigen::Vector3f WallFinder::getNormalizedWallEndpoint(int i, bool lo, double hei
     p[2] = x.second;
     return p;
 }
+
+void WallFinder::getAsRoomModel(roommodel::RoomModel* rm) {
+    rm->height = ceilplane - floorplane;
+    rm->walls.clear();
+    int start;
+    for (start = 0; start < wallsegments.size(); ++start) {
+        if (wallsegments[start].direction == 0 && wallsegments[start].norm > 0) {
+            break;
+        }
+    }
+    if (start == wallsegments.size()) {
+        cout << "Error creating floor plan!" << endl;
+        return;
+    }
+    rotate(wallsegments.begin(), wallsegments.begin()+start, wallsegments.end());
+    if (wallsegments[1].coord != wallsegments[0].end) {
+        reverse(wallsegments.begin(), wallsegments.end());
+    }
+
+    for (int i = 0; i < wallsegments.size(); ++i) {
+        roommodel::Wall wall;
+        wall.length = wallsegments[i].length();
+        wall.normal = wallsegments[i].norm;
+        rm->walls.push_back(wall);
+    }
+    rm->wallMaterial.diffuse.r = 1;
+    rm->wallMaterial.diffuse.g = 1;
+    rm->wallMaterial.diffuse.b = 1;
+    rm->floorMaterial.diffuse.r = 1;
+    rm->floorMaterial.diffuse.g = 1;
+    rm->floorMaterial.diffuse.b = 1;
+    rm->ceilingMaterial.diffuse.r = 1;
+    rm->ceilingMaterial.diffuse.g = 1;
+    rm->ceilingMaterial.diffuse.b = 1;
+}

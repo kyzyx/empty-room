@@ -11,33 +11,29 @@ using namespace std;
 using namespace pcl;
 
 
-OrientationFinder::OrientationFinder(pcl::PolygonMesh::Ptr m) :
+OrientationFinder::OrientationFinder(MeshManager* m) :
     mesh(m),
     cloud(new pcl::PointCloud<PointNormal>())
 {
 }
 
-bool OrientationFinder::computeNormals(bool ccw)
+bool OrientationFinder::computeNormals()
 {
     // Initialize point cloud
     {
-        PointCloud<PointXYZ> tmp;
-        fromPCLPointCloud2(mesh->cloud, tmp);
-        cloud->points.resize(tmp.size());
-        for (size_t i = 0; i < tmp.size(); ++i) {
-            cloud->points[i].x = tmp[i].x;
-            cloud->points[i].y = tmp[i].y;
-            cloud->points[i].z = tmp[i].z;
+        cloud->points.resize(mesh->NVertices());
+        for (size_t i = 0; i < mesh->NVertices(); ++i) {
+            cloud->points[i].x = mesh->VertexPosition(i).X();
+            cloud->points[i].y = mesh->VertexPosition(i).Y();
+            cloud->points[i].z = mesh->VertexPosition(i).Z();
         }
     }
-    facenormals.resize(mesh->polygons.size());
+    facenormals.resize(mesh->NFaces());
 
     // Iterate over faces
-    for (int i = 0; i < mesh->polygons.size(); ++i) {
-        if (mesh->polygons[i].vertices.size() != 3) {
-            return false;
-        }
-        vector<uint32_t>& f = mesh->polygons[i].vertices;
+    for (int i = 0; i < mesh->NFaces(); ++i) {
+        int f[3];
+        for (int j = 0; j < 3; ++j) f[j] = mesh->VertexOnFace(i,j);
         Eigen::Vector3f a(
                 (*cloud)[f[0]].x - (*cloud)[f[1]].x,
                 (*cloud)[f[0]].y - (*cloud)[f[1]].y,
@@ -49,7 +45,6 @@ bool OrientationFinder::computeNormals(bool ccw)
                 (*cloud)[f[2]].z - (*cloud)[f[1]].z
         );
         Eigen::Vector3f c = a.cross(b);
-        if (ccw) c = -c;
 
         // Add to vertex normals
         for (int j = 0; j < 3; ++j) {
@@ -187,7 +182,7 @@ bool NormalOrientationFinder::prepareComputeOrientation() {
     return true;
 }
 void NormalOrientationFinder::fillHistogram(int resolution) {
-    for (int i = 0; i < mesh->polygons.size(); ++i) {
+    for (int i = 0; i < mesh->NFaces(); ++i) {
         double norm = facenormals[i].norm();
         if (norm == 0) continue;
         double x,y,z;

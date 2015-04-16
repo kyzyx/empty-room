@@ -3,7 +3,6 @@
 #include <pcl/io/io.h>
 #include <pcl/io/vtk_lib_io.h>
 #include <pcl/point_types.h>
-#include <pcl/PolygonMesh.h>
 #include <boost/thread/thread.hpp>
 #include <iostream>
 
@@ -41,9 +40,7 @@ int main(int argc, char* argv[]) {
     if (!parseargs(argc, argv)) return 1;
 
     cout << "Loading mesh geometry...." << endl;
-    PolygonMesh::Ptr mesh(new PolygonMesh());
-    io::loadPolygonFile(argv[1], *mesh);
-    MeshServer mmgr(mesh, ccw);
+    MeshServer mmgr(argv[1], ccw);
     cout << "Done loading mesh geometry" << endl;
 
     ImageServer imgr(camfile, image_flip_x, image_flip_y);
@@ -57,8 +54,8 @@ int main(int argc, char* argv[]) {
     if (do_wallfinding) {
         cout << "===== WALLFINDING =====" << endl;
         vector<char> types(mmgr.NVertices());
-        PlaneOrientationFinder of(mesh, resolution/2);
-        of.computeNormals(ccw);
+        PlaneOrientationFinder of(&mmgr, resolution/2);
+        of.computeNormals();
         if (wallinput) {
             cout << "Loading wall files..." << endl;
             wf.loadWalls(wallfile, types, of);
@@ -190,13 +187,11 @@ int main(int argc, char* argv[]) {
     if (display) {
         PointCloud<PointXYZRGB>::Ptr cloud(new PointCloud<PointXYZRGB>());
         {
-            PointCloud<PointXYZ> tmp;
-            fromPCLPointCloud2(mesh->cloud, tmp);
-            cloud->points.resize(tmp.size());
-            for (size_t i = 0; i < tmp.size(); ++i) {
-                cloud->points[i].x = tmp[i].x;
-                cloud->points[i].y = tmp[i].y;
-                cloud->points[i].z = tmp[i].z;
+            cloud->points.resize(mmgr.NVertices());
+            for (size_t i = 0; i < mmgr.NVertices(); ++i) {
+                cloud->points[i].x = mmgr.VertexPosition(i).X();
+                cloud->points[i].y = mmgr.VertexPosition(i).Y();
+                cloud->points[i].z = mmgr.VertexPosition(i).Z();
             }
         }
 

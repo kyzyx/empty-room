@@ -4,6 +4,7 @@
 #include <pcl/PolygonMesh.h>
 #include <pcl/point_types.h>
 #include "orientation_finder.h"
+#include "roommodel.h"
 
 #include <vector>
 
@@ -94,6 +95,7 @@ class WallFinder {
                 double minlength=0.2,
                 double anglethreshold=M_PI/40);
 
+        void getAsRoomModel(roommodel::RoomModel* rm);
         void loadWalls(std::string filename, std::vector<char>& labels, OrientationFinder& of);
         void saveWalls(std::string filename, std::vector<char>& labels, OrientationFinder& of);
         double getResolution() const { return resolution; }

@@ -26,6 +26,11 @@ target_link_libraries(dataserver ${PCL_LIBRARIES} memory)
 add_executable(reprojectapp reprojectapp.cpp invrenderapp.cpp invrenderapp.h
     reproject.cpp reproject.h clusterlights.cpp clusterlights.h)
 target_link_libraries(reprojectapp ${PCL_LIBRARIES} memory)
+add_executable(wallfindapp wallfindapp.cpp invrenderapp.cpp invrenderapp.h
+    RoomModel_Internal.h roommodel.h RoomModel.cpp
+    orientation_finder.h orientation_finder.cpp wall_finder.h wall_finder.cpp
+    shortestpath.h shortestpath.cpp)
+target_link_libraries(wallfindapp ${PCL_LIBRARIES} memory)
 
 add_executable(invrender invrender.cpp
     reproject.h reproject.cpp
@@ -35,6 +40,7 @@ add_executable(invrender invrender.cpp
     shortestpath.cpp shortestpath.h
     Simplify.h eigen_nnls.h
     solver.cpp solvetexture.cpp solver.h clusterlights.cpp clusterlights.h
+    RoomModel.cpp roommodel.h RoomModel_Internal.h
     display.cpp display.h parse_args.cpp parse_args.h rerender.cpp rerender.h)
 target_link_libraries(invrender ${PCL_LIBRARIES} ${OpenCV_LIBS}
     R3Graphics.a R3Shapes.a R2Shapes.a RNBasics.a

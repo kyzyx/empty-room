@@ -7,7 +7,7 @@
 ERUIGLWidget::ERUIGLWidget(QWidget *parent) :
     HDRQGlViewerWidget(parent), mmgr(NULL),
     hasColors(false), hasGeometry(false),
-    selectedCamera(0), renderoptions(this),
+    selectedCamera(0), renderoptions(this)
 {
 }
 
