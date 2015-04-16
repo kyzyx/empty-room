@@ -29,6 +29,7 @@ MeshServer::MeshServer(const string& meshfile, bool ccw, cb_type cb)
     io::loadPolygonFile(meshfile.c_str(), *mesh);
     if (progress_cb) progress_cb(33);
     loadMesh(mesh, ccw);
+    setTransform(R4identity_matrix);
 }
 MeshServer::MeshServer(PolygonMesh::ConstPtr mesh, bool ccw, cb_type cb)
     : progress_cb(cb)
@@ -45,6 +46,7 @@ MeshServer::MeshServer(PolygonMesh::ConstPtr mesh, bool ccw, cb_type cb)
     if (progress_cb) progress_cb(33);
 
     loadMesh(mesh, ccw);
+    setTransform(R4identity_matrix);
 }
 
 MeshServer::~MeshServer() {

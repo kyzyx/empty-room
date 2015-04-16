@@ -44,6 +44,7 @@ class MeshManager {
         R3Vector VertexNormal(int n) const;
         Eigen::Vector3f VertexPositionE(int n) const;
         Eigen::Vector3f VertexNormalE(int n) const;
+        R4Matrix getTransform() const;
         int VertexOnFace(int n, int i) const;
         char getLabel(int n, int ch=0) const;
         Sample getSample(int n, int i) const;
@@ -53,6 +54,7 @@ class MeshManager {
 
         // Label i/o
         void setLabel(int n, char c, int ch=0);
+        void setTransform(const R4Matrix& t);
 
         R3Mesh* getMesh();
 
@@ -97,6 +99,7 @@ class MeshManager {
         int nvertices, nfaces;
         R3Point* pos;
         R3Vector* norm;
+        R4Matrix* transform;
         int* faces;
         // Auxiliary Data
         char* labels[NUM_CHANNELS];
