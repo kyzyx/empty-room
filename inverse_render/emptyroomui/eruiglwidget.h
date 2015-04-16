@@ -7,6 +7,70 @@
 #include "hdrviewer.h"
 #include "imagemanager.h"
 
+class ERUIRenderOptions : public QObject {
+Q_OBJECT
+public:
+    ERUIRenderOptions(QGLWidget* parent=NULL) :
+        qglw(parent),
+        renderCameras(true),
+        renderCurrentCamera(true),
+        renderMesh(true),
+        renderRoom(false),
+        cameraRenderFormat(CAMRENDER_FRUSTUM)
+    {;}
+
+public:
+    bool shouldRenderAnyCameras() {
+        return renderCameras || renderCurrentCamera;
+    }
+
+    int getCameraFormat(bool isCurrent=false) {
+        if (renderCameras || (renderCurrentCamera && isCurrent)) {
+            return cameraRenderFormat;
+        } else {
+            return CAMRENDER_NONE;
+        }
+    }
+    bool shouldRenderMesh() { return renderMesh; }
+    bool shouldRenderRoom() { return renderRoom; }
+
+    enum {
+        CAMRENDER_NONE=0,
+        CAMRENDER_AXES,
+        CAMRENDER_FRUSTUM,
+    };
+protected:
+    QGLWidget* qglw;
+    bool renderCameras;
+    bool renderCurrentCamera;
+    bool renderMesh;
+    bool renderRoom;
+
+    int cameraRenderFormat;
+
+public slots:
+    void setRenderCameras(bool shouldRenderCamera) {
+        renderCameras = shouldRenderCamera;
+        if (qglw) qglw->updateGL();
+    }
+    void setRenderCurrentCamera(bool shouldRenderCurrentCamera) {
+        renderCurrentCamera = shouldRenderCurrentCamera;
+        if (qglw) qglw->updateGL();
+    }
+    void setRenderMesh(bool shouldRenderMesh) {
+        renderMesh = shouldRenderMesh;
+        if (qglw) qglw->updateGL();
+    }
+    void setRenderRoom(bool shouldRenderRoom) {
+        renderRoom = shouldRenderRoom;
+        if (qglw) qglw->updateGL();
+    }
+    void setCameraRenderFormat(int camformat) {
+        cameraRenderFormat = camformat;
+        if (qglw) qglw->updateGL();
+    }
+};
+
 class ERUIGLWidget : public HDRQGlViewerWidget
 {
     Q_OBJECT
@@ -17,7 +81,7 @@ public:
     void setupCameras(ImageManager* imgr);
 
     void lookThroughCamera(const CameraParams* cam);
-
+    ERUIRenderOptions* renderOptions() { return &renderoptions; }
 protected:
     virtual void draw();
     virtual void init();
@@ -27,6 +91,7 @@ protected:
 
     void setupMeshGeometry();
 
+    void renderMesh();
     void renderCamera(const CameraParams& cam, bool id_only=false);
 
     std::vector<CameraParams> cameras;
@@ -35,14 +100,7 @@ protected:
 
     bool hasColors, hasGeometry;
 
-    // Camera rendering variables
-    enum {
-        CAMRENDER_NONE,
-        CAMRENDER_AXES,
-        CAMRENDER_FRUSTUM,
-    };
-    bool renderCurrent;
-    int cameraRenderFormat;
+    ERUIRenderOptions renderoptions;
     int selectedCamera;
 
     // OpenGL buffer ids
@@ -51,8 +109,6 @@ signals:
     void cameraSelected(int cameraindex);
 public slots:
     void highlightCamera(int cameraindex);
-    void showCameras(bool show);
-    void showCurrentCamera(bool show);
 };
 
 class ERUIGLViewer : public HDRViewer {
@@ -74,18 +130,16 @@ public:
     void setMeshManager(MeshManager* manager) {
         v->setMeshManager(manager);
     }
+    ERUIRenderOptions* renderOptions() { return v->renderOptions(); }
     void setupMeshColors() { v->setupMeshColors(); }
     void setupCameras(ImageManager* imgr) { v->setupCameras(imgr); }
     void lookThroughCamera(const CameraParams* cam) { v->lookThroughCamera(cam); }
-
 signals:
     void cameraSelected(int cameraindex);
 protected slots:
     void emitCameraSelected(int cameraindex) { emit cameraSelected(cameraindex); }
 public slots:
     void highlightCamera(int cameraindex) { v->highlightCamera(cameraindex); }
-    void showCameras(bool show) { v->showCameras(show); }
-    void showCurrentCamera(bool show) { v->showCurrentCamera(show); }
 
 protected:
     ERUIGLWidget* v;

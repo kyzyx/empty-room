@@ -7,8 +7,7 @@
 ERUIGLWidget::ERUIGLWidget(QWidget *parent) :
     HDRQGlViewerWidget(parent), mmgr(NULL),
     hasColors(false), hasGeometry(false),
-    cameraRenderFormat(CAMRENDER_NONE), selectedCamera(0),
-    renderCurrent(true)
+    selectedCamera(0), renderoptions(this),
 {
 }
 
@@ -153,17 +152,6 @@ void ERUIGLWidget::setupCameras(ImageManager* imgr) {
         cameras.push_back(*imgr->getCamera(i));
         camids.push_back(i);
     }
-    cameraRenderFormat = CAMRENDER_FRUSTUM;
-}
-
-void ERUIGLWidget::showCameras(bool show) {
-    if (show) cameraRenderFormat = CAMRENDER_FRUSTUM;
-    else cameraRenderFormat = CAMRENDER_NONE;
-    updateGL();
-}
-
-void ERUIGLWidget::showCurrentCamera(bool show) {
-    renderCurrent = show;
     updateGL();
 }
 
@@ -210,13 +198,12 @@ QString ERUIGLWidget::helpString() const
   text += "Press <b>Escape</b> to exit the viewer.";
   return text;
 }
-
+static R3DirectionalLight l(R3Vector(0.3, 0.3, -1), RNRgb(1, 1, 1), 1, TRUE);
+static R3Brdf b(RNRgb(0.2,0.2,0.2), RNRgb(0.8,0.8,0.8),
+                RNRgb(0,0,0), RNRgb(0,0,0), 0.2, 1, 1);
 // Draws a spiral
 void ERUIGLWidget::draw()
 {
-    static R3DirectionalLight l(R3Vector(0.3, 0.3, -1), RNRgb(1, 1, 1), 1, TRUE);
-    static R3Brdf b(RNRgb(0.2,0.2,0.2), RNRgb(0.8,0.8,0.8),
-                    RNRgb(0,0,0), RNRgb(0,0,0), 0.2, 1, 1);
     if (!hasGeometry) {
         const float nbSteps = 200.0;
         glBegin(GL_QUAD_STRIP);
@@ -237,68 +224,72 @@ void ERUIGLWidget::draw()
         }
         glEnd();
     } else {
-        bool light = true;
-        glEnable(GL_CULL_FACE);
-        glCullFace(GL_BACK);
-        glDisable(GL_LIGHT0);
         glDepthMask(true);
         glClearColor(0.,0.,0.,0.);
         glEnable(GL_DEPTH_TEST);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        if (renderoptions.shouldRenderMesh() && hasGeometry) renderMesh();
 
-        if (hasColors) {
-            glDisable(GL_LIGHTING);
-            glEnableClientState(GL_COLOR_ARRAY);
-            glBindBuffer(GL_ARRAY_BUFFER, cbo);
-            glColorPointer(3, GL_FLOAT, 6*sizeof(float), (void*) (light?3*sizeof(float):0));
-        } else {
+        if (renderoptions.shouldRenderAnyCameras()) {
             glEnable(GL_LIGHTING);
             glColor3f(1,1,1);
             b.Draw();
             l.Draw(0);
-        }
-        glEnableClientState(GL_VERTEX_ARRAY);
-        glEnableClientState(GL_NORMAL_ARRAY);
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glVertexPointer(3, GL_FLOAT, 6*sizeof(float), 0);
-        glNormalPointer(GL_FLOAT, 6*sizeof(float), (void*)(3*sizeof(float)));
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-        glDrawElements(GL_TRIANGLES, mmgr->NFaces()*3, GL_UNSIGNED_INT, 0);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-        glDisableClientState(GL_VERTEX_ARRAY);
-        glDisableClientState(GL_NORMAL_ARRAY);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        if (hasColors) glDisableClientState(GL_COLOR_ARRAY);
-
-        if (cameraRenderFormat != CAMRENDER_NONE || renderCurrent) {
-            glEnable(GL_LIGHTING);
-            glColor3f(1,1,1);
-            b.Draw();
-            l.Draw(0);
-            for (int i = 0; i < cameras.size(); ++i) {
-                if (i == selectedCamera)
-                    glColor3f(0,100,100);
-                else
-                    glColor3f(0,100,0);
-                if (i == selectedCamera || cameraRenderFormat != CAMRENDER_NONE)
+            for (size_t i = 0; i < cameras.size(); ++i) {
+                if (renderoptions.getCameraFormat(i == selectedCamera)) {
+                    if (i == selectedCamera)
+                        glColor3f(0,100,100);
+                    else
+                        glColor3f(0,100,0);
                     renderCamera(cameras[i]);
+                }
             }
             glDisable(GL_LIGHTING);
         }
     }
 }
 
+void ERUIGLWidget::renderMesh() {
+    bool light = true;
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    glDisable(GL_LIGHT0);
+    if (hasColors) {
+        glDisable(GL_LIGHTING);
+        glEnableClientState(GL_COLOR_ARRAY);
+        glBindBuffer(GL_ARRAY_BUFFER, cbo);
+        glColorPointer(3, GL_FLOAT, 6*sizeof(float), (void*) (light?3*sizeof(float):0));
+    } else {
+        glEnable(GL_LIGHTING);
+        glColor3f(1,1,1);
+        b.Draw();
+        l.Draw(0);
+    }
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glEnableClientState(GL_NORMAL_ARRAY);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glVertexPointer(3, GL_FLOAT, 6*sizeof(float), 0);
+    glNormalPointer(GL_FLOAT, 6*sizeof(float), (void*)(3*sizeof(float)));
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+    glDrawElements(GL_TRIANGLES, mmgr->NFaces()*3, GL_UNSIGNED_INT, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    glDisableClientState(GL_VERTEX_ARRAY);
+    glDisableClientState(GL_NORMAL_ARRAY);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    if (hasColors) glDisableClientState(GL_COLOR_ARRAY);
+}
+
 void ERUIGLWidget::drawWithNames() {
 
     glClearColor(0,0,0,1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    if (cameraRenderFormat != CAMRENDER_NONE || renderCurrent) {
+    if (renderoptions.shouldRenderAnyCameras()) {
         float col[3];
         for (int i = 0; i < cameras.size(); ++i) {
             IndexToRGB(i, col);
             glPushName(i);
             glColor3fv(col);
-            if (i == selectedCamera || cameraRenderFormat != CAMRENDER_NONE) renderCamera(cameras[i], true);
+            if (renderoptions.getCameraFormat(i == selectedCamera)) renderCamera(cameras[i], true);
             glPopName();
         }
     }
@@ -332,7 +323,7 @@ void ERUIGLWidget::renderCamera(const CameraParams &cam, bool id_only) {
     R3Point p = cam.pos;
     float f = 0.1;
     glPushAttrib(GL_ALL_ATTRIB_BITS);
-    if (cameraRenderFormat == CAMRENDER_AXES) {
+    if (renderoptions.getCameraFormat(true) == ERUIRenderOptions::CAMRENDER_AXES) {
         R3Point v2 = p + cam.towards*f;
         R3Point v3 = p + cam.up*f;
         glBegin(GL_LINES);
@@ -343,8 +334,7 @@ void ERUIGLWidget::renderCamera(const CameraParams &cam, bool id_only) {
             glVertex3f(GLEXPAND(v3));
         glEnd();
     }
-    //else if (cameraRenderFormat == CAMRENDER_FRUSTUM) {
-    else {
+    else if (renderoptions.getCameraFormat(true) == ERUIRenderOptions::CAMRENDER_FRUSTUM) {
         double w = cam.width/(2*cam.focal_length);
         double h = cam.height/(2*cam.focal_length);
 

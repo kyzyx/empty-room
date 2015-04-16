@@ -336,13 +336,16 @@ void MainWindow::loadVertexData(QString meshfile, QString datafile) {
 
 void MainWindow::on_showCameraCheckbox_toggled(bool checked)
 {
-    ui->meshWidget->showCameras(checked);
-    if (checked) ui->showCurrentCameraCheckbox->setChecked(true);
+    ui->meshWidget->renderOptions()->setRenderCameras(checked);
+    if (checked) {
+        ui->showCurrentCameraCheckbox->setChecked(true);
+        ui->meshWidget->renderOptions()->setRenderCurrentCamera(true);
+    }
 }
 
 void MainWindow::on_showCurrentCameraCheckbox_toggled(bool checked)
 {
-    ui->meshWidget->showCurrentCamera(checked);
+    ui->meshWidget->renderOptions()->setRenderCurrentCamera(checked);
 }
 
 void MainWindow::on_reprojectButton_clicked()
