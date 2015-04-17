@@ -2,15 +2,16 @@
 #include <iostream>
 #include <fstream>
 #include "hdrglwidget.h"
+#include "loadshader.h"
 
 using namespace std;
 
-const char* shadername[NUM_TMOS] = {
+static const char* shadername[NUM_TMOS] = {
     "linear shader",
     "logarithmic shader",
     "gamma shader",
 };
-const char* vertexshadertext =
+static const char* vertexshadertext =
 "#version 400\n" \
 "in vec2 v_coord;\n" \
 "uniform sampler2D rendered_image;\n" \
@@ -20,7 +21,7 @@ const char* vertexshadertext =
   "f_texcoord = (v_coord + 1.0) / 2.0;\n" \
 "}";
 
-const char* shadertext[NUM_TMOS] = {
+static const char* shadertext[NUM_TMOS] = {
     // linear shader
     "#version 400\n" \
     "uniform sampler2D rendered_image;\n" \
@@ -81,93 +82,6 @@ void HDRGlHelper::setScale(int lo, int hi) {
     emit update();
 }
 
-std::string readFile(const char *filePath) {
-    std::string content;
-    std::ifstream fileStream(filePath, std::ios::in);
-
-    if(!fileStream.is_open()) {
-        std::cerr << "Could not read file " << filePath << ". File does not exist." << std::endl;
-        return "";
-    }
-
-    std::string line = "";
-    while(!fileStream.eof()) {
-        std::getline(fileStream, line);
-        content.append(line + "\n");
-    }
-
-    fileStream.close();
-    return content;
-}
-
-
-GLuint LoadShader(const char *vertShaderSrc, const char *fragShaderSrc) {
-    GLuint vertShader = glCreateShader(GL_VERTEX_SHADER);
-    GLuint fragShader = glCreateShader(GL_FRAGMENT_SHADER);
-
-    GLint result = GL_FALSE;
-    int logLength;
-
-    // Compile vertex shader
-    std::cout << "Compiling vertex shader." << std::endl;
-    glShaderSource(vertShader, 1, &vertShaderSrc, NULL);
-    glCompileShader(vertShader);
-
-    // Check vertex shader
-    glGetShaderiv(vertShader, GL_COMPILE_STATUS, &result);
-    glGetShaderiv(vertShader, GL_INFO_LOG_LENGTH, &logLength);
-    std::vector<char> vertShaderError((logLength > 1) ? logLength : 1);
-    glGetShaderInfoLog(vertShader, logLength, NULL, &vertShaderError[0]);
-    std::cout << &vertShaderError[0] << std::endl;
-
-    // Compile fragment shader
-    std::cout << "Compiling fragment shader." << std::endl;
-    glShaderSource(fragShader, 1, &fragShaderSrc, NULL);
-    glCompileShader(fragShader);
-
-    // Check fragment shader
-    glGetShaderiv(fragShader, GL_COMPILE_STATUS, &result);
-    glGetShaderiv(fragShader, GL_INFO_LOG_LENGTH, &logLength);
-    std::vector<char> fragShaderError((logLength > 1) ? logLength : 1);
-    glGetShaderInfoLog(fragShader, logLength, NULL, &fragShaderError[0]);
-    std::cout << &fragShaderError[0] << std::endl;
-
-    std::cout << "Linking program" << std::endl;
-    GLuint program = glCreateProgram();
-    glAttachShader(program, vertShader);
-    glAttachShader(program, fragShader);
-    glLinkProgram(program);
-    glGetProgramiv(program, GL_LINK_STATUS, &result);
-    if (!result) {
-        glGetProgramiv(program, GL_INFO_LOG_LENGTH, &logLength);
-        std::vector<char> programError( (logLength > 1) ? logLength : 1 );
-        glGetProgramInfoLog(program, logLength, NULL, &programError[0]);
-        std::cout << &programError[0] << std::endl;
-    }
-    glValidateProgram(program);
-    glGetProgramiv(program, GL_VALIDATE_STATUS, &result);
-    if (!result) {
-        glGetProgramiv(program, GL_INFO_LOG_LENGTH, &logLength);
-        std::vector<char> programError( (logLength > 1) ? logLength : 1 );
-        glGetProgramInfoLog(program, logLength, NULL, &programError[0]);
-        std::cout << &programError[0] << std::endl;
-    }
-    glDeleteShader(vertShader);
-    glDeleteShader(fragShader);
-
-    return program;
-}
-
-GLuint LoadShaderFromFiles(const char *vertex_path, const char *fragment_path) {
-    // Read shaders
-    std::string vertShaderStr = readFile(vertex_path);
-    std::string fragShaderStr = readFile(fragment_path);
-    const char *vertShaderSrc = vertShaderStr.c_str();
-    const char *fragShaderSrc = fragShaderStr.c_str();
-    return LoadShader(vertShaderSrc, fragShaderSrc);
-}
-
-
 void HDRGlHelper::initializeHelper() {
     int w = 640;
     int h = 480;
@@ -178,6 +92,7 @@ void HDRGlHelper::initializeHelper() {
     glClampColor(GL_CLAMP_FRAGMENT_COLOR, GL_FALSE);
 
     glGenTextures(1, &fbo_tex);
+    glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, fbo_tex);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -255,6 +170,7 @@ void HDRGlHelper::paintHelper() {
     glEnable(GL_TEXTURE_2D);
     HDRShaderProgram& p = progs[mapping];
     glUseProgram(p.progid);
+    glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, fbo_tex);
     glUniform1i(p.uniform_ids[UNIFORM_FBO_TEXTURE], 0);
     glUniform3f(p.uniform_ids[UNIFORM_HDR_BOUNDS], mini, maxi, 2.2);
@@ -292,6 +208,7 @@ void HDRGlHelper::readFromTexture(int x, int y, int w, int h, float* data) {
 void HDRGlHelper::resizeHelper(int width, int height) {
     currw = width;
     currh = height;
+    glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, fbo_tex);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, width, height, 0, GL_RGB, GL_FLOAT, NULL);
     glBindTexture(GL_TEXTURE_2D, 0);

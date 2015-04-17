@@ -21,7 +21,8 @@ SOURCES += main.cpp\
     hdrimageviewer.cpp \
     geometrygenerator.cpp \
     rectanglerenderer.cpp \
-    ../RoomModel.cpp
+    ../RoomModel.cpp \
+    loadshader.cpp
 
 HEADERS  += mainwindow.h \
             eruiglwidget.h \
@@ -35,7 +36,8 @@ HEADERS  += mainwindow.h \
     geometrygenerator.h \
     rectanglerenderer.h \
     ../roommodel.h \
-    ../RoomModel_Internal.h
+    ../RoomModel_Internal.h \
+    loadshader.h
 
 FORMS    += mainwindow.ui
 
@@ -58,4 +60,7 @@ OTHER_FILES += \
     hdr.v.glsl \
     hdr.f.glsl \
     hdr_log.f.glsl \
-    hdr_gamma.f.glsl
+    hdr_gamma.f.glsl \
+    default.v.glsl \
+    default.f.glsl \
+    averagesample.v.glsl

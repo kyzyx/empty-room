@@ -8,6 +8,13 @@
 #include "imagemanager.h"
 #include "roommodel.h"
 
+enum {
+    VIEW_GEOMETRY,
+    VIEW_AVERAGE,
+    VIEW_IMAGEID,
+    NUM_VIEWOPTIONS
+};
+
 class ERUIRenderOptions : public QObject {
 Q_OBJECT
 public:
@@ -77,6 +84,7 @@ class ERUIGLWidget : public HDRQGlViewerWidget
     Q_OBJECT
 public:
     explicit ERUIGLWidget(QWidget *parent = 0);
+    ~ERUIGLWidget();
     void setMeshManager(MeshManager* manager);
     void setupMeshColors();
     void setupCameras(ImageManager* imgr);
@@ -112,6 +120,11 @@ protected:
     // OpenGL buffer ids
     GLuint vbo, ibo, cbo;
     GLuint roomvbo, roomcbo;
+    GLuint sampletex[3];
+
+
+    GLuint progids[NUM_VIEWOPTIONS];
+    GLuint uniformids[NUM_VIEWOPTIONS][3];
 signals:
     void cameraSelected(int cameraindex);
 public slots:
