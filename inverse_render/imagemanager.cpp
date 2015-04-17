@@ -102,8 +102,8 @@ bool ImageManager::initializeSharedMemory() {
 // --------------------------------------------------------------
 // Utilities
 // --------------------------------------------------------------
-int ImageManager::computeSize() const {
-    int sum = 0;
+size_t ImageManager::computeSize() const {
+    size_t sum = 0;
     for (int i = 0; i < imagetypes.size(); ++i) {
         sum += imagetypes[i].getSize();
     }

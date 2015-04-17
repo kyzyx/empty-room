@@ -81,7 +81,10 @@ bool ImageServer::readCameraFile(const string& filename)
         if (numparams > 4) {
             string camxform;
             infoin >> camxform;
-            ifstream xformin(camxform.c_str());
+            bfpath filepath = bfpath(filename).parent_path();
+            filepath /= bfpath(camxform);
+            string fullpath = boost::filesystem::canonical(filepath).string();
+            ifstream xformin(fullpath);
             double m[16];
             for (int i = 0; i < 16; ++i) xformin >> m[i];
             *depth2rgb = R4Matrix(m);

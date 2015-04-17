@@ -72,6 +72,8 @@ private slots:
 
     void on_loadWallsButton_clicked();
 
+    void on_autoLookCheckbox_toggled(bool checked);
+
 private:
     Ui::MainWindow *ui;
     ImageManager* imgr;

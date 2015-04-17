@@ -106,7 +106,7 @@
            </size>
           </property>
           <property name="currentIndex">
-           <number>1</number>
+           <number>0</number>
           </property>
           <widget class="QWidget" name="DisplayTab">
            <attribute name="title">
@@ -127,6 +127,16 @@
             </property>
             <item>
              <layout class="QHBoxLayout" name="tab0_layout_1">
+              <item>
+               <widget class="QCheckBox" name="autoLookCheckbox">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
+                <property name="text">
+                 <string>Auto Look Through Selected</string>
+                </property>
+               </widget>
+              </item>
               <item>
                <widget class="QCheckBox" name="showCameraCheckbox">
                 <property name="enabled">

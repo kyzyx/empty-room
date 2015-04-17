@@ -76,7 +76,7 @@ class ImageManager {
         void defaultinit(const std::string& camfile);
         bool initializeSharedMemory();
 
-        int computeSize() const;
+        size_t computeSize() const;
         int nameToIndex(const std::string& type) const;
         shmutex* getMutex(int t, int n);
 

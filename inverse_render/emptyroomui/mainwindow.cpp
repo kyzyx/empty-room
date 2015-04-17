@@ -140,6 +140,7 @@ void MainWindow::updateImage(int idx, int type)
             return;
     }
     ui->meshWidget->highlightCamera(idx);
+    if (ui->autoLookCheckbox->isChecked()) ui->meshWidget->lookThroughCamera(imgr->getCamera(idx));
 
     if (imageindex == 0) ui->prevImageButton->setEnabled(false);
     else ui->prevImageButton->setEnabled(true);
@@ -249,7 +250,6 @@ void MainWindow::imagesLoaded() {
 void MainWindow::onCameraSelection(int selected) {
     if (imageindex == selected) ui->meshWidget->lookThroughCamera(imgr->getCamera(selected));
     updateImage(selected);
-
 }
 
 void MainWindow::allLoaded() {
@@ -257,6 +257,7 @@ void MainWindow::allLoaded() {
         ui->reprojectButton->setEnabled(true);
         ui->showCameraCheckbox->setEnabled(true);
         ui->showCurrentCameraCheckbox->setEnabled(true);
+        ui->autoLookCheckbox->setEnabled(true);
         // Render cameras
         ui->meshWidget->setupCameras(imgr);
         connect(ui->meshWidget, SIGNAL(cameraSelected(int)), this, SLOT(onCameraSelection(int)));
@@ -455,4 +456,9 @@ void MainWindow::on_loadWallsButton_clicked()
         ui->showRoomCheckbox->setEnabled(true);
     }
 
+}
+
+void MainWindow::on_autoLookCheckbox_toggled(bool checked)
+{
+    if (checked) ui->meshWidget->lookThroughCamera(imgr->getCamera(imageindex));
 }

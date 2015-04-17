@@ -201,9 +201,7 @@ void ERUIGLWidget::highlightCamera(int cameraindex) {
     std::vector<int>::iterator it = std::lower_bound(camids.begin(), camids.end(), cameraindex);
     if (it == camids.end()) return;
     int idx = *it;
-    if (camids[idx] == cameraindex) {
-        selectedCamera = idx;
-    }
+    selectedCamera = it - camids.begin();
     updateGL();
 }
 
@@ -367,7 +365,7 @@ void ERUIGLWidget::drawWithNames() {
 }
 
 void ERUIGLWidget::postSelection(const QPoint &point) {
-    if (selectedName() >= 0) emit cameraSelected(selectedName());
+    if (selectedName() >= 0) emit cameraSelected(camids[selectedName()]);
 }
 
 void ERUIGLWidget::lookThroughCamera(const CameraParams* cam) {
