@@ -16,6 +16,7 @@ protected:
 signals:
     void percentChanged(int percent);
     void done();
+    void error(QString errstring);
 
 public slots:
     void run();

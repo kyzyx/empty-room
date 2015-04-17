@@ -85,14 +85,22 @@ void SubprocessWorker::run() {
     delete [] arguments;
     FILE* fp = fdopen(output, "r");
     char buf[SZ];
+    bool isdone = false;
     while (fgets(buf, SZ, fp) != NULL) {
         qDebug(buf);
         if (buf[0] == '>') {
-            int n = atoi(buf+1);
-            emit percentChanged(n);
-            if (n == 100) {
-                emit done();
-                //break;
+            if (buf[1] == '>') {
+                if (strncmp(buf+2, "done", 4) == 0) {
+                    if (!isdone) {
+                        emit done();
+                        isdone = true;
+                    }
+                } else if (strncmp(buf+2, "error:", 6) == 0) {
+                    emit error(QString(buf+2));
+                }
+            } else {
+                int n = atoi(buf+1);
+                emit percentChanged(n);
             }
         }
     }

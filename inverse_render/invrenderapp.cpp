@@ -35,7 +35,7 @@ int InvrenderApp::parseargs(int argc, char** argv) {
 }
 
 void InvrenderApp::emitDone() {
-    if (emit_progress) cout << ">100" << endl;
+    if (emit_progress) cout << ">>done" << endl;
 }
 void InvrenderApp::progressfn(int percent, int doneparts, int totalparts) {
     if (emit_progress) cout << ">" << (100*doneparts+percent)/totalparts << endl;
