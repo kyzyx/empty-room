@@ -13,7 +13,7 @@ class WallfindApp : public InvrenderApp {
         WallfindApp()
             : resolution(0.01), minlength(0.2),
               wallthreshold(200), anglethreshold(M_PI/40.),
-              outputroommodel("")
+              outputroommodel(""), flip(false)
         {;}
 
         virtual int run() {
@@ -41,6 +41,9 @@ class WallfindApp : public InvrenderApp {
             }
             roommodel::RoomModel r;
             wf.getAsRoomModel(&r);
+            if (flip) {
+                std::reverse(r.walls.begin(), r.walls.end());
+            }
 
             Eigen::Matrix4f trans;
             trans.setIdentity();
@@ -65,6 +68,7 @@ class WallfindApp : public InvrenderApp {
              "      -outputroommodel roomodel.json: output roommodel to file\n" \
              "      -anglethreshold f: Angle between normals to be\n" \
              "           considered equal (default PI/40)\n" \
+             "      -flip: Reverse floor and ceiling\n" \
              "      -min_wall_length f: Minimum length of a wall\n" \
              "           (default 0.2)\n" \
              "      -resolution f: maximum distance for a point to\n" \
@@ -75,6 +79,7 @@ class WallfindApp : public InvrenderApp {
         }
         virtual int _parseargs(int argc, char** argv) {
             if (!mmgr) return 0;
+            if (pcl::console::find_switch(argc, argv, "-flip")) flip = true;
             if (pcl::console::find_argument(argc, argv, "-outputroommodel") >= 0) {
                 pcl::console::parse_argument(argc, argv, "-outputroommodel", outputroommodel);
             }
@@ -98,6 +103,7 @@ class WallfindApp : public InvrenderApp {
         double resolution;
         double minlength;
         int wallthreshold;
+        bool flip;
 };
 
 int main(int argc, char** argv) {

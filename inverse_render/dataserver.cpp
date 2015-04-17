@@ -100,6 +100,7 @@ int main(int argc, char* argv[]) {
         cout << "Done loading per-vertex data." << endl;
         nloaded++;
     }
+    cout << ">100" << endl;
     cout << ">>done" << endl;
     if (!data_only || !camfile.empty()) {
         while(run) {
