@@ -147,6 +147,37 @@ void ERUIGLWidget::setupMeshColors()
 
 void ERUIGLWidget::setupRoomGeometry(roommodel::RoomModel* model) {
     if (!model) model = room;
+    makeCurrent();
+    roommodel::GeometryGenerator gg(model);
+    gg.generate();
+    std::vector<double> triangles;
+    gg.getTriangleGeometry(triangles);
+    numroomtriangles = triangles.size()/6;
+    float* vertices = new float[numroomtriangles*6];
+    float* colors = new float[numroomtriangles*3];
+    for (int i = 0; i < triangles.size(); ++i) {
+        vertices[i] = triangles[i];
+    }
+    glGenBuffers(1, &roomvbo);
+    glBindBuffer(GL_ARRAY_BUFFER, roomvbo);
+    glBufferData(GL_ARRAY_BUFFER,
+            numroomtriangles*6*sizeof(float),
+            vertices, GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    delete [] vertices;
+
+    glGenBuffers(1, &roomcbo);
+    glBindBuffer(GL_ARRAY_BUFFER, roomcbo);
+    triangles.clear();
+    gg.getTriangleVertexColors(triangles);
+    for (int i = 0; i < triangles.size(); ++i) {
+        colors[i] = triangles[i];
+    }
+    glBufferData(GL_ARRAY_BUFFER,
+            numroomtriangles*3*sizeof(float),
+            colors, GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    delete [] colors;
 }
 
 void ERUIGLWidget::setRoomModel(roommodel::RoomModel* model) {
@@ -209,7 +240,7 @@ QString ERUIGLWidget::helpString() const
   text += "Press <b>Escape</b> to exit the viewer.";
   return text;
 }
-static R3DirectionalLight l(R3Vector(0.3, 0.3, -1), RNRgb(1, 1, 1), 1, TRUE);
+static R3DirectionalLight l(R3Vector(0.3, 0.5, -1), RNRgb(1, 1, 1), 1, TRUE);
 static R3Brdf b(RNRgb(0.2,0.2,0.2), RNRgb(0.8,0.8,0.8),
                 RNRgb(0,0,0), RNRgb(0,0,0), 0.2, 1, 1);
 // Draws a spiral
@@ -300,6 +331,9 @@ void ERUIGLWidget::renderRoom() {
     b.Draw();
     l.Draw(0);
 
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glRotatef(90,1,0,0);
     glEnableClientState(GL_VERTEX_ARRAY);
     glEnableClientState(GL_NORMAL_ARRAY);
     glEnableClientState(GL_COLOR_ARRAY);
@@ -313,6 +347,7 @@ void ERUIGLWidget::renderRoom() {
     glDisableClientState(GL_NORMAL_ARRAY);
     glDisableClientState(GL_COLOR_ARRAY);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glPopMatrix();
 }
 
 void ERUIGLWidget::drawWithNames() {

@@ -192,6 +192,7 @@ void MainWindow::meshLoaded() {
     ui->actionLoad_Last_Intermediates->setEnabled(true);
     ui->wf_resolutionSlider->setEnabled(true);
     ui->wf_wallthresholdSlider->setEnabled(true);
+    ui->showMeshCheckbox->setEnabled(true);
     mmgr = new MeshManager(meshfilename.toStdString());
     ui->meshWidget->setMeshManager(mmgr);
     allLoaded();
@@ -292,11 +293,13 @@ void MainWindow::on_loadReprojectButton_clicked()
         QString lwd = settings->value("lastworkingdirectory", "").toString();
         QString cfile = settings->value("lastreprojectfile", lwd).toString();
         QString datafilename = QFileDialog::getOpenFileName(this, "Open Reprojection Samples", cfile);
-        QDir cwd = QDir(datafilename);
-        cwd.cdUp();
-        settings->setValue("lastworkingdirectory", cwd.canonicalPath());
-        settings->setValue("lastreprojectfile", datafilename);
-        loadVertexData(meshfilename, datafilename);
+        if (!datafilename.isEmpty()) {
+            QDir cwd = QDir(datafilename);
+            cwd.cdUp();
+            settings->setValue("lastworkingdirectory", cwd.canonicalPath());
+            settings->setValue("lastreprojectfile", datafilename);
+            loadVertexData(meshfilename, datafilename);
+        }
     }
 }
 
@@ -377,12 +380,14 @@ void MainWindow::on_saveReprojectButton_clicked()
         QString lwd = settings->value("lastworkingdirectory", "").toString();
         QString cfile = settings->value("lastreprojectfile", lwd).toString();
         QString datafilename = QFileDialog::getSaveFileName(this, "Open Reprojection Samples", cfile);
-        QDir cwd = QDir(datafilename);
-        cwd.cdUp();
-        settings->setValue("lastworkingdirectory", cwd.canonicalPath());
-        // settings->setValue("lastreprojectfile", datafilename);
+        if (!datafilename.isEmpty()) {
+            QDir cwd = QDir(datafilename);
+            cwd.cdUp();
+            settings->setValue("lastworkingdirectory", cwd.canonicalPath());
+            // settings->setValue("lastreprojectfile", datafilename);
 
-        mmgr->writeSamplesToFile(datafilename.toStdString(), boost::bind(&QProgressBar::setValue, progressbar, _1));
+            mmgr->writeSamplesToFile(datafilename.toStdString(), boost::bind(&QProgressBar::setValue, progressbar, _1));
+        }
     }
 }
 
@@ -409,9 +414,11 @@ void MainWindow::on_wallfindButton_clicked()
 }
 
 void MainWindow::wallfindingDone() {
+    if (room) delete room;
     room = new roommodel::RoomModel;
     roommodel::load(*room, temproommodel->fileName().toStdString());
     ui->meshWidget->setRoomModel(room);
+    ui->showRoomCheckbox->setEnabled(true);
     //delete temproommodel;
 }
 
@@ -421,4 +428,31 @@ void MainWindow::showwfrestooltip(int v) {
 
 void MainWindow::showwfthresholdtooltip(int v) {
     QToolTip::showText(QCursor::pos(), QString::number(v), ui->wf_wallthresholdSlider);
+}
+
+void MainWindow::on_showMeshCheckbox_toggled(bool checked)
+{
+    ui->meshWidget->renderOptions()->setRenderMesh(checked);
+}
+
+void MainWindow::on_showRoomCheckbox_toggled(bool checked)
+{
+    ui->meshWidget->renderOptions()->setRenderRoom(checked);
+}
+
+void MainWindow::on_loadWallsButton_clicked()
+{
+    QString lwd = settings->value("lastworkingdirectory", "").toString();
+    QString datafilename = QFileDialog::getOpenFileName(this, "Open Floor Plan", lwd, "JSON Files (*.json)");
+    if (!datafilename.isEmpty()) {
+        QDir cwd = QDir(datafilename);
+        cwd.cdUp();
+        settings->setValue("lastworkingdirectory", cwd.canonicalPath());
+        if (room) delete room;
+        room = new roommodel::RoomModel;
+        roommodel::load(*room, datafilename.toStdString());
+        ui->meshWidget->setRoomModel(room);
+        ui->showRoomCheckbox->setEnabled(true);
+    }
+
 }

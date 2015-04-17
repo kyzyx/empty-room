@@ -16,7 +16,8 @@ class GeometryGenerator {
 
         void generate();
         void getRectangles(std::vector<Rect>& rectangles);
-        void getTriangleVertices(std::vector<double>& triangles);
+        void getTriangleGeometry(std::vector<double>& triangles);
+        void getTriangleVertexColors(std::vector<double>& colors);
 		Rect getRectangleForWindow(RectangleWallObject* rwo);
     protected:
         RoomModel* model;

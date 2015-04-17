@@ -66,6 +66,12 @@ private slots:
     void showwfrestooltip(int v);
     void showwfthresholdtooltip(int v);
 
+    void on_showMeshCheckbox_toggled(bool checked);
+
+    void on_showRoomCheckbox_toggled(bool checked);
+
+    void on_loadWallsButton_clicked();
+
 private:
     Ui::MainWindow *ui;
     ImageManager* imgr;

@@ -8,6 +8,7 @@
 #define _RECTANGLE_RENDERER
 #include <vector>
 #include <algorithm>
+#include <cmath>
 #include "roommodel.h"
 namespace roommodel {
 class Rect {
@@ -34,16 +35,16 @@ class Rect {
 
             if (x1 == x2) {
                 axis = 0;
-                w = abs(y1-y2);
-                h = abs(z1-z2);
+                w = std::abs(y1-y2);
+                h = std::abs(z1-z2);
 			} else if (y1 == y2) {
                 axis = 1;
-                w = abs(x1-x2);
-                h = abs(z1-z2);
+                w = std::abs(x1-x2);
+                h = std::abs(z1-z2);
             } else {
                 axis = 2;
-                w = abs(x1-x2);
-                h = abs(y1-y2);
+                w = std::abs(x1-x2);
+                h = std::abs(y1-y2);
             }
 			depth = 0.1;
         }
@@ -70,6 +71,8 @@ void rectangleDiff(
 // Turns the rectangles into a list of triangle vertex coordinates
 void rectanglesToTriangles(
         std::vector<Rect>& rectangles,
-        std::vector<double>& triangles);
+        std::vector<double>& triangles,
+        bool includebackfaces=true,
+        bool includenormals=false);
 }
 #endif

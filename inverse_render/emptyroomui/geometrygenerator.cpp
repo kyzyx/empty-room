@@ -159,10 +159,21 @@ void GeometryGenerator::getRectangles(vector<Rect>& rectangles) {
 	rectangles.insert(rectangles.end(), baseboardRectangles.begin(), baseboardRectangles.end());
 }
 
-void GeometryGenerator::getTriangleVertices(vector<double>& triangles) {
+void GeometryGenerator::getTriangleGeometry(vector<double>& triangles) {
 	vector<Rect> rectangles;
 	getRectangles(rectangles);
-	rectanglesToTriangles(rectangles, triangles);
+    rectanglesToTriangles(rectangles, triangles, false, true);
+}
+void GeometryGenerator::getTriangleVertexColors(std::vector<double>& colors) {
+    vector<Rect> rectangles;
+    getRectangles(rectangles);
+    for (int i = 0; i < rectangles.size(); ++i) {
+        for (int j = 0; j < 6; ++j) {
+            colors.push_back(rectangles[i].material->diffuse.r);
+            colors.push_back(rectangles[i].material->diffuse.g);
+            colors.push_back(rectangles[i].material->diffuse.b);
+        }
+    }
 }
 
 

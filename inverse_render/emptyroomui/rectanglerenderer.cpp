@@ -127,7 +127,9 @@ void rectangleDiff(
 
 void rectanglesToTriangles(
         vector<Rect>& rectangles,
-        vector<double>& triangles)
+        vector<double>& triangles,
+        bool includebackfaces,
+        bool includenormals)
 {
     for (int i = 0; i < rectangles.size(); ++i) {
         Rect& r = rectangles[i];
@@ -150,9 +152,23 @@ void rectanglesToTriangles(
             2,3,0,
             2,0,3,
         };
-        for (int j = 0; j < 4*3; ++j) {
+        FVector norm(0,0,0);
+        norm[r.axis] = 1;
+        norm *= r.normal;
+        for (int j = 0; j < 4; ++j) {
+            if (!includebackfaces) {
+                if ((j&1) == 0 && r.normal == -1) continue;
+                else if ((j&1) == 1 && r.normal == 1) continue;
+            }
             for (int k = 0; k < 3; ++k) {
-                triangles.push_back(coords[indices[j]][k]);
+                for (int z = 0; z < 3; ++z) {
+                    triangles.push_back(coords[indices[j*3+k]][z]);
+                }
+                if (includenormals) {
+                    for (int z = 0; z < 3; ++z) {
+                        triangles.push_back(norm[z]);
+                    }
+                }
             }
         }
     }
