@@ -73,7 +73,7 @@ bool ColorHelper::load(int i, int flags) {
     }
     if (flags & READ_EDGES) {
         if (fileexists(replaceExtension(filenames[i], "edges.exr"))) {
-            readExrImage(replaceExtension(filenames[i], "edges.exr"), edges[i], w, h, 1);
+            readExrImage(replaceExtension(filenames[i], "edges.exr"), edges[i], w, h, 3);
             if (!edges[i]) {
                 cerr << "Error reading image " << filenames[i] << endl;
                 return false;
