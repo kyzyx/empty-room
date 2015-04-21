@@ -154,8 +154,8 @@ void GeometryGenerator::generate() {
 }
 
 void GeometryGenerator::getRectangles(vector<Rect>& rectangles) {
-	rectangles.insert(rectangles.end(), wallRectangles.begin(), wallRectangles.end());
 	rectangles.insert(rectangles.end(), otherRectangles.begin(), otherRectangles.end());
+	rectangles.insert(rectangles.end(), wallRectangles.begin(), wallRectangles.end());
 	rectangles.insert(rectangles.end(), baseboardRectangles.begin(), baseboardRectangles.end());
 }
 

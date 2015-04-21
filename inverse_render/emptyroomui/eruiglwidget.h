@@ -110,6 +110,7 @@ protected:
     std::vector<int> camids;
     MeshManager* mmgr;
     roommodel::RoomModel* room;
+    R3Vector trans;
 
     bool hasColors, hasGeometry;
 

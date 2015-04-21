@@ -157,8 +157,10 @@ void rectanglesToTriangles(
         norm *= r.normal;
         for (int j = 0; j < 4; ++j) {
             if (!includebackfaces) {
-                if ((j&1) == 0 && r.normal == -1) continue;
-                else if ((j&1) == 1 && r.normal == 1) continue;
+                if (!r.axis && r.normal == -1 && (j&1)) continue;
+                else if (!r.axis && r.normal == 1 && !(j&1)) continue;
+                else if (r.axis && r.normal == -1 && !(j&1)) continue;
+                else if (r.axis && r.normal == 1 && (j&1)) continue;
             }
             for (int k = 0; k < 3; ++k) {
                 for (int z = 0; z < 3; ++z) {

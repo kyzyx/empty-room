@@ -210,8 +210,25 @@ void ERUIGLWidget::setupRoomGeometry(roommodel::RoomModel* model) {
     numroomtriangles = triangles.size()/6;
     float* vertices = new float[numroomtriangles*6];
     float* colors = new float[numroomtriangles*3];
-    for (int i = 0; i < triangles.size(); ++i) {
-        vertices[i] = triangles[i];
+
+    R4Matrix m = mmgr->getTransform();
+    m = m.Inverse();
+    trans = R3Vector(m[0][3], m[1][3], m[2][3]);
+
+    m[0][3] = 0;
+    m[1][3] = 0;
+    m[2][3] = 0;
+    for (int i = 0; i < numroomtriangles; ++i) {
+        R3Point p(triangles[6*i], triangles[6*i+1], triangles[6*i+2]);
+        R3Vector n(triangles[6*3], triangles[6*i+4], triangles[6*i+5]);
+        p = m*p;
+        n = m*n;
+        vertices[6*i] = p.X();
+        vertices[6*i+1] = p.Y();
+        vertices[6*i+2] = p.Z();
+        vertices[6*i+3] = n.X();
+        vertices[6*i+4] = n.Y();
+        vertices[6*i+5] = n.Z();
     }
     glGenBuffers(1, &roomvbo);
     glBindBuffer(GL_ARRAY_BUFFER, roomvbo);
@@ -405,7 +422,10 @@ void ERUIGLWidget::renderRoom() {
 
     glMatrixMode(GL_MODELVIEW);
     glPushMatrix();
+    glTranslatef(trans[0], trans[1], trans[2]);
     glRotatef(90,1,0,0);
+    glRotatef(-90,0,0,1);
+
     glEnableClientState(GL_VERTEX_ARRAY);
     glEnableClientState(GL_NORMAL_ARRAY);
     glEnableClientState(GL_COLOR_ARRAY);

@@ -20,19 +20,18 @@ class WallfindApp : public InvrenderApp {
             vector<char> types(mmgr->NVertices());
             PlaneOrientationFinder of(mmgr, resolution/2);
             of.computeNormals();
-            progressfn(100,0,7);
+            progressfn(100,1,22);
             of.computeOrientation();
-            progressfn(100,2,7);
+            progressfn(100,12,22);
             of.normalize();
-            progressfn(100,3,7);
+            progressfn(100,13,22);
             WallFinder wf(resolution);
             Eigen::Matrix4f m = of.getNormalizationTransform();
             wf.setNormalizationTransform(m);
 
             wf.findFloorAndCeiling(&of, types, anglethreshold);
-            progressfn(100,4,7);
+            progressfn(100,14,22);
             wf.findWalls(&of, types, wallthreshold, minlength, anglethreshold);
-            progressfn(100,5,7);
             {
                 boost::interprocess::scoped_lock<MeshManager::shmutex> lock(*(mmgr->getMutex(MeshManager::TYPE_CHANNEL,0)));
                 for (int i = 0; i < types.size(); ++i) {

@@ -174,7 +174,7 @@ void MainWindow::on_actionOpen_Mesh_triggered()
             cmd = cmd + " -ccw";
             settings->setValue("lastmeshflags", " -ccw");
         }
-
+        progressbar->setValue(0);
         SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
         workers.push_back(w);
         QThread* thread = new QThread;
@@ -220,6 +220,7 @@ void MainWindow::on_actionOpen_Images_triggered()
         if (idialog.isFlipY()) extraflags = extraflags + " -flip_y";
         cmd += extraflags;
         settings->setValue("lastimageflags", extraflags);
+        progressbar->setValue(0);
         SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
         workers.push_back(w);
         QThread* thread = new QThread;
@@ -314,7 +315,7 @@ void MainWindow::on_actionLoad_Last_Mesh_Camera_File_triggered()
     cmd += extraflags;
     extraflags = settings->value("lastmeshflags", "").toString();
     cmd += extraflags;
-
+    progressbar->setValue(0);
     SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
     workers.push_back(w);
     QThread* thread = new QThread;
@@ -334,6 +335,7 @@ void MainWindow::on_actionLoad_Last_Intermediates_triggered()
 void MainWindow::loadVertexData(QString meshfile, QString datafile) {
     QString cmd = settings->value("loaddata_binary", "dataserver -meshfile %1 -datafile %2 -p").toString();
     cmd = cmd.arg(meshfile, datafile);
+    progressbar->setValue(0);
     SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
     workers.push_back(w);
     QThread* thread = new QThread;
@@ -364,7 +366,7 @@ void MainWindow::on_reprojectButton_clicked()
     cmd = cmd.arg(camfilename, meshfilename);
     QString extraflags;
     cmd += extraflags;
-
+    progressbar->setValue(0);
     SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
     workers.push_back(w);
     QThread* thread = new QThread;
@@ -403,7 +405,7 @@ void MainWindow::on_wallfindButton_clicked()
     extraflags += " -resolution " + QString::number(ui->wf_resolutionSlider->value()*0.001);
     extraflags += " -wallthreshold " + QString::number(ui->wf_wallthresholdSlider->value());
     cmd += extraflags;
-
+    progressbar->setValue(0);
     SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
     workers.push_back(w);
     QThread* thread = new QThread;
@@ -455,7 +457,6 @@ void MainWindow::on_loadWallsButton_clicked()
         ui->meshWidget->setRoomModel(room);
         ui->showRoomCheckbox->setEnabled(true);
     }
-
 }
 
 void MainWindow::on_autoLookCheckbox_toggled(bool checked)
