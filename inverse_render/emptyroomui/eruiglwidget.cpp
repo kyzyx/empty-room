@@ -152,41 +152,25 @@ void ERUIGLWidget::setupMeshColors()
     for (int i = 0; i < mmgr->NVertices(); ++i) {
         float* s[3];
         for (int j = 0; j < 3; ++j)  s[j] = sampledata[j] + i*maxsamples*3;
-        if (mmgr->getVertexSampleCount(i) > maxsamples) {
-            std::vector<std::pair<float,int> > confidences;
-            for (int j = 0; j < mmgr->getVertexSampleCount(i); ++j) {
-                confidences.push_back(std::make_pair(mmgr->getSample(i,j).confidence, j));
-            }
-            std::sort(confidences.begin(), confidences.end());
-            for (int j = 0; j < maxsamples; ++j) {
-                Sample sample = mmgr->getSample(i, confidences[j].second);
-                s[0][3*j+0] = sample.r;
-                s[0][3*j+1] = sample.g;
-                s[0][3*j+2] = sample.b;
+        int nsamplestoload = std::min(maxsamples, mmgr->getVertexSampleCount(i));
+        std::vector<std::pair<float,int> > confidences;
+        for (int j = 0; j < mmgr->getVertexSampleCount(i); ++j) {
+            confidences.push_back(std::make_pair(mmgr->getSample(i,j).confidence, j));
+        }
+        std::sort(confidences.begin(), confidences.end(), std::greater<std::pair<float,int> >());
+        for (int j = 0; j < nsamplestoload; ++j) {
+            Sample sample = mmgr->getSample(i, confidences[j].second);
+            s[0][3*j+0] = sample.r;
+            s[0][3*j+1] = sample.g;
+            s[0][3*j+2] = sample.b;
 
-                s[1][3*j+0] = sample.x;
-                s[1][3*j+1] = sample.y;
-                s[1][3*j+2] = sample.z;
+            s[1][3*j+0] = sample.x;
+            s[1][3*j+1] = sample.y;
+            s[1][3*j+2] = sample.z;
 
-                s[2][3*j+0] = std::max(0.f,sample.confidence);
-                s[2][3*j+1] = sample.dA;
-                s[2][3*j+2] = sample.label;
-            }
-        } else {
-            for (int j = 0; j < mmgr->getVertexSampleCount(i); ++j) {
-                Sample sample = mmgr->getSample(i, j);
-                s[0][3*j+0] = sample.r;
-                s[0][3*j+1] = sample.g;
-                s[0][3*j+2] = sample.b;
-
-                s[1][3*j+0] = sample.x;
-                s[1][3*j+1] = sample.y;
-                s[1][3*j+2] = sample.z;
-
-                s[2][3*j+0] = std::max(0.f,sample.confidence);
-                s[2][3*j+1] = sample.dA;
-                s[2][3*j+2] = sample.label;
-            }
+            s[2][3*j+0] = std::max(0.f,sample.confidence);
+            s[2][3*j+1] = sample.dA;
+            s[2][3*j+2] = sample.label;
         }
     }
     for (int i = 0; i < 3; ++i) {
