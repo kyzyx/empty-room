@@ -1,11 +1,18 @@
-#version 130
+#version 430
 out vec4 computed_color;
+
+uniform mat4 modelviewmatrix;
+uniform mat4 projectionmatrix;
+
 uniform sampler2D colors;
 uniform sampler2D angles;
 uniform sampler2D aux;
 
+layout (location=0) in vec3 position;
+layout (location=1) in vec3 normal;
+
 void main(void) {
-    gl_Position = ftransform();
+    gl_Position = projectionmatrix*modelviewmatrix*vec4(position,1);
     computed_color = vec4(0,0,0,1);
     float weight = 0;
     int start = (gl_VertexID%256)*32;

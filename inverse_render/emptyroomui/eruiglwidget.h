@@ -122,10 +122,11 @@ protected:
     GLuint vbo, ibo, cbo;
     GLuint roomvbo, roomcbo;
     GLuint sampletex[3];
+    GLuint vaoid;
 
 
     GLuint progids[NUM_VIEWOPTIONS];
-    GLuint uniformids[NUM_VIEWOPTIONS][3];
+    GLuint uniformids[NUM_VIEWOPTIONS][5];
 signals:
     void cameraSelected(int cameraindex);
 public slots:

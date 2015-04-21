@@ -8,17 +8,30 @@
 #define MAX_CAMERAS 100
 
 
-static const int NUM_UNIFORMS = 3;
+static const int NUM_UNIFORM_TEXTURES = 3;
+
+enum {
+    UNIFORM_SAMPLE_COLORS=0,
+    UNIFORM_SAMPLE_ANGLES=1,
+    UNIFORM_SAMPLE_AUX=2,
+    UNIFORM_MODELVIEW=3,
+    UNIFORM_PROJECTION=4,
+    NUM_UNIFORMS=5,
+};
+
 GLchar* uniforms[NUM_UNIFORMS] = {
     "colors",
     "angles",
-    "aux"
+    "aux",
+    "modelviewmatrix",
+    "projectionmatrix",
 };
 
+
 bool usesUniform[NUM_VIEWOPTIONS][NUM_UNIFORMS] = {
-    { false, false, false },
-    { true, true, true },
-    { false, false, false },
+    { false, false, false, true, true },
+    { true, false, true, true, true },
+    { false, false, false, true, true },
 };
 
 static const char* shadername[NUM_VIEWOPTIONS] = {
@@ -60,6 +73,8 @@ void ERUIGLWidget::setupMeshGeometry()
     //int varraysize = 3*3*mmgr->NFaces();
     int varraysize = 2*3*mmgr->NVertices();
     float* vertices = new float[varraysize];
+    glGenVertexArrays(1,&vaoid);
+    glBindVertexArray(vaoid);
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     int v = 0;
@@ -95,7 +110,6 @@ void ERUIGLWidget::setupMeshGeometry()
     glBufferData(GL_ARRAY_BUFFER,
             varraysize*sizeof(float),
             vertices, GL_STATIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
     delete [] vertices;
 
     int iarraysize = 3*mmgr->NFaces();
@@ -111,9 +125,17 @@ void ERUIGLWidget::setupMeshGeometry()
     glBufferData(GL_ELEMENT_ARRAY_BUFFER,
                  iarraysize * sizeof(unsigned int),
                  indices, GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     delete [] indices;
     hasGeometry = true;
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0,3,GL_FLOAT, GL_FALSE, 6*sizeof(float), 0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1,3,GL_FLOAT, GL_FALSE, 6*sizeof(float), (void*)(3*sizeof(float)));
+    glBindVertexArray(0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     updateGL();
 }
 
@@ -132,8 +154,8 @@ void ERUIGLWidget::setupMeshColors()
     int vertsperrow = rowsize/maxsamples;
     int nrows = (mmgr->NVertices()+vertsperrow-1)/vertsperrow;
     if (initialize) {
-        glGenTextures(3, sampletex);
-        for (int i = 0; i < 3; ++i) {
+        glGenTextures(NUM_UNIFORM_TEXTURES, sampletex);
+        for (int i = 0; i < NUM_UNIFORM_TEXTURES; ++i) {
             glActiveTexture(GL_TEXTURE0+i+2);
             glBindTexture(GL_TEXTURE_2D, sampletex[i]);
             glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -144,13 +166,13 @@ void ERUIGLWidget::setupMeshColors()
             glBindTexture(GL_TEXTURE_2D, 0);
         }
     }
-    float* sampledata[3];
-    for (int i = 0; i < 3; ++i) {
+    float* sampledata[NUM_UNIFORM_TEXTURES];
+    for (int i = 0; i < NUM_UNIFORM_TEXTURES; ++i) {
         sampledata[i] = new float[rowsize*nrows*3];
         memset(sampledata[i], 0, sizeof(float)*rowsize*nrows*3);
     }
     for (int i = 0; i < mmgr->NVertices(); ++i) {
-        float* s[3];
+        float* s[NUM_UNIFORM_TEXTURES];
         for (int j = 0; j < 3; ++j)  s[j] = sampledata[j] + i*maxsamples*3;
         int nsamplestoload = std::min(maxsamples, mmgr->getVertexSampleCount(i));
         std::vector<std::pair<float,int> > confidences;
@@ -173,13 +195,14 @@ void ERUIGLWidget::setupMeshColors()
             s[2][3*j+2] = sample.label;
         }
     }
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < NUM_UNIFORM_TEXTURES; ++i) {
         glActiveTexture(GL_TEXTURE0+i+2);
         glBindTexture(GL_TEXTURE_2D, sampletex[i]);
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, rowsize, nrows, GL_RGB, GL_FLOAT, sampledata[i]);
         glBindTexture(GL_TEXTURE_2D, 0);
         delete [] sampledata[i];
     }
+
     hasColors = true;
     updateGL();
 }
@@ -280,10 +303,11 @@ void ERUIGLWidget::init()
       for (int j = 0; j < NUM_UNIFORMS; ++j) {
           if (!usesUniform[i][j]) continue;
           uniformids[i][j] = glGetUniformLocation(progids[i],uniforms[j]);
-          glUniform1i(uniformids[i][j], j+2);
+          if (j < NUM_UNIFORM_TEXTURES) {
+              glUniform1i(uniformids[i][j], j+2);
+          }
           if (uniformids[i][j] == -1) {
               qDebug("Error binding uniform %s in %s", uniforms[j], shadername[i]);
-              return;
           }
       }
   }
@@ -366,31 +390,28 @@ void ERUIGLWidget::draw()
 void ERUIGLWidget::renderMesh() {
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
+    int n = hasColors?VIEW_AVERAGE:VIEW_GEOMETRY;
+    glUseProgram(progids[n]);
     if (hasColors) {
-        int n = VIEW_AVERAGE;
-        glUseProgram(progids[n]);
-        for (int i = 0; i < NUM_UNIFORMS; ++i) {
+        for (int i = 0; i < NUM_UNIFORM_TEXTURES; ++i) {
             if (usesUniform[n][i]) {
                 glActiveTexture(GL_TEXTURE0+i+2);
                 glBindTexture(GL_TEXTURE_2D, sampletex[i]);
             }
         }
-    } else {
-        glUseProgram(progids[VIEW_GEOMETRY]);
     }
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glEnableClientState(GL_NORMAL_ARRAY);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glVertexPointer(3, GL_FLOAT, 6*sizeof(float), 0);
-    glNormalPointer(GL_FLOAT, 6*sizeof(float), (void*)(3*sizeof(float)));
+    GLfloat modelview[16];
+    GLfloat projection[16];
+    glGetFloatv(GL_MODELVIEW_MATRIX, modelview);
+    glGetFloatv(GL_PROJECTION_MATRIX, projection);
+    glUniformMatrix4fv(uniformids[n][UNIFORM_MODELVIEW], 1, GL_FALSE, modelview);
+    glUniformMatrix4fv(uniformids[n][UNIFORM_PROJECTION], 1, GL_FALSE, projection);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+    glBindVertexArray(vaoid);
     glDrawElements(GL_TRIANGLES, mmgr->NFaces()*3, GL_UNSIGNED_INT, 0);
     //glDrawElements(GL_POINTS, mmgr->NFaces()*3, GL_UNSIGNED_INT, 0);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
     glBindTexture(GL_TEXTURE_2D, 0);
-    glDisableClientState(GL_VERTEX_ARRAY);
-    glDisableClientState(GL_NORMAL_ARRAY);
     glUseProgram(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
