@@ -37,6 +37,7 @@ void reproject(
         double threshold,
         vector<int>& vids,
         vector<Sample>& samples,
+        int16_t id,
         R3MeshSearchTree* searchtree)
 {
     if (!searchtree) {
@@ -79,6 +80,7 @@ void reproject(
         // Compute direction, add sample
         Sample s;
         s.label = 0;
+        s.id = id;
         if (isLight(idx, hdrimage, confidencemap, threshold)) {
             s.label = 1;
         }
@@ -106,11 +108,12 @@ void reproject(
         const CameraParams* cam,
         MeshManager& mesh,
         double threshold,
+        int16_t id,
         R3MeshSearchTree* searchtree)
 {
     vector<int> vids;
     vector<Sample> samples;
-    reproject(hdrimage, confidencemap, depthmap, cam, mesh, threshold, vids, samples, searchtree);
+    reproject(hdrimage, confidencemap, depthmap, cam, mesh, threshold, vids, samples, id, searchtree);
     for (int i = 0; i < vids.size(); ++i) {
         mesh.addSample(vids[i],samples[i]);
     }
@@ -123,7 +126,7 @@ void reproject(ImageManager& hdr, MeshManager& mesh, double threshold, boost::fu
                 (const float*) hdr.getImage(i),
                 (const float*) hdr.getImage("confidence", i),
                 (const float*) hdr.getImage("depth", i),
-                hdr.getCamera(i), mesh, threshold, &searchtree);
+                hdr.getCamera(i), mesh, threshold, i, &searchtree);
         if (cb) cb(((i+1)*100)/hdr.size());
     }
 }

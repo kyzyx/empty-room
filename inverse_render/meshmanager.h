@@ -16,7 +16,6 @@
  */
 class Sample {
     public:
-        unsigned char label;
         float r;
         float g;
         float b;
@@ -29,6 +28,8 @@ class Sample {
         // the pixel actually comes from other vertices
         // Larger form factor implies more accuracy - the projection of the
         // mesh element on the pixel is greater and therefore is more
+        uint16_t label;
+        int16_t id;
 };
 
 class MeshManager {

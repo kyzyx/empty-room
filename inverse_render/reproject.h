@@ -16,6 +16,7 @@ void reproject(
         const CameraParams* cam,
         MeshManager& mesh,
         double threshold,
+        int16_t id=-1,
         R3MeshSearchTree* searchtree=NULL
 );
 #endif

@@ -3,6 +3,7 @@
 #include "geometrygenerator.h"
 #include "loadshader.h"
 #include "R3Graphics/R3Graphics.h"
+#include <glm/glm.hpp>
 
 GLchar* uniformnames[NUM_UNIFORMS] = {
     "colors",
@@ -238,7 +239,10 @@ void RenderManager::setupMeshColors() {
 
             s[2][3*j+0] = sample.confidence;
             s[2][3*j+1] = sample.dA;
-            s[2][3*j+2] = sample.label;
+            const uint16_t* tmp = (const uint16_t*)&sample.id;
+            uint32_t l = sample.label;
+            l = (l << 16) | *tmp;
+            s[2][3*j+2] = glm::uintBitsToFloat(l);
         }
     }
     for (int i = 0; i < NUM_UNIFORM_TEXTURES; ++i) {

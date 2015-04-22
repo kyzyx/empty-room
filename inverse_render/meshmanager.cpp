@@ -283,7 +283,8 @@ void MeshManager::readSamplesFromFile(const string& samplesfile, int flags, cb_t
         in.read((char*) &sz, 4);
         for (int j = 0; j < sz; ++j) {
             Sample s;
-            in.read((char*) &s.label, 1);
+            in.read((char*) &s.label, sizeof(uint16_t));
+            in.read((char*) &s.id, sizeof(int16_t));
             in.read((char*) &s.r, sizeof(float));
             in.read((char*) &s.g, sizeof(float));
             in.read((char*) &s.b, sizeof(float));
@@ -312,7 +313,8 @@ void MeshManager::writeSamplesToFile(const string& samplesfile, cb_type cb) {
         out.write((char*) &sz, 4);
         for (int j = 0; j < sz; ++j) {
             Sample s = getSample(i,j);
-            out.write((char*) &s.label, 1);
+            out.write((char*) &s.label, sizeof(uint16_t));
+            out.write((char*) &s.id, sizeof(int16_t));
             out.write((char*) &s.r, sizeof(float));
             out.write((char*) &s.g, sizeof(float));
             out.write((char*) &s.b, sizeof(float));

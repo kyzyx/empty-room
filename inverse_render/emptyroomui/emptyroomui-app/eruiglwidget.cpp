@@ -130,8 +130,13 @@ void ERUIGLWidget::draw()
         glClearColor(0.,0.,0.,0.);
         glEnable(GL_DEPTH_TEST);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        if (renderoptions.shouldRenderMesh())
+        if (renderoptions.shouldRenderMesh()) {
+            if (renderoptions.getMeshRenderFormat() == VIEW_SINGLEIMAGE) {
+                rendermanager.setShaderAuxInt(0,0);
+                rendermanager.setShaderAuxInt(selectedCamera, 1);
+            }
             rendermanager.renderMesh(renderoptions.getMeshRenderFormat());
+        }
         if (renderoptions.shouldRenderRoom())
             rendermanager.renderRoom();
 
