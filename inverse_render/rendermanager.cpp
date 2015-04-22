@@ -4,42 +4,56 @@
 #include "loadshader.h"
 #include "R3Graphics/R3Graphics.h"
 
-GLchar* uniforms[NUM_UNIFORMS] = {
+GLchar* uniformnames[NUM_UNIFORMS] = {
     "colors",
     "angles",
     "aux",
-    "modelviewmatrix",
     "projectionmatrix",
+    "modelviewmatrix",
+    "auxdata",
 };
 
+std::string flatfragshadername = "flat.f.glsl";
+std::string defaultfragshadername = "default.f.glsl";
 
-bool usesUniform[NUM_VIEWOPTIONS][NUM_UNIFORMS] = {
-    { false, false, false, true, true },
-    { true, false, true, true, true },
-    { false, false, false, true, true },
-    { false, false, false, true, true },
-    { false, false, false, true, true },
-};
+void ShaderType::init() {
+    if (f&SHADERFLAGS_USE_FLAT_FRAG_SHADER) {
+        progid = LoadShaderFromFiles(n+".v.glsl", flatfragshadername);
+    } else {
+        progid = LoadShaderFromFiles(n+".v.glsl", defaultfragshadername);
+    }
+    glUseProgram(progid);
+    for (int j = 0; j < NUM_UNIFORM_TEXTURES; ++j) {
+        if (f&(1<<j)) {
+            GLuint u = glGetUniformLocation(progid,uniformnames[j]);
+            glUniform1i(u, j+2);
+            if (u == -1) {
+                fprintf(stderr, "Error binding uniform %s in %s shader", uniformnames[j], n.c_str());
+            }
+            uniforms.push_back(u);
+        } else {
+            uniforms.push_back(-1);
+        }
+    }
+    for (int j = NUM_UNIFORM_TEXTURES; j < NUM_UNIFORMS; ++j) {
+        GLuint u = glGetUniformLocation(progid,uniformnames[j]);
+        uniforms.push_back(u);
+    }
+    glUseProgram(0);
+}
 
-static const char* shadername[NUM_VIEWOPTIONS] = {
-    "geometry only",
-    "weighted average sample",
-    "single image reprojection",
-    "per-vertex labels",
-    "light ids and visibility labels",
-};
-static const char* vertexshaderfilenames[NUM_VIEWOPTIONS] = {
-    "default.v.glsl",
-    "averagesample.v.glsl",
-    "default.v.glsl",
-    "default.v.glsl",
-    "default.v.glsl"
-};
+void RenderManager::initShaderTypes() {
+    shaders.push_back(ShaderType("normals", "Normals"));
+    shaders.push_back(ShaderType("avg", "Weighted Average of Samples",  SHADERFLAGS_USES_COLOR_UNIFORM|SHADERFLAGS_USES_AUX_UNIFORM));
+    shaders.push_back(ShaderType("singleimage", "Reprojection of Single Image", SHADERFLAGS_USES_COLOR_UNIFORM|SHADERFLAGS_USES_AUX_UNIFORM));
+    shaders.push_back(ShaderType("labels", "Per-Vertex Light IDs, Visibility, and Auxiliary Labels", SHADERFLAGS_USE_FLAT_FRAG_SHADER));
+}
 
 RenderManager::RenderManager(MeshManager* meshmanager) {
     room = NULL;
     numroomtriangles = 0;
     samples_initialized = false;
+    initShaderTypes();
     setMeshManager(meshmanager);
 }
 
@@ -83,21 +97,9 @@ void RenderManager::init() {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     // Initialize shaders
-    for (int i = 0; i < NUM_VIEWOPTIONS; ++i) {
-        progids[i] = LoadShaderFromFiles(vertexshaderfilenames[i], "default.f.glsl");
-        glUseProgram(progids[i]);
-        for (int j = 0; j < NUM_UNIFORMS; ++j) {
-            if (!usesUniform[i][j]) continue;
-            uniformids[i][j] = glGetUniformLocation(progids[i],uniforms[j]);
-            if (j < NUM_UNIFORM_TEXTURES) {
-                glUniform1i(uniformids[i][j], j+2);
-            }
-            if (uniformids[i][j] == -1) {
-                fprintf(stderr, "Error binding uniform %s in %s", uniforms[j], shadername[i]);
-            }
-        }
+    for (int i = 0; i < shaders.size(); ++i) {
+        shaders[i].init();
     }
-    glUseProgram(0);
     shaders_initialized = true;
 }
 
@@ -232,7 +234,6 @@ void RenderManager::updateMeshAuxiliaryData() {
     // Initialize vertex positions and normals
     glGenBuffers(1, &auxvbo);
     glBindBuffer(GL_ARRAY_BUFFER, auxvbo);
-    //int nch = MeshManager::NUM_CHANNELS;
     int nch = 3;
     int varraysize = nch*mmgr->NVertices();
     int* vertices = new int[varraysize];
@@ -247,11 +248,8 @@ void RenderManager::updateMeshAuxiliaryData() {
             varraysize*sizeof(float),
             vertices, GL_STATIC_DRAW);
     delete [] vertices;
-    for (int i = 0; i < nch; ++i) {
-        int aid = i+2;
-        glEnableVertexAttribArray(aid);
-        glVertexAttribIPointer(aid, 1, GL_INT, sizeof(int), (void*)(sizeof(int)*i));
-    }
+    glEnableVertexAttribArray(2);
+    glVertexAttribIPointer(2, nch, GL_INT, 0, 0);
     glBindVertexArray(0);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -312,10 +310,10 @@ void RenderManager::renderMesh(int rendermode) {
     if (!mmgr) return;
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
-    glUseProgram(progids[rendermode]);
+    glUseProgram(shaders[rendermode].getProgID());
     if (samples_initialized) {
         for (int i = 0; i < NUM_UNIFORM_TEXTURES; ++i) {
-            if (usesUniform[rendermode][i]) {
+            if (shaders[rendermode].getFlags()&(1<<i)) {
                 glActiveTexture(GL_TEXTURE0+i+2);
                 glBindTexture(GL_TEXTURE_2D, sampletex[i]);
             }
@@ -325,8 +323,8 @@ void RenderManager::renderMesh(int rendermode) {
     GLfloat projection[16];
     glGetFloatv(GL_MODELVIEW_MATRIX, modelview);
     glGetFloatv(GL_PROJECTION_MATRIX, projection);
-    glUniformMatrix4fv(uniformids[rendermode][UNIFORM_MODELVIEW], 1, GL_FALSE, modelview);
-    glUniformMatrix4fv(uniformids[rendermode][UNIFORM_PROJECTION], 1, GL_FALSE, projection);
+    glUniformMatrix4fv(shaders[rendermode].projectionUniform(), 1, GL_FALSE, projection);
+    glUniformMatrix4fv(shaders[rendermode].modelviewUniform(), 1, GL_FALSE, modelview);
 
     glBindVertexArray(vaoid);
     glDrawElements(GL_TRIANGLES, mmgr->NFaces()*3, GL_UNSIGNED_INT, 0);
