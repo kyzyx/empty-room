@@ -196,6 +196,14 @@ void MainWindow::meshLoaded() {
     ui->showMeshCheckbox->setEnabled(true);
     mmgr = new MeshManager(meshfilename.toStdString());
     ui->meshWidget->setMeshManager(mmgr);
+
+    ui->viewTypeComboBox->setEnabled(true);
+    ui->viewTypeComboBox->clear();
+    for (int i = 0; i < ui->meshWidget->renderManager()->getNumShaderTypes(); ++i) {
+        ui->viewTypeComboBox->insertItem(i, QString::fromStdString(ui->meshWidget->renderManager()->getShader(i).getDescription()));
+    }
+    connect(ui->viewTypeComboBox, SIGNAL(currentIndexChanged(int)), ui->meshWidget->renderOptions(), SLOT(setMeshRenderFormat(int)));
+
     allLoaded();
 }
 

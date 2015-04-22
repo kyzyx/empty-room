@@ -136,6 +136,7 @@ public:
     }
     ERUIRenderOptions* renderOptions() { return v->renderOptions(); }
 
+    RenderManager* renderManager() { return v->renderManager(); }
     void setMeshManager(MeshManager* manager) {
         v->setMeshManager(manager);
     }

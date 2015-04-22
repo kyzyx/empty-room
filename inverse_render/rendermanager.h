@@ -43,6 +43,7 @@ class ShaderType {
         void init();
 
         int getFlags() const { return f; }
+        std::string getDescription() const { return desc; }
         GLuint getProgID() const { return progid; }
         GLuint projectionUniform() const { return uniforms[UNIFORM_PROJECTION_MATRIX]; }
         GLuint modelviewUniform() const { return uniforms[UNIFORM_MODELVIEW_MATRIX]; }
@@ -78,6 +79,9 @@ public:
     void lookThroughCamera(const CameraParams* cam);
 
     MeshManager* getMeshManager() { return mmgr; }
+
+    const ShaderType& getShader(int n) const { return shaders[n]; }
+    int getNumShaderTypes() const { return shaders.size(); }
 protected:
     void init();
     void initShaderTypes();
