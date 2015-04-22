@@ -54,7 +54,7 @@ class WallfindApp : public InvrenderApp {
                 m(2,0), m(2,1), m(2,2), m(2,3),
                 m(3,0), m(3,1), m(3,2), m(3,3)
             );
-            mmgr->setTransform(xform);
+            r.globaltransform = xform;
             if (!outputroommodel.empty()) {
                 roommodel::save(r, outputroommodel);
             }

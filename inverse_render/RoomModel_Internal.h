@@ -139,6 +139,7 @@ public:
 	Material wallMaterial;
 	Material floorMaterial;
 	Material ceilingMaterial;
+    FMatrix globaltransform;
 	// -------------------------------------------
 	// Baseboard
 	//    Assumes blockish baseboard
@@ -167,7 +168,9 @@ public:
 		walls.push_back(wall);
 		height = h;
 	}
-	RoomModel() { ; }
+	RoomModel() {
+        globaltransform = IdentityMatrix;
+    }
 
 	RoomModel(const std::string& filename);
 };

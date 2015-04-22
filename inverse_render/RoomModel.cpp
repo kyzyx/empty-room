@@ -143,6 +143,16 @@ bool parseLight(const Value& v, Light*& l, vector<Wall>& walls) {
 #define SERIALIZE_DOUBLE(w,s,v) w.String(s); w.Double(v)
 #define SERIALIZE_INT(w,s,v) w.String(s); w.Int(v)
 template <typename Writer>
+void serializeMatrix(const FMatrix& m, Writer& writer) {
+	writer.StartArray();
+    for (int i = 0; i < 4; ++i) {
+        for (int j = 0; j < 4; ++j) {
+            writer.Double(getMatrixElement(m,i,j));
+        }
+    }
+    writer.EndArray();
+}
+template <typename Writer>
 void serializeColor(const Color& c, Writer& writer) {
 	writer.StartObject();
 	SERIALIZE_DOUBLE(writer, "r", c.r);
@@ -279,6 +289,14 @@ bool load(RoomModel& r, const string& filename) {
 		if (!parseLight(d["lights"][i], l, r.walls)) return false;
 		r.lights.push_back(l);
 	}
+    // Parse matrix
+    OPT_ARR(d, "transform") {
+        for (int i = 0; i < 4; ++i) {
+            for (int j = 0; j < 4; ++j) {
+                setMatrixElement(r.globaltransform,i,j,d["transform"][4*i+j].GetDouble());
+            }
+        }
+    }
 	fclose(fin);
 	return true;
 }
@@ -311,6 +329,8 @@ bool save(RoomModel& r, const string& filename) {
 		serializeLight(r.lights[i], r.walls, writer);
 	}
 	writer.EndArray();
+    writer.String("transform");
+    serializeMatrix(r.globaltransform, writer);
 	writer.EndObject();
 	fclose(out);
 	return true;

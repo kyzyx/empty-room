@@ -218,7 +218,7 @@ void ERUIGLWidget::setupRoomGeometry(roommodel::RoomModel* model) {
     float* vertices = new float[numroomtriangles*6];
     float* colors = new float[numroomtriangles*3];
 
-    R4Matrix m = mmgr->getTransform();
+    R4Matrix m = model->globaltransform;
     m = m.Inverse();
     trans = R3Vector(m[0][3], m[1][3], m[2][3]);
 
