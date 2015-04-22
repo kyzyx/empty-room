@@ -21,6 +21,17 @@ add_library(memory
 target_link_libraries(memory ${PCL_LIBRARIES} ${Boost_LIBRARIES}
     R3Graphics.a R3Shapes.a R2Shapes.a RNBasics.a jpeg.a
     GL GLU IlmImf Half rt)
+add_library(rendering
+    roommodel.h RoomModel.cpp RoomModel_Internal.h
+    loadshader.h loadshader.cpp
+    geometrygenerator.h geometrygenerator.cpp
+    rectanglerenderer.h rectanglerenderer.cpp
+    rendermanager.h rendermanager.cpp
+    hemicuberenderer.h hemicuberenderer.cpp)
+target_link_libraries(rendering memory
+    R3Graphics.a R3Shapes.a R2Shapes.a RNBasics.a jpeg.a
+    GL GLU)
+
 add_executable(dataserver dataserver.cpp)
 target_link_libraries(dataserver ${PCL_LIBRARIES} memory)
 add_executable(reprojectapp reprojectapp.cpp invrenderapp.cpp invrenderapp.h
@@ -44,5 +55,5 @@ add_executable(invrender invrender.cpp
     display.cpp display.h parse_args.cpp parse_args.h rerender.cpp rerender.h)
 target_link_libraries(invrender ${PCL_LIBRARIES} ${OpenCV_LIBS}
     R3Graphics.a R3Shapes.a R2Shapes.a RNBasics.a
-    jpeg.a GL glut GLU GLEW IlmImf Half memory)
+    jpeg.a GL glut GLU GLEW IlmImf Half memory rendering)
 set(CMAKE_CXX_FLAGS "-Wno-deprecated -std=c++0x")

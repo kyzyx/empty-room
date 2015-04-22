@@ -18,32 +18,21 @@ SOURCES += main.cpp\
     qxtspanslider.cpp \
     subprocessworker.cpp \
     hdrglwidget.cpp \
-    hdrimageviewer.cpp \
-    geometrygenerator.cpp \
-    rectanglerenderer.cpp \
-    ../RoomModel.cpp \
-    loadshader.cpp
+    hdrimageviewer.cpp
 
 HEADERS  += mainwindow.h \
             eruiglwidget.h \
-            ../imagemanager.h \
-            ../meshmanager.h \
     hdrviewer.h \
     qxtspanslider.h \
     subprocessworker.h \
     hdrglwidget.h \
-    hdrimageviewer.h \
-    geometrygenerator.h \
-    rectanglerenderer.h \
-    ../roommodel.h \
-    ../RoomModel_Internal.h \
-    loadshader.h
+    hdrimageviewer.h
 
 FORMS    += mainwindow.ui
 
 unix: LIBS += -L$$PWD/../build/ \
         -L$$PWD/../../GAPS/R3Graphics/ -L$$PWD/../../GAPS/R3Shapes/ -L$$PWD/../../GAPS/RNBasics/ -L$$PWD/../../GAPS/R2Shapes/ \
-        -lmemory -lHalf -lIlmImf \
+        -lrendering -lmemory -lHalf -lIlmImf \
         -lR3Graphics -lR3Shapes -lR2Shapes -lRNBasics -ljpeg -lpng \
         -lGLU -lGLEW -lrt -lboost_system -lboost_filesystem \
         -lQGLViewer -lpcl_common -lpcl_io -lpcl_io_ply
@@ -54,7 +43,7 @@ INCLUDEPATH += $$PWD/../
 INCLUDEPATH += $$PWD/../../GAPS/
 DEPENDPATH += $$PWD/../
 
-unix: PRE_TARGETDEPS += $$PWD/../build/libmemory.a
+unix: PRE_TARGETDEPS += $$PWD/../build/libmemory.a $$PWD/../build/librendering.a
 
 OTHER_FILES += \
     hdr.v.glsl \

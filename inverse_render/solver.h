@@ -11,10 +11,17 @@
 class InverseRender {
     public:
         InverseRender(MeshManager* m, int nlights, int hemicubeResolution=150)
-            : hr(m, hemicubeResolution), mesh(m), numlights(nlights), images(NULL),
+            : mesh(m), numlights(nlights), images(NULL),
               maxPercentErr(0.1), numRansacIters(1000)
         {
+            rm = new RenderManager(m);
+            rm->setupMeshColors();
+            hr = new HemicubeRenderer(rm, hemicubeResolution);
             lights.resize(numlights);
+        }
+        ~InverseRender() {
+            if (hr) delete hr;
+            if (rm) delete rm;
         }
         void solve(std::vector<SampleData>& data);
         void solveTexture(
@@ -46,7 +53,8 @@ class InverseRender {
                 std::vector<Material>& lightintensies);
         double generateBinaryMask(const CameraParams* cam, const char* labelimage, std::vector<bool>& mask, int label);
 
-        HemicubeRenderer hr;
+        HemicubeRenderer* hr;
+        RenderManager* rm;
 
         int numRansacIters;
         double maxPercentErr;

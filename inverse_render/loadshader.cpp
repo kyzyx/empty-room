@@ -23,6 +23,9 @@ std::string readFile(const char *filePath) {
     return content;
 }
 
+GLuint LoadShaderFromFiles(const std::string& vertex_path, const std::string& fragment_path) {
+    return LoadShaderFromFiles(vertex_path.c_str(), fragment_path.c_str());
+}
 GLuint LoadShader(const char *vertShaderSrc, const char *fragShaderSrc) {
     GLuint vertShader = glCreateShader(GL_VERTEX_SHADER);
     GLuint fragShader = glCreateShader(GL_FRAGMENT_SHADER);

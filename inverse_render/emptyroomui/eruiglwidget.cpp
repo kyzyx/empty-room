@@ -1,267 +1,45 @@
 #include <GL/glew.h>
 #include "eruiglwidget.h"
-#include "geometrygenerator.h"
 #include "R3Graphics/R3Graphics.h"
-#include "loadshader.h"
 
-#define MAX_LIGHTS 127
 #define MAX_CAMERAS 100
 
-
-static const int NUM_UNIFORM_TEXTURES = 3;
-
-enum {
-    UNIFORM_SAMPLE_COLORS=0,
-    UNIFORM_SAMPLE_ANGLES=1,
-    UNIFORM_SAMPLE_AUX=2,
-    UNIFORM_MODELVIEW=3,
-    UNIFORM_PROJECTION=4,
-    NUM_UNIFORMS=5,
-};
-
-GLchar* uniforms[NUM_UNIFORMS] = {
-    "colors",
-    "angles",
-    "aux",
-    "modelviewmatrix",
-    "projectionmatrix",
-};
-
-
-bool usesUniform[NUM_VIEWOPTIONS][NUM_UNIFORMS] = {
-    { false, false, false, true, true },
-    { true, false, true, true, true },
-    { false, false, false, true, true },
-};
-
-static const char* shadername[NUM_VIEWOPTIONS] = {
-    "geometry only",
-    "weighted average sample",
-    "single image reprojection",
-};
-static const char* vertexshaderfilenames[NUM_VIEWOPTIONS] = {
-    "default.v.glsl",
-    "averagesample.v.glsl",
-    "default.v.glsl"
-};
-
 ERUIGLWidget::ERUIGLWidget(QWidget *parent) :
-    HDRQGlViewerWidget(parent), mmgr(NULL),
-    hasColors(false), hasGeometry(false),
-    selectedCamera(0), renderoptions(this),
-    room(NULL), numroomtriangles(0)
+    HDRQGlViewerWidget(parent),
+    selectedCamera(0), renderoptions(this)
 {
 }
 
 ERUIGLWidget::~ERUIGLWidget() {
-    if (hasColors) glDeleteTextures(3, sampletex);
-    if (hasGeometry) {
-        glDeleteBuffers(1, &vbo);
-        glDeleteBuffers(1, &ibo);
-    }
 }
 
 void ERUIGLWidget::setMeshManager(MeshManager* manager) {
-    mmgr = manager;
-    setupMeshGeometry();
-    helper.emitSuggestRange(0,1);
-}
-
-void ERUIGLWidget::setupMeshGeometry()
-{
     makeCurrent();
-    //int varraysize = 3*3*mmgr->NFaces();
-    int varraysize = 2*3*mmgr->NVertices();
-    float* vertices = new float[varraysize];
-    glGenVertexArrays(1,&vaoid);
-    glBindVertexArray(vaoid);
-    glGenBuffers(1, &vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    int v = 0;
+    rendermanager.setMeshManager(manager);
+    // Compute scene center
     R3Box bbox = R3zero_box;
-    for (int i = 0; i < mmgr->NVertices(); ++i) {
-        R3Point p = mmgr->VertexPosition(i);
-        bbox.Union(p);
-        vertices[v++] = p[0];
-        vertices[v++] = p[1];
-        vertices[v++] = p[2];
-        R3Vector n = mmgr->VertexNormal(i);
-        vertices[v++] = n[0];
-        vertices[v++] = n[1];
-        vertices[v++] = n[2];
+    for (int i = 0; i < manager->NVertices(); ++i) {
+        bbox.Union(manager->VertexPosition(i));
     }
     setSceneRadius(bbox.DiagonalRadius());
     R3Point ctr = bbox.Centroid();
     setSceneCenter(qglviewer::Vec(ctr.X(), ctr.Y(), ctr.Z()));
-    /*for (int i = 0; i < mmgr->NFaces(); ++i) {
-        R3Point p = mmgr->VertexPosition(mmgr->VertexOnFace(i,0));
-        vertices[v++] = p[0];
-        vertices[v++] = p[1];
-        vertices[v++] = p[2];
-        p = mmgr->VertexPosition(mmgr->VertexOnFace(i,1));
-        vertices[v++] = p[0];
-        vertices[v++] = p[1];
-        vertices[v++] = p[2];
-        p = mmgr->VertexPosition(mmgr->VertexOnFace(i,2));
-        vertices[v++] = p[0];
-        vertices[v++] = p[1];
-        vertices[v++] = p[2];
-    }*/
-    glBufferData(GL_ARRAY_BUFFER,
-            varraysize*sizeof(float),
-            vertices, GL_STATIC_DRAW);
-    delete [] vertices;
 
-    int iarraysize = 3*mmgr->NFaces();
-    unsigned int* indices = new unsigned int[iarraysize];
-    v = 0;
-    for (int i = 0; i < mmgr->NFaces(); ++i) {
-        indices[v++] = mmgr->VertexOnFace(i,0);
-        indices[v++] = mmgr->VertexOnFace(i,1);
-        indices[v++] = mmgr->VertexOnFace(i,2);
-    }
-    glGenBuffers(1, &ibo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                 iarraysize * sizeof(unsigned int),
-                 indices, GL_STATIC_DRAW);
-    delete [] indices;
-    hasGeometry = true;
-
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0,3,GL_FLOAT, GL_FALSE, 6*sizeof(float), 0);
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1,3,GL_FLOAT, GL_FALSE, 6*sizeof(float), (void*)(3*sizeof(float)));
-    glBindVertexArray(0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     updateGL();
+    helper.emitSuggestRange(0,1);
 }
 
 void ERUIGLWidget::setupMeshColors()
 {
     makeCurrent();
-    // Sample texture layout:
-    // For each vertex: Take max of 32 samples
-    // Each sample is 3 "pixels"
-        // Color
-        // Incident angle
-        // Confidence,solid angle,label/id
-    static bool initialize = true;
-    static const int rowsize = 8192;
-    static const int maxsamples = 32;
-    int vertsperrow = rowsize/maxsamples;
-    int nrows = (mmgr->NVertices()+vertsperrow-1)/vertsperrow;
-    if (initialize) {
-        glGenTextures(NUM_UNIFORM_TEXTURES, sampletex);
-        for (int i = 0; i < NUM_UNIFORM_TEXTURES; ++i) {
-            glActiveTexture(GL_TEXTURE0+i+2);
-            glBindTexture(GL_TEXTURE_2D, sampletex[i]);
-            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, rowsize, nrows, 0, GL_RGB, GL_FLOAT, 0);
-            glBindTexture(GL_TEXTURE_2D, 0);
-        }
-    }
-    float* sampledata[NUM_UNIFORM_TEXTURES];
-    for (int i = 0; i < NUM_UNIFORM_TEXTURES; ++i) {
-        sampledata[i] = new float[rowsize*nrows*3];
-        memset(sampledata[i], 0, sizeof(float)*rowsize*nrows*3);
-    }
-    for (int i = 0; i < mmgr->NVertices(); ++i) {
-        float* s[NUM_UNIFORM_TEXTURES];
-        for (int j = 0; j < 3; ++j)  s[j] = sampledata[j] + i*maxsamples*3;
-        int nsamplestoload = std::min(maxsamples, mmgr->getVertexSampleCount(i));
-        std::vector<std::pair<float,int> > confidences;
-        for (int j = 0; j < mmgr->getVertexSampleCount(i); ++j) {
-            confidences.push_back(std::make_pair(mmgr->getSample(i,j).confidence, j));
-        }
-        std::sort(confidences.begin(), confidences.end(), std::greater<std::pair<float,int> >());
-        for (int j = 0; j < nsamplestoload; ++j) {
-            Sample sample = mmgr->getSample(i, confidences[j].second);
-            s[0][3*j+0] = sample.r;
-            s[0][3*j+1] = sample.g;
-            s[0][3*j+2] = sample.b;
-
-            s[1][3*j+0] = sample.x;
-            s[1][3*j+1] = sample.y;
-            s[1][3*j+2] = sample.z;
-
-            s[2][3*j+0] = sample.confidence;
-            s[2][3*j+1] = sample.dA;
-            s[2][3*j+2] = sample.label;
-        }
-    }
-    for (int i = 0; i < NUM_UNIFORM_TEXTURES; ++i) {
-        glActiveTexture(GL_TEXTURE0+i+2);
-        glBindTexture(GL_TEXTURE_2D, sampletex[i]);
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, rowsize, nrows, GL_RGB, GL_FLOAT, sampledata[i]);
-        glBindTexture(GL_TEXTURE_2D, 0);
-        delete [] sampledata[i];
-    }
-
-    hasColors = true;
+    rendermanager.setupMeshColors();
     updateGL();
 }
 
-void ERUIGLWidget::setupRoomGeometry(roommodel::RoomModel* model) {
-    if (!model) model = room;
-    makeCurrent();
-    roommodel::GeometryGenerator gg(model);
-    gg.generate();
-    std::vector<double> triangles;
-    gg.getTriangleGeometry(triangles);
-    numroomtriangles = triangles.size()/6;
-    float* vertices = new float[numroomtriangles*6];
-    float* colors = new float[numroomtriangles*3];
-
-    R4Matrix m = model->globaltransform;
-    m = m.Inverse();
-    trans = R3Vector(m[0][3], m[1][3], m[2][3]);
-
-    m[0][3] = 0;
-    m[1][3] = 0;
-    m[2][3] = 0;
-    for (int i = 0; i < numroomtriangles; ++i) {
-        R3Point p(triangles[6*i], triangles[6*i+1], triangles[6*i+2]);
-        R3Vector n(triangles[6*3], triangles[6*i+4], triangles[6*i+5]);
-        p = m*p;
-        n = m*n;
-        vertices[6*i] = p.X();
-        vertices[6*i+1] = p.Y();
-        vertices[6*i+2] = p.Z();
-        vertices[6*i+3] = n.X();
-        vertices[6*i+4] = n.Y();
-        vertices[6*i+5] = n.Z();
-    }
-    glGenBuffers(1, &roomvbo);
-    glBindBuffer(GL_ARRAY_BUFFER, roomvbo);
-    glBufferData(GL_ARRAY_BUFFER,
-            numroomtriangles*6*sizeof(float),
-            vertices, GL_STATIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    delete [] vertices;
-
-    glGenBuffers(1, &roomcbo);
-    glBindBuffer(GL_ARRAY_BUFFER, roomcbo);
-    triangles.clear();
-    gg.getTriangleVertexColors(triangles);
-    for (int i = 0; i < triangles.size(); ++i) {
-        colors[i] = triangles[i];
-    }
-    glBufferData(GL_ARRAY_BUFFER,
-            numroomtriangles*3*sizeof(float),
-            colors, GL_STATIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    delete [] colors;
-}
-
 void ERUIGLWidget::setRoomModel(roommodel::RoomModel* model) {
-    setupRoomGeometry(model);
-    room = model;
+    makeCurrent();
+    rendermanager.setRoomModel(model);
+    updateGL();
 }
 
 void ERUIGLWidget::setupCameras(ImageManager* imgr) {
@@ -296,24 +74,6 @@ void ERUIGLWidget::init()
   setShortcut(ANIMATION, 0);
   setShortcut(SNAPSHOT_TO_CLIPBOARD, 0);
   //help();
-  makeCurrent();
-  for (int i = 0; i < NUM_VIEWOPTIONS; ++i) {
-      progids[i] = LoadShaderFromFiles(vertexshaderfilenames[i], "default.f.glsl");
-      glUseProgram(progids[i]);
-      for (int j = 0; j < NUM_UNIFORMS; ++j) {
-          if (!usesUniform[i][j]) continue;
-          uniformids[i][j] = glGetUniformLocation(progids[i],uniforms[j]);
-          if (j < NUM_UNIFORM_TEXTURES) {
-              glUniform1i(uniformids[i][j], j+2);
-          }
-          if (uniformids[i][j] == -1) {
-              qDebug("Error binding uniform %s in %s", uniforms[j], shadername[i]);
-          }
-      }
-  }
-  glUseProgram(0);
-
-
 }
 
 QString ERUIGLWidget::helpString() const
@@ -338,10 +98,9 @@ QString ERUIGLWidget::helpString() const
 static R3DirectionalLight l(R3Vector(0.3, 0.5, -1), RNRgb(1, 1, 1), 1, TRUE);
 static R3Brdf b(RNRgb(0.2,0.2,0.2), RNRgb(0.8,0.8,0.8),
                 RNRgb(0,0,0), RNRgb(0,0,0), 0.2, 1, 1);
-// Draws a spiral
 void ERUIGLWidget::draw()
 {
-    if (!hasGeometry) {
+/*    if (!hasGeometry) {
         const float nbSteps = 200.0;
         glBegin(GL_QUAD_STRIP);
         for (int i=0; i<nbSteps; ++i) {
@@ -360,13 +119,15 @@ void ERUIGLWidget::draw()
           glVertex3f(r2*c, alt+0.05f, r2*s);
         }
         glEnd();
-    } else {
+    } else {*/
         glDepthMask(true);
         glClearColor(0.,0.,0.,0.);
         glEnable(GL_DEPTH_TEST);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        if (renderoptions.shouldRenderMesh() && hasGeometry) renderMesh();
-        if (renderoptions.shouldRenderRoom() && room) renderRoom();
+        if (renderoptions.shouldRenderMesh())
+            rendermanager.renderMesh(renderoptions.getMeshRenderFormat());
+        if (renderoptions.shouldRenderRoom())
+            rendermanager.renderRoom();
 
         if (renderoptions.shouldRenderAnyCameras()) {
             glEnable(GL_LIGHTING);
@@ -384,71 +145,10 @@ void ERUIGLWidget::draw()
             }
             glDisable(GL_LIGHTING);
         }
-    }
-}
-
-void ERUIGLWidget::renderMesh() {
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
-    int n = hasColors?VIEW_AVERAGE:VIEW_GEOMETRY;
-    glUseProgram(progids[n]);
-    if (hasColors) {
-        for (int i = 0; i < NUM_UNIFORM_TEXTURES; ++i) {
-            if (usesUniform[n][i]) {
-                glActiveTexture(GL_TEXTURE0+i+2);
-                glBindTexture(GL_TEXTURE_2D, sampletex[i]);
-            }
-        }
-    }
-    GLfloat modelview[16];
-    GLfloat projection[16];
-    glGetFloatv(GL_MODELVIEW_MATRIX, modelview);
-    glGetFloatv(GL_PROJECTION_MATRIX, projection);
-    glUniformMatrix4fv(uniformids[n][UNIFORM_MODELVIEW], 1, GL_FALSE, modelview);
-    glUniformMatrix4fv(uniformids[n][UNIFORM_PROJECTION], 1, GL_FALSE, projection);
-
-    glBindVertexArray(vaoid);
-    glDrawElements(GL_TRIANGLES, mmgr->NFaces()*3, GL_UNSIGNED_INT, 0);
-    //glDrawElements(GL_POINTS, mmgr->NFaces()*3, GL_UNSIGNED_INT, 0);
-    glBindVertexArray(0);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    glUseProgram(0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-}
-
-void ERUIGLWidget::renderRoom() {
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
-    glDisable(GL_LIGHT0);
-    glEnable(GL_LIGHTING);
-    glColor3f(1,1,1);
-    b.Draw();
-    l.Draw(0);
-
-    glMatrixMode(GL_MODELVIEW);
-    glPushMatrix();
-    glTranslatef(trans[0], trans[1], trans[2]);
-    glRotatef(90,1,0,0);
-    glRotatef(-90,0,0,1);
-
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glEnableClientState(GL_NORMAL_ARRAY);
-    glEnableClientState(GL_COLOR_ARRAY);
-    glBindBuffer(GL_ARRAY_BUFFER, roomcbo);
-    glColorPointer(3, GL_FLOAT, 3*sizeof(float), 0);
-    glBindBuffer(GL_ARRAY_BUFFER, roomvbo);
-    glVertexPointer(3, GL_FLOAT, 6*sizeof(float), 0);
-    glNormalPointer(GL_FLOAT, 6*sizeof(float), (void*)(3*sizeof(float)));
-    glDrawArrays(GL_TRIANGLES, 0, numroomtriangles);
-    glDisableClientState(GL_VERTEX_ARRAY);
-    glDisableClientState(GL_NORMAL_ARRAY);
-    glDisableClientState(GL_COLOR_ARRAY);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glPopMatrix();
+   // }
 }
 
 void ERUIGLWidget::drawWithNames() {
-
     glClearColor(0,0,0,1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     if (renderoptions.shouldRenderAnyCameras()) {

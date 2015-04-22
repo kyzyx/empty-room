@@ -7,13 +7,7 @@
 #include "hdrviewer.h"
 #include "imagemanager.h"
 #include "roommodel.h"
-
-enum {
-    VIEW_GEOMETRY,
-    VIEW_AVERAGE,
-    VIEW_IMAGEID,
-    NUM_VIEWOPTIONS
-};
+#include "rendermanager.h"
 
 class ERUIRenderOptions : public QObject {
 Q_OBJECT
@@ -24,7 +18,8 @@ public:
         renderCurrentCamera(true),
         renderMesh(true),
         renderRoom(false),
-        cameraRenderFormat(CAMRENDER_FRUSTUM)
+        cameraRenderFormat(CAMRENDER_FRUSTUM),
+        meshRenderFormat(VIEW_GEOMETRY)
     {;}
 
 public:
@@ -38,6 +33,9 @@ public:
         } else {
             return CAMRENDER_NONE;
         }
+    }
+    int getMeshRenderFormat() {
+        return meshRenderFormat;
     }
     bool shouldRenderMesh() { return renderMesh; }
     bool shouldRenderRoom() { return renderRoom; }
@@ -55,6 +53,7 @@ protected:
     bool renderRoom;
 
     int cameraRenderFormat;
+    int meshRenderFormat;
 
 public slots:
     void setRenderCameras(bool shouldRenderCamera) {
@@ -77,6 +76,10 @@ public slots:
         cameraRenderFormat = camformat;
         if (qglw) qglw->updateGL();
     }
+    void setMeshRenderFormat(int meshformat) {
+        meshRenderFormat = meshformat;
+        if (qglw) qglw->updateGL();
+    }
 };
 
 class ERUIGLWidget : public HDRQGlViewerWidget
@@ -85,13 +88,16 @@ class ERUIGLWidget : public HDRQGlViewerWidget
 public:
     explicit ERUIGLWidget(QWidget *parent = 0);
     ~ERUIGLWidget();
-    void setMeshManager(MeshManager* manager);
+
+    RenderManager* renderManager() { return &rendermanager; }
+    ERUIRenderOptions* renderOptions() { return &renderoptions; }
+
+    void setRoomModel(roommodel::RoomModel* model);
     void setupMeshColors();
-    void setupCameras(ImageManager* imgr);
+    void setMeshManager(MeshManager* meshmanager);
 
     void lookThroughCamera(const CameraParams* cam);
-    void setRoomModel(roommodel::RoomModel* model);
-    ERUIRenderOptions* renderOptions() { return &renderoptions; }
+    void setupCameras(ImageManager* imgr);
 protected:
     virtual void draw();
     virtual void init();
@@ -99,34 +105,14 @@ protected:
     void postSelection(const QPoint &point);
     virtual QString helpString() const;
 
-    void setupMeshGeometry();
-    void setupRoomGeometry(roommodel::RoomModel* model);
-
-    void renderRoom();
-    void renderMesh();
     void renderCamera(const CameraParams& cam, bool id_only=false);
 
+    RenderManager rendermanager;
     std::vector<CameraParams> cameras;
     std::vector<int> camids;
-    MeshManager* mmgr;
-    roommodel::RoomModel* room;
-    R3Vector trans;
-
-    bool hasColors, hasGeometry;
 
     ERUIRenderOptions renderoptions;
     int selectedCamera;
-    int numroomtriangles;
-
-    // OpenGL buffer ids
-    GLuint vbo, ibo, cbo;
-    GLuint roomvbo, roomcbo;
-    GLuint sampletex[3];
-    GLuint vaoid;
-
-
-    GLuint progids[NUM_VIEWOPTIONS];
-    GLuint uniformids[NUM_VIEWOPTIONS][5];
 signals:
     void cameraSelected(int cameraindex);
 public slots:
@@ -148,15 +134,23 @@ public:
     ~ERUIGLViewer() {
         if (v) delete v;
     }
+    ERUIRenderOptions* renderOptions() { return v->renderOptions(); }
 
     void setMeshManager(MeshManager* manager) {
         v->setMeshManager(manager);
     }
-    ERUIRenderOptions* renderOptions() { return v->renderOptions(); }
-    void setupMeshColors() { v->setupMeshColors(); }
-    void setupCameras(ImageManager* imgr) { v->setupCameras(imgr); }
-    void lookThroughCamera(const CameraParams* cam) { v->lookThroughCamera(cam); }
-    void setRoomModel(roommodel::RoomModel* model) { v->setRoomModel(model); }
+    void setupMeshColors() {
+        v->setupMeshColors();
+    }
+    void setupCameras(ImageManager* imgr) {
+        v->setupCameras(imgr);
+    }
+    void setRoomModel(roommodel::RoomModel* model) {
+        v->setRoomModel(model);
+    }
+    void lookThroughCamera(const CameraParams* cam) {
+        v->lookThroughCamera(cam);
+    }
 signals:
     void cameraSelected(int cameraindex);
 protected slots:

@@ -137,7 +137,7 @@ void InverseRender::computeSamples(
     if (saveImages) {
         images = new float*[numsamples*2];
     }
-    hr.computeSamples(data, indices, numsamples, discardthreshold, images);
+    hr->computeSamples(data, indices, numsamples, discardthreshold, images);
     for (int i = 0; i < data.size(); ++i) {
         data[i].lightamount.resize(numlights, 0);
     }
