@@ -28,7 +28,6 @@ using namespace pcl;
  * Vertex Positions
  * Vertex Normals
  * Face indices
- * Transform
  * All labels
  */
 
@@ -121,8 +120,6 @@ bool MeshManager::initializeSharedMemory() {
     s += nvertices*sizeof(R3Vector);
     faces = (int*)(s);
     s += nfaces*3*sizeof(int);
-    transform = (R4Matrix*)(s);
-    s += sizeof(R4Matrix);
     for (int i = 0; i < NUM_CHANNELS; ++i) {
         labels[i] = (char*) s;
         s += nvertices;
@@ -159,7 +156,6 @@ int MeshManager::computeSize() const {
          + nvertices*sizeof(R3Point)
          + nvertices*sizeof(R3Vector)
          + nfaces*3*sizeof(int)
-         + sizeof(R4Matrix)
          + NUM_CHANNELS*nvertices;
 }
 
@@ -181,12 +177,6 @@ Eigen::Vector3f MeshManager::VertexPositionE(int n) const {
 }
 Eigen::Vector3f MeshManager::VertexNormalE(int n) const {
     return Eigen::Vector3f(norm[n].X(), norm[n].Y(), norm[n].Z());
-}
-R4Matrix MeshManager::getTransform() const {
-    return *transform;
-}
-void MeshManager::setTransform(const R4Matrix& t) {
-    *transform = t;
 }
 int MeshManager::VertexOnFace(int n, int i) const {
     return faces[3*n+i];
