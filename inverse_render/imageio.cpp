@@ -41,9 +41,10 @@ bool readScalarMap(const string& filename, void* image, int w, int h, int bytes)
     try {
         ifstream in(filename.c_str(), ifstream::binary);
         char* p = (char*) image;
-        for (int i = 0; i < w*h; ++i) {
-            in.read(p, bytes);
-            p += bytes;
+        p += (h-1)*w*bytes;
+        for (int i = 0; i < h; ++i) {
+            in.read(p, w*bytes);
+            p -= w*bytes;
         }
         return true;
     } catch(...) {

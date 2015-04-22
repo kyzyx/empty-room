@@ -74,6 +74,8 @@ private slots:
 
     void on_autoLookCheckbox_toggled(bool checked);
 
+    void on_saveWallsButton_clicked();
+
 private:
     Ui::MainWindow *ui;
     ImageManager* imgr;

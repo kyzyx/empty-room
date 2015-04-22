@@ -190,7 +190,7 @@ void ERUIGLWidget::setupMeshColors()
             s[1][3*j+1] = sample.y;
             s[1][3*j+2] = sample.z;
 
-            s[2][3*j+0] = std::max(0.f,sample.confidence);
+            s[2][3*j+0] = sample.confidence;
             s[2][3*j+1] = sample.dA;
             s[2][3*j+2] = sample.label;
         }

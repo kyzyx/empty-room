@@ -161,7 +161,7 @@ void MainWindow::on_actionOpen_Mesh_triggered()
     mdialog.setFileMode(QFileDialog::ExistingFile);
     mdialog.setOption(QFileDialog::DontUseNativeDialog);
     mdialog.setDirectory(settings->value("lastworkingdirectory", "").toString());
-    mdialog.selectFile(settings->value("lastmeshfile", "").toString());
+    mdialog.selectFile(QFileInfo(settings->value("lastmeshfile", "").toString()).fileName());
     if (mdialog.exec()) {
         meshfilename = mdialog.selectedFiles().first();
         settings->setValue("lastmeshfile", meshfilename);
@@ -206,7 +206,7 @@ void MainWindow::on_actionOpen_Images_triggered()
     idialog.setFileMode(QFileDialog::ExistingFile);
     idialog.setOption(QFileDialog::DontUseNativeDialog);
     idialog.setDirectory(settings->value("lastworkingdirectory", "").toString());
-    idialog.selectFile(settings->value("lastcamerafile", "").toString());
+    idialog.selectFile(QFileInfo(settings->value("lastcamerafile", "").toString()).fileName());
     if (idialog.exec()) {
         camfilename = idialog.selectedFiles().first();
         settings->setValue("lastcamerafile", camfilename);
@@ -293,8 +293,8 @@ void MainWindow::on_loadReprojectButton_clicked()
 {
     if (mmgr) {
         QString lwd = settings->value("lastworkingdirectory", "").toString();
-        QString cfile = settings->value("lastreprojectfile", lwd).toString();
-        QString datafilename = QFileDialog::getOpenFileName(this, "Open Reprojection Samples", cfile);
+        //QString cfile = settings->value("lastreprojectfile", lwd).toString();
+        QString datafilename = QFileDialog::getOpenFileName(this, "Open Reprojection Samples", lwd);
         if (!datafilename.isEmpty()) {
             QDir cwd = QDir(datafilename);
             cwd.cdUp();
@@ -381,8 +381,8 @@ void MainWindow::on_saveReprojectButton_clicked()
 {
     if (mmgr) {
         QString lwd = settings->value("lastworkingdirectory", "").toString();
-        QString cfile = settings->value("lastreprojectfile", lwd).toString();
-        QString datafilename = QFileDialog::getSaveFileName(this, "Open Reprojection Samples", cfile);
+        //QString cfile = settings->value("lastreprojectfile", lwd).toString();
+        QString datafilename = QFileDialog::getSaveFileName(this, "Save Reprojection Samples", lwd);
         if (!datafilename.isEmpty()) {
             QDir cwd = QDir(datafilename);
             cwd.cdUp();
@@ -422,6 +422,7 @@ void MainWindow::wallfindingDone() {
     roommodel::load(*room, temproommodel->fileName().toStdString());
     ui->meshWidget->setRoomModel(room);
     ui->showRoomCheckbox->setEnabled(true);
+    ui->saveWallsButton->setEnabled(true);
     //delete temproommodel;
 }
 
@@ -456,10 +457,26 @@ void MainWindow::on_loadWallsButton_clicked()
         roommodel::load(*room, datafilename.toStdString());
         ui->meshWidget->setRoomModel(room);
         ui->showRoomCheckbox->setEnabled(true);
+        ui->saveWallsButton->setEnabled(true);
     }
 }
 
 void MainWindow::on_autoLookCheckbox_toggled(bool checked)
 {
     if (checked) ui->meshWidget->lookThroughCamera(imgr->getCamera(imageindex));
+}
+
+void MainWindow::on_saveWallsButton_clicked()
+{
+    if (mmgr) {
+        QString lwd = settings->value("lastworkingdirectory", "").toString();
+        //QString cfile = settings->value("lastreprojectfile", lwd).toString();
+        QString datafilename = QFileDialog::getSaveFileName(this, "Save Wallfinding Results", lwd, "JSON files (*.json)");
+        if (!datafilename.isEmpty()) {
+            QDir cwd = QDir(datafilename);
+            cwd.cdUp();
+            settings->setValue("lastworkingdirectory", cwd.canonicalPath());
+            roommodel::save(*room, datafilename.toStdString());
+        }
+    }
 }
