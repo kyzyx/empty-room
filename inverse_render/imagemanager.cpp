@@ -152,8 +152,7 @@ void* ImageManager::getImageWriteable(const string& type, int n) {
     if (i < 0) return NULL;
     //boost::interprocess::scoped_lock<shmutex> lock(*getMutex(i,n));
     //memcpy(images[i][n], ptr, w*h*imagetypes[i].getSize());
-    if (flags[i*sz+n] & DF_INITIALIZED) return images[i][n];
-    else return NULL;
+    return images[i][n];
 }
 
 const CameraParams* ImageManager::getCamera(int n) const {

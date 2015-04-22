@@ -166,11 +166,13 @@ void HDRGlHelper::initializeHelper() {
 void HDRGlHelper::renderToTexture(boost::function<void()> f) {
     glEnable(GL_TEXTURE_2D);
     glUseProgram(0);
+    int lastfbo;
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &lastfbo);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glPopAttrib();
     if (f) f();
     glPushAttrib(GL_ALL_ATTRIB_BITS-GL_VIEWPORT_BIT);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, lastfbo);
 }
 
 void HDRGlHelper::paintHelper() {

@@ -121,6 +121,7 @@ void RenderManager::setupMeshGeometry() {
     glBindVertexArray(vaoid);
     // Initialize vertex positions and normals
     glGenBuffers(1, &vbo);
+    glGenBuffers(1, &auxvbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     int v = 0;
     for (int i = 0; i < mmgr->NVertices(); ++i) {
@@ -158,6 +159,14 @@ void RenderManager::setupMeshGeometry() {
     glVertexAttribPointer(0,3,GL_FLOAT, GL_FALSE, 6*sizeof(float), 0);
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1,3,GL_FLOAT, GL_FALSE, 6*sizeof(float), (void*)(3*sizeof(float)));
+
+    glGenBuffers(1, &auxvbo);
+    glBindBuffer(GL_ARRAY_BUFFER, auxvbo);
+    glBufferData(GL_ARRAY_BUFFER,
+            3*mmgr->NVertices()*sizeof(int),
+            0, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(2);
+    glVertexAttribIPointer(2, 3, GL_INT, 0, 0);
     glBindVertexArray(0);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -232,26 +241,21 @@ void RenderManager::setupMeshColors() {
 void RenderManager::updateMeshAuxiliaryData() {
     glBindVertexArray(vaoid);
     // Initialize vertex positions and normals
-    glGenBuffers(1, &auxvbo);
     glBindBuffer(GL_ARRAY_BUFFER, auxvbo);
     int nch = 3;
-    int varraysize = nch*mmgr->NVertices();
-    int* vertices = new int[varraysize];
+    int* vertices = new int[nch*mmgr->NVertices()];
     int v = 0;
     for (int i = 0; i < mmgr->NVertices(); ++i) {
-        vertices[i++] = mmgr->getVertexSampleCount(i);
+        vertices[v++] = mmgr->getVertexSampleCount(i);
         for (int j = 1; j < nch; ++j) {
-            vertices[i++] = mmgr->getLabel(i, j-1);
+            vertices[v++] = mmgr->getLabel(i, j-1);
         }
     }
     glBufferData(GL_ARRAY_BUFFER,
-            varraysize*sizeof(float),
+            nch*mmgr->NVertices()*sizeof(int),
             vertices, GL_STATIC_DRAW);
     delete [] vertices;
-    glEnableVertexAttribArray(2);
-    glVertexAttribIPointer(2, nch, GL_INT, 0, 0);
     glBindVertexArray(0);
-
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
@@ -403,6 +407,9 @@ void RenderManager::readFromRender(const CameraParams* cam, float*& image, int r
     resizeReadFromRenderBuffer(w,h);
     lookThroughCamera(cam);
     glBindFramebuffer(GL_FRAMEBUFFER, rfr_fbo);
+    glClearColor(0.,0.,0.,0.);
+    glEnable(GL_DEPTH_TEST);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     renderMesh(rendermode);
     glReadPixels(0,0,w,h,GL_RGB,GL_FLOAT,(void*)image);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
