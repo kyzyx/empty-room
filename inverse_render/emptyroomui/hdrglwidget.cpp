@@ -10,6 +10,7 @@ static const char* shadername[NUM_TMOS] = {
     "linear shader",
     "logarithmic shader",
     "gamma shader",
+    "float-as-int shader"
 };
 static const char* vertexshadertext =
 "#version 400\n" \
@@ -52,6 +53,16 @@ static const char* shadertext[NUM_TMOS] = {
     "void main(void) {\n" \
         "vec4 f = texture2D(rendered_image, f_texcoord);\n" \
         "color = clamp(pow((f-hdr_bounds[0])/(hdr_bounds[1]-hdr_bounds[0]),hdr_bounds[2]*vec4(1,1,1,1)), 0, 1);\n" \
+    "}",
+    // Float-as-int shader
+    "#version 400\n" \
+    "uniform sampler2D rendered_image;\n" \
+    "in vec2 f_texcoord;\n" \
+    "uniform vec3 hdr_bounds;\n" \
+    "out vec4 color;\n" \
+    "void main(void) {\n" \
+        "ivec4 f = floatBitsToInt(texture2D(rendered_image, f_texcoord));\n" \
+        "color = clamp((f-hdr_bounds[0])/(hdr_bounds[1]-hdr_bounds[0]), 0, 1);\n" \
     "}",
 };
 

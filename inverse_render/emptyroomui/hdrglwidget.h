@@ -12,6 +12,7 @@ enum {
     TMO_LINEAR,
     TMO_LOG,
     TMO_GAMMA22,
+    TMO_BITWISE_INT,
     NUM_TMOS,
 };
 

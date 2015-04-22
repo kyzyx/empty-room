@@ -28,6 +28,7 @@ void HDRViewer::init() {
     tmo->insertItem(TMO_LINEAR, "Linear Mapping");
     tmo->insertItem(TMO_LOG, "Logarithmic Mapping");
     tmo->insertItem(TMO_GAMMA22, "Gamma 2.2");
+    tmo->insertItem(TMO_BITWISE_INT, "Float-to-int mapping");
     tmo->setCurrentIndex(0);
     tmo->setEnabled(false);
     tmo->setMinimumHeight(30);
