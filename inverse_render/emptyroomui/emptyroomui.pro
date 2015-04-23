@@ -49,3 +49,6 @@ OTHER_FILES += \
     $$PWD/../shaders/singleimage.v.glsl
 
 QMAKE_POST_LINK += cp $$PWD/../shaders/* $$OUT_PWD/
+
+DISTFILES += \
+    ../shaders/default.v.glsl

@@ -43,6 +43,7 @@ void ShaderType::init() {
 }
 
 void RenderManager::initShaderTypes() {
+    shaders.push_back(ShaderType("default", "Grayscale Lit"));
     shaders.push_back(ShaderType("normals", "Normals"));
     shaders.push_back(ShaderType("avg", "Weighted Average of Samples",  SHADERFLAGS_USES_COLOR_UNIFORM|SHADERFLAGS_USES_AUX_UNIFORM));
     shaders.push_back(ShaderType("singleimage", "Reprojection of Single Image", SHADERFLAGS_USES_COLOR_UNIFORM|SHADERFLAGS_USES_AUX_UNIFORM));

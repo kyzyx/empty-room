@@ -6,7 +6,8 @@
 #include "roommodel.h"
 
 enum {
-    VIEW_GEOMETRY,
+    VIEW_DEFAULT,
+    VIEW_NORMALS,
     VIEW_AVERAGE,
     VIEW_SINGLEIMAGE,
     VIEW_LABELS,

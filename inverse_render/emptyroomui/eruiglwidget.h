@@ -19,7 +19,7 @@ public:
         renderMesh(true),
         renderRoom(false),
         cameraRenderFormat(CAMRENDER_FRUSTUM),
-        meshRenderFormat(VIEW_GEOMETRY)
+        meshRenderFormat(VIEW_DEFAULT)
     {;}
 
 public:

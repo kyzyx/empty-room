@@ -63,8 +63,8 @@ float HemicubeRenderer::renderHemicube(
     R3Vector y = n%x;
     R3Vector orientations[] = {x,-x,y,-y};
     for (int o = 0; o < 4; ++o) {
-        renderFace(pp, orientations[o], n, image, true);
-        renderFace(pp, orientations[o], n, light, false);
+        renderFace(pp, orientations[o], n, image, VIEW_AVERAGE);
+        renderFace(pp, orientations[o], n, light, VIEW_LABELS);
         for (int i = 0; i < res/2; ++i) {
             for (int j = 0; j < res; ++j) {
                 int visibility = *reinterpret_cast<int*>(&light[3*(i*res+j)]);
@@ -83,8 +83,8 @@ float HemicubeRenderer::renderHemicube(
             }
         }
     }
-    renderFace(pp, n, y, image, true);
-    renderFace(pp, n, y, light, false);
+    renderFace(pp, n, y, image, VIEW_AVERAGE);
+    renderFace(pp, n, y, light, VIEW_LABELS);
     for (int i = 0; i < res; ++i) {
         for (int j = 0; j < res; ++j) {
             int visibility = *reinterpret_cast<int*>(&light[3*(i*res+j)]);
