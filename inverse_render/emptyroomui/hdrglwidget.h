@@ -16,6 +16,13 @@ enum {
     NUM_TMOS,
 };
 
+enum {
+    RED_CHANNEL=1,
+    GREEN_CHANNEL=2,
+    BLUE_CHANNEL=4,
+    ALL_CHANNELS=7,
+};
+
 class HDRGlHelper : public QObject
 {
     Q_OBJECT
@@ -44,6 +51,7 @@ public:
 
     void setRenderFunction(boost::function<void()> f) { renderfunc = f; }
 
+    int channelsToRender;
 protected:
     boost::function<void()> renderfunc;
     int mapping;
@@ -58,6 +66,7 @@ protected:
     enum {
         UNIFORM_FBO_TEXTURE,
         UNIFORM_HDR_BOUNDS,
+        UNIFORM_CHANNEL_SELECT,
         NUM_UNIFORMS
     };
     struct HDRShaderProgram {
@@ -69,6 +78,10 @@ protected:
 public slots:
     void setMapping(int v);
     void setScale(int lo, int hi);
+
+    void renderRedChannel(bool on);
+    void renderGreenChannel(bool on);
+    void renderBlueChannel(bool on);
 
 signals:
     void suggestRange(int lo, int hi);

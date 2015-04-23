@@ -28,47 +28,51 @@ static const char* shadertext[NUM_TMOS] = {
     "uniform sampler2D rendered_image;\n" \
     "in vec2 f_texcoord;\n" \
     "uniform vec3 hdr_bounds;\n" \
+    "uniform vec3 channelselect;\n" \
     "out vec4 color;\n" \
     "void main(void) {\n" \
         "vec4 f = texture2D(rendered_image, f_texcoord);\n" \
-        "color = clamp((f-hdr_bounds[0])/(hdr_bounds[1]-hdr_bounds[0]), 0, 1);\n" \
+        "color = vec4(channelselect,1)*clamp((f-hdr_bounds[0])/(hdr_bounds[1]-hdr_bounds[0]), 0, 1);\n" \
     "}",
     // Logarithmic shader
     "#version 400\n" \
     "uniform sampler2D rendered_image;\n" \
     "in vec2 f_texcoord;\n" \
     "uniform vec3 hdr_bounds;\n" \
+    "uniform vec3 channelselect;\n" \
     "out vec4 color;\n" \
     "void main(void) {\n" \
         "vec4 f = log(texture2D(rendered_image, f_texcoord));\n" \
         "vec3 lb = log(hdr_bounds);\n" \
-        "color = clamp((f-lb[0])/(lb[1]-lb[0]), 0, 1);\n" \
+        "color = vec4(channelselect,1)*clamp((f-lb[0])/(lb[1]-lb[0]), 0, 1);\n" \
     "}",
     // Gamma shader
     "#version 400\n" \
     "uniform sampler2D rendered_image;\n" \
     "in vec2 f_texcoord;\n" \
     "uniform vec3 hdr_bounds;\n" \
+    "uniform vec3 channelselect;\n" \
     "out vec4 color;\n" \
     "void main(void) {\n" \
         "vec4 f = texture2D(rendered_image, f_texcoord);\n" \
-        "color = clamp(pow((f-hdr_bounds[0])/(hdr_bounds[1]-hdr_bounds[0]),hdr_bounds[2]*vec4(1,1,1,1)), 0, 1);\n" \
+        "color = vec4(channelselect,1)*clamp(pow((f-hdr_bounds[0])/(hdr_bounds[1]-hdr_bounds[0]),hdr_bounds[2]*vec4(1,1,1,1)), 0, 1);\n" \
     "}",
     // Float-as-int shader
     "#version 400\n" \
     "uniform sampler2D rendered_image;\n" \
     "in vec2 f_texcoord;\n" \
     "uniform vec3 hdr_bounds;\n" \
+    "uniform vec3 channelselect;\n" \
     "out vec4 color;\n" \
     "void main(void) {\n" \
         "ivec4 f = floatBitsToInt(texture2D(rendered_image, f_texcoord));\n" \
-        "color = clamp((f-hdr_bounds[0])/(hdr_bounds[1]-hdr_bounds[0]), 0, 1);\n" \
+        "color = vec4(channelselect,1)*clamp((f-hdr_bounds[0])/(hdr_bounds[1]-hdr_bounds[0]), 0, 1);\n" \
     "}",
 };
 
 
 HDRGlHelper::HDRGlHelper() :
-    mapping(TMO_LINEAR), mini(0), maxi(1)
+    mapping(TMO_LINEAR), mini(0), maxi(1), channelsToRender(ALL_CHANNELS)
 {
 }
 
@@ -143,6 +147,7 @@ void HDRGlHelper::initializeHelper() {
     GLchar* uniforms[NUM_UNIFORMS] = {
         "rendered_image",
         "hdr_bounds",
+        "channelselect"
     };
     GLchar* attribute_name = "v_coord";
     for (int i = 0; i < NUM_TMOS; ++i) {
@@ -187,6 +192,10 @@ void HDRGlHelper::paintHelper() {
     glBindTexture(GL_TEXTURE_2D, fbo_tex);
     glUniform1i(p.uniform_ids[UNIFORM_FBO_TEXTURE], 0);
     glUniform3f(p.uniform_ids[UNIFORM_HDR_BOUNDS], mini, maxi, 2.2);
+    glUniform3f(p.uniform_ids[UNIFORM_CHANNEL_SELECT],
+                (channelsToRender&RED_CHANNEL)  ?1.f:0.f,
+                (channelsToRender&GREEN_CHANNEL)?1.f:0.f,
+                (channelsToRender&BLUE_CHANNEL) ?1.f:0.f);
     glEnableVertexAttribArray(p.v_coord);
     glBindBuffer(GL_ARRAY_BUFFER, vbo_fbo_vertices);
     glVertexAttribPointer(
@@ -229,6 +238,21 @@ void HDRGlHelper::resizeHelper(int width, int height) {
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, width, height);
     glBindRenderbuffer(GL_RENDERBUFFER, 0);
     emit forceupdate();
+}
+
+void HDRGlHelper::renderRedChannel(bool on) {
+    if (on) channelsToRender |= RED_CHANNEL;
+    else channelsToRender &= (ALL_CHANNELS - RED_CHANNEL);
+}
+
+void HDRGlHelper::renderGreenChannel(bool on) {
+    if (on) channelsToRender |= GREEN_CHANNEL;
+    else channelsToRender &= (ALL_CHANNELS - GREEN_CHANNEL);
+}
+
+void HDRGlHelper::renderBlueChannel(bool on) {
+    if (on) channelsToRender |= BLUE_CHANNEL;
+    else channelsToRender &= (ALL_CHANNELS - BLUE_CHANNEL);
 }
 
 void HDRQGlViewerWidget::resizeGL(int width, int height) {

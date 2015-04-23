@@ -26,6 +26,7 @@ protected slots:
     void userEditRange(int lo, int hi);
     void setSuggestRange(int lo, int hi);
     void fixRange(int lo, int hi, int v);
+    void showTooltip();
 
     void notifyUpdateMappingType(int v) { rendercontrol->setMapping(v); emit updateMappingType(v); }
     void notifyUpdateRange(int lo, int hi) { emit updateRange(lo, hi); }
