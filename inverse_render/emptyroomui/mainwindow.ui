@@ -761,6 +761,13 @@
     <property name="title">
      <string>Intermediates</string>
     </property>
+    <widget class="QMenu" name="menuSave_Generated_Images">
+     <property name="title">
+      <string>Save Generated Images</string>
+     </property>
+     <addaction name="actionSave_Label_Images_2"/>
+     <addaction name="actionSave_Edge_Images"/>
+    </widget>
     <addaction name="actionLoad_Last_Intermediates"/>
     <addaction name="separator"/>
     <addaction name="actionSave_Reprojection_Results"/>
@@ -770,6 +777,8 @@
     <addaction name="actionLoad_Reprojection_Results"/>
     <addaction name="actionLoad_Wallfinding_Floor_Plan"/>
     <addaction name="actionLoad_Per_Vertex_Labels"/>
+    <addaction name="separator"/>
+    <addaction name="menuSave_Generated_Images"/>
    </widget>
    <addaction name="menuEmpty_Room_Editor"/>
    <addaction name="menuIntermediates"/>
@@ -880,6 +889,16 @@
    </property>
    <property name="text">
     <string>Load Per-Vertex Labels</string>
+   </property>
+  </action>
+  <action name="actionSave_Label_Images_2">
+   <property name="text">
+    <string>Save Label Images</string>
+   </property>
+  </action>
+  <action name="actionSave_Edge_Images">
+   <property name="text">
+    <string>Save Edge Images</string>
    </property>
   </action>
  </widget>

@@ -544,7 +544,6 @@ void MainWindow::on_actionLoad_Wallfinding_Floor_Plan_triggered()
 // ------------------------
 void MainWindow::on_computeLabelImagesButton_clicked()
 {
-    if (!room) return;
     progressbar->setValue(0);
     for (int i = 0; i < imgr->size(); ++i) {
         progressbar->setValue(100*i/imgr->size());
@@ -599,5 +598,26 @@ void MainWindow::on_actionSave_Per_Vertex_Labels_triggered()
             settings->setValue("lastlabelsfile", datafilename);
             mmgr->writeLabelsToFile(datafilename.toStdString());
         }
+    }
+}
+
+void MainWindow::on_actionSave_Label_Images_2_triggered()
+{
+    saveAllImages("labels");
+}
+void MainWindow::on_actionSave_Edge_Images_triggered()
+{
+    saveAllImages("edges");
+}
+
+void MainWindow::saveAllImages(const char *type) {
+    if (imgr) {
+        progressbar->setValue(0);
+        for (int i = 0; i < imgr->size(); ++i) {
+            progressbar->setValue(100*i/imgr->size());
+            if (imgr->getFlags(type, i) & ImageManager::DF_INITIALIZED)
+                imgr->saveImage(type, i);
+        }
+        progressbar->setValue(100);
     }
 }

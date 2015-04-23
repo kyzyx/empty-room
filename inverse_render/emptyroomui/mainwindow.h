@@ -63,6 +63,9 @@ private slots:
     void on_actionSave_Reprojection_Results_triggered();
     void on_actionSave_Wallfinding_Floor_Plan_triggered();
     void on_actionSave_Per_Vertex_Labels_triggered();
+    void on_actionSave_Label_Images_2_triggered();
+    void on_actionSave_Edge_Images_triggered();
+    void saveAllImages(const char* type);
     void on_actionLoad_Reprojection_Results_triggered();
     void on_actionLoad_Wallfinding_Floor_Plan_triggered();
     void on_actionLoad_Per_Vertex_Labels_triggered();
