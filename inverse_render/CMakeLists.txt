@@ -53,6 +53,9 @@ target_link_libraries(dataserver ${PCL_LIBRARIES} memory)
 add_executable(reprojectapp reprojectapp.cpp invrenderapp.cpp invrenderapp.h
     reproject.cpp reproject.h clusterlights.cpp clusterlights.h)
 target_link_libraries(reprojectapp ${PCL_LIBRARIES} memory)
+add_executable(labelimageapp labelimageapp.cpp invrenderapp.cpp invrenderapp.h
+    material.h)
+target_link_libraries(labelimageapp ${PCL_LIBRARIES} ${GLUT_LIBRARY} memory rendering)
 add_executable(wallfindapp wallfindapp.cpp invrenderapp.cpp invrenderapp.h
     RoomModel_Internal.h roommodel.h RoomModel.cpp
     orientation_finder.h orientation_finder.cpp wall_finder.h wall_finder.cpp
