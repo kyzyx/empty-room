@@ -268,16 +268,16 @@ Material MeshManager::getVertexColor(int n) const {
     }
     return m;
 }
-void MeshManager::readSamplesFromFile(const std::string& samplesfile, cb_type cb) {
+void MeshManager::readSamplesFromFile(const string& samplesfile, int flags, cb_type cb) {
     ifstream in(samplesfile.c_str(), ifstream::binary);
     uint32_t n, sz;
     in.read((char*) &n, 4);
     for (int i = 0; i < n; ++i) {
         char c;
         in.read(&c, 1);
-        setLabel(i, c, 0);
+        if (flags & 1) setLabel(i, c, 0);
         in.read(&c, 1);
-        setLabel(i, c, 1);
+        if (flags & (1<<1)) setLabel(i, c, 1);
         in.read((char*) &sz, 4);
         for (int j = 0; j < sz; ++j) {
             Sample s;
@@ -297,7 +297,7 @@ void MeshManager::readSamplesFromFile(const std::string& samplesfile, cb_type cb
     commitSamples();
     if (cb) cb(100);
 }
-void MeshManager::writeSamplesToFile(const std::string& samplesfile, cb_type cb) {
+void MeshManager::writeSamplesToFile(const string& samplesfile, cb_type cb) {
     ofstream out(samplesfile.c_str(), ofstream::binary);
     uint32_t sz = nvertices;
     out.write((char*) &sz, 4);
@@ -321,6 +321,37 @@ void MeshManager::writeSamplesToFile(const std::string& samplesfile, cb_type cb)
             out.write((char*) &s.dA, sizeof(float));
         }
         if (cb && (i+1) % (nvertices/100) == 0) cb((int) 100*(i/(float)nvertices));
+    }
+    if (cb) cb(100);
+}
+void MeshManager::readLabelsFromFile(const string& labelsfile, int flags, cb_type cb) {
+    ifstream in(labelsfile.c_str(), ifstream::binary);
+    uint32_t n, m;
+    in.read((char*) &n, sizeof(uint32_t));
+    in.read((char*) &m, sizeof(uint32_t));
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < m; ++j) {
+            char c;
+            in.read(&c, 1);
+            if (flags & (1<<j)) setLabel(i, c, j);
+        }
+        if (cb && (i+1) % (nvertices/100) == 0) cb((int) 80*(i/(float)nvertices));
+    }
+    if (cb) cb(100);
+}
+
+void MeshManager::writeLabelsToFile(const string& labelsfile, cb_type cb) {
+    ofstream out(labelsfile.c_str(), ifstream::binary);
+    uint32_t sz = nvertices;
+    out.write((char*) &sz, sizeof(uint32_t));
+    sz = NUM_CHANNELS;
+    out.write((char*) &sz, sizeof(uint32_t));
+    for (int i = 0; i < nvertices; ++i) {
+        for (int j = 0; j < NUM_CHANNELS; ++j) {
+            char c = getLabel(i,j);
+            out.write(&c, 1);
+        }
+        if (cb && (i+1) % (nvertices/100) == 0) cb((int) 80*(i/(float)nvertices));
     }
     if (cb) cb(100);
 }

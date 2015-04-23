@@ -336,7 +336,7 @@ void MainWindow::on_actionLoad_Last_Intermediates_triggered()
 }
 
 void MainWindow::loadVertexData(QString meshfile, QString datafile) {
-    QString cmd = settings->value("loaddata_binary", "dataserver -meshfile %1 -datafile %2 -p").toString();
+    QString cmd = settings->value("loadsamples_binary", "dataserver -meshfile %1 -samplesfile %2 -p").toString();
     cmd = cmd.arg(meshfile, datafile);
     progressbar->setValue(0);
     SubprocessWorker* w = new SubprocessWorker(NULL, cmd);

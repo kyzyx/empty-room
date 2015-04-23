@@ -66,8 +66,13 @@ class MeshManager {
         void addSample(int n, Sample s);
         void commitSamples(bool finalcommit=true);
         bool loadSamples();
-        void readSamplesFromFile(const std::string& samplesfile, cb_type cb=NULL);
+
+        // Sample I/O
+        void readSamplesFromFile(const std::string& samplesfile, int flags=-1, cb_type cb=NULL);
         void writeSamplesToFile(const std::string& samplesfile, cb_type cb=NULL);
+        // Vertex info I/O
+        void readLabelsFromFile(const std::string& labelsfile, int flags=-1, cb_type cb=NULL);
+        void writeLabelsToFile(const std::string& labelsfile, cb_type cb=NULL);
 
         shmutex* getMutex(int t, int n);
 
@@ -76,6 +81,13 @@ class MeshManager {
             TYPE_CHANNEL,
             DATA_CHANNEL,
             NUM_CHANNELS
+        };
+        enum {
+            READ_SAMPLES_ONLY=0,
+            READ_LABEL_CHANNEL=1,
+            READ_TYPE_CHANNEL=2,
+            READ_DATA_CHANNEL=4,
+            READ_ALL_CHANNELS=7,
         };
 
     protected:

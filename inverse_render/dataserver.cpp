@@ -17,19 +17,29 @@ bool emit_progress = false;
 // TODO: Configure imagetypes to load
 // TODO: Load labels/types/samples from file
 
-string camfile, meshfile, datafile;
+string camfile, meshfile, samplesfile, datafile;
 bool data_only = false;
+
+int sampleflags = MeshManager::READ_SAMPLES_ONLY;
+int labelflags = MeshManager::READ_ALL_CHANNELS;
 
 int parseargs(int argc, char** argv) {
     if (argc < 3) {
         cout <<
          "Usage: dataserver -meshfile mesh.ply -camfile camera.cam [args] &\n" \
          "   Arguments:\n" \
-         "       -datafile f: Load mesh per-vertex data from file f\n" \
+         "       -labelfile f: Load mesh per-vertex data from file f\n" \
+         "       -samplesfile f: Load mesh per-vertex color samples from file f\n" \
          "       -ccw: Face vertices in counterclockwise direction, i.e.\n" \
          "             flip normals (default off, i.e. clockwise)\n" \
          "       -flip_x: Mirror the input images horizontally\n"\
          "       -flip_y: Mirror the input images vertically\n"\
+         "       -[no]load_labels: With samplesfile or labelfile, [don't] load \n"\
+         "                     the per-vertex label field (channel 0)\n"\
+         "       -[no]load_types: With samplesfile or labelfile, [don't] load \n"\
+         "                     the per-vertex types field  (channel 1)\n"\
+         "       -[no]load_data: With samplesfile or labelfile, [don't] load\n"\
+         "                     the per-vertex data field (channel 2)\n"\
          "       -p: Emit progress in percent\n" << endl;
         return false;
     }
@@ -38,6 +48,25 @@ int parseargs(int argc, char** argv) {
     if (pcl::console::find_switch(argc, argv, "-flip_x")) image_flip_x = true;
     if (pcl::console::find_switch(argc, argv, "-flip_y")) image_flip_x = true;
     if (pcl::console::find_switch(argc, argv, "-p")) emit_progress = true;
+
+    if (pcl::console::find_switch(argc, argv, "-load_labels")) {
+        sampleflags += MeshManager::READ_LABEL_CHANNEL;
+    }
+    if (pcl::console::find_switch(argc, argv, "-load_types")) {
+        sampleflags += MeshManager::READ_TYPE_CHANNEL;
+    }
+    if (pcl::console::find_switch(argc, argv, "-load_data")) {
+        sampleflags += MeshManager::READ_DATA_CHANNEL;
+    }
+    if (pcl::console::find_switch(argc, argv, "-noload_labels")) {
+        labelflags -= MeshManager::READ_LABEL_CHANNEL;
+    }
+    if (pcl::console::find_switch(argc, argv, "-noload_types")) {
+        labelflags -= MeshManager::READ_TYPE_CHANNEL;
+    }
+    if (pcl::console::find_switch(argc, argv, "-noload_data")) {
+        labelflags -= MeshManager::READ_DATA_CHANNEL;
+    }
     if (pcl::console::find_switch(argc, argv, "-data_only")) {
         data_only = true;
         --numfilestoload;
@@ -51,12 +80,16 @@ int parseargs(int argc, char** argv) {
         pcl::console::parse_argument(argc, argv, "-camfile", camfile);
         ++numfilestoload;
     }
-    if (pcl::console::find_argument(argc, argv, "-datafile") >= 0) {
-        pcl::console::parse_argument(argc, argv, "-datafile", datafile);
+    if (pcl::console::find_argument(argc, argv, "-labelfile") >= 0) {
+        pcl::console::parse_argument(argc, argv, "-labelfile", datafile);
         ++numfilestoload;
     }
-    if (!datafile.empty() && meshfile.empty()) {
-        cout << "Error: datafile loading requires a meshfile" << endl;
+    if (pcl::console::find_argument(argc, argv, "-samplesfile") >= 0) {
+        pcl::console::parse_argument(argc, argv, "-samplesfile", samplesfile);
+        ++numfilestoload;
+    }
+    if (meshfile.empty() && (!datafile.empty() || !samplesfile.empty())) {
+        cout << "Error: loading per-vertex data requires a meshfile" << endl;
         return 0;
     }
     return numfilestoload;
@@ -93,10 +126,17 @@ int main(int argc, char* argv[]) {
         cout << "Done loading geometry." << endl;
         nloaded++;
     }
+    if (!samplesfile.empty()) {
+        cout << "Loading per-vertex color sample data..." << endl;
+        if (!mmgr) mmgr = new MeshManager(meshfile);
+        mmgr->readSamplesFromFile(samplesfile, sampleflags, boost::bind(progressfn, _1, nloaded, nload));
+        cout << "Done loading per-vertex color sample data." << endl;
+        nloaded++;
+    }
     if (!datafile.empty()) {
         cout << "Loading per-vertex data..." << endl;
         if (!mmgr) mmgr = new MeshManager(meshfile);
-        mmgr->readSamplesFromFile(datafile, boost::bind(progressfn, _1, nloaded, nload));
+        mmgr->readLabelsFromFile(datafile, labelflags, boost::bind(progressfn, _1, nloaded, nload));
         cout << "Done loading per-vertex data." << endl;
         nloaded++;
     }
