@@ -7,6 +7,39 @@
 #include <QThread>
 #include <QToolTip>
 
+
+/*
+ * Action Flowchart
+ * ----------------
+ * LoadMesh -> Mesh
+ * LoadImages -> Images [LabelImages]
+ * LoadReproject -> Reproject
+ * LoadFloorPlan -> FloorPlan
+ * LoadLabels -> Labels
+ * DoReprojection -> Reproject
+ * DoWallfinding -> Floorplan Labels
+ * LoadEquations -> Equations
+ * RenderHemicubes -> Hemicubes Equations
+ * DoSolving -> Lighting
+ * ComputeLabelImages -> LabelImages
+ * DoEdgefinding -> EdgeImages
+ * DoVoting -> ???
+ *
+ * Mesh: (Do/Load)Wallfinding+Options LoadLabels LoadReproject -- DisplayMesh RenderOptions
+ * Images: -- DisplayImageOptions
+ * Mesh*Images: DoReprojection DoEdgeFinding -- DisplayCameras CameraViewOptions
+ * Reproject: SaveReprojection
+ * FloorPlan: SaveFloorPlan -- DisplayFloorPlan
+ * Labels: SaveLabels ComputeLabelImages
+ * Reproject*Labels: RenderHemicubes
+ * Hemicubes: -- DisplayHemicubes
+ * Equations: DoSolving
+ *
+ * Reproject*Lighting*LabelImages: DoFloorTex
+ *
+ * LabelImages: SaveLabelImages -- ViewLabelImages
+ * EdgeImages: DoVoting SaveEdgeImages - ViewEdgeImages
+ */
 class MeshDialog : public QFileDialog
 {
     public:
@@ -109,7 +142,9 @@ void MainWindow::keyPressEvent(QKeyEvent *e)
     else
         QWidget::keyPressEvent(e);
 }
-
+// -----------------
+// Interface Actions
+// -----------------
 void MainWindow::updateImage(int idx, int type)
 {
     imageindex = idx%imgr->size();
@@ -142,11 +177,62 @@ void MainWindow::updateImage(int idx, int type)
     ui->imageNumBox->setText(QString::number(imageindex));
 }
 
+void MainWindow::on_loadImageButton_clicked()
+{
+    int n = ui->imageNumBox->text().toInt();
+    updateImage(n, typeindex);
+}
+
+void MainWindow::onCameraSelection(int selected) {
+    if (imageindex == selected) ui->meshWidget->lookThroughCamera(imgr->getCamera(selected));
+    updateImage(selected);
+}
+
+void MainWindow::on_autoLookCheckbox_toggled(bool checked)
+{
+    if (checked) ui->meshWidget->lookThroughCamera(imgr->getCamera(imageindex));
+}
+
+void MainWindow::on_showCameraCheckbox_toggled(bool checked)
+{
+    ui->meshWidget->renderOptions()->setRenderCameras(checked);
+    if (checked) {
+        ui->showCurrentCameraCheckbox->setChecked(true);
+        ui->meshWidget->renderOptions()->setRenderCurrentCamera(true);
+    }
+}
+
+void MainWindow::on_showCurrentCameraCheckbox_toggled(bool checked)
+{
+    ui->meshWidget->renderOptions()->setRenderCurrentCamera(checked);
+}
+
+void MainWindow::on_showMeshCheckbox_toggled(bool checked)
+{
+    ui->meshWidget->renderOptions()->setRenderMesh(checked);
+}
+
+void MainWindow::on_showRoomCheckbox_toggled(bool checked)
+{
+    ui->meshWidget->renderOptions()->setRenderRoom(checked);
+}
+
+void MainWindow::showwfrestooltip(int v) {
+    QToolTip::showText(QCursor::pos(), QString::number(v*0.001), ui->wf_resolutionSlider);
+}
+
+void MainWindow::showwfthresholdtooltip(int v) {
+    QToolTip::showText(QCursor::pos(), QString::number(v), ui->wf_wallthresholdSlider);
+}
+
 void MainWindow::on_actionQuit_triggered()
 {
     close();
 }
 
+// --------------------------
+// Basic Data Loading Actions
+// --------------------------
 void MainWindow::on_actionOpen_Mesh_triggered()
 {
     MeshDialog mdialog(this);
@@ -179,12 +265,13 @@ void MainWindow::on_actionOpen_Mesh_triggered()
         thread->start();
     }
 }
-
 void MainWindow::meshLoaded() {
     ui->wallfindButton->setEnabled(true);
     ui->loadWallsButton->setEnabled(true);
     ui->loadReprojectButton->setEnabled(true);
     ui->actionLoad_Last_Intermediates->setEnabled(true);
+    ui->actionLoad_Reprojection_Results->setEnabled(true);
+    ui->actionLoad_Per_Vertex_Labels->setEnabled(true);
     ui->wf_resolutionSlider->setEnabled(true);
     ui->wf_wallthresholdSlider->setEnabled(true);
     ui->showMeshCheckbox->setEnabled(true);
@@ -198,7 +285,7 @@ void MainWindow::meshLoaded() {
     }
     connect(ui->viewTypeComboBox, SIGNAL(currentIndexChanged(int)), ui->meshWidget->renderOptions(), SLOT(setMeshRenderFormat(int)));
 
-    allLoaded();
+    meshAndImagesLoaded();
 }
 
 void MainWindow::on_actionOpen_Images_triggered()
@@ -248,64 +335,7 @@ void MainWindow::imagesLoaded() {
         ui->imageTypeComboBox->insertItem(i, QString::fromStdString(imgr->getImageType(i).getName()));
     }
     updateImage(0, typeindex);
-    allLoaded();
-}
-
-void MainWindow::onCameraSelection(int selected) {
-    if (imageindex == selected) ui->meshWidget->lookThroughCamera(imgr->getCamera(selected));
-    updateImage(selected);
-}
-
-void MainWindow::allLoaded() {
-    if (imgr && mmgr) {
-        ui->reprojectButton->setEnabled(true);
-        ui->showCameraCheckbox->setEnabled(true);
-        ui->showCurrentCameraCheckbox->setEnabled(true);
-        ui->autoLookCheckbox->setEnabled(true);
-        // Render cameras
-        ui->meshWidget->setupCameras(imgr);
-        connect(ui->meshWidget, SIGNAL(cameraSelected(int)), this, SLOT(onCameraSelection(int)));
-    }
-}
-#include <boost/interprocess/sync/sharable_lock.hpp>
-void MainWindow::vertexDataLoaded() {
-    if (mmgr->loadSamples()) {
-        boost::interprocess::sharable_lock<MeshManager::shmutex> lock(*(mmgr->getMutex(MeshManager::NUM_CHANNELS,0)));
-        ui->meshWidget->setupMeshColors();
-    }
-    ui->saveReprojectButton->setEnabled(true);
-}
-void MainWindow::partialVertexDataLoaded(int percent) {
-    if (percent == 100) {
-        vertexDataLoaded();
-        return;
-    }
-    if (mmgr->loadSamples()) {
-        boost::interprocess::sharable_lock<MeshManager::shmutex> lock(*(mmgr->getMutex(MeshManager::NUM_CHANNELS,0)));
-        ui->meshWidget->setupMeshColors();
-    }
-}
-
-void MainWindow::on_loadImageButton_clicked()
-{
-    int n = ui->imageNumBox->text().toInt();
-    updateImage(n, typeindex);
-}
-
-void MainWindow::on_loadReprojectButton_clicked()
-{
-    if (mmgr) {
-        QString lwd = settings->value("lastworkingdirectory", "").toString();
-        //QString cfile = settings->value("lastreprojectfile", lwd).toString();
-        QString datafilename = QFileDialog::getOpenFileName(this, "Open Reprojection Samples", lwd);
-        if (!datafilename.isEmpty()) {
-            QDir cwd = QDir(datafilename);
-            cwd.cdUp();
-            settings->setValue("lastworkingdirectory", cwd.canonicalPath());
-            settings->setValue("lastreprojectfile", datafilename);
-            loadVertexData(meshfilename, datafilename);
-        }
-    }
+    meshAndImagesLoaded();
 }
 
 void MainWindow::on_actionLoad_Last_Mesh_Camera_File_triggered()
@@ -330,12 +360,67 @@ void MainWindow::on_actionLoad_Last_Mesh_Camera_File_triggered()
     thread->start();
 }
 
-void MainWindow::on_actionLoad_Last_Intermediates_triggered()
-{
-    loadVertexData(meshfilename, settings->value("lastreprojectfile", "").toString());
+void MainWindow::meshAndImagesLoaded() {
+    if (imgr && mmgr) {
+        ui->reprojectButton->setEnabled(true);
+        ui->showCameraCheckbox->setEnabled(true);
+        ui->showCurrentCameraCheckbox->setEnabled(true);
+        ui->autoLookCheckbox->setEnabled(true);
+        // Render cameras
+        ui->meshWidget->setupCameras(imgr);
+        connect(ui->meshWidget, SIGNAL(cameraSelected(int)), this, SLOT(onCameraSelection(int)));
+    }
 }
 
-void MainWindow::loadVertexData(QString meshfile, QString datafile) {
+// --------------------
+// Reprojection Actions
+// --------------------
+#include <boost/interprocess/sync/sharable_lock.hpp>
+void MainWindow::on_actionLoad_Reprojection_Results_triggered()
+{
+    if (mmgr) {
+        QString lwd = settings->value("lastworkingdirectory", "").toString();
+        //QString cfile = settings->value("lastreprojectfile", lwd).toString();
+        QString datafilename = QFileDialog::getOpenFileName(this, "Open Reprojection Samples", lwd);
+        if (!datafilename.isEmpty()) {
+            QDir cwd = QDir(datafilename);
+            cwd.cdUp();
+            settings->setValue("lastworkingdirectory", cwd.canonicalPath());
+            settings->setValue("lastreprojectfile", datafilename);
+            loadVertexSampleData(meshfilename, datafilename);
+        }
+    }
+}
+void MainWindow::on_actionLoad_Last_Intermediates_triggered()
+{
+    loadVertexSampleData(meshfilename, settings->value("lastreprojectfile", "").toString());
+    loadVertexLabelData(meshfilename, settings->value("lastlabelsfile", "").toString());
+}
+void MainWindow::samplesLoaded() {
+    if (mmgr->loadSamples()) {
+        boost::interprocess::sharable_lock<MeshManager::shmutex> lock(*(mmgr->getMutex(MeshManager::NUM_CHANNELS,0)));
+        ui->meshWidget->setupMeshColors();
+    }
+    ui->actionSave_Reprojection_Results->setEnabled(true);
+}
+void MainWindow::partialVertexDataLoaded(int percent) {
+    if (percent == 100) {
+        samplesLoaded();
+        return;
+    }
+    if (mmgr->loadSamples()) {
+        boost::interprocess::sharable_lock<MeshManager::shmutex> lock(*(mmgr->getMutex(MeshManager::NUM_CHANNELS,0)));
+        ui->meshWidget->setupMeshColors();
+    }
+}
+void MainWindow::labelDataLoaded() {
+    ui->computeLabelImagesButton->setEnabled(true);
+    ui->meshWidget->updateMeshAuxiliaryData();
+    ui->actionSave_Per_Vertex_Labels->setEnabled(true);
+}
+
+void MainWindow::loadVertexSampleData(QString meshfile, QString datafile) {
+    if (datafile.isEmpty()) return;
     QString cmd = settings->value("loadsamples_binary", "dataserver -meshfile %1 -samplesfile %2 -p").toString();
     cmd = cmd.arg(meshfile, datafile);
     progressbar->setValue(0);
@@ -344,23 +429,23 @@ void MainWindow::loadVertexData(QString meshfile, QString datafile) {
     QThread* thread = new QThread;
     connect(thread, SIGNAL(started()), w, SLOT(run()));
     connect(w, SIGNAL(percentChanged(int)), progressbar, SLOT(setValue(int)));
-    connect(w, SIGNAL(done()), this, SLOT(vertexDataLoaded()));
+    connect(w, SIGNAL(done()), this, SLOT(samplesLoaded()));
     w->moveToThread(thread);
     thread->start();
 }
-
-void MainWindow::on_showCameraCheckbox_toggled(bool checked)
-{
-    ui->meshWidget->renderOptions()->setRenderCameras(checked);
-    if (checked) {
-        ui->showCurrentCameraCheckbox->setChecked(true);
-        ui->meshWidget->renderOptions()->setRenderCurrentCamera(true);
-    }
-}
-
-void MainWindow::on_showCurrentCameraCheckbox_toggled(bool checked)
-{
-    ui->meshWidget->renderOptions()->setRenderCurrentCamera(checked);
+void MainWindow::loadVertexLabelData(QString meshfile, QString datafile) {
+    if (datafile.isEmpty()) return;
+    QString cmd = settings->value("loadlabels_binary", "dataserver -meshfile %1 -labelsfile %2 -p").toString();
+    cmd = cmd.arg(meshfile, datafile);
+    progressbar->setValue(0);
+    SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
+    workers.push_back(w);
+    QThread* thread = new QThread;
+    connect(thread, SIGNAL(started()), w, SLOT(run()));
+    connect(w, SIGNAL(percentChanged(int)), progressbar, SLOT(setValue(int)));
+    connect(w, SIGNAL(done()), this, SLOT(labelDataLoaded()));
+    w->moveToThread(thread);
+    thread->start();
 }
 
 void MainWindow::on_reprojectButton_clicked()
@@ -380,23 +465,25 @@ void MainWindow::on_reprojectButton_clicked()
     thread->start();
 }
 
-void MainWindow::on_saveReprojectButton_clicked()
+void MainWindow::on_actionLoad_Per_Vertex_Labels_triggered()
 {
     if (mmgr) {
         QString lwd = settings->value("lastworkingdirectory", "").toString();
-        //QString cfile = settings->value("lastreprojectfile", lwd).toString();
-        QString datafilename = QFileDialog::getSaveFileName(this, "Save Reprojection Samples", lwd);
+        //QString cfile = settings->value("lastlabelsfile", lwd).toString();
+        QString datafilename = QFileDialog::getOpenFileName(this, "Load Per-Vertex Labels", lwd);
         if (!datafilename.isEmpty()) {
             QDir cwd = QDir(datafilename);
             cwd.cdUp();
             settings->setValue("lastworkingdirectory", cwd.canonicalPath());
-            // settings->setValue("lastreprojectfile", datafilename);
-
-            mmgr->writeSamplesToFile(datafilename.toStdString(), boost::bind(&QProgressBar::setValue, progressbar, _1));
+            settings->setValue("lastlabelsfile", datafilename);
+            loadVertexLabelData(meshfilename, datafilename);
         }
     }
 }
 
+// -------------------
+// Wallfinding Actions
+// -------------------
 void MainWindow::on_wallfindButton_clicked()
 {
     temproommodel = new QTemporaryFile();
@@ -420,72 +507,41 @@ void MainWindow::on_wallfindButton_clicked()
 }
 
 void MainWindow::wallfindingDone() {
+    loadFloorPlan(temproommodel->fileName());
+    labelDataLoaded();
+}
+
+void MainWindow::floorPlanLoaded() {
+    ui->meshWidget->setRoomModel(room);
+    ui->showRoomCheckbox->setEnabled(true);
+    ui->actionSave_Wallfinding_Floor_Plan->setEnabled(true);
+}
+
+void MainWindow::loadFloorPlan(QString floorplanfile) {
+    if (floorplanfile.isEmpty()) return;
     if (room) delete room;
     room = new roommodel::RoomModel;
-    roommodel::load(*room, temproommodel->fileName().toStdString());
-    ui->meshWidget->setRoomModel(room);
-    ui->meshWidget->updateMeshAuxiliaryData();
-    ui->showRoomCheckbox->setEnabled(true);
-    ui->saveWallsButton->setEnabled(true);
-    ui->computeLabelImagesButton->setEnabled(true);
-    //delete temproommodel;
+    roommodel::load(*room, floorplanfile.toStdString());
+    floorPlanLoaded();
 }
 
-void MainWindow::showwfrestooltip(int v) {
-    QToolTip::showText(QCursor::pos(), QString::number(v*0.001), ui->wf_resolutionSlider);
-}
-
-void MainWindow::showwfthresholdtooltip(int v) {
-    QToolTip::showText(QCursor::pos(), QString::number(v), ui->wf_wallthresholdSlider);
-}
-
-void MainWindow::on_showMeshCheckbox_toggled(bool checked)
-{
-    ui->meshWidget->renderOptions()->setRenderMesh(checked);
-}
-
-void MainWindow::on_showRoomCheckbox_toggled(bool checked)
-{
-    ui->meshWidget->renderOptions()->setRenderRoom(checked);
-}
-
-void MainWindow::on_loadWallsButton_clicked()
+void MainWindow::on_actionLoad_Wallfinding_Floor_Plan_triggered()
 {
     QString lwd = settings->value("lastworkingdirectory", "").toString();
+    //QString cfile = settings->value("lastlabelsfile", lwd).toString();
     QString datafilename = QFileDialog::getOpenFileName(this, "Open Floor Plan", lwd, "JSON Files (*.json)");
     if (!datafilename.isEmpty()) {
         QDir cwd = QDir(datafilename);
         cwd.cdUp();
         settings->setValue("lastworkingdirectory", cwd.canonicalPath());
-        if (room) delete room;
-        room = new roommodel::RoomModel;
-        roommodel::load(*room, datafilename.toStdString());
-        ui->meshWidget->setRoomModel(room);
-        ui->showRoomCheckbox->setEnabled(true);
-        ui->saveWallsButton->setEnabled(true);
+        settings->setValue("lastfloorplanfile", datafilename);
+        loadFloorPlan(datafilename);
     }
 }
 
-void MainWindow::on_autoLookCheckbox_toggled(bool checked)
-{
-    if (checked) ui->meshWidget->lookThroughCamera(imgr->getCamera(imageindex));
-}
-
-void MainWindow::on_saveWallsButton_clicked()
-{
-    if (mmgr) {
-        QString lwd = settings->value("lastworkingdirectory", "").toString();
-        //QString cfile = settings->value("lastreprojectfile", lwd).toString();
-        QString datafilename = QFileDialog::getSaveFileName(this, "Save Wallfinding Results", lwd, "JSON files (*.json)");
-        if (!datafilename.isEmpty()) {
-            QDir cwd = QDir(datafilename);
-            cwd.cdUp();
-            settings->setValue("lastworkingdirectory", cwd.canonicalPath());
-            roommodel::save(*room, datafilename.toStdString());
-        }
-    }
-}
-
+// ------------------------
+// Inverse Lighting Actions
+// ------------------------
 void MainWindow::on_computeLabelImagesButton_clicked()
 {
     if (!room) return;
@@ -497,4 +553,51 @@ void MainWindow::on_computeLabelImagesButton_clicked()
         imgr->setFlags("labels", i, f|ImageManager::DF_INITIALIZED);
     }
     progressbar->setValue(100);
+}
+
+// ----------------------------
+// Saving Intermediates Actions
+// ----------------------------
+void MainWindow::on_actionSave_Reprojection_Results_triggered()
+{
+    if (mmgr) {
+        QString lwd = settings->value("lastworkingdirectory", "").toString();
+        QString datafilename = QFileDialog::getSaveFileName(this, "Save Reprojection Samples", lwd);
+        if (!datafilename.isEmpty()) {
+            QDir cwd = QDir(datafilename);
+            cwd.cdUp();
+            settings->setValue("lastworkingdirectory", cwd.canonicalPath());
+            // settings->setValue("lastreprojectfile", datafilename);
+
+            mmgr->writeSamplesToFile(datafilename.toStdString(), boost::bind(&QProgressBar::setValue, progressbar, _1));
+        }
+    }
+}
+void MainWindow::on_actionSave_Wallfinding_Floor_Plan_triggered()
+{
+    if (mmgr) {
+        QString lwd = settings->value("lastworkingdirectory", "").toString();
+        QString datafilename = QFileDialog::getSaveFileName(this, "Save Floor Plan", lwd, "JSON files (*.json)");
+        if (!datafilename.isEmpty()) {
+            QDir cwd = QDir(datafilename);
+            cwd.cdUp();
+            settings->setValue("lastworkingdirectory", cwd.canonicalPath());
+            settings->setValue("lastfloorplanfile", datafilename);
+            roommodel::save(*room, datafilename.toStdString());
+        }
+    }
+}
+void MainWindow::on_actionSave_Per_Vertex_Labels_triggered()
+{
+    if (mmgr) {
+        QString lwd = settings->value("lastworkingdirectory", "").toString();
+        QString datafilename = QFileDialog::getSaveFileName(this, "Save Per-Vertex Labels", lwd);
+        if (!datafilename.isEmpty()) {
+            QDir cwd = QDir(datafilename);
+            cwd.cdUp();
+            settings->setValue("lastworkingdirectory", cwd.canonicalPath());
+            settings->setValue("lastlabelsfile", datafilename);
+            mmgr->writeLabelsToFile(datafilename.toStdString());
+        }
+    }
 }

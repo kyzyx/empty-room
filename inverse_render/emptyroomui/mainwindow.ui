@@ -272,29 +272,7 @@
                  </size>
                 </property>
                 <property name="text">
-                 <string>Load Wallfinding</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="saveWallsButton">
-                <property name="enabled">
-                 <bool>false</bool>
-                </property>
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="minimumSize">
-                 <size>
-                  <width>0</width>
-                  <height>30</height>
-                 </size>
-                </property>
-                <property name="text">
-                 <string>Save Wallfinding</string>
+                 <string>Load Floor Plan</string>
                 </property>
                </widget>
               </item>
@@ -462,28 +440,6 @@
               </property>
               <property name="text">
                <string>Load Reprojection</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="saveReprojectButton">
-              <property name="enabled">
-               <bool>false</bool>
-              </property>
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>30</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>Save Reprojection</string>
               </property>
              </widget>
             </item>
@@ -793,7 +749,6 @@
     <addaction name="actionOpen_Images"/>
     <addaction name="separator"/>
     <addaction name="actionLoad_Last_Mesh_Camera_File"/>
-    <addaction name="actionLoad_Last_Intermediates"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
    </widget>
@@ -802,7 +757,22 @@
      <string>Help</string>
     </property>
    </widget>
+   <widget class="QMenu" name="menuIntermediates">
+    <property name="title">
+     <string>Intermediates</string>
+    </property>
+    <addaction name="actionLoad_Last_Intermediates"/>
+    <addaction name="separator"/>
+    <addaction name="actionSave_Reprojection_Results"/>
+    <addaction name="actionSave_Wallfinding_Floor_Plan"/>
+    <addaction name="actionSave_Per_Vertex_Labels"/>
+    <addaction name="separator"/>
+    <addaction name="actionLoad_Reprojection_Results"/>
+    <addaction name="actionLoad_Wallfinding_Floor_Plan"/>
+    <addaction name="actionLoad_Per_Vertex_Labels"/>
+   </widget>
    <addaction name="menuEmpty_Room_Editor"/>
+   <addaction name="menuIntermediates"/>
    <addaction name="menuHelp"/>
   </widget>
   <widget class="QToolBar" name="mainToolBar">
@@ -864,6 +834,54 @@
     <string>Load Last Intermediates</string>
    </property>
   </action>
+  <action name="actionSave_Reprojection_Results">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Save Reprojection Results</string>
+   </property>
+  </action>
+  <action name="actionSave_Wallfinding_Floor_Plan">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Save Wallfinding Floor Plan</string>
+   </property>
+  </action>
+  <action name="actionSave_Per_Vertex_Labels">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Save Per-Vertex Labels</string>
+   </property>
+  </action>
+  <action name="actionLoad_Reprojection_Results">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Load Reprojection Results</string>
+   </property>
+  </action>
+  <action name="actionLoad_Wallfinding_Floor_Plan">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Load Wallfinding Floor Plan</string>
+   </property>
+  </action>
+  <action name="actionLoad_Per_Vertex_Labels">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Load Per-Vertex Labels</string>
+   </property>
+  </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <customwidgets>
@@ -881,5 +899,38 @@
   </customwidget>
  </customwidgets>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>loadReprojectButton</sender>
+   <signal>clicked()</signal>
+   <receiver>actionLoad_Reprojection_Results</receiver>
+   <slot>trigger()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>474</x>
+     <y>688</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>loadWallsButton</sender>
+   <signal>clicked()</signal>
+   <receiver>actionLoad_Wallfinding_Floor_Plan</receiver>
+   <slot>trigger()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>474</x>
+     <y>665</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>
