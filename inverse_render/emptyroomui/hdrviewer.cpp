@@ -2,10 +2,9 @@
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QToolTip>
-#include <QCheckBox>
 
 HDRViewer::HDRViewer(QWidget *parent, QWidget* hdrwidget, HDRGlHelper* hdrcontrol) :
-    QWidget(parent), state(STATE_FIXED), renderwidget(hdrwidget), rendercontrol(hdrcontrol)
+    QWidget(parent), state(STATE_FIXED), renderwidget(hdrwidget), rendercontrol(hdrcontrol), currentindex(0)
 {
     init();
 }
@@ -16,21 +15,24 @@ void HDRViewer::init() {
 
     QWidget* container = new QWidget(this);
 
-    QCheckBox* red_check = new QCheckBox(this);
+    red_check = new QCheckBox(this);
     red_check->setText("R");
     red_check->setChecked(true);
     connect(red_check, SIGNAL(toggled(bool)), rendercontrol, SLOT(renderRedChannel(bool)));
     connect(red_check, SIGNAL(toggled(bool)), this, SLOT(update()));
-    QCheckBox* green_check = new QCheckBox(this);
+    connect(red_check, SIGNAL(toggled(bool)), this, SLOT(saveSettings()));
+    green_check = new QCheckBox(this);
     green_check->setText("G");
     green_check->setChecked(true);
     connect(green_check, SIGNAL(toggled(bool)), rendercontrol, SLOT(renderGreenChannel(bool)));
     connect(green_check, SIGNAL(toggled(bool)), this, SLOT(update()));
-    QCheckBox* blue_check = new QCheckBox(this);
+    connect(green_check, SIGNAL(toggled(bool)), this, SLOT(saveSettings()));
+    blue_check = new QCheckBox(this);
     blue_check->setText("B");
     blue_check->setChecked(true);
     connect(blue_check, SIGNAL(toggled(bool)), rendercontrol, SLOT(renderBlueChannel(bool)));
     connect(blue_check, SIGNAL(toggled(bool)), this, SLOT(update()));
+    connect(blue_check, SIGNAL(toggled(bool)), this, SLOT(saveSettings()));
 
     slider = new QxtSpanSlider(Qt::Horizontal, container);
     slider->setEnabled(false);
@@ -41,6 +43,7 @@ void HDRViewer::init() {
     connect(slider, SIGNAL(spanChanged(int, int)), this, SLOT(userEditRange(int, int)));
     connect(slider, SIGNAL(spanChanged(int,int)), rendercontrol, SLOT(setScale(int,int)));
     connect(slider, SIGNAL(spanChanged(int, int)), this, SLOT(notifyUpdateRange(int,int)));
+    connect(slider, SIGNAL(spanChanged(int,int)), this, SLOT(saveSettings()));
     connect(slider, SIGNAL(upperPositionChanged(int)), this, SLOT(showTooltip()));
     connect(slider, SIGNAL(lowerPositionChanged(int)), this, SLOT(showTooltip()));
 
@@ -53,8 +56,9 @@ void HDRViewer::init() {
     tmo->setEnabled(false);
     tmo->setMinimumHeight(30);
     tmo->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-    connect(tmo, SIGNAL(activated(int)), rendercontrol, SLOT(setMapping(int)));
-    connect(tmo, SIGNAL(activated(int)), this, SLOT(notifyUpdateMappingType(int)));
+    connect(tmo, SIGNAL(currentIndexChanged(int)), rendercontrol, SLOT(setMapping(int)));
+    connect(tmo, SIGNAL(currentIndexChanged(int)), this, SLOT(notifyUpdateMappingType(int)));
+    connect(tmo, SIGNAL(currentIndexChanged(int)), this, SLOT(saveSettings()));
 
     QHBoxLayout* ll = new QHBoxLayout(container);
     ll->addWidget(red_check);
@@ -90,6 +94,34 @@ void HDRViewer::setSuggestRange(int lo, int hi) {
         case STATE_EDITED:
             break;
     }
+}
+
+void HDRViewer::saveSettings() {
+    saveSettings(currentindex);
+}
+
+void HDRViewer::saveSettings(int index) {
+    if (index >= savedsettings.size()) savedsettings.resize(index+1);
+    currsettings = Settings(
+                slider->lowerPosition(), slider->upperPosition(), tmo->currentIndex(),
+                red_check->isChecked(), green_check->isChecked(), blue_check->isChecked()
+                );
+}
+
+void HDRViewer::loadSettings(int index) {
+    savedsettings[currentindex] = currsettings;
+    currentindex = index;
+    if (index >= savedsettings.size() || index < 0) return;
+    slider->setSpan(savedsettings[index].lo, savedsettings[index].hi);
+    tmo->setCurrentIndex(savedsettings[index].idx);
+    red_check->setChecked(savedsettings[index].r);
+    green_check->setChecked(savedsettings[index].g);
+    blue_check->setChecked(savedsettings[index].b);
+}
+
+void HDRViewer::copySettings(HDRViewer* v) {
+    savedsettings[currentindex] = v->savedsettings[v->currentindex];
+    loadSettings(currentindex);
 }
 
 void HDRViewer::fixRange(int lo, int hi, int v) {

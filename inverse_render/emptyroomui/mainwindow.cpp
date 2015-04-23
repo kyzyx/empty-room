@@ -284,7 +284,7 @@ void MainWindow::meshLoaded() {
         ui->viewTypeComboBox->insertItem(i, QString::fromStdString(ui->meshWidget->renderManager()->getShader(i).getDescription()));
     }
     connect(ui->viewTypeComboBox, SIGNAL(currentIndexChanged(int)), ui->meshWidget->renderOptions(), SLOT(setMeshRenderFormat(int)));
-
+    connect(ui->viewTypeComboBox, SIGNAL(currentIndexChanged(int)), ui->meshWidget, SLOT(loadSettings(int)));
     meshAndImagesLoaded();
 }
 
@@ -335,6 +335,7 @@ void MainWindow::imagesLoaded() {
         ui->imageTypeComboBox->insertItem(i, QString::fromStdString(imgr->getImageType(i).getName()));
     }
     updateImage(0, typeindex);
+    connect(ui->imageTypeComboBox, SIGNAL(currentIndexChanged(int)), ui->imageWidget, SLOT(loadSettings(int)));
     meshAndImagesLoaded();
 }
 

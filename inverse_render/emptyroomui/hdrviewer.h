@@ -6,22 +6,27 @@
 #include "hdrglwidget.h"
 #include <QComboBox>
 #include <QOpenGLWidget>
+#include <QCheckBox>
 #include "hdrimageviewer.h"
 
 class HDRViewer : public QWidget
 {
     Q_OBJECT
 public:
-    explicit HDRViewer(QWidget *parent=0) : QWidget(parent), state(STATE_FIXED) {;}
+    explicit HDRViewer(QWidget *parent=0) : QWidget(parent), state(STATE_FIXED), currentindex(0) {;}
     explicit HDRViewer(QWidget *parent, QWidget* renderwidget, HDRGlHelper* rendercontrol);
     ~HDRViewer();
 
+    void copySettings(HDRViewer* v);
 protected:
     void init();
 signals:
     void updateMappingType(int v);
     void updateRange(int lo, int hi);
-
+public slots:
+    void saveSettings();
+    void saveSettings(int index);
+    void loadSettings(int index);
 protected slots:
     void userEditRange(int lo, int hi);
     void setSuggestRange(int lo, int hi);
@@ -36,6 +41,25 @@ protected:
     QWidget* renderwidget;
     QxtSpanSlider* slider;
     QComboBox* tmo;
+    QCheckBox* red_check;
+    QCheckBox* green_check;
+    QCheckBox* blue_check;
+
+    int currentindex;
+    class Settings {
+        public:
+        Settings()
+            :lo(0), hi(0), idx(0), r(true), g(true), b(true) {;}
+        Settings(int l, int h, int i, bool rr, bool gg, bool bb)
+            : lo(l), hi(h), idx(i),
+              r(rr), g(gg), b(bb)
+            {;}
+        int lo, hi, idx;
+        bool r, g, b;
+    };
+    Settings currsettings;
+    std::vector<Settings> savedsettings;
+
     enum {
         STATE_SUGGESTED,
         STATE_FIXED,
