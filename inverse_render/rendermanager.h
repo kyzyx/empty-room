@@ -80,6 +80,7 @@ public:
 
     MeshManager* getMeshManager() { return mmgr; }
 
+    void createLabelImage(const CameraParams* cam, void* image);
     const ShaderType& getShader(int n) const { return shaders[n]; }
     int getNumShaderTypes() const { return shaders.size(); }
 protected:

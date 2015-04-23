@@ -415,3 +415,15 @@ void RenderManager::readFromRender(const CameraParams* cam, float*& image, int r
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glPopAttrib();
 }
+
+void RenderManager::createLabelImage(const CameraParams* cam, void* image) {
+    int w = cam->width;
+    int h = cam->height;
+    char* ret = (char*) image;
+    float* rendered = new float[w*h*3];
+    readFromRender(cam, rendered, VIEW_LABELS, true);
+    for (int i = 0; i < w*h; ++i) {
+        ret[i] = (char) *reinterpret_cast<int*>(&rendered[3*i+2]);
+    }
+    delete [] rendered;
+}

@@ -30,8 +30,6 @@ class HemicubeRenderer {
         int getHemicubeResolution() const { return res; }
 
         void render(const CameraParams* cam, float* image, int mode=VIEW_AVERAGE);
-
-        void createLabelImage(const CameraParams* cam, void* image);
     private:
         void renderFace(const R3Point& p,
                 const R3Vector& towards, const R3Vector& up,

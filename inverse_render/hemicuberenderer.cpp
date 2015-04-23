@@ -172,15 +172,3 @@ void HemicubeRenderer::computeSamples(
     }
     cout << "Done sampling" << endl;
 }
-
-void HemicubeRenderer::createLabelImage(const CameraParams* cam, void* image) {
-    int w = cam->width;
-    int h = cam->height;
-    char* ret = (char*) image;
-    float* rendered = new float[w*h*3];
-    render(cam, rendered, false);
-    for (int i = 0; i < w*h; ++i) {
-        ret[i] = (char) *reinterpret_cast<int*>(&rendered[3*i+2]);
-    }
-    delete [] rendered;
-}
