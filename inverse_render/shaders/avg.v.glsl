@@ -22,7 +22,7 @@ void main(void) {
         ivec2 coord = ivec2(start+i, row);
         vec4 a = texelFetch(aux, coord, 0);
         //float currweight = abs(a.r*a.g*dot(gl_Normal,texture2D(angles,coord).rgb));
-        float currweight = abs(max(0,a.r)*a.g);
+        float currweight = abs(a.r*a.g);
         computed_color += texelFetch(colors, coord, 0)*currweight;
         weight += currweight;
     }

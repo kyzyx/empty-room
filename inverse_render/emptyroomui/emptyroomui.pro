@@ -34,9 +34,6 @@ unix: LIBS += -L$$PWD/../build/ \
         -lR3Graphics -lR3Shapes -lR2Shapes -lRNBasics -ljpeg -lpng \
         -lGLU -lGLEW -lrt -lboost_system -lboost_filesystem \
         -lQGLViewer -lpcl_common -lpcl_io -lpcl_io_ply
-#-L$$PWD/../../GAPS/R3Graphics/ -L$$PWD/../../GAPS/R3Shapes/ -L$$PWD/../../GAPS/RNBasics/ -L$$PWD/../../GAPS/R2Shapes/ \
-              #-lR3Graphics -lR3Shapes -lR2Shapes -lRNBasics -ljpeg \
-#-lGAPS -ljpeg \
 INCLUDEPATH += $$PWD/../
 INCLUDEPATH += $$PWD/../../GAPS/
 DEPENDPATH += $$PWD/../
@@ -44,10 +41,11 @@ DEPENDPATH += $$PWD/../
 unix: PRE_TARGETDEPS += $$PWD/../build/libmemory.a $$PWD/../build/librendering.a
 
 OTHER_FILES += \
-    hdr.v.glsl \
-    hdr.f.glsl \
-    hdr_log.f.glsl \
-    hdr_gamma.f.glsl \
-    default.v.glsl \
-    default.f.glsl \
-    averagesample.v.glsl
+    $$PWD/../shaders/default.f.glsl \
+    $$PWD/../shaders/flat.f.glsl \
+    $$PWD/../shaders/avg.v.glsl \
+    $$PWD/../shaders/labels.v.glsl \
+    $$PWD/../shaders/normals.v.glsl \
+    $$PWD/../shaders/singleimage.v.glsl
+
+QMAKE_POST_LINK += cp $$PWD/../shaders/* $$OUT_PWD/
