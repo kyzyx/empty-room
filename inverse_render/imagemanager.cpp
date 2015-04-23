@@ -1,4 +1,5 @@
 #include "imagemanager.h"
+#include "imageio.h"
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/sync/scoped_lock.hpp>
 #include <boost/interprocess/sync/sharable_lock.hpp>
@@ -40,9 +41,11 @@ ImageManager::ImageManager(const string& camfile)
 {
     ifstream in(camfile.c_str());
     in >> sz >> w >> h;
+    in.close();
 
     defaultinit(camfile);
     initializeSharedMemory();
+    readCameraFile(camfile);
 }
 
 void ImageManager::defaultinit(const string& camfile) {
@@ -60,11 +63,11 @@ void ImageManager::initializeImageTypes() {
     // Raw input data
     imagetypes.push_back(ImageType("color",      "",     CV_32FC3));
     // Custom types begin here
-    imagetypes.push_back(ImageType("confidence", "conf", CV_32FC1, ImageType::IT_SCALAR));
-    imagetypes.push_back(ImageType("depth",      "pcd",  CV_32FC1, ImageType::IT_DEPTHMAP));
+    imagetypes.push_back(ImageType("confidence", "conf", CV_32FC1, 0, ImageType::IT_SCALAR));
+    imagetypes.push_back(ImageType("depth",      "pcd",  CV_32FC1, 0, ImageType::IT_DEPTHMAP));
     // Processed results
-    imagetypes.push_back(ImageType("edges",      "edge", CV_8UC3));
-    imagetypes.push_back(ImageType("labels",     "lbl",  CV_8UC1));
+    imagetypes.push_back(ImageType("edges",      "edge", CV_8UC3, ImageType::IT_COMPUTED));
+    imagetypes.push_back(ImageType("labels",     "lbl",  CV_8UC1, ImageType::IT_RENDERED));
 
     images.resize(imagetypes.size());
 }
@@ -98,6 +101,62 @@ bool ImageManager::initializeSharedMemory() {
     return true;
 }
 
+typedef boost::filesystem::path bfpath;
+bool ImageManager::readCameraFile(const std::string& filename)
+{
+    try {
+        ifstream in(filename.c_str());
+        string infoline;
+        getline(in, infoline);
+        size_t numparams = count(infoline.begin(), infoline.end(), ' ') + 1;
+        if (numparams < 4) {
+            cerr << "Error! Invalid camera file!" << endl;
+            return false;
+        }
+        double a;
+        string s;
+        for (int i = 0; i < sz; ++i) {
+            in >> s;
+            for (int j = 0; j < 9; ++j) in >> a;
+            bfpath filepath = bfpath(filename).parent_path();
+            filepath /= bfpath(s);
+            string fullpath = boost::filesystem::canonical(filepath).string();
+            filenames.push_back(fullpath);
+        }
+    } catch (...) {
+        return false;
+    }
+    return true;
+}
+
+void ImageManager::saveImage(const string& type, int n) const {
+    int i = nameToIndex(type);
+    if (i < 0) return;
+    saveImage(i,n);
+}
+
+void ImageManager::saveImage(int i, int n) const {
+    string f = filenames[n];
+    if (imagetypes[i].getExtension() != "") {
+        f = ImageIO::replaceExtension(f, imagetypes[i].getExtension());
+    }
+    if (imagetypes[i].getFileFormat() == ImageType::IT_DEPTHMAP) {
+        // TODO: Unimplemented
+    } else if (imagetypes[i].getFileFormat() == ImageType::IT_SCALAR) {
+        ImageIO::writeScalarMap(f, getImage(i,n), w, h, imagetypes[i].getSize());
+    } else {
+        if (imagetypes[i].getType() == CV_32FC3) {
+            ImageIO::writeExrImage(f, (const float*) getImage(i,n), w, h);
+        } else if (imagetypes[i].getType() == CV_32FC1) {
+            ImageIO::writeExrImage(f, (const float*) getImage(i,n), w, h, 1);
+        } else if (imagetypes[i].getType() == CV_8UC3) {
+            ImageIO::writePngImage(f, (const char*) getImage(i,n), w, h);
+        } else if (imagetypes[i].getType() == CV_8UC1) {
+            ImageIO::writePngImage(f, (const char*) getImage(i,n), w, h, 1);
+        }
+    }
+
+}
 
 // --------------------------------------------------------------
 // Utilities

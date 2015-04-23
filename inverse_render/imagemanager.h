@@ -18,8 +18,8 @@
  */
 class ImageType {
     public:
-        ImageType(const std::string& name, const std::string& extension, int sizetype, int fileformat=IT_IMAGE)
-            : n(name), ext(extension), s(sizetype), img(fileformat){;}
+        ImageType(const std::string& name, const std::string& extension, int sizetype, int flags=0, int fileformat=IT_IMAGE)
+            : n(name), ext(extension), s(sizetype), f(flags), img(fileformat){;}
         const std::string& getName() const { return n; }
         const std::string& getExtension() const { return ext; }
         int getSize() const {
@@ -29,16 +29,23 @@ class ImageType {
         }
         int getType() const { return s; }
         int getFileFormat() const { return img; }
+        int getFlags() const { return f; }
         enum {
             IT_IMAGE,
             IT_SCALAR,
             IT_DEPTHMAP,
+        };
+        enum {
+            IT_COMPUTED=1,
+            IT_NOFLIP=2,
+            IT_RENDERED=3,
         };
     private:
         std::string n;
         std::string ext;
         int s;
         int img;
+        int f;
 };
 
 class ImageManager {
@@ -56,6 +63,9 @@ class ImageManager {
         const void* getImage(int n) const;
         void* getImageWriteable(const std::string& type, int n);
         const R4Matrix& getDepthToRgbTransform() const;
+
+        void saveImage(int i, int n) const;
+        void saveImage(const std::string& type, int n) const;
 
         ImageType getImageType(int n) const { return imagetypes[n]; }
         int getNumImageTypes() const { return imagetypes.size(); }
@@ -76,6 +86,8 @@ class ImageManager {
         void defaultinit(const std::string& camfile);
         bool initializeSharedMemory();
 
+        virtual bool readCameraFile(const std::string& filename);
+
         size_t computeSize() const;
         int nameToIndex(const std::string& type) const;
         shmutex* getMutex(int t, int n);
@@ -90,6 +102,7 @@ class ImageManager {
         unsigned char* flags;
         shmutex* mutexes;
         std::string shmname;
+        std::vector<std::string> filenames;
 
         boost::interprocess::mapped_region mregion;
 };

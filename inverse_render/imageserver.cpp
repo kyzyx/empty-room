@@ -114,11 +114,6 @@ inline bool fileexists(const string& filename) {
     struct stat buffer;
     return (stat (filename.c_str(), &buffer) == 0);
 }
-string replaceExtension(const string& s, string newext) {
-    size_t i = s.find_last_of(".");
-    if (i == string::npos) return s + newext;
-    else return s.substr(0,i+1) + newext;
-}
 // --------------------------------------------------------------
 // File load
 // --------------------------------------------------------------
@@ -127,7 +122,7 @@ bool ImageServer::loadAllFiles() {
         for (int n = 0; n < imagetypes.size(); ++n) {
             string f = filenames[i];
             if (imagetypes[n].getExtension() != "") {
-                f = replaceExtension(f, imagetypes[n].getExtension());
+                f = ImageIO::replaceExtension(f, imagetypes[n].getExtension());
             }
             if (fileexists(f)) {
                 void* im = images[n][i];
@@ -150,7 +145,8 @@ bool ImageServer::loadAllFiles() {
                 }
 
                 if (success) {
-                    flip((char*) im, w, h, imagetypes[n].getSize());
+                    if (!(imagetypes[n].getFlags() & ImageType::IT_NOFLIP))
+                        flip((char*) im, w, h, imagetypes[n].getSize());
                     flags[n*sz+i] |= DF_INITIALIZED;
                 }
             }

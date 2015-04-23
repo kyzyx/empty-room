@@ -23,6 +23,11 @@ using namespace pcl;
 using namespace Imf;
 using namespace Imath;
 
+string replaceExtension(const string& s, string newext) {
+    size_t i = s.find_last_of(".");
+    if (i == string::npos) return s + newext;
+    else return s.substr(0,i+1) + newext;
+}
 bool endswith(const string& s, string e) {
     if (s.length() > e.length())
         return s.compare(s.length()-e.length(), e.length(), e) == 0;
@@ -44,6 +49,20 @@ bool readScalarMap(const string& filename, void* image, int w, int h, int bytes)
         p += (h-1)*w*bytes;
         for (int i = 0; i < h; ++i) {
             in.read(p, w*bytes);
+            p -= w*bytes;
+        }
+        return true;
+    } catch(...) {
+        return false;
+    }
+}
+bool writeScalarMap(const string& filename, const void* image, int w, int h, int bytes) {
+    try {
+        ofstream out(filename.c_str(), ifstream::binary);
+        char* p = (char*) image;
+        p += (h-1)*w*bytes;
+        for (int i = 0; i < h; ++i) {
+            out.write(p,w*bytes);
             p -= w*bytes;
         }
         return true;
@@ -269,7 +288,7 @@ bool readPngImage(const string& filename,
     int bit_depth;
     png_uint_32 pngw, pngh;
     png_get_IHDR(png_ptr, info_ptr, &pngw, &pngh, &bit_depth, &color_type,
-                 &interlace_type, NULL, NULL);
+            &interlace_type, NULL, NULL);
     width = pngw;
     height = pngh;
 
@@ -284,6 +303,89 @@ bool readPngImage(const string& filename,
     }
 
     png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+    fclose(fp);
+    return true;
+}
+bool writePngImage(const string& filename,
+        const char* image,
+        int width,
+        int height,
+        int channels)
+{
+    png_structp png_ptr;
+    png_infop info_ptr;
+    unsigned int sig_read = 0;
+    int color_type, interlace_type;
+    png_bytep * row_pointers;
+
+    FILE *fp;
+    if ((fp = fopen(filename.c_str(), "wb")) == NULL)
+        return false;
+
+    png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+    if (!png_ptr) {
+        fclose(fp);
+        return false;
+    }
+
+    info_ptr = png_create_info_struct(png_ptr);
+    if (!info_ptr) {
+        fclose(fp);
+        return false;
+    }
+
+    if (setjmp(png_jmpbuf(png_ptr))) {
+        fclose(fp);
+        return false;
+    }
+
+    png_init_io(png_ptr, fp);
+
+    if (setjmp(png_jmpbuf(png_ptr))) {
+        fclose(fp);
+        return false;
+    }
+
+    png_set_IHDR(png_ptr, info_ptr, width, height,
+            8, PNG_COLOR_TYPE_RGB, PNG_INTERLACE_NONE,
+            PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
+
+    png_write_info(png_ptr, info_ptr);
+
+    if (setjmp(png_jmpbuf(png_ptr))) {
+        fclose(fp);
+        return false;
+    }
+
+    row_pointers = (png_bytep*) malloc(sizeof(png_bytep) * height);
+    unsigned int row_bytes = png_get_rowbytes(png_ptr,info_ptr);
+    const unsigned char* im = (const unsigned char*) image;
+    for (int i = 0; i < height; i++) {
+        row_pointers[i] = (png_byte*) malloc(row_bytes);
+        if (channels == 3) {
+            memcpy(row_pointers[i], im + (row_bytes * (height-1-i)), row_bytes);
+        } else {
+            for (int j = 0; j < width; ++j) {
+                int idx = j + width*(height-1-i);
+                for (int k = 0; k < 3; ++k)
+                    row_pointers[i][3*j+k] = k<channels?im[channels*idx+k]:im[channels*idx+channels-1];
+            }
+        }
+    }
+
+    png_write_image(png_ptr, row_pointers);
+
+    if (setjmp(png_jmpbuf(png_ptr))) {
+        fclose(fp);
+        return false;
+    }
+
+    png_write_end(png_ptr, NULL);
+
+    for (int y=0; y<height; y++)
+        free(row_pointers[y]);
+    free(row_pointers);
+
     fclose(fp);
     return true;
 }

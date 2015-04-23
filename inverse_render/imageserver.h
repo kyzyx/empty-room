@@ -13,13 +13,11 @@ class ImageServer : public ImageManager {
         ~ImageServer();
 
     protected:
-        bool readCameraFile(const std::string& filename);
+        virtual bool readCameraFile(const std::string& filename);
         void transformAllCameras(const R4Matrix& m);
         void flip(char* a, int w, int h, size_t bytes);
 
         bool loadAllFiles();
-
-        std::vector<std::string> filenames;
 
         bool flip_x, flip_y;
 

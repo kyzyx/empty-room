@@ -5,8 +5,10 @@
 #include <string>
 
 namespace ImageIO {
+std::string replaceExtension(const std::string& s, std::string newext);
 bool readDepthMap(const std::string& filename, void* image, int w, int h);
 bool readScalarMap(const std::string& filename, void* image, int w, int h, int bytes);
+bool writeScalarMap(const std::string& filename, const void* image, int w, int h, int bytes);
 bool readFloatImage(const std::string& filename, void* image, int w, int h, int channels=3);
 bool readRGBImage(const std::string& filename, void* image, int w, int h, int channels=3);
 
@@ -37,4 +39,9 @@ bool readPngImage(const std::string& filename,
         int& width,
         int& height,
         bool preallocated=false);
+bool writePngImage(const std::string& filename,
+        const char* image,
+        int width,
+        int height,
+        int channels=3);
 };
