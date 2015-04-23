@@ -83,14 +83,14 @@ HDRGlHelper::~HDRGlHelper()
 void HDRGlHelper::setMapping(int v) {
     if (v != mapping) {
         mapping = v;
-        emit update();
+        emit forceupdate();
     }
 }
 
 void HDRGlHelper::setScale(int lo, int hi) {
     mini = LINTOLOG(lo);
     maxi = LINTOLOG(hi);
-    emit update();
+    emit forceupdate();
 }
 
 void HDRGlHelper::initializeHelper() {
@@ -228,7 +228,7 @@ void HDRGlHelper::resizeHelper(int width, int height) {
     glBindRenderbuffer(GL_RENDERBUFFER, fbo_z);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, width, height);
     glBindRenderbuffer(GL_RENDERBUFFER, 0);
-    emit update();
+    emit forceupdate();
 }
 
 void HDRQGlViewerWidget::resizeGL(int width, int height) {

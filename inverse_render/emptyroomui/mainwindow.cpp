@@ -9,74 +9,67 @@
 
 class MeshDialog : public QFileDialog
 {
-public:
- explicit MeshDialog(QWidget *parent=0) :
-     QFileDialog( parent ),
-     ccw(0)
-    {
-     QGridLayout* mainLayout = dynamic_cast<QGridLayout*>(layout());
+    public:
+        explicit MeshDialog(QWidget *parent=0) : QFileDialog(parent), ccw(0) {;}
 
-     if ( ! mainLayout ) {
-      assert(0); // in case of future changes
-     } else {
-      QHBoxLayout *hbl = new QHBoxLayout();
-
-      // add some widgets
-      ccw = new QCheckBox(QString("Flip Normals"), this);
-      hbl->addWidget(ccw);
-      ccw->setChecked(true);
-
-      int numRows = mainLayout->rowCount();
-
-      // add the new layout to the bottom of mainLayout
-      // and span all columns
-      mainLayout->addLayout( hbl, numRows,0,1,-1);
-      }
-    }
- bool isCcw() const {
-     if (ccw) return ccw->isChecked();
-     return false;
- }
-private:
- QCheckBox *ccw;
+        void addCheckboxes() {
+            QHBoxLayout *hbl = new QHBoxLayout();
+            ccw = new QCheckBox(QString("Flip Normals"), this);
+            hbl->addWidget(ccw);
+            ccw->setChecked(true);
+            QGridLayout* mainLayout = dynamic_cast<QGridLayout*>(layout());
+            if (mainLayout) {
+                int numRows = mainLayout->rowCount();
+                mainLayout->addLayout( hbl, numRows,0,1,-1);
+            } else {
+                QVBoxLayout* l = dynamic_cast<QVBoxLayout*>(layout());
+                if (l) {
+                    l->addLayout(hbl);
+                }
+            }
+        }
+        bool isCcw() const {
+            if (ccw) return ccw->isChecked();
+            return false;
+        }
+    private:
+        QCheckBox *ccw;
 };
 class ImageDialog : public QFileDialog
 {
-public:
- explicit ImageDialog(QWidget *parent=0) :
-     QFileDialog( parent ),
-     flipx(0), flipy(0)
-    {
-     QGridLayout* mainLayout = dynamic_cast<QGridLayout*>(layout());
+    public:
+        explicit ImageDialog(QWidget *parent=0) : QFileDialog(parent), flipx(0), flipy(0) { ; }
+        void addCheckBoxes() {
+            QHBoxLayout *hbl = new QHBoxLayout();
+            flipx = new QCheckBox(QString("Flip horizontally"), this);
+            flipy = new QCheckBox(QString("Flip vertically"), this);
+            hbl->addWidget(flipx);
+            hbl->addWidget(flipy);
+            QLayout* l = layout();
+            QGridLayout* mainLayout = dynamic_cast<QGridLayout*>(layout());
+            if (mainLayout) {
+                int numRows = mainLayout->rowCount();
+                mainLayout->addLayout( hbl, numRows,0,1,-1);
+            } else {
 
-     if ( ! mainLayout ) {
-      assert(0); // in case of future changes
-     } else {
-      QHBoxLayout *hbl = new QHBoxLayout();
+                QVBoxLayout* l = dynamic_cast<QVBoxLayout*>(layout());
+                if (l) {
+                    l->addLayout(hbl);
+                }
+            }
+        }
 
-      // add some widgets
-      flipx = new QCheckBox(QString("Flip horizontally"), this);
-      flipy = new QCheckBox(QString("Flip vertically"), this);
-        hbl->addWidget(flipx);
-        hbl->addWidget(flipy);
-      int numRows = mainLayout->rowCount();
-
-      // add the new layout to the bottom of mainLayout
-      // and span all columns
-      mainLayout->addLayout( hbl, numRows,0,1,-1);
-      }
-    }
- bool isFlipX() const {
-     if (flipx) return flipx->isChecked();
-     return false;
- }
- bool isFlipY() const {
-     if (flipy) return flipy->isChecked();
-     return false;
- }
-private:
- QCheckBox *flipx;
- QCheckBox *flipy;
+        bool isFlipX() const {
+            if (flipx) return flipx->isChecked();
+            return false;
+        }
+        bool isFlipY() const {
+            if (flipy) return flipy->isChecked();
+            return false;
+        }
+    private:
+        QCheckBox *flipx;
+        QCheckBox *flipy;
 };
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -162,6 +155,7 @@ void MainWindow::on_actionOpen_Mesh_triggered()
     mdialog.setOption(QFileDialog::DontUseNativeDialog);
     mdialog.setDirectory(settings->value("lastworkingdirectory", "").toString());
     mdialog.selectFile(QFileInfo(settings->value("lastmeshfile", "").toString()).fileName());
+    mdialog.addCheckboxes();
     if (mdialog.exec()) {
         meshfilename = mdialog.selectedFiles().first();
         settings->setValue("lastmeshfile", meshfilename);
@@ -215,6 +209,7 @@ void MainWindow::on_actionOpen_Images_triggered()
     idialog.setOption(QFileDialog::DontUseNativeDialog);
     idialog.setDirectory(settings->value("lastworkingdirectory", "").toString());
     idialog.selectFile(QFileInfo(settings->value("lastcamerafile", "").toString()).fileName());
+    idialog.addCheckBoxes();
     if (idialog.exec()) {
         camfilename = idialog.selectedFiles().first();
         settings->setValue("lastcamerafile", camfilename);

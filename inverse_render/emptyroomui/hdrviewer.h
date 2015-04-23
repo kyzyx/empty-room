@@ -5,7 +5,7 @@
 #include "qxtspanslider.h"
 #include "hdrglwidget.h"
 #include <QComboBox>
-#include <QGLWidget>
+#include <QOpenGLWidget>
 #include "hdrimageviewer.h"
 
 class HDRViewer : public QWidget

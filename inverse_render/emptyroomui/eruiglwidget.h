@@ -1,7 +1,7 @@
 #ifndef ERUIGLWIDGET_H
 #define ERUIGLWIDGET_H
 
-#include <QGLWidget>
+#include <QOpenGLWidget>
 #include "hdrglwidget.h"
 #include "meshmanager.h"
 #include "hdrviewer.h"
@@ -12,7 +12,7 @@
 class ERUIRenderOptions : public QObject {
 Q_OBJECT
 public:
-    ERUIRenderOptions(QGLWidget* parent=NULL) :
+    ERUIRenderOptions(QOpenGLWidget* parent=NULL) :
         qglw(parent),
         renderCameras(true),
         renderCurrentCamera(true),
@@ -46,7 +46,7 @@ public:
         CAMRENDER_FRUSTUM,
     };
 protected:
-    QGLWidget* qglw;
+    QOpenGLWidget* qglw;
     bool renderCameras;
     bool renderCurrentCamera;
     bool renderMesh;
@@ -58,27 +58,27 @@ protected:
 public slots:
     void setRenderCameras(bool shouldRenderCamera) {
         renderCameras = shouldRenderCamera;
-        if (qglw) qglw->updateGL();
+        if (qglw) qglw->update();
     }
     void setRenderCurrentCamera(bool shouldRenderCurrentCamera) {
         renderCurrentCamera = shouldRenderCurrentCamera;
-        if (qglw) qglw->updateGL();
+        if (qglw) qglw->update();
     }
     void setRenderMesh(bool shouldRenderMesh) {
         renderMesh = shouldRenderMesh;
-        if (qglw) qglw->updateGL();
+        if (qglw) qglw->update();
     }
     void setRenderRoom(bool shouldRenderRoom) {
         renderRoom = shouldRenderRoom;
-        if (qglw) qglw->updateGL();
+        if (qglw) qglw->update();
     }
     void setCameraRenderFormat(int camformat) {
         cameraRenderFormat = camformat;
-        if (qglw) qglw->updateGL();
+        if (qglw) qglw->update();
     }
     void setMeshRenderFormat(int meshformat) {
         meshRenderFormat = meshformat;
-        if (qglw) qglw->updateGL();
+        if (qglw) qglw->update();
     }
 };
 

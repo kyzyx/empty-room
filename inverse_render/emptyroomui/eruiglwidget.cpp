@@ -25,7 +25,7 @@ void ERUIGLWidget::setMeshManager(MeshManager* manager) {
     R3Point ctr = bbox.Centroid();
     setSceneCenter(qglviewer::Vec(ctr.X(), ctr.Y(), ctr.Z()));
 
-    updateGL();
+    update();
     helper.emitSuggestRange(0,1);
 }
 
@@ -33,13 +33,13 @@ void ERUIGLWidget::setupMeshColors()
 {
     makeCurrent();
     rendermanager.setupMeshColors();
-    updateGL();
+    update();
 }
 
 void ERUIGLWidget::setRoomModel(roommodel::RoomModel* model) {
     makeCurrent();
     rendermanager.setRoomModel(model);
-    updateGL();
+    update();
 }
 
 void ERUIGLWidget::setupCameras(ImageManager* imgr) {
@@ -51,7 +51,7 @@ void ERUIGLWidget::setupCameras(ImageManager* imgr) {
         cameras.push_back(*imgr->getCamera(i));
         camids.push_back(i);
     }
-    updateGL();
+    update();
 }
 
 void ERUIGLWidget::highlightCamera(int cameraindex) {
@@ -59,7 +59,7 @@ void ERUIGLWidget::highlightCamera(int cameraindex) {
     if (it == camids.end()) return;
     int idx = *it;
     selectedCamera = it - camids.begin();
-    updateGL();
+    update();
 }
 
 void ERUIGLWidget::init()
@@ -183,7 +183,7 @@ void ERUIGLWidget::lookThroughCamera(const CameraParams* cam) {
     camera()->setPosition(qglviewer::Vec(cam->pos[0], cam->pos[1], cam->pos[2]));
     camera()->setUpVector(qglviewer::Vec(cam->up[0], cam->up[1], cam->up[2]));
     camera()->setViewDirection(qglviewer::Vec(cam->towards[0], cam->towards[1], cam->towards[2]));
-    updateGL();
+    update();
 }
 
 #define GLEXPAND(x) (x)[0], (x)[1], (x)[2]

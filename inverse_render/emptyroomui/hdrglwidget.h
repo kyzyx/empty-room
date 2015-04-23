@@ -1,7 +1,7 @@
 #ifndef HDRGLWIDGET_H
 #define HDRGLWIDGET_H
 
-#include <QGLWidget>
+#include <QOpenGLWidget>
 #include <QGLViewer/qglviewer.h>
 #include <cmath>
 #include <boost/bind.hpp>
@@ -73,17 +73,17 @@ public slots:
 signals:
     void suggestRange(int lo, int hi);
     void fixParams(int lo, int hi, int v);
-    void update();
+    void forceupdate();
     void _render();
 
 };
 
-class HDRGlWidget : public QGLWidget {
+class HDRGlWidget : public QOpenGLWidget {
     Q_OBJECT
 public:
-    explicit HDRGlWidget(QWidget *parent = 0) : QGLWidget(parent)
+    explicit HDRGlWidget(QWidget *parent = 0) : QOpenGLWidget(parent)
     {
-        connect(&helper, SIGNAL(update()), this, SLOT(callupdate()));
+        connect(&helper, SIGNAL(forceupdate()), this, SLOT(callupdate()));
         helper.setRenderFunction(boost::bind(&HDRGlWidget::calldorender, this));
     }
 
@@ -98,7 +98,7 @@ protected:
     void resizeGL(int width, int height) { helper.resizeHelper(width, height); _doresize(width, height);}
     HDRGlHelper helper;
 protected slots:
-        void callupdate() { updateGL(); }
+        void callupdate() { update(); }
 };
 
 class HDRQGlViewerWidget : public QGLViewer {
@@ -106,7 +106,7 @@ class HDRQGlViewerWidget : public QGLViewer {
     public:
     explicit HDRQGlViewerWidget(QWidget* parent = 0) : QGLViewer(parent)
     {
-        connect(&helper, SIGNAL(update()), this, SLOT(callupdate()));
+        connect(&helper, SIGNAL(forceupdate()), this, SLOT(callupdate()));
         helper.setRenderFunction(boost::bind(&HDRQGlViewerWidget::calldorender, this));
     }
 
@@ -132,7 +132,7 @@ protected:
 
     HDRGlHelper helper;
 protected slots:
-        void callupdate() { updateGL(); }
+        void callupdate() { update(); }
 
 };
 

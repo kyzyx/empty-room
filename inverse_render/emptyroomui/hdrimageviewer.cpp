@@ -45,7 +45,7 @@ bool HDRImageViewer::setFloatImage(const float* data, int w, int h, int channels
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h, GL_RGB, GL_FLOAT, (GLvoid*) image);
     glBindTexture(GL_TEXTURE_2D, 0);
     helper.emitSuggestRange(ilo, ihi);
-    updateGL();
+    update();
     return true;
 }
 
@@ -80,7 +80,7 @@ bool HDRImageViewer::setRGBImage(const unsigned char* data, int w, int h, int ch
     glBindTexture(GL_TEXTURE_2D, tex);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h, GL_RGB, GL_FLOAT, (GLvoid*) image);
     glBindTexture(GL_TEXTURE_2D, 0);
-    updateGL();
+    update();
     return true;
 }
 void HDRImageViewer::_dorender() {

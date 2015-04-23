@@ -4,9 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui opengl xml
-
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+QT       += core gui opengl xml widgets
 
 TARGET = emptyroomui
 TEMPLATE = app
