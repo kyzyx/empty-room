@@ -76,7 +76,8 @@ bool HDRImageViewer::setRGBImage(const unsigned char* data, int w, int h, int ch
             if (channels != 3) ++curr;
         }
     }
-    helper.emitFixParams(0, 1, TMO_LINEAR);
+    //helper.emitFixParams(0, 1, TMO_LINEAR);
+    helper.emitSuggestRange(0,1);
     glBindTexture(GL_TEXTURE_2D, tex);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h, GL_RGB, GL_FLOAT, (GLvoid*) image);
     glBindTexture(GL_TEXTURE_2D, 0);

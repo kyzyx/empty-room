@@ -89,9 +89,10 @@ public:
     explicit ERUIGLWidget(QWidget *parent = 0);
     ~ERUIGLWidget();
 
-    RenderManager* renderManager() { return &rendermanager; }
+    RenderManager* renderManager() { makeCurrent(); return &rendermanager; }
     ERUIRenderOptions* renderOptions() { return &renderoptions; }
 
+    void updateMeshAuxiliaryData();
     void setRoomModel(roommodel::RoomModel* model);
     void setupMeshColors();
     void setMeshManager(MeshManager* meshmanager);
@@ -151,6 +152,9 @@ public:
     }
     void lookThroughCamera(const CameraParams* cam) {
         v->lookThroughCamera(cam);
+    }
+    void updateMeshAuxiliaryData() {
+        v->updateMeshAuxiliaryData();
     }
 signals:
     void cameraSelected(int cameraindex);

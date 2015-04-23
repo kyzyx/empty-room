@@ -8,12 +8,12 @@
 #include <QStringList>
 
 SubprocessWorker::SubprocessWorker(QObject *parent) :
-    QObject(parent)
+    QObject(parent), pid(0)
 {
 }
 
 SubprocessWorker::SubprocessWorker(QObject *parent, QString cmd) :
-    QObject(parent), command(cmd)
+    QObject(parent), command(cmd), pid(0)
 {
 }
 

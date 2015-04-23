@@ -76,6 +76,8 @@ private slots:
 
     void on_saveWallsButton_clicked();
 
+    void on_computeLabelImagesButton_clicked();
+
 private:
     Ui::MainWindow *ui;
     ImageManager* imgr;

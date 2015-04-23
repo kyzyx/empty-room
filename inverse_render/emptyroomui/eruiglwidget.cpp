@@ -42,6 +42,12 @@ void ERUIGLWidget::setRoomModel(roommodel::RoomModel* model) {
     update();
 }
 
+void ERUIGLWidget::updateMeshAuxiliaryData() {
+    makeCurrent();
+    rendermanager.updateMeshAuxiliaryData();
+    update();
+}
+
 void ERUIGLWidget::setupCameras(ImageManager* imgr) {
     int inc = 1;
     if (imgr->size() > MAX_CAMERAS) {

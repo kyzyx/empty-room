@@ -424,8 +424,10 @@ void MainWindow::wallfindingDone() {
     room = new roommodel::RoomModel;
     roommodel::load(*room, temproommodel->fileName().toStdString());
     ui->meshWidget->setRoomModel(room);
+    ui->meshWidget->updateMeshAuxiliaryData();
     ui->showRoomCheckbox->setEnabled(true);
     ui->saveWallsButton->setEnabled(true);
+    ui->computeLabelImagesButton->setEnabled(true);
     //delete temproommodel;
 }
 
@@ -482,4 +484,17 @@ void MainWindow::on_saveWallsButton_clicked()
             roommodel::save(*room, datafilename.toStdString());
         }
     }
+}
+
+void MainWindow::on_computeLabelImagesButton_clicked()
+{
+    if (!room) return;
+    progressbar->setValue(0);
+    for (int i = 0; i < imgr->size(); ++i) {
+        progressbar->setValue(100*i/imgr->size());
+        ui->meshWidget->renderManager()->createLabelImage(imgr->getCamera(i), imgr->getImageWriteable("labels",i));
+        int f = imgr->getFlags("labels", i);
+        imgr->setFlags("labels", i, f|ImageManager::DF_INITIALIZED);
+    }
+    progressbar->setValue(100);
 }

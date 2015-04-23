@@ -507,6 +507,28 @@
              <number>10</number>
             </property>
             <item>
+             <widget class="QPushButton" name="computeLabelImagesButton">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Compute Label Images</string>
+              </property>
+             </widget>
+            </item>
+            <item>
              <widget class="QPushButton" name="inverseButton">
               <property name="enabled">
                <bool>false</bool>

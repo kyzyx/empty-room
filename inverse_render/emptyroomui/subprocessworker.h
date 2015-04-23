@@ -19,7 +19,7 @@ signals:
     void error(QString errstring);
 
 public slots:
-    void run();
+    virtual void run();
     void terminate();
 };
 

@@ -385,7 +385,7 @@ void RenderManager::lookThroughCamera(const CameraParams* cam) {
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     R3Point at = p + towards;
-    gluLookAt(p[0], p[1], p[2], at[0], at[1], at[2], -up[0], -up[1], -up[2]); // OpenGL is lower left origin
+    gluLookAt(p[0], p[1], p[2], at[0], at[1], at[2], up[0], up[1], up[2]);
 }
 
 void RenderManager::resizeReadFromRenderBuffer(int width, int height) {
@@ -422,8 +422,11 @@ void RenderManager::createLabelImage(const CameraParams* cam, void* image) {
     char* ret = (char*) image;
     float* rendered = new float[w*h*3];
     readFromRender(cam, rendered, VIEW_LABELS, true);
-    for (int i = 0; i < w*h; ++i) {
-        ret[i] = (char) *reinterpret_cast<int*>(&rendered[3*i+2]);
+    for (int i = 0; i < h; ++i) {
+        for (int j = 0; j < w; ++j) {
+            int idx = i*w+j;
+            ret[i*w+j] = (char) *reinterpret_cast<int*>(&rendered[3*idx+2]);
+        }
     }
     delete [] rendered;
 }
