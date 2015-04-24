@@ -5,13 +5,18 @@ layout(triangle_strip,max_vertices=3) out;
 flat out vec4 flatcolor;
 
 in vec4 computed_color[];
-in ivec3 id[];
 
 uniform ivec3 auxdata;
 
+bool inrange(vec3 v) {
+    return any(greaterThan(v, vec3(auxdata).xxx)) && all(lessThan(v, vec3(auxdata).yyy));
+}
 void main(void) {
-    if (id[0].r > 0 && id[0].r == id[1].r && id[1].r == id[2].r) {
-        flatcolor = computed_color[0];
+    if (inrange(computed_color[0].rgb)
+     && inrange(computed_color[1].rgb) 
+     && inrange(computed_color[2].rgb))
+    {
+        flatcolor = vec4(0,0,1,0.5);
         for (int i = 0; i < 3; i++) {
             gl_Position = gl_in[i].gl_Position;
             EmitVertex();

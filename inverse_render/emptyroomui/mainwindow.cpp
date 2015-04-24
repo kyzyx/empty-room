@@ -410,10 +410,13 @@ void MainWindow::samplesLoaded() {
         ui->meshWidget->setupMeshColors();
     }
     ui->actionSave_Reprojection_Results->setEnabled(true);
-    ui->overlayLightsCheckbox->setEnabled(true);
-    connect(ui->overlayLightsCheckbox, SIGNAL(toggled(bool)), ui->meshWidget->renderOptions(), SLOT(setOverlayLights(bool)));
+
+    ui->lightsliderlabel->setEnabled(true);
+    ui->overlayThresholdCheckbox->setEnabled(true);
+    connect(ui->overlayThresholdCheckbox, SIGNAL(toggled(bool)), ui->meshWidget->renderOptions(), SLOT(setOverlayThresholded(bool)));
     ui->commitLightsButton->setEnabled(true);
     ui->lightThresholdSlider->setEnabled(true);
+    connect(ui->lightThresholdSlider, SIGNAL(valueChanged(int)), ui->meshWidget->renderOptions(), SLOT(setLowerThreshold(int)));
 }
 void MainWindow::partialVertexDataLoaded(int percent) {
     if (percent == 100) {
@@ -429,6 +432,8 @@ void MainWindow::labelDataLoaded() {
     ui->computeLabelImagesButton->setEnabled(true);
     ui->meshWidget->updateMeshAuxiliaryData();
     ui->actionSave_Per_Vertex_Labels->setEnabled(true);
+    ui->overlayLightsCheckbox->setEnabled(true);
+    connect(ui->overlayLightsCheckbox, SIGNAL(toggled(bool)), ui->meshWidget->renderOptions(), SLOT(setOverlayLights(bool)));
 }
 
 void MainWindow::loadVertexSampleData(QString meshfile, QString datafile) {
@@ -473,6 +478,22 @@ void MainWindow::on_reprojectButton_clicked()
     connect(thread, SIGNAL(started()), w, SLOT(run()));
     connect(w, SIGNAL(percentChanged(int)), progressbar, SLOT(setValue(int)));
     connect(w, SIGNAL(percentChanged(int)), this, SLOT(partialVertexDataLoaded(int)));
+    w->moveToThread(thread);
+    thread->start();
+}
+
+void MainWindow::on_commitLightsButton_clicked()
+{
+    QString cmd = settings->value("reproject_binary", "reprojectapp -camfile %1 -meshfile %2 -p").toString();
+    cmd = cmd.arg(camfilename, meshfilename);
+    QString extraflags = " -label_lights_only -hdr_threshold %1";
+    cmd += extraflags.arg(QString::number(ui->lightThresholdSlider->value()));
+    progressbar->setValue(0);
+    SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
+    workers.push_back(w);
+    QThread* thread = new QThread;
+    connect(thread, SIGNAL(started()), w, SLOT(run()));
+    connect(w, SIGNAL(done()), this, SLOT(labelDataLoaded()));
     w->moveToThread(thread);
     thread->start();
 }

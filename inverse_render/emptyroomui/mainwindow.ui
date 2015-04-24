@@ -466,8 +466,11 @@
              <layout class="QHBoxLayout" name="tab3_layout_1">
               <item>
                <widget class="QCheckBox" name="overlayLightsCheckbox">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
                 <property name="text">
-                 <string>Highlight Lights</string>
+                 <string>Highlight Identified Lights</string>
                 </property>
                </widget>
               </item>
@@ -498,9 +501,38 @@
             <item>
              <layout class="QHBoxLayout" name="tab3_layout_2">
               <item>
-               <widget class="QLabel" name="lightsliderlabel">
+               <widget class="QCheckBox" name="overlayThresholdCheckbox">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
                 <property name="text">
-                 <string>Minimum Radiance for Lights</string>
+                 <string>Highlight Potential Lights</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer_2">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeType">
+                 <enum>QSizePolicy::Preferred</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>20</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item>
+               <widget class="QLabel" name="lightsliderlabel">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
+                <property name="text">
+                 <string>Minimum Light Radiance</string>
                 </property>
                </widget>
               </item>
@@ -516,10 +548,10 @@
                  </sizepolicy>
                 </property>
                 <property name="minimum">
-                 <number>0</number>
+                 <number>1</number>
                 </property>
                 <property name="maximum">
-                 <number>100</number>
+                 <number>101</number>
                 </property>
                 <property name="singleStep">
                  <number>1</number>

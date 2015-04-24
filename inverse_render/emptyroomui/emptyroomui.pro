@@ -50,7 +50,9 @@ OTHER_FILES += \
     $$PWD/../shaders/default.v.glsl \
     $$PWD/../shaders/overlay.v.glsl \
     $$PWD/../shaders/labels.g.glsl \
-    $$PWD/../shaders/overlay.g.glsl
+    $$PWD/../shaders/overlay.g.glsl \
+    $$PWD/../shaders/threshold.v.glsl \
+    $$PWD/../shaders/threshold.g.glsl
 
 QMAKE_POST_LINK += cp $$PWD/../shaders/* $$OUT_PWD/
 

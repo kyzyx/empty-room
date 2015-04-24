@@ -20,8 +20,8 @@ public:
         renderRoom(false),
         cameraRenderFormat(CAMRENDER_FRUSTUM),
         meshRenderFormat(VIEW_DEFAULT),
-        overlayFormat(0)
-    {;}
+        overlayLoThreshold(0), overlayHiThreshold(1000)
+    { renderOverlay.resize(NUM_VIEW_TYPES, false);}
 
 public:
     bool shouldRenderAnyCameras() {
@@ -38,13 +38,16 @@ public:
     int getMeshRenderFormat() {
         return meshRenderFormat;
     }
-    int getOverlayFormat() {
-        return overlayFormat;
+    int getLowerThreshold() {
+        return overlayLoThreshold;
+    }
+    int getUpperThreshold() {
+        return overlayHiThreshold;
     }
     int getOverlayLabelIndex() {
         return overlayIndex;
     }
-
+    bool shouldOverlay(int n) { return renderOverlay[n]; }
     bool shouldRenderMesh() { return renderMesh; }
     bool shouldRenderRoom() { return renderRoom; }
 
@@ -59,11 +62,12 @@ protected:
     bool renderCurrentCamera;
     bool renderMesh;
     bool renderRoom;
+    std::vector<bool> renderOverlay;
 
     int cameraRenderFormat;
     int meshRenderFormat;
-    int overlayFormat;
     int overlayIndex;
+    int overlayLoThreshold, overlayHiThreshold;
 
 public slots:
     void setRenderCameras(bool shouldRenderCamera) {
@@ -92,11 +96,29 @@ public slots:
     }
     void setOverlayLights(bool overlay) {
         if (overlay) {
-            overlayFormat = VIEW_LABELOVERLAY;
+            renderOverlay[VIEW_LABELOVERLAY] = true;
             overlayIndex = 1;
         } else {
-            overlayFormat = 0;
+            renderOverlay[VIEW_LABELOVERLAY] = false;
         }
+        if (qglw) qglw->update();
+    }
+    void setOverlayThresholded(bool overlay) {
+        if (overlay) {
+            renderOverlay[VIEW_THRESHOLD] = true;
+        } else {
+            renderOverlay[VIEW_THRESHOLD] = false;
+        }
+        if (qglw) qglw->update();
+    }
+
+    void setLowerThreshold(int t) {
+        overlayLoThreshold = t;
+        if (qglw) qglw->update();
+    }
+    void setUpperThreshold(int t) {
+        overlayHiThreshold = t;
+        if (qglw) qglw->update();
     }
 };
 

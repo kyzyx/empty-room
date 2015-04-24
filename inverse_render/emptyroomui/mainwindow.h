@@ -82,6 +82,8 @@ private slots:
     void wallfindingDone();
     void partialVertexDataLoaded(int percent);
 
+    void on_commitLightsButton_clicked();
+
 private:
     Ui::MainWindow *ui;
     ImageManager* imgr;

@@ -57,6 +57,9 @@ void RenderManager::initShaderTypes() {
     shaders.push_back(ShaderType("overlay",
         "Overlay Labels",
         SHADERFLAGS_PASS|SHADERFLAGS_USESH_FLAT_FRAG));
+    shaders.push_back(ShaderType("threshold",
+        "Highlight pixels within a threshold",
+        SHADERFLAGS_USEU_COLOR|SHADERFLAGS_USEU_AUX|SHADERFLAGS_PASS|SHADERFLAGS_USESH_FLAT_FRAG));
 }
 
 RenderManager::RenderManager(MeshManager* meshmanager) {

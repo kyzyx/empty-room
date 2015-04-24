@@ -10,19 +10,23 @@ using namespace std;
 
 class ReprojectApp : public InvrenderApp {
     public:
-        ReprojectApp() : projectonly(-1), hdr_threshold(10), minlightsize(100) {;}
+        ReprojectApp() : projectonly(-1), hdr_threshold(10), minlightsize(100), dosamples(true) {;}
 
         virtual int run() {
-            if (projectonly < 0) {
-                reproject(*imgr, *mmgr, hdr_threshold, boost::bind(&ReprojectApp::refreshingProgressFn, this, _1));
+            if (dosamples) {
+                if (projectonly < 0) {
+                    reproject(*imgr, *mmgr, hdr_threshold, boost::bind(&ReprojectApp::refreshingProgressFn, this, _1));
+                } else {
+                    reproject((const float*) imgr->getImage(projectonly),
+                              (const float*) imgr->getImage("confidence", projectonly),
+                              (const float*) imgr->getImage("depth", projectonly),
+                              imgr->getCamera(projectonly),
+                              *mmgr, hdr_threshold);
+                }
+                mmgr->commitSamples();
             } else {
-                reproject((const float*) imgr->getImage(projectonly),
-                          (const float*) imgr->getImage("confidence", projectonly),
-                          (const float*) imgr->getImage("depth", projectonly),
-                          imgr->getCamera(projectonly),
-                          *mmgr, hdr_threshold);
+                mmgr->loadSamples();
             }
-            mmgr->commitSamples();
             int numlights = clusterLights(*mmgr, hdr_threshold, minlightsize);
             emitDone();
             return 0;
@@ -36,9 +40,11 @@ class ReprojectApp : public InvrenderApp {
 cout << "       -project n: Reproject only image n\n" << endl;
 cout << "       -hdr_threshold f: Set intensity threshold for lights as f\n" << endl;
 cout << "       -min_light_size n: Minimum number of vertices in a light\n" << endl;
+cout << "       -label_lights_only: Don't reproject, just label lights\n" << endl;
         }
         virtual int _parseargs(int argc, char** argv) {
             if (!mmgr || !imgr) return 0;
+            if (pcl::console::find_switch(argc, argv, "-label_lights_only")) dosamples = false;
             if (pcl::console::find_argument(argc, argv, "-project") >= 0) {
                 pcl::console::parse_argument(argc, argv, "-project", projectonly);
             }
@@ -54,6 +60,7 @@ cout << "       -min_light_size n: Minimum number of vertices in a light\n" << e
         int projectonly;
         double hdr_threshold;
         int minlightsize;
+        bool dosamples;
 };
 
 int main(int argc, char** argv) {

@@ -12,6 +12,8 @@ enum {
     VIEW_SINGLEIMAGE,
     VIEW_LABELS,
     VIEW_LABELOVERLAY,
+    VIEW_THRESHOLD,
+    NUM_VIEW_TYPES,
 };
 
 enum {

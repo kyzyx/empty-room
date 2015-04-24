@@ -152,15 +152,20 @@ void ERUIGLWidget::draw()
             glDisable(GL_LIGHTING);
         }
         if (renderoptions.shouldRenderMesh()) {
-            if (renderoptions.getOverlayFormat() == VIEW_LABELOVERLAY) {
-                glEnable(GL_BLEND);
-                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            if (renderoptions.shouldOverlay(VIEW_THRESHOLD)) {
+                rendermanager.setShaderAuxInt(renderoptions.getLowerThreshold(),0);
+                rendermanager.setShaderAuxInt(renderoptions.getUpperThreshold(),1);
+                rendermanager.renderMesh(VIEW_THRESHOLD);
+            }
+            if (renderoptions.shouldOverlay(VIEW_LABELOVERLAY)) {
                 for (int i = 0; i < 3; ++i) {
                     rendermanager.setShaderAuxInt(i==renderoptions.getOverlayLabelIndex()?1:0,i);
                 }
-                rendermanager.renderMesh(renderoptions.getOverlayFormat());
-                glDisable(GL_BLEND);
+                rendermanager.renderMesh(VIEW_LABELOVERLAY);
             }
+            glDisable(GL_BLEND);
         }
    // }
 }
