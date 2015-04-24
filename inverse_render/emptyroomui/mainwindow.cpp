@@ -170,6 +170,9 @@ void MainWindow::updateImage(int idx, int type)
     ui->meshWidget->highlightCamera(idx);
     if (ui->autoLookCheckbox->isChecked()) ui->meshWidget->lookThroughCamera(imgr->getCamera(idx));
 
+    if (ui->meshWidget->renderOptions()->getMeshRenderFormat() == VIEW_SINGLEIMAGE) {
+        ui->meshWidget->renderManager()->setShaderAuxInt(imageindex);
+    }
     if (imageindex == 0) ui->prevImageButton->setEnabled(false);
     else ui->prevImageButton->setEnabled(true);
     if (imageindex == imgr->size() - 1) ui->nextImageButton->setEnabled(false);
@@ -281,7 +284,11 @@ void MainWindow::meshLoaded() {
     ui->viewTypeComboBox->setEnabled(true);
     ui->viewTypeComboBox->clear();
     for (int i = 0; i < ui->meshWidget->renderManager()->getNumShaderTypes(); ++i) {
-        ui->viewTypeComboBox->insertItem(i, QString::fromStdString(ui->meshWidget->renderManager()->getShader(i).getDescription()));
+        if (ui->meshWidget->renderManager()->getShader(i).getFlags() & SHADERFLAGS_PASS) {
+            continue;
+        } else {
+            ui->viewTypeComboBox->insertItem(i, QString::fromStdString(ui->meshWidget->renderManager()->getShader(i).getDescription()));
+        }
     }
     connect(ui->viewTypeComboBox, SIGNAL(currentIndexChanged(int)), ui->meshWidget->renderOptions(), SLOT(setMeshRenderFormat(int)));
     connect(ui->viewTypeComboBox, SIGNAL(currentIndexChanged(int)), ui->meshWidget, SLOT(loadSettings(int)));
@@ -403,6 +410,10 @@ void MainWindow::samplesLoaded() {
         ui->meshWidget->setupMeshColors();
     }
     ui->actionSave_Reprojection_Results->setEnabled(true);
+    ui->overlayLightsCheckbox->setEnabled(true);
+    connect(ui->overlayLightsCheckbox, SIGNAL(toggled(bool)), ui->meshWidget->renderOptions(), SLOT(setOverlayLights(bool)));
+    ui->commitLightsButton->setEnabled(true);
+    ui->lightThresholdSlider->setEnabled(true);
 }
 void MainWindow::partialVertexDataLoaded(int percent) {
     if (percent == 100) {

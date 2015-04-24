@@ -19,7 +19,8 @@ public:
         renderMesh(true),
         renderRoom(false),
         cameraRenderFormat(CAMRENDER_FRUSTUM),
-        meshRenderFormat(VIEW_DEFAULT)
+        meshRenderFormat(VIEW_DEFAULT),
+        overlayFormat(0)
     {;}
 
 public:
@@ -37,6 +38,13 @@ public:
     int getMeshRenderFormat() {
         return meshRenderFormat;
     }
+    int getOverlayFormat() {
+        return overlayFormat;
+    }
+    int getOverlayLabelIndex() {
+        return overlayIndex;
+    }
+
     bool shouldRenderMesh() { return renderMesh; }
     bool shouldRenderRoom() { return renderRoom; }
 
@@ -54,6 +62,8 @@ protected:
 
     int cameraRenderFormat;
     int meshRenderFormat;
+    int overlayFormat;
+    int overlayIndex;
 
 public slots:
     void setRenderCameras(bool shouldRenderCamera) {
@@ -79,6 +89,14 @@ public slots:
     void setMeshRenderFormat(int meshformat) {
         meshRenderFormat = meshformat;
         if (qglw) qglw->update();
+    }
+    void setOverlayLights(bool overlay) {
+        if (overlay) {
+            overlayFormat = VIEW_LABELOVERLAY;
+            overlayIndex = 1;
+        } else {
+            overlayFormat = 0;
+        }
     }
 };
 

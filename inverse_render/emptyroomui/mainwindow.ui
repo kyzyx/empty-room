@@ -126,7 +126,7 @@
              <number>10</number>
             </property>
             <item>
-             <layout class="QHBoxLayout" name="tab0_layout_1">
+             <layout class="QHBoxLayout" name="tab0_layout1">
               <item>
                <widget class="QCheckBox" name="autoLookCheckbox">
                 <property name="enabled">
@@ -166,7 +166,7 @@
              </layout>
             </item>
             <item>
-             <layout class="QHBoxLayout" name="horizontalLayout">
+             <layout class="QHBoxLayout" name="tab0_layout2">
               <item>
                <widget class="QCheckBox" name="showMeshCheckbox">
                 <property name="enabled">
@@ -445,11 +445,105 @@
             </item>
            </layout>
           </widget>
+          <widget class="QWidget" name="LightTab">
+           <attribute name="title">
+            <string>Light Identification</string>
+           </attribute>
+           <layout class="QVBoxLayout" name="tab3_layout">
+            <property name="leftMargin">
+             <number>10</number>
+            </property>
+            <property name="topMargin">
+             <number>10</number>
+            </property>
+            <property name="rightMargin">
+             <number>10</number>
+            </property>
+            <property name="bottomMargin">
+             <number>10</number>
+            </property>
+            <item>
+             <layout class="QHBoxLayout" name="tab3_layout_1">
+              <item>
+               <widget class="QCheckBox" name="overlayLightsCheckbox">
+                <property name="text">
+                 <string>Highlight Lights</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="commitLightsButton">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>30</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Commit Lights</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="tab3_layout_2">
+              <item>
+               <widget class="QLabel" name="lightsliderlabel">
+                <property name="text">
+                 <string>Minimum Radiance for Lights</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QSlider" name="lightThresholdSlider">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimum">
+                 <number>0</number>
+                </property>
+                <property name="maximum">
+                 <number>100</number>
+                </property>
+                <property name="singleStep">
+                 <number>1</number>
+                </property>
+                <property name="pageStep">
+                 <number>5</number>
+                </property>
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="tickPosition">
+                 <enum>QSlider::NoTicks</enum>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </widget>
           <widget class="QWidget" name="InverseTab">
            <attribute name="title">
             <string>Inverse Rendering</string>
            </attribute>
-           <layout class="QHBoxLayout" name="tab3_layout">
+           <layout class="QHBoxLayout" name="tab4_layout">
             <property name="leftMargin">
              <number>10</number>
             </property>

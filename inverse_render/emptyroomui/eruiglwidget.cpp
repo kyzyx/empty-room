@@ -151,6 +151,17 @@ void ERUIGLWidget::draw()
             }
             glDisable(GL_LIGHTING);
         }
+        if (renderoptions.shouldRenderMesh()) {
+            if (renderoptions.getOverlayFormat() == VIEW_LABELOVERLAY) {
+                glEnable(GL_BLEND);
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+                for (int i = 0; i < 3; ++i) {
+                    rendermanager.setShaderAuxInt(i==renderoptions.getOverlayLabelIndex()?1:0,i);
+                }
+                rendermanager.renderMesh(renderoptions.getOverlayFormat());
+                glDisable(GL_BLEND);
+            }
+        }
    // }
 }
 

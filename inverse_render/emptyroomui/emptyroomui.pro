@@ -46,9 +46,11 @@ OTHER_FILES += \
     $$PWD/../shaders/avg.v.glsl \
     $$PWD/../shaders/labels.v.glsl \
     $$PWD/../shaders/normals.v.glsl \
-    $$PWD/../shaders/singleimage.v.glsl
+    $$PWD/../shaders/singleimage.v.glsl \
+    $$PWD/../shaders/default.v.glsl \
+    $$PWD/../shaders/overlay.v.glsl \
+    $$PWD/../shaders/labels.g.glsl \
+    $$PWD/../shaders/overlay.g.glsl
 
 QMAKE_POST_LINK += cp $$PWD/../shaders/* $$OUT_PWD/
 
-DISTFILES += \
-    ../shaders/default.v.glsl
