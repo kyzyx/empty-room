@@ -11,6 +11,7 @@ enum {
     VIEW_AVERAGE,
     VIEW_SINGLEIMAGE,
     VIEW_LABELS,
+    VIEW_LABELOVERLAY,
 };
 
 enum {
@@ -25,11 +26,13 @@ enum {
 };
 
 enum {
-    SHADERFLAGS_USES_COLOR_UNIFORM=1,
-    SHADERFLAGS_USES_ANGLES_UNIFORM=2,
-    SHADERFLAGS_USES_AUX_UNIFORM=4,
-    SHADERFLAGS_USES_ALL_UNIFORMS=7,
-    SHADERFLAGS_USE_FLAT_FRAG_SHADER=32,
+    SHADERFLAGS_USEU_COLOR=1,
+    SHADERFLAGS_USEU_ANGLES=2,
+    SHADERFLAGS_USEU_AUX=4,
+    SHADERFLAGS_USEU_ALL=7,
+    SHADERFLAGS_USESH_FLAT_FRAG=32,
+    SHADERFLAGS_PASS=64,
+    SHADERFLAGS_USESH_FILTER_GEOM=128,
 };
 
 class ShaderType {
@@ -48,6 +51,7 @@ class ShaderType {
         GLuint getProgID() const { return progid; }
         GLuint projectionUniform() const { return uniforms[UNIFORM_PROJECTION_MATRIX]; }
         GLuint modelviewUniform() const { return uniforms[UNIFORM_MODELVIEW_MATRIX]; }
+        GLuint getUniform(int i) const { return uniforms[i]; }
     private:
         // Descriptive Variables
         std::string n;
@@ -84,6 +88,8 @@ public:
     void createLabelImage(const CameraParams* cam, void* image);
     const ShaderType& getShader(int n) const { return shaders[n]; }
     int getNumShaderTypes() const { return shaders.size(); }
+
+    void setShaderAuxInt(int aux, int i=0) { auxint[i] = aux; }
 protected:
     void init();
     void initShaderTypes();
@@ -95,6 +101,8 @@ protected:
     roommodel::RoomModel* room;
     R3Vector trans;
     int numroomtriangles;
+
+    GLint auxint[3];
 
     // OpenGL object ids
     //   Mesh geometry info

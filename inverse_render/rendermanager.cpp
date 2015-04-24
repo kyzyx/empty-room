@@ -17,8 +17,8 @@ std::string flatfragshadername = "flat.f.glsl";
 std::string defaultfragshadername = "default.f.glsl";
 
 void ShaderType::init() {
-    if (f&SHADERFLAGS_USE_FLAT_FRAG_SHADER) {
-        progid = LoadShaderFromFiles(n+".v.glsl", flatfragshadername);
+    if (f&SHADERFLAGS_USESH_FLAT_FRAG) {
+        progid = LoadShaderFromFiles(n+".v.glsl", flatfragshadername, n+".g.glsl");
     } else {
         progid = LoadShaderFromFiles(n+".v.glsl", defaultfragshadername);
     }
@@ -45,9 +45,18 @@ void ShaderType::init() {
 void RenderManager::initShaderTypes() {
     shaders.push_back(ShaderType("default", "Grayscale Lit"));
     shaders.push_back(ShaderType("normals", "Normals"));
-    shaders.push_back(ShaderType("avg", "Weighted Average of Samples",  SHADERFLAGS_USES_COLOR_UNIFORM|SHADERFLAGS_USES_AUX_UNIFORM));
-    shaders.push_back(ShaderType("singleimage", "Reprojection of Single Image", SHADERFLAGS_USES_COLOR_UNIFORM|SHADERFLAGS_USES_AUX_UNIFORM));
-    shaders.push_back(ShaderType("labels", "Per-Vertex Light IDs, Visibility, and Auxiliary Labels", SHADERFLAGS_USE_FLAT_FRAG_SHADER));
+    shaders.push_back(ShaderType("avg",
+        "Weighted Average of Samples",
+        SHADERFLAGS_USEU_COLOR|SHADERFLAGS_USEU_AUX));
+    shaders.push_back(ShaderType("singleimage",
+        "Reprojection of Single Image",
+        SHADERFLAGS_USEU_COLOR|SHADERFLAGS_USEU_AUX));
+    shaders.push_back(ShaderType("labels",
+        "Per-Vertex Light IDs, Visibility, and Auxiliary Labels",
+        SHADERFLAGS_USESH_FLAT_FRAG));
+    shaders.push_back(ShaderType("overlay",
+        "Overlay Labels",
+        SHADERFLAGS_PASS|SHADERFLAGS_USESH_FLAT_FRAG));
 }
 
 RenderManager::RenderManager(MeshManager* meshmanager) {
@@ -330,6 +339,7 @@ void RenderManager::renderMesh(int rendermode) {
     glGetFloatv(GL_PROJECTION_MATRIX, projection);
     glUniformMatrix4fv(shaders[rendermode].projectionUniform(), 1, GL_FALSE, projection);
     glUniformMatrix4fv(shaders[rendermode].modelviewUniform(), 1, GL_FALSE, modelview);
+    glUniform3iv(shaders[rendermode].getUniform(UNIFORM_AUXDATA), 1, auxint);
 
     glBindVertexArray(vaoid);
     glDrawElements(GL_TRIANGLES, mmgr->NFaces()*3, GL_UNSIGNED_INT, 0);

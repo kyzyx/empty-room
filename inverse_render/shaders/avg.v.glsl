@@ -18,7 +18,7 @@ void main(void) {
     int start = (gl_VertexID%256)*32;
     int row = gl_VertexID/256;
 
-    for (int i = 0; i < 16; ++i) {
+    for (int i = 0; i < 8; ++i) {
         ivec2 coord = ivec2(start+i, row);
         vec4 a = texelFetch(aux, coord, 0);
         //float currweight = abs(a.r*a.g*dot(gl_Normal,texture2D(angles,coord).rgb));

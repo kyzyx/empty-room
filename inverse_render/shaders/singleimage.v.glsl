@@ -8,7 +8,7 @@ uniform sampler2D colors;
 uniform sampler2D angles;
 uniform sampler2D aux;
 
-uniform int auxdata;
+uniform ivec3 auxdata;
 
 layout (location=0) in vec3 position;
 layout (location=1) in vec3 normal;
@@ -27,7 +27,7 @@ void main(void) {
         uint id = bitfieldExtract(data, 0, 16);
         uint label = bitfieldExtract(data, 16, 16);
         float currweight = abs(a.r*a.g);
-        computed_color += texelFetch(colors, coord, 0)*float(id==auxdata);
+        computed_color += texelFetch(colors, coord, 0)*float(id==auxdata.r);
     }
     computed_color.a = 1;
 }
