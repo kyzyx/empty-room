@@ -35,13 +35,13 @@ using namespace pcl;
 // Constructors and initialization
 // --------------------------------------------------------------
 MeshManager::MeshManager(int numvertices, int numfaces)
-    : nvertices(numvertices), nfaces(numfaces)
+    : nvertices(numvertices), nfaces(numfaces), r3meshinitialized(false)
 {
     defaultinit("");
     initializeSharedMemory();
 }
 MeshManager::MeshManager(const string& meshfile)
-    : nvertices(0), nfaces(0)
+    : nvertices(0), nfaces(0), r3meshinitialized(false)
 {
     readHeader(meshfile);
     defaultinit(meshfile);
@@ -86,6 +86,7 @@ void MeshManager::readHeader(const string& meshfile) {
 }
 
 bool MeshManager::initializeR3Mesh() {
+    if (r3meshinitialized) return true;
     m = new R3Mesh();
     if (!m) return false;
     for (int i = 0; i < nvertices; ++i) {
@@ -96,6 +97,7 @@ bool MeshManager::initializeR3Mesh() {
                       m->Vertex(VertexOnFace(i,1)),
                       m->Vertex(VertexOnFace(i,2)));
     }
+    r3meshinitialized = true;
     return true;
 }
 
