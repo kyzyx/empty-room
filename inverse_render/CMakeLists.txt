@@ -1,15 +1,30 @@
 cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
 cmake_policy(SET CMP0015 NEW)
 project(EMPTY_ROOM)
+
+find_package(OpenGL REQUIRED)
+find_package(GLUT REQUIRED)
+include_directories(${OPENGL_INCLUDE_DIR} ${GLUT_INCLUDE_DIR})
+if(APPLE)
+    set(GLLIBS ${OPENGL_LIBRARIES})
+else()
+    find_package(GLEW REQUIRED)
+    include_directories(${GLEW_INCLUDE_DIRS})
+    set(GLLIBS ${OPENGL_LIBRARIES} ${GLEW_LIBRARIES})
+endif()
+
 find_package(PCL 1.7 REQUIRED)
-find_package(OpenCV REQUIRED)
 find_package(Boost 1.54.0 COMPONENTS system REQUIRED)
-include_directories(${Boost_INCLUDE_DIRS})
-include_directories(${PCL_INCLUDE_DIRS} . ../GAPS/)
-link_directories(${PCL_LIBRARY_DIRS} ../GAPS/R3Graphics/ ../GAPS/R3Shapes/
+include_directories(${Boost_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
+add_definitions(${PCL_DEFINITIONS})
+
+find_package(OpenCV REQUIRED)
+include_directories(. ../GAPS/)
+link_directories(${PCL_LIBRARY_DIRS}
+    ../GAPS/R3Graphics/ ../GAPS/R3Shapes/
     ../GAPS/RNBasics/ ../GAPS/R2Shapes/
     ../GAPS/jpeg/)
-add_definitions(${PCL_DEFINITIONS})
+
 add_library(memory 
     camparams.h
     rgbe.h rgbe.cpp
@@ -20,9 +35,10 @@ add_library(memory
     imageio.cpp imageio.h)
 target_link_libraries(memory ${PCL_LIBRARIES} ${Boost_LIBRARIES}
     R3Graphics.a R3Shapes.a R2Shapes.a RNBasics.a jpeg.a
-    GL GLU IlmImf Half rt)
+    ${GLLIBS} IlmImf Half rt)
 add_library(rendering
     roommodel.h RoomModel.cpp RoomModel_Internal.h
+    opengl_compat.h opengl_compat.cpp
     loadshader.h loadshader.cpp
     geometrygenerator.h geometrygenerator.cpp
     rectanglerenderer.h rectanglerenderer.cpp
@@ -30,7 +46,7 @@ add_library(rendering
     hemicuberenderer.h hemicuberenderer.cpp)
 target_link_libraries(rendering memory
     R3Graphics.a R3Shapes.a R2Shapes.a RNBasics.a jpeg.a
-    GL GLU)
+    ${GLLIBS})
 
 add_executable(dataserver dataserver.cpp)
 target_link_libraries(dataserver ${PCL_LIBRARIES} memory)
@@ -55,5 +71,5 @@ add_executable(invrender invrender.cpp
     display.cpp display.h parse_args.cpp parse_args.h rerender.cpp rerender.h)
 target_link_libraries(invrender ${PCL_LIBRARIES} ${OpenCV_LIBS}
     R3Graphics.a R3Shapes.a R2Shapes.a RNBasics.a
-    jpeg.a GL glut GLU GLEW IlmImf Half memory rendering)
+    jpeg.a ${GLLIBS} ${GLUT_LIBRARY} IlmImf Half memory rendering)
 set(CMAKE_CXX_FLAGS "-Wno-deprecated -std=c++0x")

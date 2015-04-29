@@ -1,4 +1,4 @@
-#include <GL/glew.h>
+#include "opengl_compat.h"
 #include "eruiglwidget.h"
 #include "R3Graphics/R3Graphics.h"
 
@@ -70,7 +70,7 @@ void ERUIGLWidget::highlightCamera(int cameraindex) {
 
 void ERUIGLWidget::init()
 {
-  glewInit();
+  openglInit();
   restoreStateFromFile();
   setShortcut(EXIT_VIEWER, 0);
   setShortcut(DRAW_GRID, 0);

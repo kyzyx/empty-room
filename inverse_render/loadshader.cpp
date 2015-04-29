@@ -1,4 +1,3 @@
-#include <GL/glew.h>
 #include "loadshader.h"
 #include <iostream>
 #include <fstream>

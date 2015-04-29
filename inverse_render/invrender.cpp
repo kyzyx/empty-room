@@ -1,5 +1,4 @@
-#include <GL/glew.h>
-#include <GL/glut.h>
+#include "opengl_compat.h"
 #include <pcl/io/io.h>
 #include <pcl/io/vtk_lib_io.h>
 #include <pcl/point_types.h>
@@ -32,11 +31,7 @@ int main(int argc, char* argv[]) {
     glutInitWindowSize(1,1);
     glutCreateWindow("");
     glutHideWindow();
-    GLenum err = glewInit();
-    if (err != GLEW_OK) {
-        cerr << "Error:" << glewGetErrorString(err) << endl;
-        return 1;
-    }
+    if (!openglInit()) return 1;
     if (!parseargs(argc, argv)) return 1;
 
     cout << "Loading mesh geometry...." << endl;

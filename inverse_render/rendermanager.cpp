@@ -1,4 +1,4 @@
-#include <GL/glew.h>
+#include "opengl_compat.h"
 #include "rendermanager.h"
 #include "geometrygenerator.h"
 #include "loadshader.h"
@@ -81,7 +81,7 @@ RenderManager::~RenderManager() {
 }
 
 void RenderManager::init() {
-    glewInit();
+    openglInit();
 
     glClampColor(GL_CLAMP_READ_COLOR, GL_FALSE);
     glClampColor(GL_CLAMP_VERTEX_COLOR, GL_FALSE);

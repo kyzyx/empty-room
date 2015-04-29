@@ -28,12 +28,17 @@ HEADERS  += mainwindow.h \
 
 FORMS    += mainwindow.ui
 
-unix: LIBS += -L$$PWD/../build/ \
+unix: {
+    LIBS += -L$$PWD/../build/ \
         -L$$PWD/../../GAPS/R3Graphics/ -L$$PWD/../../GAPS/R3Shapes/ -L$$PWD/../../GAPS/RNBasics/ -L$$PWD/../../GAPS/R2Shapes/ \
         -lrendering -lmemory -lHalf -lIlmImf \
         -lR3Graphics -lR3Shapes -lR2Shapes -lRNBasics -ljpeg -lpng \
-        -lGLU -lGLEW -lrt -lboost_system -lboost_filesystem \
+        -lrt -lboost_system -lboost_filesystem \
         -lQGLViewer -lpcl_common -lpcl_io -lpcl_io_ply
+}
+unix:!macx {
+    LIBS += -lGLEW
+}
 INCLUDEPATH += $$PWD/../
 INCLUDEPATH += $$PWD/../../GAPS/
 DEPENDPATH += $$PWD/../

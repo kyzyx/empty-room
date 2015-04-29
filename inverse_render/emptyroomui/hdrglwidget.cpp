@@ -1,8 +1,7 @@
-#include <GL/glew.h>
+#include "loadshader.h"
+#include "hdrglwidget.h"
 #include <iostream>
 #include <fstream>
-#include "hdrglwidget.h"
-#include "loadshader.h"
 
 using namespace std;
 

@@ -1,6 +1,6 @@
 #ifndef LOADSHADER_H
 #define LOADSHADER_H
-#include "GL/gl.h"
+#include "opengl_compat.h"
 #include <string>
 std::string readFile(const char *filePath);
 GLuint LoadShader(const char *vertShaderSrc, const char *fragShaderSrc, const char *geomShaderSrc=NULL);
