@@ -1,4 +1,4 @@
-#version 430
+#version 400
 
 layout(triangles) in;
 layout(triangle_strip,max_vertices=3) out;
@@ -18,5 +18,4 @@ void main(void) {
         EmitVertex();
     }
     EndPrimitive();
-    //if (id[0] > 0 && id[0] == id[1] && id[1] == id[2])
 }

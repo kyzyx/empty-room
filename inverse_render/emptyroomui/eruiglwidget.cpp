@@ -143,17 +143,17 @@ void ERUIGLWidget::draw()
             for (size_t i = 0; i < cameras.size(); ++i) {
                 if (renderoptions.getCameraFormat(i == selectedCamera)) {
                     if (i == selectedCamera)
-                        glColor3f(0,100,100);
+                        glColor4f(0,1,1,0.5);
                     else
-                        glColor3f(0,100,0);
+                        glColor4f(0,1,0,0.5);
                     renderCamera(cameras[i]);
                 }
             }
             glDisable(GL_LIGHTING);
         }
         if (renderoptions.shouldRenderMesh()) {
-            glEnable(GL_BLEND);
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            //glEnable(GL_BLEND);
+            //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             if (renderoptions.shouldOverlay(VIEW_THRESHOLD)) {
                 rendermanager.setShaderAuxInt(renderoptions.getLowerThreshold(),0);
                 rendermanager.setShaderAuxInt(renderoptions.getUpperThreshold(),1);
@@ -165,7 +165,7 @@ void ERUIGLWidget::draw()
                 }
                 rendermanager.renderMesh(VIEW_LABELOVERLAY);
             }
-            glDisable(GL_BLEND);
+            //glDisable(GL_BLEND);
         }
    // }
 }

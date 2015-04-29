@@ -32,7 +32,8 @@ static const char* shadertext[NUM_TMOS] = {
     "out vec4 color;\n" \
     "void main(void) {\n" \
         "vec4 f = texture2D(rendered_image, f_texcoord);\n" \
-        "color = vec4(channelselect,1)*clamp((f-hdr_bounds[0])/(hdr_bounds[1]-hdr_bounds[0]), 0, 1);\n" \
+        "if (f.a < 0.8) color = vec4(channelselect,1)*f;\n" \
+        "else color = vec4(channelselect,1)*clamp((f-hdr_bounds[0])/(hdr_bounds[1]-hdr_bounds[0]), 0, 1);\n" \
     "}",
     // Logarithmic shader
     "#version 400\n" \
@@ -42,9 +43,10 @@ static const char* shadertext[NUM_TMOS] = {
     "uniform vec3 channelselect;\n" \
     "out vec4 color;\n" \
     "void main(void) {\n" \
-        "vec4 f = log(texture2D(rendered_image, f_texcoord));\n" \
+        "vec4 f = texture2D(rendered_image, f_texcoord);\n" \
         "vec3 lb = log(hdr_bounds);\n" \
-        "color = vec4(channelselect,1)*clamp((f-lb[0])/(lb[1]-lb[0]), 0, 1);\n" \
+        "if (f.a < 0.8) color = vec4(channelselect,1)*f;\n" \
+        "else color = vec4(channelselect,1)*clamp((log(f)-lb[0])/(lb[1]-lb[0]), 0, 1);\n" \
     "}",
     // Gamma shader
     "#version 400\n" \
@@ -55,7 +57,8 @@ static const char* shadertext[NUM_TMOS] = {
     "out vec4 color;\n" \
     "void main(void) {\n" \
         "vec4 f = texture2D(rendered_image, f_texcoord);\n" \
-        "color = vec4(channelselect,1)*clamp(pow((f-hdr_bounds[0])/(hdr_bounds[1]-hdr_bounds[0]),hdr_bounds[2]*vec4(1,1,1,1)), 0, 1);\n" \
+        "if (f.a < 0.8) color = vec4(channelselect,1)*f;\n" \
+        "else color = vec4(channelselect,1)*clamp(pow((f-hdr_bounds[0])/(hdr_bounds[1]-hdr_bounds[0]),hdr_bounds[2]*vec4(1,1,1,1)), 0, 1);\n" \
     "}",
     // Float-as-int shader
     "#version 400\n" \
@@ -65,8 +68,9 @@ static const char* shadertext[NUM_TMOS] = {
     "uniform vec3 channelselect;\n" \
     "out vec4 color;\n" \
     "void main(void) {\n" \
-        "ivec4 f = floatBitsToInt(texture2D(rendered_image, f_texcoord));\n" \
-        "color = vec4(channelselect,1)*clamp((f-hdr_bounds[0])/(hdr_bounds[1]-hdr_bounds[0]), 0, 1);\n" \
+        "vec4 f = texture2D(rendered_image, f_texcoord);\n" \
+        "if (f.a < 0.8) color = vec4(channelselect,1)*f;\n" \
+        "else color = vec4(channelselect,1)*clamp((floatBitsToInt(f)-hdr_bounds[0])/(hdr_bounds[1]-hdr_bounds[0]), 0, 1);\n" \
     "}",
 };
 
@@ -113,7 +117,7 @@ void HDRGlHelper::initializeHelper() {
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, w, h, 0, GL_RGB, GL_FLOAT, 0);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, w, h, 0, GL_RGBA, GL_FLOAT, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
 
     glGenRenderbuffers(1, &fbo_z);
@@ -232,7 +236,7 @@ void HDRGlHelper::resizeHelper(int width, int height) {
     currh = height;
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, fbo_tex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, width, height, 0, GL_RGB, GL_FLOAT, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindRenderbuffer(GL_RENDERBUFFER, fbo_z);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, width, height);
