@@ -77,8 +77,6 @@ void HDRViewer::init() {
     setLayout(layout);
 }
 HDRViewer::~HDRViewer() {
-    delete slider;
-    delete tmo;
 }
 
 void HDRViewer::setSuggestRange(int lo, int hi) {

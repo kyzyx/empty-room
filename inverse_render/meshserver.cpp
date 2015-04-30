@@ -23,6 +23,9 @@ MeshServer::MeshServer(const string& meshfile, bool ccw, cb_type cb)
     defaultinit(meshfile);
     shared_memory_object::remove(shmname.c_str());
     initializeSharedMemory();
+    for (int i = 0; i < NUM_CHANNELS+1; ++i) {
+        new (&(mutexes[i])) shmutex();
+    }
     if (progress_cb) progress_cb(5);
 
     PolygonMesh::Ptr mesh(new PolygonMesh());
@@ -42,6 +45,9 @@ MeshServer::MeshServer(PolygonMesh::ConstPtr mesh, bool ccw, cb_type cb)
     shared_memory_object::remove(shmname.c_str());
     shared_memory_object::remove(shmsamplename.c_str());
     initializeSharedMemory();
+    for (int i = 0; i < NUM_CHANNELS+1; ++i) {
+        new (&(mutexes[i])) shmutex();
+    }
     if (progress_cb) progress_cb(33);
 
     loadMesh(mesh, ccw);

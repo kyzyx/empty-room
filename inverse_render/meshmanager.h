@@ -8,7 +8,7 @@
 #include <Eigen/Eigen>
 
 #include <boost/interprocess/mapped_region.hpp>
-#include <boost/interprocess/sync/interprocess_upgradable_mutex.hpp>
+#include <boost/interprocess/sync/interprocess_sharable_mutex.hpp>
 #include <boost/function.hpp>
 /**
  * Stores a single sample of the outgoing radiance from a surface
@@ -34,7 +34,7 @@ class Sample {
 
 class MeshManager {
     public:
-        typedef boost::interprocess::interprocess_upgradable_mutex shmutex;
+        typedef boost::interprocess::interprocess_sharable_mutex shmutex;
         typedef boost::function<void(int)> cb_type;
 
         MeshManager(int numvertices, int numfaces);
