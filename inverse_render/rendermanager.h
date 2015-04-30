@@ -13,6 +13,7 @@ enum {
     VIEW_LABELS,
     VIEW_LABELOVERLAY,
     VIEW_THRESHOLD,
+    PRECALCULATE,
     NUM_VIEW_TYPES,
 };
 
@@ -34,7 +35,6 @@ enum {
     SHADERFLAGS_USEU_ALL=7,
     SHADERFLAGS_USESH_FLAT_FRAG=32,
     SHADERFLAGS_PASS=64,
-    SHADERFLAGS_USESH_FILTER_GEOM=128,
 };
 
 class ShaderType {
@@ -66,7 +66,7 @@ class ShaderType {
 
 class RenderManager {
 public:
-    RenderManager() : mmgr(NULL), room(NULL), numroomtriangles(0), samples_initialized(false), shaders_initialized(false) { initShaderTypes(); }
+    RenderManager() : mmgr(NULL), room(NULL), numroomtriangles(0), samples_initialized(false), shaders_initialized(false), precalculated(-1) { initShaderTypes(); }
     RenderManager(MeshManager* meshmanager);
     ~RenderManager();
 
@@ -78,6 +78,9 @@ public:
     void setupRoomGeometry(roommodel::RoomModel* model);
 
     void updateMeshAuxiliaryData();
+    void precalculateAverageSamples();
+    void precalculateSingleImage(int n);
+    bool hasPrecalculatedColors() const { return precalculated >= 0; }
 
     void readFromRender(const CameraParams* cam, float*& image, int rendermode, bool preallocated=false);
     void renderMesh(int rendermode);
@@ -114,7 +117,7 @@ protected:
     GLuint roomvbo, roomcbo;
     //   Shader data ids
     GLuint sampletex[NUM_UNIFORM_TEXTURES];
-    GLuint auxvbo;
+    GLuint auxvbo, precalcvbo;
     //   Shader info
     std::vector<ShaderType> shaders;
     //   Read-from-render textures
@@ -122,6 +125,7 @@ protected:
 
     bool samples_initialized;
     bool shaders_initialized;
+    int precalculated;
 };
 
 #endif

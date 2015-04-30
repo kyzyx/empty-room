@@ -18,7 +18,7 @@ void main(void) {
     {
         flatcolor = vec4(0,0,1,0.5);
         for (int i = 0; i < 3; i++) {
-            gl_Position = gl_in[i].gl_Position;
+            gl_Position = gl_in[i].gl_Position - vec4(0,0,0.01,0);
             EmitVertex();
         }
         EndPrimitive();

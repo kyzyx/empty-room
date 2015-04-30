@@ -8,6 +8,7 @@ ERUIGLWidget::ERUIGLWidget(QWidget *parent) :
     HDRQGlViewerWidget(parent),
     selectedCamera(0), renderoptions(this)
 {
+    renderoptions.setRenderManager(&rendermanager);
 }
 
 ERUIGLWidget::~ERUIGLWidget() {
@@ -65,6 +66,7 @@ void ERUIGLWidget::highlightCamera(int cameraindex) {
     if (it == camids.end()) return;
     int idx = *it;
     selectedCamera = it - camids.begin();
+    renderoptions.setCurrentCamera(cameraindex);
     update();
 }
 

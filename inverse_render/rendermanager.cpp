@@ -60,7 +60,11 @@ void RenderManager::initShaderTypes() {
         SHADERFLAGS_PASS|SHADERFLAGS_USESH_FLAT_FRAG));
     shaders.push_back(ShaderType("threshold",
         "Highlight pixels within a threshold",
-        SHADERFLAGS_USEU_COLOR|SHADERFLAGS_USEU_AUX|SHADERFLAGS_PASS|SHADERFLAGS_USESH_FLAT_FRAG));
+        //SHADERFLAGS_USEU_COLOR|SHADERFLAGS_USEU_AUX|SHADERFLAGS_PASS|SHADERFLAGS_USESH_FLAT_FRAG));
+        SHADERFLAGS_PASS|SHADERFLAGS_USESH_FLAT_FRAG));
+    shaders.push_back(ShaderType("precalculated",
+        "Precalculated Colors",
+        SHADERFLAGS_PASS));
 }
 
 RenderManager::RenderManager(MeshManager* meshmanager) {
@@ -68,6 +72,7 @@ RenderManager::RenderManager(MeshManager* meshmanager) {
     numroomtriangles = 0;
     samples_initialized = false;
     initShaderTypes();
+    precalculated = -1;
     setMeshManager(meshmanager);
 }
 
@@ -135,7 +140,6 @@ void RenderManager::setupMeshGeometry() {
     glBindVertexArray(vaoid);
     // Initialize vertex positions and normals
     glGenBuffers(1, &vbo);
-    glGenBuffers(1, &auxvbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     int v = 0;
     for (int i = 0; i < mmgr->NVertices(); ++i) {
@@ -181,6 +185,13 @@ void RenderManager::setupMeshGeometry() {
             0, GL_STATIC_DRAW);
     glEnableVertexAttribArray(2);
     glVertexAttribIPointer(2, 3, GL_INT, 0, 0);
+    glGenBuffers(1, &precalcvbo);
+    glBindBuffer(GL_ARRAY_BUFFER, precalcvbo);
+    glBufferData(GL_ARRAY_BUFFER,
+            3*mmgr->NVertices()*sizeof(float),
+            0, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(3);
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glBindVertexArray(0);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -276,6 +287,62 @@ void RenderManager::updateMeshAuxiliaryData() {
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
+void RenderManager::precalculateSingleImage(int n) {
+    glBindVertexArray(vaoid);
+    glBindBuffer(GL_ARRAY_BUFFER, precalcvbo);
+    float* colors = new float[3*mmgr->NVertices()];
+    memset(colors, 0, sizeof(float)*3*mmgr->NVertices());
+    float* curr = colors;
+    for (int i = 0; i < mmgr->NVertices(); ++i) {
+        for (int j = 0; j < mmgr->getVertexSampleCount(i); ++j) {
+            Sample sample = mmgr->getSample(i, j);
+            if (sample.id == n) {
+                curr[0] = sample.r;
+                curr[1] = sample.g;
+                curr[2] = sample.b;
+            }
+        }
+        curr += 3;
+    }
+    glBufferData(GL_ARRAY_BUFFER,
+            3*mmgr->NVertices()*sizeof(float),
+            colors, GL_STATIC_DRAW);
+    delete [] colors;
+    glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    precalculated = VIEW_SINGLEIMAGE;
+}
+
+void RenderManager::precalculateAverageSamples() {
+    glBindVertexArray(vaoid);
+    glBindBuffer(GL_ARRAY_BUFFER, precalcvbo);
+    float* colors = new float[3*mmgr->NVertices()];
+    memset(colors, 0, sizeof(float)*3*mmgr->NVertices());
+    float* curr = colors;
+    for (int i = 0; i < mmgr->NVertices(); ++i) {
+        float totalweight = 0;
+        for (int j = 0; j < mmgr->getVertexSampleCount(i); ++j) {
+            Sample sample = mmgr->getSample(i, j);
+            float w = std::abs(sample.confidence*sample.dA);
+            curr[0] += sample.r*w;
+            curr[1] += sample.g*w;
+            curr[2] += sample.b*w;
+            totalweight += w;
+        }
+        if (totalweight > 0) {
+            for (int j = 0; j < 3; ++j) curr[j] /= totalweight;
+        }
+        curr += 3;
+    }
+    glBufferData(GL_ARRAY_BUFFER,
+            3*mmgr->NVertices()*sizeof(float),
+            colors, GL_STATIC_DRAW);
+    delete [] colors;
+    glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    precalculated = VIEW_AVERAGE;
+}
+
 void RenderManager::setupRoomGeometry(roommodel::RoomModel* model) {
     if (!shaders_initialized) init();
     roommodel::GeometryGenerator gg(model);
@@ -331,6 +398,9 @@ void RenderManager::renderMesh(int rendermode) {
     if (!mmgr) return;
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
+    if (precalculated == rendermode) {
+        rendermode = PRECALCULATE;
+    }
     glUseProgram(shaders[rendermode].getProgID());
     if (samples_initialized) {
         for (int i = 0; i < NUM_UNIFORM_TEXTURES; ++i) {

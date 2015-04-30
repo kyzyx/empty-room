@@ -20,7 +20,9 @@ public:
         renderRoom(false),
         cameraRenderFormat(CAMRENDER_FRUSTUM),
         meshRenderFormat(VIEW_DEFAULT),
-        overlayLoThreshold(0), overlayHiThreshold(1000)
+        overlayLoThreshold(0), overlayHiThreshold(1000),
+        currentCamera(0),
+        renderer(NULL)
     { renderOverlay.resize(NUM_VIEW_TYPES, false);}
 
 public:
@@ -51,12 +53,14 @@ public:
     bool shouldRenderMesh() { return renderMesh; }
     bool shouldRenderRoom() { return renderRoom; }
 
+    void setRenderManager(RenderManager* rm) { renderer = rm; }
     enum {
         CAMRENDER_NONE=0,
         CAMRENDER_AXES,
         CAMRENDER_FRUSTUM,
     };
 protected:
+    RenderManager* renderer;
     QOpenGLWidget* qglw;
     bool renderCameras;
     bool renderCurrentCamera;
@@ -64,6 +68,7 @@ protected:
     bool renderRoom;
     std::vector<bool> renderOverlay;
 
+    int currentCamera;
     int cameraRenderFormat;
     int meshRenderFormat;
     int overlayIndex;
@@ -92,6 +97,10 @@ public slots:
     }
     void setMeshRenderFormat(int meshformat) {
         meshRenderFormat = meshformat;
+        if (meshRenderFormat == VIEW_AVERAGE && renderer)
+            renderer->precalculateAverageSamples();
+        else if (meshRenderFormat == VIEW_SINGLEIMAGE && renderer)
+            renderer->precalculateSingleImage(currentCamera);
         if (qglw) qglw->update();
     }
     void setOverlayLights(bool overlay) {
@@ -105,6 +114,7 @@ public slots:
     }
     void setOverlayThresholded(bool overlay) {
         if (overlay) {
+            if (renderer && !renderer->hasPrecalculatedColors()) renderer->precalculateAverageSamples();
             renderOverlay[VIEW_THRESHOLD] = true;
         } else {
             renderOverlay[VIEW_THRESHOLD] = false;
@@ -118,6 +128,11 @@ public slots:
     }
     void setUpperThreshold(int t) {
         overlayHiThreshold = t;
+        if (qglw) qglw->update();
+    }
+    void setCurrentCamera(int n) {
+        currentCamera = n;
+        if (meshRenderFormat == VIEW_SINGLEIMAGE && renderer) renderer->precalculateSingleImage(n);
         if (qglw) qglw->update();
     }
 };

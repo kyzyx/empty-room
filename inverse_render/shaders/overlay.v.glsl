@@ -35,8 +35,7 @@ uniform vec4 KellyColors[NUM_KELLY_COLORS] = vec4[NUM_KELLY_COLORS](
 );
 
 void main(void) {
-    vec4 pos = modelviewmatrix*vec4(position,1);
-    gl_Position = projectionmatrix*pos - vec4(0,0,0.01,0);
+    gl_Position = projectionmatrix*modelviewmatrix*vec4(position,1);
     ivec3 tmp = auxdata*vertexaux;
     id = ivec3(tmp.x+tmp.y+tmp.z,0,0);
     computed_color = KellyColors[id.r%NUM_KELLY_COLORS];
