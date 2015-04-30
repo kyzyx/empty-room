@@ -432,8 +432,11 @@ void MainWindow::labelDataLoaded() {
     ui->computeLabelImagesButton->setEnabled(true);
     ui->meshWidget->updateMeshAuxiliaryData();
     ui->actionSave_Per_Vertex_Labels->setEnabled(true);
-    ui->overlayLightsCheckbox->setEnabled(true);
-    connect(ui->overlayLightsCheckbox, SIGNAL(toggled(bool)), ui->meshWidget->renderOptions(), SLOT(setOverlayLights(bool)));
+    ui->overlayTypeComboBox->setEnabled(true);
+    ui->overlayTypeComboBox->insertItem(0,"No Overlay");
+    ui->overlayTypeComboBox->insertItem(1,"Overlay identified lights");
+    ui->overlayTypeComboBox->insertItem(2,"Overlay semantic data");
+    connect(ui->overlayTypeComboBox, SIGNAL(currentIndexChanged(int)), ui->meshWidget->renderOptions(), SLOT(setOverlay(int)));
 }
 
 void MainWindow::loadVertexSampleData(QString meshfile, QString datafile) {

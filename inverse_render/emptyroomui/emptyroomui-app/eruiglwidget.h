@@ -103,10 +103,10 @@ public slots:
             renderer->precalculateSingleImage(currentCamera);
         if (qglw) qglw->update();
     }
-    void setOverlayLights(bool overlay) {
+    void setOverlay(int overlay) {
         if (overlay) {
             renderOverlay[VIEW_LABELOVERLAY] = true;
-            overlayIndex = 1;
+            overlayIndex = overlay;
         } else {
             renderOverlay[VIEW_LABELOVERLAY] = false;
         }
