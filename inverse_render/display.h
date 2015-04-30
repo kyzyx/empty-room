@@ -1,7 +1,7 @@
 #ifndef _DISPLAY_H
 #define _DISPLAY_H
-#include "meshmanager.h"
-#include "imagemanager.h"
+#include "datamanager/meshmanager.h"
+#include "datamanager/imagemanager.h"
 #include "solver.h"
 #include "wall_finder.h"
 #include <pcl/point_types.h>

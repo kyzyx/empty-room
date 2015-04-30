@@ -2,10 +2,10 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include "meshmanager.h"
-#include "imagemanager.h"
+#include "datamanager/meshmanager.h"
+#include "datamanager/imagemanager.h"
 #include "subprocessworker.h"
-#include "roommodel.h"
+#include "roommodel/roommodel.h"
 #include <QProgressBar>
 #include <QSettings>
 #include <QTemporaryFile>

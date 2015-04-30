@@ -3,10 +3,10 @@
 #include <vector>
 
 #include "R3Shapes/R3Shapes.h"
-#include "imagemanager.h"
+#include "datamanager/imagemanager.h"
 #include "hemicuberenderer.h"
 #include "material.h"
-#include "meshmanager.h"
+#include "datamanager/meshmanager.h"
 
 class InverseRender {
     public:

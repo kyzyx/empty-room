@@ -3,7 +3,7 @@
 
 class Texture {
     public:
-        Texture() : texture(NULL), size(0), scale(1) {}
+        Texture() : texture(0), size(0), scale(1) {}
         Texture(float* tex, int texsize, float texscale) : texture(tex), size(texsize), scale(texscale) {}
 
         Texture& operator=(const Texture& t) {

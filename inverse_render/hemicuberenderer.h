@@ -1,10 +1,10 @@
 #ifndef _HEMICUBE_RENDERER_H
 #define _HEMICUBE_RENDERER_H
 
-#include "camparams.h"
+#include "datamanager/camparams.h"
 #include "material.h"
 #include "rendermanager.h"
-#include "imagemanager.h"
+#include "datamanager/imagemanager.h"
 
 class SampleData {
     public:

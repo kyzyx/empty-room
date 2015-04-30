@@ -25,54 +25,38 @@ link_directories(${PCL_LIBRARY_DIRS}
     ../GAPS/RNBasics/ ../GAPS/R2Shapes/
     ../GAPS/jpeg/)
 
-add_library(memory 
-    camparams.h
-    rgbe.h rgbe.cpp
-    meshmanager.cpp meshmanager.h
-    meshserver.cpp meshserver.h
-    imagemanager.cpp imagemanager.h
-    imageserver.cpp imageserver.h
-    imageio.cpp imageio.h)
-target_link_libraries(memory ${PCL_LIBRARIES} ${Boost_LIBRARIES}
-    R3Graphics.a R3Shapes.a R2Shapes.a RNBasics.a jpeg.a
-    ${GLLIBS} IlmImf Half rt)
+add_subdirectory(datamanager .)
+add_subdirectory(roommodel .)
+
 add_library(rendering
-    roommodel.h RoomModel.cpp RoomModel_Internal.h
     opengl_compat.h opengl_compat.cpp
     loadshader.h loadshader.cpp
-    geometrygenerator.h geometrygenerator.cpp
-    rectanglerenderer.h rectanglerenderer.cpp
     rendermanager.h rendermanager.cpp
     hemicuberenderer.h hemicuberenderer.cpp)
-target_link_libraries(rendering memory
+target_link_libraries(rendering datamanager roommodel
     R3Graphics.a R3Shapes.a R2Shapes.a RNBasics.a jpeg.a
     ${GLLIBS})
 
-add_executable(dataserver dataserver.cpp)
-target_link_libraries(dataserver ${PCL_LIBRARIES} memory)
 add_executable(reprojectapp reprojectapp.cpp invrenderapp.cpp invrenderapp.h
     reproject.cpp reproject.h clusterlights.cpp clusterlights.h)
-target_link_libraries(reprojectapp ${PCL_LIBRARIES} memory)
+target_link_libraries(reprojectapp ${PCL_LIBRARIES} datamanager)
 add_executable(labelimageapp labelimageapp.cpp invrenderapp.cpp invrenderapp.h
     material.h)
-target_link_libraries(labelimageapp ${PCL_LIBRARIES} ${GLUT_LIBRARY} memory rendering)
+target_link_libraries(labelimageapp ${PCL_LIBRARIES} ${GLUT_LIBRARY} datamanager rendering)
 add_executable(wallfindapp wallfindapp.cpp invrenderapp.cpp invrenderapp.h
-    RoomModel_Internal.h roommodel.h RoomModel.cpp
     orientation_finder.h orientation_finder.cpp wall_finder.h wall_finder.cpp
     shortestpath.h shortestpath.cpp)
-target_link_libraries(wallfindapp ${PCL_LIBRARIES} memory)
+target_link_libraries(wallfindapp ${PCL_LIBRARIES} datamanager roommodel)
 
 add_executable(invrender invrender.cpp
     reproject.h reproject.cpp
     wall_finder.h wall_finder.cpp material.h
-    hemicuberenderer.h hemicuberenderer.cpp
     orientation_finder.cpp orientation_finder.h
     shortestpath.cpp shortestpath.h
     Simplify.h eigen_nnls.h
     solver.cpp solvetexture.cpp solver.h clusterlights.cpp clusterlights.h
-    RoomModel.cpp roommodel.h RoomModel_Internal.h
     display.cpp display.h parse_args.cpp parse_args.h rerender.cpp rerender.h)
 target_link_libraries(invrender ${PCL_LIBRARIES} ${OpenCV_LIBS}
     R3Graphics.a R3Shapes.a R2Shapes.a RNBasics.a
-    jpeg.a ${GLLIBS} ${GLUT_LIBRARY} IlmImf Half memory rendering)
+    jpeg.a ${GLLIBS} ${GLUT_LIBRARY} IlmImf Half datamanager rendering)
 set(CMAKE_CXX_FLAGS "-Wno-deprecated -std=c++0x")

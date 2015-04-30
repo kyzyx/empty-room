@@ -5,7 +5,6 @@
 #include <iostream>
 #include <pcl/console/parse.h>
 #include <boost/bind.hpp>
-#include "imageio.h"
 
 using namespace std;
 

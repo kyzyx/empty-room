@@ -4,7 +4,7 @@
 #include <pcl/PolygonMesh.h>
 #include <pcl/point_types.h>
 #include "orientation_finder.h"
-#include "roommodel.h"
+#include "roommodel/roommodel.h"
 
 #include <vector>
 

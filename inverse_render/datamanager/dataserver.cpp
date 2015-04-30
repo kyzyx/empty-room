@@ -1,5 +1,5 @@
-#include "imageserver.h"
-#include "meshserver.h"
+#include "datamanager/imageserver.h"
+#include "datamanager/meshserver.h"
 #include <unistd.h>
 #include <string>
 #include <cstdio>

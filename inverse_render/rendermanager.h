@@ -1,9 +1,9 @@
 #ifndef _RENDERMANAGER_H
 #define _RENDERMANAGER_H
 
-#include "meshmanager.h"
-#include "imagemanager.h"
-#include "roommodel.h"
+#include "datamanager/meshmanager.h"
+#include "datamanager/imagemanager.h"
+#include "roommodel/roommodel.h"
 
 enum {
     VIEW_DEFAULT,

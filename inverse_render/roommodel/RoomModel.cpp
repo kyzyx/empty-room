@@ -6,7 +6,7 @@
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/prettywriter.h" // for stringify JSON
 #include "rapidjson/filestream.h"   // wrapper of C stream for prettywriter as output
-#include "imageio.h"
+#include "datamanager/imageio.h"
 
 #include <iostream>
 #include <fstream>

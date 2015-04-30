@@ -3,7 +3,7 @@
 
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
-#include "meshmanager.h"
+#include "datamanager/meshmanager.h"
 
 /**
  * OrientationFinder encapsulates an algorithm to find the

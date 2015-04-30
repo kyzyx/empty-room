@@ -1,7 +1,7 @@
 #ifndef _REPROJECT_H
 #define _REPROJECT_H
-#include "meshmanager.h"
-#include "imagemanager.h"
+#include "datamanager/meshmanager.h"
+#include "datamanager/imagemanager.h"
 
 void reproject(
         ImageManager& hdr,

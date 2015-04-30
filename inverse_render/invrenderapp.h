@@ -1,7 +1,7 @@
 #ifndef _INVRENDER_APP_H
 #define _INVRENDER_APP_H
-#include "imagemanager.h"
-#include "meshmanager.h"
+#include "datamanager/imagemanager.h"
+#include "datamanager/meshmanager.h"
 
 class InvrenderApp {
     public:

@@ -1,6 +1,6 @@
 #include "opengl_compat.h"
 #include "rendermanager.h"
-#include "geometrygenerator.h"
+#include "roommodel/geometrygenerator.h"
 #include "loadshader.h"
 #include "R3Graphics/R3Graphics.h"
 #include <glm/glm.hpp>

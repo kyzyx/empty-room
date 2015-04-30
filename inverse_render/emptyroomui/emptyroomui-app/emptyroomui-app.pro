@@ -35,7 +35,7 @@ unix: {
     LIBS += -L$$INVRENDER_DIR \
         -L$$GAPS_DIR/R3Graphics/ -L$$GAPS_DIR/R3Shapes/ -L$$GAPS_DIR/RNBasics/ -L$$GAPS_DIR/R2Shapes/ \
         -L$$OUT_PWD/../QGLViewer \
-        -lrendering -lmemory -lHalf -lIlmImf \
+        -lrendering -lroommodel -ldatamanager -lHalf -lIlmImf \
         -lR3Graphics -lR3Shapes -lR2Shapes -lRNBasics -ljpeg -lpng \
         -lrt -lboost_system -lboost_filesystem \
         -lGLU -lQGLViewer -lpcl_common -lpcl_io -lpcl_io_ply
@@ -47,7 +47,7 @@ INCLUDEPATH += $$PWD/../../
 INCLUDEPATH += $$GAPS_DIR
 DEPENDPATH += $$PWD/../../
 
-unix: PRE_TARGETDEPS += $$INVRENDER_DIR/libmemory.a $$INVRENDER_DIR/librendering.a ../QGLViewer/libQGLViewer.a
+unix: PRE_TARGETDEPS += $$INVRENDER_DIR/libdatamanager.a $$INVRENDER_DIR/libroommodel.a $$INVRENDER_DIR/librendering.a ../QGLViewer/libQGLViewer.a
 
 OTHER_FILES += \
     $$SHADER_DIR/default.f.glsl \

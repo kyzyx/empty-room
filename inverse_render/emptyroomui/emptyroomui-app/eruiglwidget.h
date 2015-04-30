@@ -3,10 +3,10 @@
 
 #include <QOpenGLWidget>
 #include "hdrglwidget.h"
-#include "meshmanager.h"
+#include "datamanager/meshmanager.h"
 #include "hdrviewer.h"
-#include "imagemanager.h"
-#include "roommodel.h"
+#include "datamanager/imagemanager.h"
+#include "roommodel/roommodel.h"
 #include "rendermanager.h"
 
 class ERUIRenderOptions : public QObject {

@@ -5,9 +5,9 @@
 #include <boost/thread/thread.hpp>
 #include <iostream>
 
-#include "meshserver.h"
-#include "imageserver.h"
-#include "imageio.h"
+#include "datamanager/meshserver.h"
+#include "datamanager/imageserver.h"
+#include "datamanager/imageio.h"
 #include "reproject.h"
 #include "rerender.h"
 #include "orientation_finder.h"
