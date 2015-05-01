@@ -229,7 +229,10 @@ void MeshManager::commitSamples(bool finalcommit) {
     for (int i = 0; i < nvertices; ++i) {
         *numsamples += wsamples[i].size();
     }
-    initializeSharedSampleMemory();
+    if (!initializeSharedSampleMemory()) {
+        cout << "Error initializing sample memory!" << endl;
+        return;
+    }
     Sample* s = sampleptr;
     for (int i = 0; i < nvertices; ++i) {
         vertexsamples[i] = wsamples[i].size();

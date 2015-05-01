@@ -22,6 +22,9 @@ ImageServer::ImageServer(const string& camfile, bool flipx, bool flipy, cb_type 
     defaultinit(camfile);
     shared_memory_object::remove(shmname.c_str());
     initializeSharedMemory();
+    for (int i = 0; i < imagetypes.size(); ++i) {
+        new (&(mutexes[i])) shmutex();
+    }
     if (progress_cb) progress_cb(2);
     readCameraFile(camfile);
     if (progress_cb) progress_cb(5);

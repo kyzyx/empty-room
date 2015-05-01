@@ -33,7 +33,7 @@ class ReprojectApp : public InvrenderApp {
         }
     protected:
         void refreshingProgressFn(int percent) {
-            mmgr->commitSamples(false);
+            if (emit_progress) mmgr->commitSamples(false);
             getProgressFunction(0,1)(percent);
         }
         virtual void printargs() {

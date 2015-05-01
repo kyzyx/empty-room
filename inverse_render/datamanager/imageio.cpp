@@ -38,7 +38,7 @@ bool endswith(const string& s, string e) {
 bool readDepthMap(const string& filename, void* image, int w, int h) {
     int width = 0;
     int height = 0;
-    bool success = readPcdDepthImage(filename, (float**) &image, width, height);
+    bool success = readPcdDepthImage(filename, (float**) &image, width, height, true);
     return width == w && height == h && success;
 }
 

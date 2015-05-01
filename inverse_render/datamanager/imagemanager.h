@@ -6,7 +6,7 @@
 #include <opencv2/core/types_c.h>
 
 #include <boost/interprocess/mapped_region.hpp>
-#include <boost/interprocess/sync/interprocess_upgradable_mutex.hpp>
+#include <boost/interprocess/sync/interprocess_sharable_mutex.hpp>
 
 #include "camparams.h"
 
@@ -50,7 +50,7 @@ class ImageType {
 
 class ImageManager {
     public:
-        typedef boost::interprocess::interprocess_upgradable_mutex shmutex;
+        typedef boost::interprocess::interprocess_sharable_mutex shmutex;
 
         ImageManager(int width, int height, int numImages);
         ImageManager(const std::string& camfile);

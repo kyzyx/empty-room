@@ -71,7 +71,7 @@ void reproject(
         // Check if depth map is consistent with projection
         if (depthmap) {
             float f = depthmap[idx];
-            if (!isnan(f) && f != numeric_limits<float>::infinity()) {
+            if (!isnan(f) && f != 0 && f != numeric_limits<float>::infinity()) {
                 if (abs(f-d) > DEPTHTOLERANCE)
                     continue;
             }
@@ -127,6 +127,7 @@ void reproject(ImageManager& hdr, MeshManager& mesh, double threshold, boost::fu
                 (const float*) hdr.getImage("confidence", i),
                 (const float*) hdr.getImage("depth", i),
                 hdr.getCamera(i), mesh, threshold, i, &searchtree);
+        cout << "Done reprojecting " << (i+1) << "/" << hdr.size() << endl;
         if (cb) cb(((i+1)*100)/hdr.size());
     }
 }
