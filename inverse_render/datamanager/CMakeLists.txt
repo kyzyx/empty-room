@@ -1,5 +1,5 @@
 add_library(datamanager 
-    camparams.h
+    camparams.h material.h
     rgbe.h rgbe.cpp
     meshmanager.cpp meshmanager.h
     meshserver.cpp meshserver.h

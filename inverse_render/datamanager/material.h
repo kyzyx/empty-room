@@ -10,6 +10,7 @@ class Texture {
             texture = t.texture;
             size = t.size;
             scale = t.scale;
+            return *this;
         }
 
         bool isEmpty() const { return size > 0; }
@@ -30,7 +31,7 @@ class Material {
         float& operator()(int n) {
             if (n == 0) return r;
             else if (n == 1) return g;
-            else if (n == 2) return b;
+            else return b;
         }
         bool isEmpty() {
             return r == 0 && g == 0 && b == 0;

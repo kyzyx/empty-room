@@ -1,5 +1,4 @@
 #include "clusterlights.h"
-#include "material.h"
 #include <bitset>
 #include <deque>
 

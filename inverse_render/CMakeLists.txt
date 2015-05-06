@@ -40,8 +40,7 @@ target_link_libraries(rendering datamanager roommodel
 add_executable(reprojectapp reprojectapp.cpp invrenderapp.cpp invrenderapp.h
     reproject.cpp reproject.h clusterlights.cpp clusterlights.h)
 target_link_libraries(reprojectapp ${PCL_LIBRARIES} datamanager)
-add_executable(labelimageapp labelimageapp.cpp invrenderapp.cpp invrenderapp.h
-    material.h)
+add_executable(labelimageapp labelimageapp.cpp invrenderapp.cpp invrenderapp.h)
 target_link_libraries(labelimageapp ${PCL_LIBRARIES} ${GLUT_LIBRARY} datamanager rendering)
 add_executable(wallfindapp wallfindapp.cpp invrenderapp.cpp invrenderapp.h
     orientation_finder.h orientation_finder.cpp wall_finder.h wall_finder.cpp
@@ -50,7 +49,7 @@ target_link_libraries(wallfindapp ${PCL_LIBRARIES} datamanager roommodel)
 
 add_executable(invrender invrender.cpp
     reproject.h reproject.cpp
-    wall_finder.h wall_finder.cpp material.h
+    wall_finder.h wall_finder.cpp
     orientation_finder.cpp orientation_finder.h
     shortestpath.cpp shortestpath.h
     Simplify.h eigen_nnls.h
