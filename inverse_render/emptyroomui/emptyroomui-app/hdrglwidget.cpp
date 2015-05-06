@@ -66,10 +66,36 @@ static const char* shadertext[NUM_TMOS] = {
     "uniform vec3 hdr_bounds;\n" \
     "uniform vec3 channelselect;\n" \
     "out vec4 color;\n" \
+    "const int NUM_KELLY_COLORS = 20;\n" \
+    "uniform vec4 KellyColors[NUM_KELLY_COLORS] = vec4[NUM_KELLY_COLORS](\n" \
+        "vec4(255, 179, 0, 128)/255,\n" \
+        "vec4(128, 62, 117, 128)/255,\n" \
+        "vec4(255, 104, 0, 128)/255,\n" \
+        "vec4(166, 189, 215, 128)/255,\n" \
+        "vec4(193, 0, 32, 128)/255,\n" \
+        "vec4(206, 162, 98, 128)/255,\n" \
+        "vec4(129, 112, 102, 128)/255,\n" \
+        "vec4(0, 125, 52, 128)/255,\n" \
+        "vec4(246, 118, 142, 128)/255,\n" \
+        "vec4(0, 83, 138, 128)/255,\n" \
+        "vec4(255, 122, 92, 128)/255,\n" \
+        "vec4(83, 55, 122, 128)/255,\n" \
+        "vec4(255, 142, 0, 128)/255,\n" \
+        "vec4(179, 40, 81, 128)/255,\n" \
+        "vec4(244, 200, 0, 128)/255,\n" \
+        "vec4(127, 24, 13, 128)/255,\n" \
+        "vec4(147, 170, 0, 128)/255,\n" \
+        "vec4(89, 51, 21, 128)/255,\n" \
+        "vec4(241, 58, 19, 128)/255,\n" \
+        "vec4(35, 44, 22, 128)/255\n" \
+    ");\n" \
     "void main(void) {\n" \
         "vec4 f = texture2D(rendered_image, f_texcoord);\n" \
-        "if (f.a < 0.8) color = vec4(channelselect,1)*f;\n" \
-        "else color = vec4(channelselect,1)*clamp((floatBitsToInt(f)-hdr_bounds[0])/(hdr_bounds[1]-hdr_bounds[0]), 0, 1);\n" \
+        "int id = int(f.r*255 + 0.5);\n" \
+        "if (id == 0) color = vec4(0,0,0,0.5);\n" \
+        "else color = KellyColors[id%NUM_KELLY_COLORS];\n" \
+        /*"if (f.a < 0.8) color = vec4(channelselect,1)*f;\n" \
+        "else color = vec4(channelselect,1)*clamp((floatBitsToInt(f)-hdr_bounds[0])/(hdr_bounds[1]-hdr_bounds[0]), 0, 1);\n" \*/
     "}",
 };
 
