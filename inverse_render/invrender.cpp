@@ -13,6 +13,8 @@
 #include "orientation_finder.h"
 #include "wall_finder.h"
 #include "clusterlights.h"
+#include "linefinder.h"
+#include "orientededgefilter.h"
 
 #include "parse_args.h"
 #include "display.h"
@@ -42,6 +44,8 @@ int main(int argc, char* argv[]) {
     // if (use_confidence_files)
 
 
+    vector<WallLine> lines;
+    vector<WallLine> allvotes;
     vector<int> wallindices;
     vector<int> floorindices;
     WallFinder wf(resolution);
@@ -121,6 +125,31 @@ int main(int argc, char* argv[]) {
         cout << "========================" << endl;
     }
     InverseRender ir(&mmgr, numlights, hemicuberesolution);
+    if (do_linefinding && (input || all_project) && (wallinput || do_wallfinding)) {
+        for (int i = 0; i < imgr.size(); ++i) {
+            int f = imgr.getFlags("labels", i);
+            if (f & ImageManager::DF_INITIALIZED) {
+                cout << "Read label image " << i << endl;
+            } else {
+                ir.getRenderManager()->createLabelImage(imgr.getCamera(i), imgr.getImageWriteable("labels",i));
+                imgr.setFlags("labels", i, f|ImageManager::DF_INITIALIZED);
+                cout << "Created label image " << i << endl;
+            }
+            f = imgr.getFlags("edges", i);
+            if (f & ImageManager::DF_INITIALIZED) {
+                cout << "Read edge image " << i << endl;
+            } else {
+                createEdgeImage(imgr.getCamera(i), imgr.getImage(i), imgr.getImageWriteable("edges",i));
+                imgr.setFlags("edges", i, f|ImageManager::DF_INITIALIZED);
+                cout << "Created edge image " << i << endl;
+            }
+        }
+
+        cout << "Finding lines" << endl;
+        findWallLines(imgr, wf, lines, 0.03);
+        //findWallLines(loader, wf, allvotes, 0.03, true);
+        cout << "Done finding lines" << endl;
+    }
     vector<SampleData> walldata, floordata;
     // Only do inverse rendering with full reprojection and wall labels
     if (do_sampling && (input || all_project) && (wallinput || do_wallfinding)) {
@@ -195,6 +224,20 @@ int main(int argc, char* argv[]) {
         irv.visualizeCameras(camera);
         irv.visualizeWalls();
         irv.addSamples(walldata);
+        for (int i = 0; i < lines.size(); ++i) {
+            double sy = lines[i].starty - wf.floorplane;
+            double ey = lines[i].endy - wf.floorplane;
+            sy /= wf.ceilplane - wf.floorplane;
+            ey /= wf.ceilplane - wf.floorplane;
+            irv.drawLine(lines[i].wallindex, lines[i].p, 1, 0, 0, sy, ey);
+        }
+        for (int i = 0; i < allvotes.size(); ++i) {
+            double sy = allvotes[i].starty - wf.floorplane;
+            double ey = allvotes[i].endy - wf.floorplane;
+            sy /= wf.ceilplane - wf.floorplane;
+            ey /= wf.ceilplane - wf.floorplane;
+            irv.drawLine(allvotes[i].wallindex, allvotes[i].p, 0.5, 0, 1, sy, ey);
+        }
         irv.loop();
     }
     return 0;

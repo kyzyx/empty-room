@@ -41,6 +41,7 @@ class InverseRender {
 
         void setNumRansacIters(int n) { numRansacIters = n; }
         void setMaxPercentErr(double d) { maxPercentErr = d; }
+        RenderManager* getRenderManager() { return rm; }
     private:
         // Inverse Rendering helpers
         bool calculateWallMaterialFromUnlit(std::vector<SampleData>& data);

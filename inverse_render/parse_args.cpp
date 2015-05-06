@@ -40,6 +40,7 @@ bool do_wallfinding = true;
 bool do_reprojection = true;
 bool do_sampling = true;
 bool do_texture = true;
+bool do_linefinding = false;
 double hdr_threshold = -1.;
 double displayscale = 2.;
 int hemicuberesolution = 150;
@@ -76,6 +77,7 @@ bool parseargs(int argc, char** argv) {
              "      -wallfind_only: only perform wallfinding\n" \
              "      -reproject_only: only perform reprojection\n" \
              "      -solve_only: only perform solving; requires -samplefile\n" \
+             "      -do_linefinding: perform linefinding operations\n" \
              "      -nosolve: do not perform solving (default off)\n" \
              "      -notexture: do not perform texture recovery (default off)\n" \
              "  Display Arguments:\n" \
@@ -136,6 +138,7 @@ bool parseargs(int argc, char** argv) {
     if (console::find_switch(argc, argv, "-prune_occluded")) prune = true;
     if (console::find_switch(argc, argv, "-nosolve")) do_sampling = false;
     if (console::find_switch(argc, argv, "-notexture")) do_texture = false;
+    if (console::find_switch(argc, argv, "-do_linefinding")) do_linefinding = true;
     if (console::find_switch(argc, argv, "-flip_x")) image_flip_x = true;
     if (console::find_switch(argc, argv, "-flip_y")) image_flip_x = true;
     if (console::find_switch(argc, argv, "-wallfinder_flip_floor_ceiling")) flipfloorceiling = true;

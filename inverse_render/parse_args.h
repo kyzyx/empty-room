@@ -31,6 +31,7 @@ extern bool do_wallfinding;
 extern bool do_reprojection;
 extern bool do_sampling;
 extern bool do_texture;
+extern bool do_linefinding;
 extern double hdr_threshold;
 extern double displayscale;
 extern bool image_flip_x, image_flip_y;
