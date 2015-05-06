@@ -334,6 +334,7 @@ void MainWindow::imagesLoaded() {
     ui->nextImageButton->setEnabled(true);
     ui->imageNumBox->setEnabled(true);
     ui->loadImageButton->setEnabled(true);
+    ui->edgeFilterButton->setEnabled(true);
 
     ui->imageNumBox->setValidator(new QIntValidator(0, imgr->size()-1, this));
 
@@ -588,6 +589,24 @@ void MainWindow::on_computeLabelImagesButton_clicked()
         imgr->setFlags("labels", i, f|ImageManager::DF_INITIALIZED);
     }
     progressbar->setValue(100);
+}
+// ---------------------------
+// Door/Window Finding Actions
+// ---------------------------
+void MainWindow::on_edgeFilterButton_clicked()
+{
+    QString cmd = settings->value("compute_edges_binary", "edgeimageapp -camfile %1 -p").toString();
+    cmd = cmd.arg(camfilename);
+    QString extraflags = "";
+    cmd += extraflags;
+    progressbar->setValue(0);
+    SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
+    workers.push_back(w);
+    QThread* thread = new QThread;
+    connect(thread, SIGNAL(started()), w, SLOT(run()));
+    connect(w, SIGNAL(percentChanged(int)), progressbar, SLOT(setValue(int)));
+    w->moveToThread(thread);
+    thread->start();
 }
 
 // ----------------------------

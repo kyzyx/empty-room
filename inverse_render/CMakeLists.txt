@@ -42,6 +42,10 @@ add_executable(reprojectapp reprojectapp.cpp invrenderapp.cpp invrenderapp.h
 target_link_libraries(reprojectapp ${PCL_LIBRARIES} datamanager)
 add_executable(labelimageapp labelimageapp.cpp invrenderapp.cpp invrenderapp.h)
 target_link_libraries(labelimageapp ${PCL_LIBRARIES} ${GLUT_LIBRARY} datamanager rendering)
+add_executable(edgeimageapp edgeimageapp.cpp
+    orientededgefilter.cpp orientededgefilter.h
+    invrenderapp.cpp invrenderapp.h)
+target_link_libraries(edgeimageapp ${PCL_LIBRARIES} ${OpenCV_LIBS} datamanager)
 add_executable(wallfindapp wallfindapp.cpp invrenderapp.cpp invrenderapp.h
     orientation_finder.h orientation_finder.cpp wall_finder.h wall_finder.cpp
     shortestpath.h shortestpath.cpp)

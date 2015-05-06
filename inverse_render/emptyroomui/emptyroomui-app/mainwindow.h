@@ -84,6 +84,8 @@ private slots:
 
     void on_commitLightsButton_clicked();
 
+    void on_edgeFilterButton_clicked();
+
 private:
     Ui::MainWindow *ui;
     ImageManager* imgr;

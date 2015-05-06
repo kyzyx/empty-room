@@ -197,19 +197,20 @@ bool writeExrImage(const string& filename,
     Rgba* pixels = new Rgba[width*height];
     for (int i = 0; i < height; ++i) {
         for (int j = 0; j < width; ++j) {
-            int idx = j + (height-i-1)*width;
-            pixels[idx].r = image[channels*idx];
+            int pidx = j + i*width;
+            int iidx = j + (height-i-1)*width;
+            pixels[pidx].r = image[channels*iidx];
             if (channels > 1) {
-                pixels[idx].g = image[channels*idx+1];
-                pixels[idx].b = image[channels*idx+2];
+                pixels[pidx].g = image[channels*iidx+1];
+                pixels[pidx].b = image[channels*iidx+2];
             } else {
-                pixels[idx].g = image[idx];
-                pixels[idx].b = image[idx];
+                pixels[pidx].g = image[iidx];
+                pixels[pidx].b = image[iidx];
             }
             if (channels > 3) {
-                pixels[idx].a = image[channels*idx+3];
+                pixels[pidx].a = image[channels*iidx+3];
             } else {
-                pixels[idx].a = 1;
+                pixels[pidx].a = 1;
             }
         }
     }
