@@ -15,12 +15,12 @@ class WallLine {
 };
 
 void findWallLinesInImage(
-        const CameraParams& cam,
-        const char* image,
+        ImageManager& imgr,
+        int idx,
         WallFinder& wf,
         double resolution,
         R4Matrix norm,
-        std::vector<std::vector<double> >& votes
+        std::vector<std::vector<Eigen::Vector3d> >& votes
 );
 void findWallLines(ImageManager& imgr, WallFinder& wf, std::vector<WallLine>& lines, double resolution=0.02, bool getvotes=false);
 

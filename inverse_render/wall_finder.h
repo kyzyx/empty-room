@@ -96,6 +96,7 @@ class WallFinder {
                 double anglethreshold=M_PI/40);
 
         void getAsRoomModel(roommodel::RoomModel* rm);
+        void loadFromRoomModel(roommodel::RoomModel* rm);
         void loadWalls(std::string filename, std::vector<char>& labels, OrientationFinder& of);
         void saveWalls(std::string filename, std::vector<char>& labels, OrientationFinder& of);
         double getResolution() const { return resolution; }

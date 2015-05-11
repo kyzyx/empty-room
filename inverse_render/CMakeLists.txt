@@ -46,6 +46,13 @@ add_executable(edgeimageapp edgeimageapp.cpp
     orientededgefilter.cpp orientededgefilter.h
     invrenderapp.cpp invrenderapp.h)
 target_link_libraries(edgeimageapp ${PCL_LIBRARIES} ${OpenCV_LIBS} datamanager)
+add_executable(linefindapp linefindapp.cpp
+    wall_finder.h wall_finder.cpp
+    linefinder.cpp linefinder.h
+    shortestpath.h shortestpath.cpp orientededgefilter.cpp orientededgefilter.h
+    invrenderapp.cpp invrenderapp.h)
+target_link_libraries(linefindapp ${PCL_LIBRARIES} ${OpenCV_LIBS} datamanager
+    roommodel)
 add_executable(wallfindapp wallfindapp.cpp invrenderapp.cpp invrenderapp.h
     orientation_finder.h orientation_finder.cpp wall_finder.h wall_finder.cpp
     shortestpath.h shortestpath.cpp)

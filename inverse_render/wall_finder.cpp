@@ -654,6 +654,7 @@ Eigen::Vector3f WallFinder::getNormalizedWallEndpoint(int i, bool lo, double hei
 
 void WallFinder::getAsRoomModel(roommodel::RoomModel* rm) {
     rm->height = ceilplane - floorplane;
+    rm->originalFloor = floorplane;
     rm->walls.clear();
     int start;
     for (start = 0; start < wallsegments.size(); ++start) {
@@ -685,4 +686,35 @@ void WallFinder::getAsRoomModel(roommodel::RoomModel* rm) {
     rm->ceilingMaterial.diffuse.r = 1;
     rm->ceilingMaterial.diffuse.g = 1;
     rm->ceilingMaterial.diffuse.b = 1;
+}
+
+void WallFinder::loadFromRoomModel(roommodel::RoomModel* rm) {
+    wallsegments.clear();
+    floorplane = rm->originalFloor;
+    ceilplane = floorplane + rm->height;
+    R4Matrix m = rm->globaltransform;
+    normalization << m[0][0], m[0][1], m[0][2], m[0][3],
+                     m[1][0], m[1][1], m[1][2], m[1][3],
+                     m[2][0], m[2][1], m[2][2], m[2][3],
+                     m[3][0], m[3][1], m[3][2], m[3][3];
+
+    double px = 0;
+    double py = 0;
+    for (int i = 0; i < rm->walls.size(); ++i) {
+        int nn = rm->walls[i].normal;
+        double l = rm->walls[i].length*nn;
+        double cx = (i&1)?px+l:px;
+        double cy = (i&1)?py:py-l;
+
+        Segment s;
+        s.direction = i&1?1:0;
+        s.start = (i&1)?px:py;
+        s.end = (i&1)?cx:cy;
+        s.coord = (i&1)?py:px;
+
+        px = cx;
+        py = cy;
+
+        wallsegments.push_back(s);
+    }
 }

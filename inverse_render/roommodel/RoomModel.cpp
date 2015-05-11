@@ -269,6 +269,7 @@ bool load(RoomModel& r, const string& filename) {
 	}
 	// Parse height
 	REQ_SET_NUM(d, "height", r.height);
+	OPT_SET_NUM(d, "originalFloor", r.originalFloor);
 
 	// Parse floor plan reflectances
 	REQ_OBJECT(d, "wallMaterial");
@@ -313,6 +314,7 @@ bool save(RoomModel& r, const string& filename) {
 	}
 	writer.EndArray();
 	SERIALIZE_DOUBLE(writer, "height", r.height);
+	SERIALIZE_DOUBLE(writer, "originalFloor", r.originalFloor);
 	SERIALIZE_DOUBLE(writer, "baseboardHeight", r.baseboardHeight);
 	SERIALIZE_DOUBLE(writer, "baseboardDepth", r.baseboardDepth);
 	writer.String("wallMaterial");
@@ -338,6 +340,8 @@ bool save(RoomModel& r, const string& filename) {
 
 RoomModel::RoomModel(const string& filename)
 {
+    globaltransform = IdentityMatrix;
+    originalFloor = 0;
 	load(*this, filename);
 }
 }

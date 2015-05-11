@@ -17,6 +17,7 @@ signals:
     void percentChanged(int percent);
     void done();
     void error(QString errstring);
+    void data(QString datastring);
 
 public slots:
     virtual void run();

@@ -139,7 +139,11 @@ public:
 	Material wallMaterial;
 	Material floorMaterial;
 	Material ceilingMaterial;
+
+    // WallFinder Helpers
     FMatrix globaltransform;
+    double originalFloor;
+
 	// -------------------------------------------
 	// Baseboard
 	//    Assumes blockish baseboard
@@ -153,6 +157,8 @@ public:
 	// Lighting
 	std::vector<Light*> lights;
 	RoomModel(double l, double w, double h) {
+        globaltransform = IdentityMatrix;
+        originalFloor = 0;
 		Wall wall;
 		wall.length = l;
 		wall.normal = -1;
@@ -170,6 +176,7 @@ public:
 	}
 	RoomModel() {
         globaltransform = IdentityMatrix;
+        originalFloor = 0;
     }
 
 	RoomModel(const std::string& filename);

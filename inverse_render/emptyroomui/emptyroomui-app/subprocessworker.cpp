@@ -97,6 +97,8 @@ void SubprocessWorker::run() {
                     }
                 } else if (strncmp(buf+2, "error:", 6) == 0) {
                     emit error(QString(buf+2));
+                } else if (strncmp(buf+2, "data:", 5) == 0) {
+                    emit data(QString(buf+7));
                 }
             } else {
                 int n = atoi(buf+1);
