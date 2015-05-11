@@ -355,16 +355,15 @@ void RenderManager::setupRoomGeometry(roommodel::RoomModel* model) {
 
     R4Matrix m = model->globaltransform;
     m = m.Inverse();
-    trans = R3Vector(m[0][3], m[1][3], m[2][3]);
-
-    m[0][3] = 0;
-    m[1][3] = 0;
-    m[2][3] = 0;
+    R4Matrix reup = R4identity_matrix;
+    reup.XRotate(M_PI/2);
+    reup.YRotate(M_PI);
+    reup.ZRotate(-M_PI/2);
     for (int i = 0; i < numroomtriangles; ++i) {
         R3Point p(triangles[6*i], triangles[6*i+1], triangles[6*i+2]);
         R3Vector n(triangles[6*3], triangles[6*i+4], triangles[6*i+5]);
-        p = m*p;
-        n = m*n;
+        p = m*reup*p;
+        n = m*reup*n;
         vertices[6*i] = p.X();
         vertices[6*i+1] = p.Y();
         vertices[6*i+2] = p.Z();
@@ -441,11 +440,6 @@ void RenderManager::renderRoom() {
     l.Draw(0);
 
     glMatrixMode(GL_MODELVIEW);
-    glPushMatrix();
-    glTranslatef(trans[0], trans[1], trans[2]);
-    glRotatef(90,1,0,0);
-    glRotatef(-90,0,0,1);
-
     glEnableClientState(GL_VERTEX_ARRAY);
     glEnableClientState(GL_NORMAL_ARRAY);
     glEnableClientState(GL_COLOR_ARRAY);
