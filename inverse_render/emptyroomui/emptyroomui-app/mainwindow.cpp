@@ -167,6 +167,12 @@ void MainWindow::updateImage(int idx, int type)
         default:
             return;
     }
+    ui->imageWidget->clearLines();
+    for (int i = 0; i < lines.size(); i+=5) {
+        if (lines[i] == imageindex) {
+            ui->imageWidget->addLine(lines[i+1], lines[i+2], lines[i+3], lines[i+4]);
+        }
+    }
     ui->meshWidget->highlightCamera(idx);
     if (ui->autoLookCheckbox->isChecked()) ui->meshWidget->lookThroughCamera(imgr->getCamera(idx));
 
@@ -344,6 +350,15 @@ void MainWindow::imagesLoaded() {
     }
     updateImage(0, typeindex);
     connect(ui->imageTypeComboBox, SIGNAL(currentIndexChanged(int)), ui->imageWidget, SLOT(loadSettings(int)));
+
+    bool edgeImagesInitialized = true;
+    for (int i = 0; i < imgr->size(); ++i) {
+        if (!(imgr->getFlags("edges", i) & ImageManager::DF_INITIALIZED)) {
+            edgeImagesInitialized = false;
+            break;
+        }
+    }
+    if (edgeImagesInitialized) edgeImagesLoaded();
     meshAndImagesLoaded();
 }
 
@@ -549,14 +564,17 @@ void MainWindow::wallfindingDone() {
 }
 
 void MainWindow::floorPlanLoaded() {
+    hasFloorPlan = true;
     ui->meshWidget->setRoomModel(room);
     ui->showRoomCheckbox->setEnabled(true);
     ui->actionSave_Wallfinding_Floor_Plan->setEnabled(true);
+    edgesAndFloorPlanLoaded();
 }
 
 void MainWindow::loadFloorPlan(QString floorplanfile) {
     if (floorplanfile.isEmpty()) return;
     if (room) delete room;
+    roommodelfile = floorplanfile;
     room = new roommodel::RoomModel;
     roommodel::load(*room, floorplanfile.toStdString());
     floorPlanLoaded();
@@ -605,8 +623,44 @@ void MainWindow::on_edgeFilterButton_clicked()
     QThread* thread = new QThread;
     connect(thread, SIGNAL(started()), w, SLOT(run()));
     connect(w, SIGNAL(percentChanged(int)), progressbar, SLOT(setValue(int)));
+    connect(w, SIGNAL(done()), progressbar, SLOT(edgeImagesLoaded()));
     w->moveToThread(thread);
     thread->start();
+}
+
+void MainWindow::edgeImagesLoaded() {
+    hasEdgeImages = true;
+    edgesAndFloorPlanLoaded();
+}
+
+void MainWindow::edgesAndFloorPlanLoaded() {
+    if (hasEdgeImages && hasFloorPlan) {
+        ui->computeVerticalLinesButton->setEnabled(true);
+    }
+}
+
+void MainWindow::addLine(QString l) {
+    QStringList ls = l.split(" ");
+    for (int i = 0; i < 5; ++i) lines.push_back(ls[i].toInt());
+    updateImage(imageindex, typeindex);
+}
+
+void MainWindow::on_computeVerticalLinesButton_clicked()
+{
+    QString cmd = settings->value("compute_rwo_binary", "linefindapp -camfile %1 -roommodel %2 -p").toString();
+    cmd = cmd.arg(camfilename, roommodelfile);
+    QString extraflags = "";
+    cmd += extraflags;
+    progressbar->setValue(0);
+    SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
+    workers.push_back(w);
+    QThread* thread = new QThread;
+    connect(thread, SIGNAL(started()), w, SLOT(run()));
+    connect(w, SIGNAL(percentChanged(int)), progressbar, SLOT(setValue(int)));
+    connect(w, SIGNAL(data(QString)), this, SLOT(addLine(QString)));
+    w->moveToThread(thread);
+    thread->start();
+
 }
 
 // ----------------------------

@@ -95,15 +95,23 @@ void HDRImageViewer::_dorender() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, tex);
+    glColor3f(1,1,1);
     glBegin(GL_QUADS);
         glTexCoord2f(0.0f, 1.0f);
-        glVertex3f(0, 0, 0);
+        glVertex3f(0.0f, 0.0f, 0.5f);
         glTexCoord2f(1.0f, 1.0f);
-        glVertex3f(currw, 0, 0);
+        glVertex3f(currw, 0.0f, 0.5f);
         glTexCoord2f(1.0f, 0.0f);
-        glVertex3f(currw, currh, 0.0f);
+        glVertex3f(currw, currh, 0.5f);
         glTexCoord2f(0.0f, 0.0f);
-        glVertex3f(0, currh, 0.0f);
+        glVertex3f(0.0f, currh, 0.5f);
+    glEnd();
+    glColor3f(100,0,0);
+    glBegin(GL_LINES);
+        for (int i = 0; i < lines.size(); i+=4) {
+            glVertex3f(lines[i], lines[i+1], 0);
+            glVertex3f(lines[i+2], lines[i+3], 0);
+        }
     glEnd();
     glBindTexture(GL_TEXTURE_2D, 0);
 }

@@ -94,6 +94,12 @@ public:
     bool setRGBImage(const unsigned char* data, int w, int h, int channels) {
         v->setRGBImage(data, w, h, channels);
     }
+    void addLine(int x1, int y1, int x2, int y2) {
+        v->addLine(x1,y1,x2,y2);
+    }
+    void clearLines() {
+        v->clearLines();
+    }
 
 protected:
     HDRImageViewer* v;

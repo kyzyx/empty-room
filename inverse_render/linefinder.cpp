@@ -238,6 +238,7 @@ void findWallLinesInImage(
     VPHough((const float*) imgr.getImage("edges", idx), (const char*) imgr.getImage("labels", idx), cam.width, cam.height, vps, 1, verticallines);
 
     for (int k = 0; k < verticallines.size(); ++k) {
+        cout << ">>data:" << idx << " " << verticallines[k][0] << " " <<  verticallines[k][1] << " " << verticallines[k][2] << " " << verticallines[k][3] << endl;
         Vector3d bestpt[2];
         int bestwall[2];
         bestwall[0] = -1;

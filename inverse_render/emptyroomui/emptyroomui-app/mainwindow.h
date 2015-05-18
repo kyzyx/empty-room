@@ -48,12 +48,18 @@ private slots:
     void on_showCurrentCameraCheckbox_toggled(bool checked);
     void on_autoLookCheckbox_toggled(bool checked);
 
+    // Data communications
+    void addLine(QString l);
+
     // Actions
     void on_actionQuit_triggered();
 
     void on_reprojectButton_clicked();
     void on_wallfindButton_clicked();
     void on_computeLabelImagesButton_clicked();
+    void on_edgeFilterButton_clicked();
+    void on_commitLightsButton_clicked();
+    void on_computeVerticalLinesButton_clicked();
 
     // Load/Save
     void on_actionOpen_Mesh_triggered();
@@ -77,14 +83,12 @@ private slots:
     void labelDataLoaded();
     void samplesLoaded();
     void floorPlanLoaded();
+    void edgeImagesLoaded();
+    void edgesAndFloorPlanLoaded();
 
     // Task Completions
     void wallfindingDone();
     void partialVertexDataLoaded(int percent);
-
-    void on_commitLightsButton_clicked();
-
-    void on_edgeFilterButton_clicked();
 
 private:
     Ui::MainWindow *ui;
@@ -102,9 +106,15 @@ private:
     QString settingsfilename;
 
     QTemporaryFile* temproommodel;
+    QString roommodelfile;
 
+    std::vector<int> lines;
     int imageindex;
     int typeindex;
+
+    // Load state
+    bool hasFloorPlan;
+    bool hasEdgeImages;
 };
 
 #endif // MAINWINDOW_H
