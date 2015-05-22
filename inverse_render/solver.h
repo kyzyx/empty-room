@@ -10,7 +10,7 @@
 class InverseRender {
     public:
         InverseRender(MeshManager* m, int nlights, int hemicubeResolution=150)
-            : mesh(m), numlights(nlights), images(NULL),
+            : mesh(m), numlights(nlights),
               maxPercentErr(0.1), numRansacIters(1000)
         {
             rm = new RenderManager(m);
@@ -59,7 +59,7 @@ class InverseRender {
         int numRansacIters;
         double maxPercentErr;
     public:
-        float** images;
+        std::vector<float*> images;
         MeshManager* mesh;
         int numlights;
         std::vector<Material> lights;

@@ -129,16 +129,12 @@ void HemicubeRenderer::computeSamples(
         vector<int> indices,
         int numsamples,
         double discardthreshold,
-        float** images)
+        vector<float*>* images,
+        boost::function<void(int)> cb)
 {
     float* lightimage;
     float* radimage;
-    if (images) {
-        for (int i = 0; i < numsamples; ++i) {
-            images[2*i] = new float[3*res*res];
-            images[2*i+1] = new float[3*res*res];
-        }
-    } else {
+    if (!images) {
         lightimage = new float[3*res*res];
         radimage = new float[3*res*res];
     }
@@ -146,29 +142,35 @@ void HemicubeRenderer::computeSamples(
     default_random_engine generator;
     uniform_int_distribution<int> dist(0, indices.size());
     for (int i = 0; i < numsamples; ++i) {
+        if (cb) cb(100*i/numsamples);
         int n;
         do {
             n = dist(generator);
         } while (rendermanager->getMeshManager()->getLabel(indices[n]) > 0 || rendermanager->getMeshManager()->getVertexSampleCount(indices[n]) == 0);
 
-        SampleData sd;
-        sd.vertexid = indices[n];
-        sd.radiosity = rendermanager->getMeshManager()->getVertexColor(indices[n]);
         if (images) {
-            radimage = images[2*i];
-            lightimage = images[2*i+1];
+            radimage = new float[3*res*res];
+            lightimage = new float[3*res*res];
+            images->push_back(radimage);
+            images->push_back(lightimage);
         }
-        sd.fractionUnknown = renderHemicube(
-                rendermanager->getMeshManager()->VertexPosition(indices[n]),
-                rendermanager->getMeshManager()->VertexNormal(indices[n]),
-                sd.netIncoming, sd.lightamount, radimage, lightimage
-        );
+        SampleData sd = computeSample(indices[n], radimage, lightimage);
         if (sd.fractionUnknown > discardthreshold) {
             --i;
             continue;
         }
         data.push_back(sd);
-        if (i%10 == 9) cout << "Rendered " << i+1 << "/" << numsamples << endl;
     }
-    cout << "Done sampling" << endl;
+}
+
+SampleData HemicubeRenderer::computeSample(int n, float* radimage, float* lightimage) {
+    SampleData sd;
+    sd.vertexid = n;
+    sd.radiosity = rendermanager->getMeshManager()->getVertexColor(n);
+    sd.fractionUnknown = renderHemicube(
+            rendermanager->getMeshManager()->VertexPosition(n),
+            rendermanager->getMeshManager()->VertexNormal(n),
+            sd.netIncoming, sd.lightamount, radimage, lightimage
+            );
+    return sd;
 }

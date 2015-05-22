@@ -186,7 +186,7 @@ void InvRenderVisualizer::visualizeWalls() {
 }
 
 void InvRenderVisualizer::addSamples(vector<SampleData>& data) {
-    if (data.size() > 0 && ir->images && !imvu) {
+    if (data.size() > 0 && ir->images.size() > 0 && !imvu) {
         imvu = new visualization::ImageViewer("Hi");
         imvu->registerKeyboardCallback(&InvRenderVisualizer::kbd_cb_, *this);
         showimage(0, 0);

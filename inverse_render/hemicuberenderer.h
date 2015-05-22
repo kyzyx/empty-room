@@ -22,7 +22,9 @@ class HemicubeRenderer {
                 std::vector<int> indices,
                 int numsamples,
                 double discardthreshold=1,
-                float** images=NULL);
+                std::vector<float*>* images=NULL,
+                boost::function<void(int)> cb=NULL
+                );
         float renderHemicube(const R3Point& p, const R3Vector& n,
                 Material& m, std::vector<float>& lightareas, float* color,
                 float* light);
@@ -30,6 +32,7 @@ class HemicubeRenderer {
 
         void render(const CameraParams* cam, float* image, int mode=VIEW_AVERAGE);
     private:
+        SampleData computeSample(int n, float* radimage, float* lightimage);
         void renderFace(const R3Point& p,
                 const R3Vector& towards, const R3Vector& up,
                 float* image, int mode);
