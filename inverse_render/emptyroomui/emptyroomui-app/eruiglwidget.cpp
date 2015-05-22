@@ -50,6 +50,7 @@ void ERUIGLWidget::updateMeshAuxiliaryData() {
 }
 
 void ERUIGLWidget::setupCameras(ImageManager* imgr) {
+    cameras.clear();
     int inc = 1;
     if (imgr->size() > MAX_CAMERAS) {
         inc = imgr->size()/MAX_CAMERAS + 1;
@@ -60,6 +61,20 @@ void ERUIGLWidget::setupCameras(ImageManager* imgr) {
     }
     update();
 }
+
+void ERUIGLWidget::setupCameras(std::vector<CameraParams>& cams) {
+    cameras.clear();
+    int inc = 1;
+    if (cams.size() > MAX_CAMERAS) {
+        inc = cams.size()/MAX_CAMERAS + 1;
+    }
+    for (int i = 0; i < cams.size(); i += inc) {
+        cameras.push_back(cams[i]);
+        camids.push_back(i);
+    }
+    update();
+}
+
 
 void ERUIGLWidget::highlightCamera(int cameraindex) {
     std::vector<int>::iterator it = std::lower_bound(camids.begin(), camids.end(), cameraindex);

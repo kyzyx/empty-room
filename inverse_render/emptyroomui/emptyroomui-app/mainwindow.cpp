@@ -109,7 +109,7 @@ MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
     imgr(NULL), mmgr(NULL),
-    typeindex(0), imageindex(0), room(NULL)
+    typeindex(0), imageindex(0), room(NULL), imagedisplaymode(1)
 {
     ui->setupUi(this);
 
@@ -147,43 +147,103 @@ void MainWindow::keyPressEvent(QKeyEvent *e)
 // -----------------
 void MainWindow::updateImage(int idx, int type)
 {
-    imageindex = idx%imgr->size();
-    typeindex = type%imgr->getNumImageTypes();
-    int w = imgr->getCamera(0)->width;
-    int h = imgr->getCamera(0)->height;
-    switch (imgr->getImageType(typeindex).getType()) {
-        case CV_32FC3:
-            ui->imageWidget->setFloatImage((const float*) imgr->getImage(typeindex, imageindex), w, h, 3);
-            break;
-        case CV_32FC1:
-            ui->imageWidget->setFloatImage((const float*) imgr->getImage(typeindex, imageindex), w, h, 1);
-            break;
-        case CV_8UC3:
-            ui->imageWidget->setRGBImage((const unsigned char*) imgr->getImage(typeindex, imageindex), w, h, 3);
-            break;
-        case CV_8UC1:
-            ui->imageWidget->setRGBImage((const unsigned char*) imgr->getImage(typeindex, imageindex), w, h, 1);
-            break;
-        default:
-            return;
-    }
-    ui->imageWidget->clearLines();
-    for (int i = 0; i < lines.size(); i+=5) {
-        if (lines[i] == imageindex) {
-            ui->imageWidget->addLine(lines[i+1], lines[i+2], lines[i+3], lines[i+4]);
+    if (imagedisplaymode > 0) {
+        imageindex = idx%imgr->size();
+        typeindex = type%imgr->getNumImageTypes();
+        int w = imgr->getCamera(0)->width;
+        int h = imgr->getCamera(0)->height;
+        switch (imgr->getImageType(typeindex).getType()) {
+            case CV_32FC3:
+                ui->imageWidget->setFloatImage((const float*) imgr->getImage(typeindex, imageindex), w, h, 3);
+                break;
+            case CV_32FC1:
+                ui->imageWidget->setFloatImage((const float*) imgr->getImage(typeindex, imageindex), w, h, 1);
+                break;
+            case CV_8UC3:
+                ui->imageWidget->setRGBImage((const unsigned char*) imgr->getImage(typeindex, imageindex), w, h, 3);
+                break;
+            case CV_8UC1:
+                ui->imageWidget->setRGBImage((const unsigned char*) imgr->getImage(typeindex, imageindex), w, h, 1);
+                break;
+            default:
+                return;
         }
-    }
-    ui->meshWidget->highlightCamera(idx);
-    if (ui->autoLookCheckbox->isChecked()) ui->meshWidget->lookThroughCamera(imgr->getCamera(idx));
+        ui->imageWidget->clearLines();
+        for (int i = 0; i < lines.size(); i+=5) {
+            if (lines[i] == imageindex) {
+                ui->imageWidget->addLine(lines[i+1], lines[i+2], lines[i+3], lines[i+4]);
+            }
+        }
+        ui->meshWidget->highlightCamera(idx);
+        if (ui->autoLookCheckbox->isChecked()) ui->meshWidget->lookThroughCamera(imgr->getCamera(idx));
 
-    if (ui->meshWidget->renderOptions()->getMeshRenderFormat() == VIEW_SINGLEIMAGE) {
-        ui->meshWidget->renderManager()->setShaderAuxInt(imageindex);
+        if (ui->meshWidget->renderOptions()->getMeshRenderFormat() == VIEW_SINGLEIMAGE) {
+            ui->meshWidget->renderManager()->setShaderAuxInt(imageindex);
+        }
+        if (imageindex == 0) ui->prevImageButton->setEnabled(false);
+        else ui->prevImageButton->setEnabled(true);
+        if (imageindex == imgr->size() - 1) ui->nextImageButton->setEnabled(false);
+        else ui->nextImageButton->setEnabled(true);
+        ui->imageNumBox->setText(QString::number(imageindex));
+    } else {
+        imageindex = idx%hemicubecams.size();
+        int w = hemicubecams[imageindex].width;
+        float* face = new float[w*w*3];
+        float* img = new float[4*w*w*3];
+        bzero(img, 4*w*w*3*sizeof(float));
+        int type = VIEW_AVERAGE;
+        // center
+        ui->meshWidget->renderManager()->readFromRender(&hemicubecams[imageindex], face, type, true);
+        for (int i = 0; i < w; ++i) {
+            float* row = img + 2*w*3 * (w/2+i);
+            memcpy(row + w/2*3, face + i*w*3, w*3*sizeof(float));
+        }
+        // top
+        CameraParams cam = hemicubecams[imageindex];
+        std::swap(cam.towards, cam.up);
+        cam.up = -cam.up;
+        cam.right = -cam.right;
+        ui->meshWidget->renderManager()->readFromRender(&cam, face, type, true);
+        for (int i = 0; i < w/2; ++i) {
+            float* row = img + 2*w*3 * (3*w/2 + i);
+            memcpy(row + w/2*3, face + i*w*3, w*3*sizeof(float));
+        }
+        // bottom
+        cam.towards = -cam.towards;
+        cam.up = -cam.up;
+        ui->meshWidget->renderManager()->readFromRender(&cam, face, type, true);
+        for (int i = 0; i < w/2; ++i) {
+            float* row = img + 2*w*3 * (w/2-i-1);
+            memcpy(row + w/2*3, face + (w-i)*w*3, w*3*sizeof(float));
+        }
+        // left
+        cam = hemicubecams[imageindex];
+        std::swap(cam.towards, cam.right);
+        cam.towards = -cam.towards;
+        ui->meshWidget->renderManager()->readFromRender(&cam, face, type, true);
+        for (int i = 0; i < w; ++i) {
+            memcpy(img + 2*w*3*(w/2+i), face + i*w*3 + 3*w/2, w/2*3*sizeof(float));
+        }
+        // right
+        cam = hemicubecams[imageindex];
+        std::swap(cam.towards, cam.right);
+        cam.right = -cam.right;
+        ui->meshWidget->renderManager()->readFromRender(&cam, face, type, true);
+        for (int i = 0; i < w; ++i) {
+            memcpy(img + 2*w*3*(w/2+i)+3*3*w/2, face + i*w*3, w/2*3*sizeof(float));
+        }
+        // TODO: !!! Display type
+        // TODO: !!! Normalization transform on sample cameras
+        // TODO: !!! Display stats (Total incoming light, etc.)
+        ui->imageWidget->setFloatImage(img, 2*w, 2*w, 3);
+        ui->meshWidget->highlightCamera(idx);
+        if (ui->autoLookCheckbox->isChecked()) ui->meshWidget->lookThroughCamera(&hemicubecams[imageindex]);
+        if (imageindex == 0) ui->prevImageButton->setEnabled(false);
+        else ui->prevImageButton->setEnabled(true);
+        if (imageindex == hemicubecams.size() - 1) ui->nextImageButton->setEnabled(false);
+        else ui->nextImageButton->setEnabled(true);
+        ui->imageNumBox->setText(QString::number(imageindex));
     }
-    if (imageindex == 0) ui->prevImageButton->setEnabled(false);
-    else ui->prevImageButton->setEnabled(true);
-    if (imageindex == imgr->size() - 1) ui->nextImageButton->setEnabled(false);
-    else ui->nextImageButton->setEnabled(true);
-    ui->imageNumBox->setText(QString::number(imageindex));
 }
 
 void MainWindow::on_loadImageButton_clicked()
@@ -193,13 +253,19 @@ void MainWindow::on_loadImageButton_clicked()
 }
 
 void MainWindow::onCameraSelection(int selected) {
-    if (imageindex == selected) ui->meshWidget->lookThroughCamera(imgr->getCamera(selected));
+    if (imageindex == selected) {
+        if (imagedisplaymode > 0) ui->meshWidget->lookThroughCamera(imgr->getCamera(selected));
+        else ui->meshWidget->lookThroughCamera(&hemicubecams[selected]);
+    }
     updateImage(selected);
 }
 
 void MainWindow::on_autoLookCheckbox_toggled(bool checked)
 {
-    if (checked) ui->meshWidget->lookThroughCamera(imgr->getCamera(imageindex));
+    if (checked) {
+        if (imagedisplaymode > 0) ui->meshWidget->lookThroughCamera(imgr->getCamera(imageindex));
+        else ui->meshWidget->lookThroughCamera(&hemicubecams[imageindex]);
+    }
 }
 
 void MainWindow::on_showCameraCheckbox_toggled(bool checked)
@@ -641,8 +707,43 @@ void MainWindow::on_computeLabelImagesButton_clicked()
     progressbar->setValue(100);
 }
 
+#include <random>
+
 void MainWindow::on_hemicubeButton_clicked()
 {
+    if (imagedisplaymode > 0) {
+        hemicubecams.clear();
+        int numsamples = ui->numSamplesLineEdit->text().toInt();
+        std::default_random_engine generator;
+        std::uniform_int_distribution<int> dist(0, wallindices.size());
+        for (int i = 0; i < numsamples; ++i) {
+            int n;
+            do {
+                n = dist(generator);
+            } while (mmgr->getLabel(wallindices[n]) > 0 || mmgr->getVertexSampleCount(wallindices[n]) == 0);
+
+            CameraParams cam;
+            cam.fov = 90;
+            cam.height = ui->hemicubeResLineEdit->text().toInt();
+            cam.width = ui->hemicubeResLineEdit->text().toInt();
+            cam.pos = mmgr->VertexPosition(wallindices[n]);
+            cam.towards = mmgr->VertexNormal(wallindices[n]);
+            cam.up = R3yaxis_vector;
+            cam.right = cam.towards;
+            cam.right.Cross(cam.up);
+            cam.focal_length = cam.width/2;
+            hemicubecams.push_back(cam);
+        }
+        ui->meshWidget->setupCameras(hemicubecams);
+        ui->hemicubeButton->setText("Revert display to cameras");
+    } else {
+        ui->meshWidget->setupCameras(imgr);
+        ui->hemicubeButton->setText("Render hemicubes");
+    }
+    imagedisplaymode = -imagedisplaymode;
+    updateImage(0);
+
+    /*
     progressbar->setValue(0);
     // FIXME - where to put images
     // FIXME - progress bar in computeSamples
@@ -650,7 +751,7 @@ void MainWindow::on_hemicubeButton_clicked()
     std::vector<SampleData> samples;
     std::vector<float*> images;
     hr.computeSamples(samples, wallindices, ui->numSamplesLineEdit->text().toInt(), 1., &images);
-    progressbar->setValue(100);
+    progressbar->setValue(100);*/
 }
 
 // ---------------------------

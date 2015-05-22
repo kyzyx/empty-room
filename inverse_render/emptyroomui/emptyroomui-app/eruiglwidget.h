@@ -154,6 +154,7 @@ public:
 
     void lookThroughCamera(const CameraParams* cam);
     void setupCameras(ImageManager* imgr);
+    void setupCameras(std::vector<CameraParams>& cams);
 protected:
     virtual void draw();
     virtual void init();
@@ -201,6 +202,9 @@ public:
     }
     void setupCameras(ImageManager* imgr) {
         v->setupCameras(imgr);
+    }
+    void setupCameras(std::vector<CameraParams>& cams) {
+        v->setupCameras(cams);
     }
     void setRoomModel(roommodel::RoomModel* model) {
         v->setRoomModel(model);

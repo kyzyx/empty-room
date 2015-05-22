@@ -6,6 +6,8 @@
 
 QT       += core gui opengl xml widgets
 
+CONFIG += c++11
+
 TARGET = ../emptyroomui
 TEMPLATE = app
 

@@ -119,6 +119,8 @@ private:
     bool hasFloorPlan;
     bool hasEdgeImages;
 
+    int imagedisplaymode;
+    std::vector<CameraParams> hemicubecams;
     std::vector<int> wallindices;
     std::vector<int> floorindices;
 };
