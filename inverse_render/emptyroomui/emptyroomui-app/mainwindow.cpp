@@ -426,6 +426,7 @@ void MainWindow::samplesLoaded() {
         ui->meshWidget->setupMeshColors();
     }
     ui->actionSave_Reprojection_Results->setEnabled(true);
+    checkEnableHemicubes();
 
     ui->lightsliderlabel->setEnabled(true);
     ui->overlayThresholdCheckbox->setEnabled(true);
@@ -444,6 +445,15 @@ void MainWindow::partialVertexDataLoaded(int percent) {
         ui->meshWidget->setupMeshColors();
     }
 }
+
+enum Label {
+    LABEL_NONE=0,
+    LABEL_WALL,
+    LABEL_CEILING,
+    LABEL_FLOOR,
+    LABEL_CORNER
+};
+
 void MainWindow::labelDataLoaded() {
     ui->computeLabelImagesButton->setEnabled(true);
     ui->meshWidget->updateMeshAuxiliaryData();
@@ -453,6 +463,28 @@ void MainWindow::labelDataLoaded() {
     ui->overlayTypeComboBox->insertItem(1,"Overlay identified lights");
     ui->overlayTypeComboBox->insertItem(2,"Overlay semantic data");
     connect(ui->overlayTypeComboBox, SIGNAL(currentIndexChanged(int)), ui->meshWidget->renderOptions(), SLOT(setOverlay(int)));
+
+    // Initialize index arrays
+    {
+        //boost::interprocess::shared_lock<MeshManager::shmutex> lock(*(mmgr->getMutex(MeshManager::TYPE_CHANNEL,0)));
+        for (int i = 0; i < mmgr->NVertices(); ++i) {
+            char label =  mmgr->getLabel(i, MeshManager::TYPE_CHANNEL);
+            if (label == LABEL_WALL) wallindices.push_back(i);
+            else if (label == LABEL_FLOOR) floorindices.push_back(i);
+        }
+    }
+    checkEnableHemicubes();
+}
+
+void MainWindow::checkEnableHemicubes() {
+    if (mmgr->hasSamples() && ui->computeLabelImagesButton->isEnabled()) {
+        ui->hemicubeButton->setEnabled(true);
+        ui->hemicubeResLineEdit->setEnabled(true);
+        ui->numSamplesLineEdit->setEnabled(true);
+
+        ui->numSamplesLineEdit->setValidator(new QIntValidator(1, std::min(wallindices.size(), floorindices.size()), this));
+        ui->hemicubeResLineEdit->setValidator(new QIntValidator(20, 800, this));
+    }
 }
 
 void MainWindow::loadVertexSampleData(QString meshfile, QString datafile) {
@@ -608,6 +640,19 @@ void MainWindow::on_computeLabelImagesButton_clicked()
     }
     progressbar->setValue(100);
 }
+
+void MainWindow::on_hemicubeButton_clicked()
+{
+    progressbar->setValue(0);
+    // FIXME - where to put images
+    // FIXME - progress bar in computeSamples
+    HemicubeRenderer hr(ui->meshWidget->renderManager(), ui->hemicubeResLineEdit->text().toInt());
+    std::vector<SampleData> samples;
+    std::vector<float*> images;
+    hr.computeSamples(samples, wallindices, ui->numSamplesLineEdit->text().toInt(), 1., &images);
+    progressbar->setValue(100);
+}
+
 // ---------------------------
 // Door/Window Finding Actions
 // ---------------------------

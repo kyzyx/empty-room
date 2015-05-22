@@ -60,6 +60,7 @@ private slots:
     void on_edgeFilterButton_clicked();
     void on_commitLightsButton_clicked();
     void on_computeVerticalLinesButton_clicked();
+    void on_hemicubeButton_clicked();
 
     // Load/Save
     void on_actionOpen_Mesh_triggered();
@@ -85,6 +86,8 @@ private slots:
     void floorPlanLoaded();
     void edgeImagesLoaded();
     void edgesAndFloorPlanLoaded();
+
+    void checkEnableHemicubes();
 
     // Task Completions
     void wallfindingDone();
@@ -115,6 +118,9 @@ private:
     // Load state
     bool hasFloorPlan;
     bool hasEdgeImages;
+
+    std::vector<int> wallindices;
+    std::vector<int> floorindices;
 };
 
 #endif // MAINWINDOW_H
