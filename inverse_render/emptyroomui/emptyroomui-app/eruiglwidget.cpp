@@ -135,7 +135,7 @@ void ERUIGLWidget::draw()
         if (renderoptions.shouldRenderMesh()) {
             if (renderoptions.getMeshRenderFormat() == VIEW_SINGLEIMAGE) {
                 rendermanager.setShaderAuxInt(0,0);
-                rendermanager.setShaderAuxInt(selectedCamera, 1);
+                rendermanager.setShaderAuxInt(camids[selectedCamera], 1);
             }
             rendermanager.renderMesh(renderoptions.getMeshRenderFormat());
         }
@@ -150,7 +150,7 @@ void ERUIGLWidget::draw()
             for (size_t i = 0; i < cameras.size(); ++i) {
                 if (renderoptions.getCameraFormat(i == selectedCamera)) {
                     if (i == selectedCamera)
-                        glColor4f(0,1,1,0.5);
+                        glColor4f(1,0,1,0.5);
                     else
                         glColor4f(0,1,0,0.5);
                     renderCamera(cameras[i]);
