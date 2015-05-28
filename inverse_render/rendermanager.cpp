@@ -5,7 +5,7 @@
 #include "R3Graphics/R3Graphics.h"
 #include <glm/glm.hpp>
 
-GLchar* uniformnames[NUM_UNIFORMS] = {
+const GLchar* uniformnames[NUM_UNIFORMS] = {
     "colors",
     "angles",
     "aux",

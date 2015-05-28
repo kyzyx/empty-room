@@ -132,7 +132,8 @@ double WallFinder::findExtremalNormal(
 {
     ConditionOr<PointNormal>::Ptr cond(new ConditionOr<PointNormal>());
     cond->addComparison(DotComparison<PointNormal>::ConstPtr(new DotComparison<PointNormal>(dir, ComparisonOps::GT, 1. - anglethreshold)));
-    ConditionalRemoval<PointNormal> filter(cond);
+    ConditionalRemoval<PointNormal> filter;
+    filter.setCondition(cond);
     filter.setInputCloud(cloud);
     filter.filter(*outcloud);
 

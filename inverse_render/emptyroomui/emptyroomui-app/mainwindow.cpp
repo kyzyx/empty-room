@@ -78,7 +78,6 @@ class ImageDialog : public QFileDialog
             flipy = new QCheckBox(QString("Flip vertically"), this);
             hbl->addWidget(flipx);
             hbl->addWidget(flipy);
-            QLayout* l = layout();
             QGridLayout* mainLayout = dynamic_cast<QGridLayout*>(layout());
             if (mainLayout) {
                 int numRows = mainLayout->rowCount();

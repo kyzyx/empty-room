@@ -13,7 +13,7 @@ class HDRViewer : public QWidget
 {
     Q_OBJECT
 public:
-    explicit HDRViewer(QWidget *parent=0) : QWidget(parent), state(STATE_FIXED), currentindex(0) {;}
+    explicit HDRViewer(QWidget *parent=0) : QWidget(parent), currentindex(0), state(STATE_FIXED) {;}
     explicit HDRViewer(QWidget *parent, QWidget* renderwidget, HDRGlHelper* rendercontrol);
     ~HDRViewer();
 
@@ -88,11 +88,11 @@ public:
     }
 
     bool setFloatImage(const float* data, int w, int h, int channels) {
-        v->setFloatImage(data, w, h, channels);
+        return v->setFloatImage(data, w, h, channels);
     }
 
     bool setRGBImage(const unsigned char* data, int w, int h, int channels) {
-        v->setRGBImage(data, w, h, channels);
+        return v->setRGBImage(data, w, h, channels);
     }
     void addLine(int x1, int y1, int x2, int y2) {
         v->addLine(x1,y1,x2,y2);

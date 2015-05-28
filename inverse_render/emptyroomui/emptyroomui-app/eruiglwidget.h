@@ -13,16 +13,16 @@ class ERUIRenderOptions : public QObject {
 Q_OBJECT
 public:
     ERUIRenderOptions(QOpenGLWidget* parent=NULL) :
+        renderer(NULL),
         qglw(parent),
         renderCameras(true),
         renderCurrentCamera(true),
         renderMesh(true),
         renderRoom(false),
+        currentCamera(0),
         cameraRenderFormat(CAMRENDER_FRUSTUM),
         meshRenderFormat(VIEW_DEFAULT),
-        overlayLoThreshold(0), overlayHiThreshold(1000),
-        currentCamera(0),
-        renderer(NULL)
+        overlayLoThreshold(0), overlayHiThreshold(1000)
     { renderOverlay.resize(NUM_VIEW_TYPES, false);}
 
 public:

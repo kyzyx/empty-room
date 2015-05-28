@@ -44,8 +44,8 @@ class ImageType {
         std::string n;
         std::string ext;
         int s;
-        int img;
         int f;
+        int img;
 };
 
 class ImageManager {
@@ -54,6 +54,7 @@ class ImageManager {
 
         ImageManager(int width, int height, int numImages);
         ImageManager(const std::string& camfile);
+        virtual ~ImageManager() {;}
 
         const CameraParams* getCamera(int n) const;
         unsigned char getFlags(const std::string& type, int n) const;
