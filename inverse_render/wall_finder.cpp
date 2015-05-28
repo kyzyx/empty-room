@@ -658,7 +658,7 @@ void WallFinder::getAsRoomModel(roommodel::RoomModel* rm) {
     rm->walls.clear();
     int start;
     for (start = 0; start < wallsegments.size(); ++start) {
-        if (wallsegments[start].direction == 0 && wallsegments[start].norm > 0) {
+        if (wallsegments[start].direction == 1 && wallsegments[start].norm > 0) {
             break;
         }
     }
@@ -669,6 +669,7 @@ void WallFinder::getAsRoomModel(roommodel::RoomModel* rm) {
     rotate(wallsegments.begin(), wallsegments.begin()+start, wallsegments.end());
     if (wallsegments[1].coord != wallsegments[0].end) {
         reverse(wallsegments.begin(), wallsegments.end());
+        rotate(wallsegments.begin(), wallsegments.end()-1, wallsegments.end());
     }
 
     for (int i = 0; i < wallsegments.size(); ++i) {

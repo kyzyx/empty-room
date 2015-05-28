@@ -361,7 +361,7 @@ void RenderManager::setupRoomGeometry(roommodel::RoomModel* model) {
     reup.ZRotate(-M_PI/2);
     for (int i = 0; i < numroomtriangles; ++i) {
         R3Point p(triangles[6*i], triangles[6*i+1], triangles[6*i+2]);
-        R3Vector n(triangles[6*3], triangles[6*i+4], triangles[6*i+5]);
+        R3Vector n(triangles[6*i+3], triangles[6*i+4], triangles[6*i+5]);
         p = m*reup*p;
         n = m*reup*n;
         vertices[6*i] = p.X();
