@@ -180,6 +180,8 @@ public:
     }
 
 	RoomModel(const std::string& filename);
+
+    void saveToPly(const std::string& filename);
 };
 
 bool load(RoomModel& r, const std::string& filename);

@@ -493,6 +493,7 @@ void MainWindow::samplesLoaded() {
     ui->actionSave_Reprojection_Results->setEnabled(true);
     checkEnableHemicubes();
 
+    ui->actionExport_Mesh_with_Colors->setEnabled(true);
     ui->lightsliderlabel->setEnabled(true);
     ui->overlayThresholdCheckbox->setEnabled(true);
     connect(ui->overlayThresholdCheckbox, SIGNAL(toggled(bool)), ui->meshWidget->renderOptions(), SLOT(setOverlayThresholded(bool)));
@@ -665,6 +666,7 @@ void MainWindow::floorPlanLoaded() {
     ui->meshWidget->setRoomModel(room);
     ui->showRoomCheckbox->setEnabled(true);
     ui->actionSave_Wallfinding_Floor_Plan->setEnabled(true);
+    ui->actionExport_Room_Model->setEnabled(true);
     edgesAndFloorPlanLoaded();
 }
 
@@ -873,5 +875,23 @@ void MainWindow::saveAllImages(const char *type) {
                 imgr->saveImage(type, i);
         }
         progressbar->setValue(100);
+    }
+}
+
+// Mesh exporting
+void MainWindow::on_actionExport_Room_Model_triggered()
+{
+    if (!room) return;
+    QString lwd = settings->value("lastworkingdirectory", "").toString();
+    QString filename = QFileDialog::getSaveFileName(this, "Save Room Model as PLY", lwd, "PLY files (*.ply)");
+    if (!filename.isEmpty()) room->saveToPly(filename.toStdString());
+}
+
+void MainWindow::on_actionExport_Mesh_with_Colors_triggered()
+{
+    if (mmgr) {
+        QString lwd = settings->value("lastworkingdirectory", "").toString();
+        QString filename = QFileDialog::getSaveFileName(this, "Save Mesh as PLY", lwd, "PLY files (*.ply)");
+        if (!filename.isEmpty()) mmgr->writePlyMesh(filename.toStdString(), 1/ui->meshWidget->getUpperBound());
     }
 }

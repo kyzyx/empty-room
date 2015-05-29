@@ -7,14 +7,15 @@
 #include "rapidjson/prettywriter.h" // for stringify JSON
 #include "rapidjson/filestream.h"   // wrapper of C stream for prettywriter as output
 #include "datamanager/imageio.h"
+#include "geometrygenerator.h"
 
 #include <iostream>
 #include <fstream>
+#include <algorithm>
 
 using namespace std;
 using namespace rapidjson;
 using namespace ImageIO;
-
 
 namespace roommodel {
 #define REQ_OBJECT(d,s) if (!d.HasMember(s) || !d[s].IsObject()) return false
@@ -343,5 +344,56 @@ RoomModel::RoomModel(const string& filename)
     globaltransform = IdentityMatrix;
     originalFloor = 0;
 	load(*this, filename);
+}
+
+void RoomModel::saveToPly(const string& filename) {
+    // Generate geometry
+    roommodel::GeometryGenerator gg(this);
+    gg.generate();
+    std::vector<double> triangles;
+    std::vector<double> colors;
+    gg.getTriangleGeometry(triangles);
+    gg.getTriangleVertexColors(colors);
+    int numroomtriangles = triangles.size()/6;
+    int j = 0;
+    double maxcolor = *max_element(colors.begin(), colors.end());
+    for (int i = 0; i < colors.size(); ++i) colors[i] = 255*colors[i]/maxcolor;
+
+    // Output ply header
+    ofstream out(filename);
+    out << "ply" << endl;
+    out << "format ascii 1.0" << endl;
+    out << "element vertex " << numroomtriangles << endl;
+    out << "property float x" << endl;
+    out << "property float y" << endl;
+    out << "property float z" << endl;
+    out << "property uchar red" << endl;
+    out << "property uchar green" << endl;
+    out << "property uchar blue" << endl;
+    out << "element face " << (numroomtriangles/3) << endl;
+    out << "property list uchar int vertex_indices" << endl;
+    out << "end_header" << endl;
+
+    // Output denormalized points
+    R4Matrix m = globaltransform;
+    m = m.Inverse();
+    R4Matrix reup = R4identity_matrix;
+    reup.XRotate(M_PI/2);
+    reup.YRotate(M_PI);
+    reup.ZRotate(-M_PI/2);
+    for (int i = 0; i < numroomtriangles; ++i) {
+        R3Point p(triangles[6*i], triangles[6*i+1], triangles[6*i+2]);
+        //R3Vector n(triangles[6*i+3], triangles[6*i+4], triangles[6*i+5]);
+        p = m*reup*p;
+        //n = m*reup*n;
+        out << p[0] << " " << p[1] << " " << p[2] << " ";
+        out << colors[j++] << " " << colors[j++] << " " << colors[j++] << endl;
+    }
+    for (int i = 0; i < numroomtriangles; ++i) {
+        if (i%3 == 0) out << "3 ";
+        out << i;
+        if (i%3 == 2) out << endl;
+        else out << " ";
+    }
 }
 }

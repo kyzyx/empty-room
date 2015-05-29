@@ -1041,10 +1041,19 @@
     <property name="title">
      <string>File</string>
     </property>
+    <widget class="QMenu" name="menuExport_Mesh">
+     <property name="title">
+      <string>Export Mesh</string>
+     </property>
+     <addaction name="actionExport_Room_Model"/>
+     <addaction name="actionExport_Mesh_with_Colors"/>
+    </widget>
     <addaction name="actionOpen_Mesh"/>
     <addaction name="actionOpen_Images"/>
     <addaction name="separator"/>
     <addaction name="actionLoad_Last_Mesh_Camera_File"/>
+    <addaction name="separator"/>
+    <addaction name="menuExport_Mesh"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
    </widget>
@@ -1195,6 +1204,22 @@
   <action name="actionSave_Edge_Images">
    <property name="text">
     <string>Save Edge Images</string>
+   </property>
+  </action>
+  <action name="actionExport_Room_Model">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Export Room Model</string>
+   </property>
+  </action>
+  <action name="actionExport_Mesh_with_Colors">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Export Mesh with Colors</string>
    </property>
   </action>
  </widget>

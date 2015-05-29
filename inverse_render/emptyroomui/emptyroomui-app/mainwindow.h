@@ -76,6 +76,9 @@ private slots:
     void on_actionLoad_Reprojection_Results_triggered();
     void on_actionLoad_Wallfinding_Floor_Plan_triggered();
     void on_actionLoad_Per_Vertex_Labels_triggered();
+    void on_actionExport_Room_Model_triggered();
+    void on_actionExport_Mesh_with_Colors_triggered();
+
 
     // Data Completions
     void meshLoaded();
