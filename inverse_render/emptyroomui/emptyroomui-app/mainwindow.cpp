@@ -349,6 +349,7 @@ void MainWindow::meshLoaded() {
     ui->wf_resolutionSlider->setEnabled(true);
     ui->wf_wallthresholdSlider->setEnabled(true);
     ui->showMeshCheckbox->setEnabled(true);
+    ui->DebugWallfindingButton->setEnabled(true);
     mmgr = new MeshManager(meshfilename.toStdString());
     ui->meshWidget->setMeshManager(mmgr);
 
@@ -690,6 +691,27 @@ void MainWindow::on_actionLoad_Wallfinding_Floor_Plan_triggered()
         settings->setValue("lastworkingdirectory", cwd.canonicalPath());
         settings->setValue("lastfloorplanfile", datafilename);
         loadFloorPlan(datafilename);
+    }
+}
+
+
+void MainWindow::on_wf_resolutionSlider_valueChanged(int value)
+{
+    if (ui->meshWidget->renderOptions()->shouldRenderWfHistogram())
+        ui->meshWidget->computeWallFindingHistogram(ui->wf_resolutionSlider->value()*0.001);
+}
+
+void MainWindow::on_DebugWallfindingButton_clicked()
+{
+    if (ui->meshWidget->renderOptions()->shouldRenderWfHistogram()) {
+        ui->DebugWallfindingButton->setText("Debug Wallfinding");
+        ui->meshWidget->renderOptions()->setRenderWfHistogram(false);
+    } else {
+        ui->DebugWallfindingButton->setText("Hide Wallfinding Debug");
+        ui->meshWidget->computeWallFindingHistogram(ui->wf_resolutionSlider->value()*0.001);
+        ui->meshWidget->renderOptions()->setRenderWfHistogram(true);
+        ui->meshWidget->renderOptions()->setWfThreshold(ui->wf_wallthresholdSlider->value());
+        connect(ui->wf_wallthresholdSlider, SIGNAL(valueChanged(int)), ui->meshWidget->renderOptions(), SLOT(setWfThreshold(int)));
     }
 }
 

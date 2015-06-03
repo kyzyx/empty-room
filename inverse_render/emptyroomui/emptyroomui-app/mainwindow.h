@@ -56,6 +56,8 @@ private slots:
 
     void on_reprojectButton_clicked();
     void on_wallfindButton_clicked();
+    void on_DebugWallfindingButton_clicked();
+    void on_wf_resolutionSlider_valueChanged(int value);
     void on_computeLabelImagesButton_clicked();
     void on_edgeFilterButton_clicked();
     void on_commitLightsButton_clicked();

@@ -19,6 +19,7 @@ public:
         renderCurrentCamera(true),
         renderMesh(true),
         renderRoom(false),
+        renderWfHistogram(false),
         currentCamera(0),
         cameraRenderFormat(CAMRENDER_FRUSTUM),
         meshRenderFormat(VIEW_DEFAULT),
@@ -26,32 +27,26 @@ public:
     { renderOverlay.resize(NUM_VIEW_TYPES, false);}
 
 public:
-    bool shouldRenderAnyCameras() {
+    bool shouldRenderAnyCameras() const {
         return renderCameras || renderCurrentCamera;
     }
 
-    int getCameraFormat(bool isCurrent=false) {
+    int getCameraFormat(bool isCurrent=false) const {
         if (renderCameras || (renderCurrentCamera && isCurrent)) {
             return cameraRenderFormat;
         } else {
             return CAMRENDER_NONE;
         }
     }
-    int getMeshRenderFormat() {
-        return meshRenderFormat;
-    }
-    int getLowerThreshold() {
-        return overlayLoThreshold;
-    }
-    int getUpperThreshold() {
-        return overlayHiThreshold;
-    }
-    int getOverlayLabelIndex() {
-        return overlayIndex;
-    }
-    bool shouldOverlay(int n) { return renderOverlay[n]; }
-    bool shouldRenderMesh() { return renderMesh; }
-    bool shouldRenderRoom() { return renderRoom; }
+    int getMeshRenderFormat() const { return meshRenderFormat; }
+    int getLowerThreshold() const { return overlayLoThreshold; }
+    int getUpperThreshold() const { return overlayHiThreshold; }
+    int getOverlayLabelIndex() const { return overlayIndex; }
+    int getWfThreshold() const { return wfthreshold; }
+    bool shouldOverlay(int n) const { return renderOverlay[n]; }
+    bool shouldRenderMesh() const { return renderMesh; }
+    bool shouldRenderRoom() const { return renderRoom; }
+    bool shouldRenderWfHistogram() const { return renderWfHistogram; }
 
     void setRenderManager(RenderManager* rm) { renderer = rm; }
     enum {
@@ -66,6 +61,7 @@ protected:
     bool renderCurrentCamera;
     bool renderMesh;
     bool renderRoom;
+    bool renderWfHistogram;
     std::vector<bool> renderOverlay;
 
     int currentCamera;
@@ -73,8 +69,14 @@ protected:
     int meshRenderFormat;
     int overlayIndex;
     int overlayLoThreshold, overlayHiThreshold;
+    int wfthreshold;
 
 public slots:
+    void setRenderWfHistogram(bool shouldRenderHistogram) {
+        renderWfHistogram = shouldRenderHistogram;
+        if (qglw) qglw->update();
+    }
+
     void setRenderCameras(bool shouldRenderCamera) {
         renderCameras = shouldRenderCamera;
         if (qglw) qglw->update();
@@ -95,6 +97,11 @@ public slots:
         cameraRenderFormat = camformat;
         if (qglw) qglw->update();
     }
+    void setWfThreshold(int threshold) {
+        wfthreshold = threshold;
+        if (qglw) qglw->update();
+    }
+
     void setMeshRenderFormat(int meshformat) {
         meshRenderFormat = meshformat;
         if (meshRenderFormat == VIEW_AVERAGE && renderer)
@@ -155,6 +162,8 @@ public:
     void lookThroughCamera(const CameraParams* cam);
     void setupCameras(ImageManager* imgr);
     void setupCameras(std::vector<CameraParams>& cams);
+
+    void computeWallFindingHistogram(double resolution);
 protected:
     virtual void draw();
     virtual void init();
@@ -163,6 +172,7 @@ protected:
     virtual QString helpString() const;
 
     void renderCamera(const CameraParams& cam, bool id_only=false);
+    void renderHistogram();
 
     RenderManager rendermanager;
     std::vector<CameraParams> cameras;
@@ -170,6 +180,10 @@ protected:
 
     ERUIRenderOptions renderoptions;
     int selectedCamera;
+
+    int* grid;
+    int gw, gh, gmax;
+    double gres;
 signals:
     void cameraSelected(int cameraindex);
 public slots:
@@ -215,6 +229,10 @@ public:
     void updateMeshAuxiliaryData() {
         v->updateMeshAuxiliaryData();
     }
+    void computeWallFindingHistogram(double resolution) {
+        v->computeWallFindingHistogram(resolution);
+    }
+
 signals:
     void cameraSelected(int cameraindex);
 protected slots:

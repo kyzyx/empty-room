@@ -93,6 +93,7 @@ public:
     void createLabelImage(const CameraParams* cam, void* image);
     const ShaderType& getShader(int n) const { return shaders[n]; }
     int getNumShaderTypes() const { return shaders.size(); }
+    roommodel::RoomModel* getRoomModel() { return room; }
 
     void setShaderAuxInt(int aux, int i=0) { auxint[i] = aux; }
 protected:

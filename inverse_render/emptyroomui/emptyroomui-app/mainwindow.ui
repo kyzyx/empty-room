@@ -289,6 +289,28 @@
               <item>
                <layout class="QHBoxLayout" name="tab1_layout1">
                 <item>
+                 <widget class="QPushButton" name="DebugWallfindingButton">
+                  <property name="enabled">
+                   <bool>false</bool>
+                  </property>
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                   </sizepolicy>
+                  </property>
+                  <property name="minimumSize">
+                   <size>
+                    <width>0</width>
+                    <height>30</height>
+                   </size>
+                  </property>
+                  <property name="text">
+                   <string>Debug Wallfinding</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
                  <widget class="QPushButton" name="wallfindButton">
                   <property name="enabled">
                    <bool>false</bool>
@@ -428,6 +450,9 @@
                   </property>
                   <property name="value">
                    <number>10</number>
+                  </property>
+                  <property name="tracking">
+                   <bool>false</bool>
                   </property>
                   <property name="orientation">
                    <enum>Qt::Horizontal</enum>

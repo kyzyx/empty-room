@@ -6,7 +6,9 @@
 
 ERUIGLWidget::ERUIGLWidget(QWidget *parent) :
     HDRQGlViewerWidget(parent),
-    selectedCamera(0), renderoptions(this)
+    renderoptions(this),
+    selectedCamera(0),
+    grid(NULL)
 {
     renderoptions.setRenderManager(&rendermanager);
 }
@@ -120,76 +122,63 @@ QString ERUIGLWidget::helpString() const
 }
 static R3DirectionalLight l(R3Vector(0.3, 0.5, -1), RNRgb(1, 1, 1), 1, TRUE);
 static R3Brdf b(RNRgb(0.2,0.2,0.2), RNRgb(0.8,0.8,0.8),
-                RNRgb(0,0,0), RNRgb(0,0,0), 0.2, 1, 1);
+                RNRgb(0,0,0), RNRgb(0,0,0));
 void ERUIGLWidget::draw()
 {
-/*    if (!hasGeometry) {
-        const float nbSteps = 200.0;
-        glBegin(GL_QUAD_STRIP);
-        for (int i=0; i<nbSteps; ++i) {
-          const float ratio = i/nbSteps;
-          const float angle = 21.0*ratio;
-          const float c = cos(angle);
-          const float s = sin(angle);
-          const float r1 = 1.0 - 0.8f*ratio;
-          const float r2 = 0.8f - 0.8f*ratio;
-          const float alt = ratio - 0.5f;
-          const float nor = 0.5f;
-          const float up = sqrt(1.0-nor*nor);
-          glColor3f(1.0-ratio, 0.2f , ratio);
-          glNormal3f(nor*c, up, nor*s);
-          glVertex3f(r1*c, alt, r1*s);
-          glVertex3f(r2*c, alt+0.05f, r2*s);
+    glDepthMask(true);
+    glClearColor(0.,0.,0.,0.);
+    glEnable(GL_DEPTH_TEST);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    if (renderoptions.shouldRenderMesh()) {
+        if (renderoptions.getMeshRenderFormat() == VIEW_SINGLEIMAGE) {
+            rendermanager.setShaderAuxInt(0,0);
+            rendermanager.setShaderAuxInt(camids[selectedCamera], 1);
         }
-        glEnd();
-    } else {*/
-        glDepthMask(true);
-        glClearColor(0.,0.,0.,0.);
-        glEnable(GL_DEPTH_TEST);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        if (renderoptions.shouldRenderMesh()) {
-            if (renderoptions.getMeshRenderFormat() == VIEW_SINGLEIMAGE) {
-                rendermanager.setShaderAuxInt(0,0);
-                rendermanager.setShaderAuxInt(camids[selectedCamera], 1);
-            }
-            rendermanager.renderMesh(renderoptions.getMeshRenderFormat());
-        }
-        if (renderoptions.shouldRenderRoom())
-            rendermanager.renderRoom();
+        rendermanager.renderMesh(renderoptions.getMeshRenderFormat());
+    }
+    if (renderoptions.shouldRenderRoom())
+        rendermanager.renderRoom();
 
-        if (renderoptions.shouldRenderAnyCameras()) {
-            glEnable(GL_LIGHTING);
-            glColor3f(1,1,1);
-            b.Draw();
-            l.Draw(0);
-            for (size_t i = 0; i < cameras.size(); ++i) {
-                if (renderoptions.getCameraFormat(i == selectedCamera)) {
-                    if (i == selectedCamera)
-                        glColor4f(1,0,1,0.5);
-                    else
-                        glColor4f(0,1,0,0.5);
-                    renderCamera(cameras[i]);
-                }
+    if (renderoptions.shouldRenderAnyCameras()) {
+        glEnable(GL_LIGHTING);
+        glColor3f(1,1,1);
+        b.Draw();
+        l.Draw(0);
+        for (size_t i = 0; i < cameras.size(); ++i) {
+            if (renderoptions.getCameraFormat(i == selectedCamera)) {
+                if (i == selectedCamera)
+                    glColor4f(1,0,1,0.5);
+                else
+                    glColor4f(0,1,0,0.5);
+                renderCamera(cameras[i]);
             }
-            glDisable(GL_LIGHTING);
         }
-        if (renderoptions.shouldRenderMesh()) {
-            //glEnable(GL_BLEND);
-            //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-            if (renderoptions.shouldOverlay(VIEW_THRESHOLD)) {
-                rendermanager.setShaderAuxInt(renderoptions.getLowerThreshold(),0);
-                rendermanager.setShaderAuxInt(renderoptions.getUpperThreshold(),1);
-                rendermanager.renderMesh(VIEW_THRESHOLD);
-            }
-            if (renderoptions.shouldOverlay(VIEW_LABELOVERLAY)) {
-                for (int i = 0; i < 3; ++i) {
-                    rendermanager.setShaderAuxInt(i==renderoptions.getOverlayLabelIndex()?1:0,i);
-                }
-                rendermanager.renderMesh(VIEW_LABELOVERLAY);
-            }
-            //glDisable(GL_BLEND);
+        glDisable(GL_LIGHTING);
+    }
+    if (renderoptions.shouldRenderMesh()) {
+        //glEnable(GL_BLEND);
+        //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        if (renderoptions.shouldOverlay(VIEW_THRESHOLD)) {
+            rendermanager.setShaderAuxInt(renderoptions.getLowerThreshold(),0);
+            rendermanager.setShaderAuxInt(renderoptions.getUpperThreshold(),1);
+            rendermanager.renderMesh(VIEW_THRESHOLD);
         }
-   // }
+        if (renderoptions.shouldOverlay(VIEW_LABELOVERLAY)) {
+            for (int i = 0; i < 3; ++i) {
+                rendermanager.setShaderAuxInt(i==renderoptions.getOverlayLabelIndex()?1:0,i);
+            }
+            rendermanager.renderMesh(VIEW_LABELOVERLAY);
+        }
+        //glDisable(GL_BLEND);
+    }
+    if (renderoptions.shouldRenderWfHistogram()) {
+        glEnable(GL_LIGHTING);
+        glColor3f(1,1,1);
+        b.Draw();
+        l.Draw(0);
+        renderHistogram();
+        glDisable(GL_LIGHTING);
+    }
 }
 
 void ERUIGLWidget::drawWithNames() {
@@ -228,6 +217,35 @@ void ERUIGLWidget::lookThroughCamera(const CameraParams* cam) {
     camera()->setUpVector(qglviewer::Vec(cam->up[0], cam->up[1], cam->up[2]));
     camera()->setViewDirection(qglviewer::Vec(cam->towards[0], cam->towards[1], cam->towards[2]));
     update();
+}
+
+#include <limits>
+void ERUIGLWidget::computeWallFindingHistogram(double res) {
+    roommodel::RoomModel* room = rendermanager.getRoomModel();
+    if (!room) return;
+    gres = res;
+    R4Matrix m = room->globaltransform;
+    float maxx = -std::numeric_limits<float>::max();
+    float maxz = -std::numeric_limits<float>::max();
+
+    for (int i = 0; i < rendermanager.getMeshManager()->size(); ++i) {
+        R3Point p = m*rendermanager.getMeshManager()->VertexPosition(i);
+        maxx = std::max((float) p.X(), maxx);
+        maxz = std::max((float) p.Z(), maxz);
+    }
+    gw = maxx/res + 1;
+    gh = maxz/res + 1;
+    if (grid) delete [] grid;
+    grid = new int[gw*gh];
+    bzero(grid, gw*gh*sizeof(int));
+    for (int i = 0; i < rendermanager.getMeshManager()->size(); ++i) {
+        R3Point p = m*rendermanager.getMeshManager()->VertexPosition(i);
+        int r = p.Z()/res;
+        int c = p.X()/res;
+        if (r < 0 || c < 0 || r >= gh || c >= gw) continue;
+        ++grid[r*gw+c];
+    }
+    gmax = *std::max_element(grid, grid+gw*gh);
 }
 
 #define GLEXPAND(x) (x)[0], (x)[1], (x)[2]
@@ -293,4 +311,115 @@ void ERUIGLWidget::renderCamera(const CameraParams &cam, bool id_only) {
         }
     }
     glPopAttrib();
+}
+
+void ERUIGLWidget::renderHistogram() {
+    if (!grid) return;
+    glDisable(GL_CULL_FACE);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+    glEnable(GL_COLOR_MATERIAL);
+    R4Matrix m = rendermanager.getRoomModel()->globaltransform;
+    m = m.Inverse();
+    double scale = rendermanager.getRoomModel()->height/gmax;
+    glBegin(GL_QUADS);
+    for (int i = 0; i < gh; ++i) {
+        for (int j = 0; j < gw; ++j) {
+            R3Point p[4];
+            R3Point t[4];
+            p[0] = R3Point(j*gres, 0, i*gres);
+            p[1] = R3Point((j+1)*gres, 0, i*gres);
+            p[2] = R3Point((j+1)*gres, 0, (i+1)*gres);
+            p[3] = R3Point(j*gres, 0, (i+1)*gres);
+            double h = scale*std::min(grid[i*gw+j], renderoptions.getWfThreshold());
+            for (int k = 0; k < 4; ++k) {
+                t[k] = p[k] + h*R3yaxis_vector;
+                p[k] = m*p[k];
+                t[k] = m*t[k];
+            }
+            R3Vector n[3];
+            n[0] = R3xaxis_vector;
+            n[1] = R3yaxis_vector;
+            n[2] = R3zaxis_vector;
+            for (int k = 0; k < 3; ++k) n[k] = m*n[k];
+
+            glColor4f(0.5,0.6,0.6,0.5);
+            glNormal3f(GLEXPAND(-n[1]));
+            glVertex3f(GLEXPAND(p[0]));
+            glVertex3f(GLEXPAND(p[1]));
+            glVertex3f(GLEXPAND(p[2]));
+            glVertex3f(GLEXPAND(p[3]));
+
+            glNormal3f(GLEXPAND(-n[2]));
+            glVertex3f(GLEXPAND(p[0]));
+            glVertex3f(GLEXPAND(p[1]));
+            glVertex3f(GLEXPAND(t[1]));
+            glVertex3f(GLEXPAND(t[0]));
+
+            glNormal3f(GLEXPAND(n[0]));
+            glVertex3f(GLEXPAND(p[1]));
+            glVertex3f(GLEXPAND(p[2]));
+            glVertex3f(GLEXPAND(t[2]));
+            glVertex3f(GLEXPAND(t[1]));
+
+            glNormal3f(GLEXPAND(n[2]));
+            glVertex3f(GLEXPAND(p[2]));
+            glVertex3f(GLEXPAND(p[3]));
+            glVertex3f(GLEXPAND(t[3]));
+            glVertex3f(GLEXPAND(t[2]));
+
+            glNormal3f(GLEXPAND(-n[0]));
+            glVertex3f(GLEXPAND(p[3]));
+            glVertex3f(GLEXPAND(p[0]));
+            glVertex3f(GLEXPAND(t[0]));
+            glVertex3f(GLEXPAND(t[3]));
+
+            if (grid[i*gw+j] >= renderoptions.getWfThreshold()) {
+                p[0] = R3Point(j*gres, h, i*gres);
+                p[1] = R3Point((j+1)*gres, h, i*gres);
+                p[2] = R3Point((j+1)*gres, h, (i+1)*gres);
+                p[3] = R3Point(j*gres, h, (i+1)*gres);
+                h = scale*grid[i*gw+j];
+                for (int k = 0; k < 4; ++k) {
+                    t[k] = p[k];
+                    t[k][1] = h;
+                    p[k] = m*p[k];
+                    t[k] = m*t[k];
+                }
+
+                glColor4f(1,0,0,0.5);
+
+                glNormal3f(GLEXPAND(-n[2]));
+                glVertex3f(GLEXPAND(p[0]));
+                glVertex3f(GLEXPAND(p[1]));
+                glVertex3f(GLEXPAND(t[1]));
+                glVertex3f(GLEXPAND(t[0]));
+
+                glNormal3f(GLEXPAND(n[0]));
+                glVertex3f(GLEXPAND(p[1]));
+                glVertex3f(GLEXPAND(p[2]));
+                glVertex3f(GLEXPAND(t[2]));
+                glVertex3f(GLEXPAND(t[1]));
+
+                glNormal3f(GLEXPAND(n[2]));
+                glVertex3f(GLEXPAND(p[2]));
+                glVertex3f(GLEXPAND(p[3]));
+                glVertex3f(GLEXPAND(t[3]));
+                glVertex3f(GLEXPAND(t[2]));
+
+                glNormal3f(GLEXPAND(-n[0]));
+                glVertex3f(GLEXPAND(p[3]));
+                glVertex3f(GLEXPAND(p[0]));
+                glVertex3f(GLEXPAND(t[0]));
+                glVertex3f(GLEXPAND(t[3]));
+            }
+            glNormal3f(GLEXPAND(n[1]));
+            glVertex3f(GLEXPAND(t[0]));
+            glVertex3f(GLEXPAND(t[1]));
+            glVertex3f(GLEXPAND(t[2]));
+            glVertex3f(GLEXPAND(t[3]));
+        }
+    }
+    glEnd();
+    glDisable(GL_COLOR_MATERIAL);
 }
