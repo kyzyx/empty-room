@@ -150,9 +150,9 @@ void ImageManager::saveImage(int i, int n) const {
         } else if (imagetypes[i].getType() == CV_32FC1) {
             ImageIO::writeExrImage(f, (const float*) getImage(i,n), w, h, 1);
         } else if (imagetypes[i].getType() == CV_8UC3) {
-            ImageIO::writePngImage(f, (const char*) getImage(i,n), w, h);
+            ImageIO::writePngImage(f, (const unsigned char*) getImage(i,n), w, h);
         } else if (imagetypes[i].getType() == CV_8UC1) {
-            ImageIO::writePngImage(f, (const char*) getImage(i,n), w, h, 1);
+            ImageIO::writePngImage(f, (const unsigned char*) getImage(i,n), w, h, 1);
         }
     }
 

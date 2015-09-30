@@ -91,8 +91,19 @@ bool readFloatImage(const string& filename, void* image, int w, int h, int chann
             delete tmp;
         }
     } else if (endswith(filename, ".png")) {
-        char* tmp;
+        unsigned char* tmp;
         if (!readPngImage(filename, &tmp, width, height)) return false;
+        // Upgrade to float 0-1
+        float* p = (float*) image;
+        for (int i = 0; i < width*height; ++i) {
+            for (int j = 0; j < channels; ++j) {
+                *(p++) = tmp[i*3+j]/255.;
+            }
+        }
+        delete tmp;
+    } else if (endswith(filename, ".bin")) {
+        unsigned char* tmp;
+        if (!readBinaryImage(filename, &tmp, width, height)) return false;
         // Upgrade to float 0-1
         float* p = (float*) image;
         for (int i = 0; i < width*height; ++i) {
@@ -113,11 +124,27 @@ bool readRGBImage(const string& filename, void* image, int w, int h, int channel
     int width = 0;
     int height = 0;
     if (channels == 3) {
-        if (!readPngImage(filename, (char**) &image, width, height, true)) return false;
+        if (endswith(filename, ".png")) {
+            if (!readPngImage(filename, (unsigned char**) &image, width, height, true))
+                return false;
+        }
+        else if (endswith(filename, ".bin")) {
+            if (!readBinaryImage(filename, (unsigned char**) &image, width, height, true))
+                return false;
+        }
     } else {
-        char* tmp;
-        if (!readPngImage(filename, &tmp, width, height)) return false;
-        char* p = (char*) image;
+        unsigned char* tmp;
+        if (endswith(filename, ".png")) {
+            if (!readPngImage(filename, &tmp, width, height))
+                return false;
+        }
+        else if (endswith(filename, ".bin")) {
+            if (!readBinaryImage(filename, &tmp, width, height))
+                return false;
+        } else {
+            return false;
+        }
+        unsigned char* p = (unsigned char*) image;
         for (int i = 0; i < width*height; ++i) {
             for (int j = 0; j < channels; ++j) {
                 *(p++) = tmp[i*3+j];
@@ -251,7 +278,7 @@ bool readHdrImage(const string& filename,
 }
 
 bool readPngImage(const string& filename,
-        char** image,
+        unsigned char** image,
         int& width,
         int& height,
         bool preallocated)
@@ -294,8 +321,8 @@ bool readPngImage(const string& filename,
     height = pngh;
 
     unsigned int row_bytes = png_get_rowbytes(png_ptr, info_ptr);
-    if (!preallocated) *image = new char[width*height*3];
-    char* im = *image;
+    if (!preallocated) *image = new unsigned char[width*height*3];
+    char* im = (char*) *image;
 
     png_bytepp row_pointers = png_get_rows(png_ptr, info_ptr);
 
@@ -308,7 +335,7 @@ bool readPngImage(const string& filename,
     return true;
 }
 bool writePngImage(const string& filename,
-        const char* image,
+        const unsigned char* image,
         int width,
         int height,
         int channels)
@@ -360,7 +387,7 @@ bool writePngImage(const string& filename,
 
     row_pointers = (png_bytep*) malloc(sizeof(png_bytep) * height);
     unsigned int row_bytes = png_get_rowbytes(png_ptr,info_ptr);
-    const unsigned char* im = (const unsigned char*) image;
+    const unsigned char* im = image;
     for (int i = 0; i < height; i++) {
         row_pointers[i] = (png_byte*) malloc(row_bytes);
         if (channels == 3) {
@@ -389,5 +416,57 @@ bool writePngImage(const string& filename,
 
     fclose(fp);
     return true;
+}
+
+bool readBinaryImage(const std::string& filename,
+        unsigned char** image,
+        int& width,
+        int& height,
+        bool preallocated)
+{
+        std::map<std::string, float> header;
+        return readBinaryImageWithHeader(filename, image, width, height, header, preallocated);
+}
+
+bool readBinaryImageWithHeader(const std::string& filename,
+        unsigned char** image,
+        int& width,
+        int& height,
+        std::map<std::string, float>& header,
+        bool preallocated)
+{
+    try {
+        ifstream in(filename, ios::in | ios::binary);
+        string line;
+        getline(in, line);
+        bool bgr = false;
+        int bpp = 0;
+        while (line != "end_header") {
+            int n = line.find(' ');
+            if (n != string::npos) {
+                string key = line.substr(0, n);
+                if (key == "width") width = atoi(line.substr(n+1).c_str());
+                else if (key == "height") height = atoi(line.substr(n+1).c_str());
+                else if (key == "format") bgr = line.substr(n+1) == "BGR";
+                else if (key == "cameraModelName") ;
+                else header[key] = atof(line.substr(n+1).c_str());
+            }
+            getline(in, line);
+        }
+        if (!preallocated) *image = new unsigned char[width*height*3];
+        char* im = (char*) *image;
+        for (int i = 0; i < height; i++) {
+            in.read(im, width*3);
+            im += width*3;
+        }
+        if (bgr) {
+            for (int i = 0; i < width*height*3; i += 3) {
+                swap((*image)[i], (*image)[i+2]);
+            }
+        }
+        return true;
+    } catch(...) {
+        return false;
+    }
 }
 };

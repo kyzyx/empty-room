@@ -3,6 +3,7 @@
 #endif
 
 #include <string>
+#include <map>
 
 namespace ImageIO {
 std::string replaceExtension(const std::string& s, std::string newext);
@@ -35,13 +36,24 @@ bool readHdrImage(const std::string& filename,
         int& height,
         bool preallocated=false);
 bool readPngImage(const std::string& filename,
-        char** image,
+        unsigned char** image,
         int& width,
         int& height,
         bool preallocated=false);
 bool writePngImage(const std::string& filename,
-        const char* image,
+        const unsigned char* image,
         int width,
         int height,
         int channels=3);
+bool readBinaryImage(const std::string& filename,
+        unsigned char** image,
+        int& width,
+        int& height,
+        bool preallocated=false);
+bool readBinaryImageWithHeader(const std::string& filename,
+        unsigned char** image,
+        int& width,
+        int& height,
+        std::map<std::string, float>& header,
+        bool preallocated=false);
 };
