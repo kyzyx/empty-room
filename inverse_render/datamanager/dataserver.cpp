@@ -55,7 +55,7 @@ int parseargs(int argc, char** argv) {
     int numfilestoload = 0;
     if (pcl::console::find_switch(argc, argv, "-ccw")) ccw = true;
     if (pcl::console::find_switch(argc, argv, "-flip_x")) image_flip_x = true;
-    if (pcl::console::find_switch(argc, argv, "-flip_y")) image_flip_x = true;
+    if (pcl::console::find_switch(argc, argv, "-flip_y")) image_flip_y = true;
     if (pcl::console::find_switch(argc, argv, "-save_label_images")) savelabelimages = true;
     if (pcl::console::find_switch(argc, argv, "-save_edge_images")) saveedgeimages = true;
     if (pcl::console::find_switch(argc, argv, "-p")) emit_progress = true;
