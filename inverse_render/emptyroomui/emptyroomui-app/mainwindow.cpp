@@ -136,10 +136,17 @@ MainWindow::~MainWindow()
 
 void MainWindow::keyPressEvent(QKeyEvent *e)
 {
-    if (e->key() == Qt::Key_Escape)
+    if (e->key() == Qt::Key_Escape) {
         close();
-    else
+    } else if (e->key() == Qt::Key_Right) {
+        if (ui->nextImageButton->isEnabled())
+            updateImage(++imageindex);
+    } else if (e->key() == Qt::Key_Left) {
+        if (ui->prevImageButton->isEnabled())
+            updateImage(--imageindex);
+    } else {
         QWidget::keyPressEvent(e);
+    }
 }
 // -----------------
 // Interface Actions
@@ -147,7 +154,7 @@ void MainWindow::keyPressEvent(QKeyEvent *e)
 void MainWindow::updateImage(int idx, int type)
 {
     if (imagedisplaymode > 0) {
-        imageindex = idx%imgr->size();
+        imageindex = (idx+imgr->size())%imgr->size();
         typeindex = type%imgr->getNumImageTypes();
         int w = imgr->getCamera(0)->width;
         int h = imgr->getCamera(0)->height;
