@@ -11,7 +11,7 @@
 
 R2Image::
 R2Image(void)
-  : width(0), 
+  : width(0),
     height(0),
     ncomponents(0),
     rowsize(0),
@@ -23,7 +23,7 @@ R2Image(void)
 
 R2Image::
 R2Image(const char *filename)
-  : width(0), 
+  : width(0),
     height(0),
     ncomponents(0),
     rowsize(0),
@@ -37,7 +37,7 @@ R2Image(const char *filename)
 
 R2Image::
 R2Image(int width, int height, int ncomponents)
-  : width(width), 
+  : width(width),
     height(height),
     ncomponents(ncomponents),
     rowsize(0),
@@ -57,7 +57,7 @@ R2Image(int width, int height, int ncomponents)
 
 R2Image::
 R2Image(int width, int height, int ncomponents, unsigned char *data)
-  : width(width), 
+  : width(width),
     height(height),
     ncomponents(ncomponents),
     rowsize(0),
@@ -77,7 +77,7 @@ R2Image(int width, int height, int ncomponents, unsigned char *data)
 
 R2Image::
 R2Image(const R2Image& image)
-  : width(image.width), 
+  : width(image.width),
     height(image.height),
     ncomponents(image.ncomponents),
     rowsize(image.rowsize),
@@ -110,7 +110,7 @@ PixelRGB(int x, int y) const
   RNScalar r, g, b;
   const unsigned char *pixel = Pixel(x, y);
   switch (ncomponents) {
-  case 1: 
+  case 1:
   case 2:
     r = *(pixel++) / 255.0;
     g = b = r;
@@ -172,7 +172,7 @@ SetPixelRGB(int x, int y, const RNRgb& rgb)
   // Set pixel color
   unsigned char *pixel = &(pixels[y*rowsize + x*ncomponents]);
   switch (ncomponents) {
-  case 1: 
+  case 1:
     *(pixel++) = (unsigned char) (255 * rgb.Luminance());
     break;
 
@@ -208,7 +208,7 @@ Capture(void)
   assert(height >= viewport[3]);
   assert(pixels);
 
-  // Read pixels from frame buffer 
+  // Read pixels from frame buffer
   switch (ncomponents) {
   case 1: glReadPixels(0, 0, width, height, GL_LUMINANCE, GL_UNSIGNED_BYTE, pixels); break;
   case 2: glReadPixels(0, 0, width, height, GL_LUMINANCE_ALPHA, GL_UNSIGNED_BYTE, pixels); break;
@@ -223,7 +223,7 @@ void R2Image::
 Draw(int x, int y) const
 {
   // Set projection matrix
-  glMatrixMode(GL_PROJECTION);  
+  glMatrixMode(GL_PROJECTION);
   glPushMatrix();
   glLoadIdentity();
   gluOrtho2D(0, width, 0, height);
@@ -268,7 +268,7 @@ Read(const char *filename)
     fprintf(stderr, "Input file has no extension (e.g., .jpg).\n");
     return 0;
   }
-  
+
   // Read file of appropriate type
   if (!strncmp(input_extension, ".bmp", 4)) return ReadBMP(filename);
   else if (!strncmp(input_extension, ".ppm", 4)) return ReadPPM(filename);
@@ -281,7 +281,7 @@ Read(const char *filename)
   else if (!strncmp(input_extension, ".png", 4)) return ReadPNG(filename);
   else if (!strncmp(input_extension, ".raw", 4)) return ReadRAW(filename);
   else if (!strncmp(input_extension, ".grd", 4)) return ReadGRD(filename);
-  
+
   // Should never get here
   fprintf(stderr, "Unrecognized image file extension");
   return 0;
@@ -298,7 +298,7 @@ Write(const char *filename) const
     fprintf(stderr, "Input file has no extension (e.g., .jpg).\n");
     return 0;
   }
-  
+
   // Write file of appropriate type
   if (!strncmp(input_extension, ".bmp", 4)) return WriteBMP(filename);
   else if (!strncmp(input_extension, ".pgm", 4)) return WritePPM(filename, 0);
@@ -384,7 +384,7 @@ static unsigned short int WordReadLE(FILE *fp)
 /* Writes a unsigned short int to a file in little endian format */
 static void WordWriteLE(unsigned short int x, FILE *fp)
 {
-  unsigned char lsb = (unsigned char) (x & 0x00FF); putc(lsb, fp); 
+  unsigned char lsb = (unsigned char) (x & 0x00FF); putc(lsb, fp);
   unsigned char msb = (unsigned char) (x >> 8); putc(msb, fp);
 }
 
@@ -453,14 +453,14 @@ ReadBMP(const char *filename)
   bmfh.bfReserved1 = WordReadLE(fp);
   bmfh.bfReserved2 = WordReadLE(fp);
   bmfh.bfOffBits = DWordReadLE(fp);
-  
+
   /* Check file header */
   assert(bmfh.bfType == BMP_BF_TYPE);
   /* ignore bmfh.bfSize */
   /* ignore bmfh.bfReserved1 */
   /* ignore bmfh.bfReserved2 */
   assert(bmfh.bfOffBits == BMP_BF_OFF_BITS);
-  
+
   /* Read info header */
   BITMAPINFOHEADER bmih;
   bmih.biSize = DWordReadLE(fp);
@@ -474,8 +474,8 @@ ReadBMP(const char *filename)
   bmih.biYPelsPerMeter = LongReadLE(fp);
   bmih.biClrUsed = DWordReadLE(fp);
   bmih.biClrImportant = DWordReadLE(fp);
-  
-  // Check info header 
+
+  // Check info header
   assert(bmih.biSize == BMP_BI_SIZE);
   assert(bmih.biWidth > 0);
   assert(bmih.biHeight > 0);
@@ -502,7 +502,7 @@ ReadBMP(const char *filename)
     return 0;
   }
 
-  // Read pixels 
+  // Read pixels
   fseek(fp, (long) bmfh.bfOffBits, SEEK_SET);
   if (fread(pixels, 1, bmih.biSizeImage, fp) != bmih.biSizeImage) {
     fprintf(stderr, "Error while reading BMP file %s", filename);
@@ -542,7 +542,7 @@ WriteBMP(const char *filename) const
     return 0;
   }
 
-  // Write file header 
+  // Write file header
   BITMAPFILEHEADER bmfh;
   bmfh.bfType = BMP_BF_TYPE;
   bmfh.bfSize = BMP_BF_OFF_BITS + rowsize * height;
@@ -555,7 +555,7 @@ WriteBMP(const char *filename) const
   WordWriteLE(bmfh.bfReserved2, fp);
   DWordWriteLE(bmfh.bfOffBits, fp);
 
-  // Write info header 
+  // Write info header
   BITMAPINFOHEADER bmih;
   bmih.biSize = BMP_BI_SIZE;
   bmih.biWidth = width;
@@ -595,12 +595,12 @@ WriteBMP(const char *filename) const
     // Pad row
     for (int i = 0; i < pad; i++) fputc(0, fp);
   }
-  
+
   // Close file
   fclose(fp);
 
   // Return success
-  return 1;  
+  return 1;
 }
 
 
@@ -641,7 +641,7 @@ ReadPPM(const char *filename)
     fclose(fp);
     return 0;
   }
-	
+
   // Read max value
   int max_value;
   if (fscanf(fp, "%d", &max_value) != 1) {
@@ -649,7 +649,7 @@ ReadPPM(const char *filename)
     fclose(fp);
     return 0;
   }
-	
+
   // Assign ncomponents and rowsize
   ncomponents = 3;
   rowsize = ncomponents * width;
@@ -666,7 +666,7 @@ ReadPPM(const char *filename)
 
   // Check file type
   if (!strcmp(buffer, "P2\n")) {
-    // Read asci gray image data 
+    // Read asci gray image data
     for (int j = height-1; j >= 0; j--) {
       unsigned char *p = &pixels[j*rowsize];
       for (int i = 0; i < width; i++) {
@@ -686,7 +686,7 @@ ReadPPM(const char *filename)
     }
   }
   else if (!strcmp(buffer, "P3\n")) {
-    // Read asci rgb image data 
+    // Read asci rgb image data
     for (int j = height-1; j >= 0; j--) {
       unsigned char *p = &pixels[j*rowsize];
       for (int i = 0; i < width; i++) {
@@ -710,7 +710,7 @@ ReadPPM(const char *filename)
     int c = getc(fp);
     if (!isspace(c)) putc(c, fp);
 
-    // Read binary gray image data 
+    // Read binary gray image data
     // First pgm pixel is top-left, so read in opposite scan-line order
     for (int j = height-1; j >= 0; j--) {
       unsigned char *p = &pixels[j*rowsize];
@@ -728,7 +728,7 @@ ReadPPM(const char *filename)
     int c = getc(fp);
     if (!isspace(c)) putc(c, fp);
 
-    // Read binary rgb image data 
+    // Read binary rgb image data
     // First ppm pixel is top-left, so read in opposite scan-line order
     for (int j = height-1; j >= 0; j--) {
       unsigned char *p = &pixels[j*rowsize];
@@ -773,7 +773,7 @@ WritePPM(const char *filename, int ascii) const
       return 0;
     }
 
-    // Print PPM image file 
+    // Print PPM image file
     // First ppm pixel is top-left, so write in opposite scan-line order
     if (pgm) fprintf(fp, "P2\n");
     else fprintf(fp, "P3\n");
@@ -803,8 +803,8 @@ WritePPM(const char *filename, int ascii) const
       fprintf(stderr, "Unable to open image file: %s", filename);
       return 0;
     }
-    
-    // Print PPM image file 
+
+    // Print PPM image file
     // First ppm pixel is top-left, so write in opposite scan-line order
     if (pgm) fprintf(fp, "P5\n");
     else fprintf(fp, "P6\n");
@@ -820,13 +820,13 @@ WritePPM(const char *filename, int ascii) const
         else fprintf(fp, "%c%c%c", r, g, b);
       }
     }
-    
+
     // Close file
     fclose(fp);
   }
 
   // Return number of bytes written
-  return width * height * ncomponents;  
+  return width * height * ncomponents;
 }
 
 
@@ -854,8 +854,8 @@ ReadPFM(const char *filename)
   // Read width
   int width_count = 0;
   char width_string[256];
-  for (int i = 0; i < 256; i++) { 
-    c = fgetc(fp); 
+  for (int i = 0; i < 256; i++) {
+    c = fgetc(fp);
     if ((c == ' ') && (width_count == 0)) { continue; }
     else if ((c == ' ') || (c == '\n')) { width_string[width_count] = '\0'; break; }
     else if (!isdigit(c)) { fprintf(stderr, "Bad width character %c in %s\n", c, filename); return 0; }
@@ -864,15 +864,15 @@ ReadPFM(const char *filename)
 
   // Check width
   if ((width_count == 0) || (width_count > 128)) {
-    fprintf(stderr, "Error reading width in %s\n", filename); 
-    return 0; 
+    fprintf(stderr, "Error reading width in %s\n", filename);
+    return 0;
   }
 
   // Read height
   int height_count = 0;
   char height_string[256];
-  for (int i = 0; i < 256; i++) { 
-    c = fgetc(fp); 
+  for (int i = 0; i < 256; i++) {
+    c = fgetc(fp);
     if ((c == ' ') && (height_count == 0)) { continue; }
     else if ((c == ' ') || (c == '\n')) { height_string[height_count] = '\0'; break; }
     else if (!isdigit(c)) { fprintf(stderr, "Bad height character %c in %s\n", c, filename); return 0; }
@@ -881,15 +881,15 @@ ReadPFM(const char *filename)
 
   // Check height
   if ((height_count == 0) || (height_count > 128)) {
-    fprintf(stderr, "Error reading height in %s\n", filename); 
-    return 0; 
+    fprintf(stderr, "Error reading height in %s\n", filename);
+    return 0;
   }
 
   // Read endian
   int endian_count = 0;
   char endian_string[256];
-  for (int i = 0; i < 256; i++) { 
-    c = fgetc(fp); 
+  for (int i = 0; i < 256; i++) {
+    c = fgetc(fp);
     if ((c == ' ') && (endian_count == 0)) { continue; }
     else if ((c == ' ') || (c == '\n')) { endian_string[endian_count] = '\0'; break; }
     if (!isdigit(c) && (c != '.') && (c != '-')) { fprintf(stderr, "Bad endian character %c in %s\n", c, filename); return 0; }
@@ -898,8 +898,8 @@ ReadPFM(const char *filename)
 
   // Check endian
   if ((endian_count == 0) || (endian_count > 128)) {
-    fprintf(stderr, "Error reading endian in %s\n", filename); 
-    return 0; 
+    fprintf(stderr, "Error reading endian in %s\n", filename);
+    return 0;
   }
 
   // Parse values
@@ -1000,13 +1000,13 @@ ReadPFM(const char *filename)
 
 #define USE_JPEG
 #ifdef USE_JPEG
-  extern "C" { 
+  extern "C" {
 #   define XMD_H // Otherwise, a conflict with INT32
 #   if RN_OS == RN_WINDOWS
 #     define HAVE_BOOLEAN
 #     undef FAR // Otherwise, a conflict with windows.h
 #   endif
-#   include "jpeg/jpeglib.h"
+#   include <jpeglib.h>
   };
 #endif
 
@@ -1048,7 +1048,7 @@ ReadJPEG(const char *filename)
     return 0;
   }
 
-  // Read scan lines 
+  // Read scan lines
   // First jpeg pixel is top-left, so read pixels in opposite scan-line order
   while (cinfo.output_scanline < cinfo.output_height) {
     int scanline = cinfo.output_height - cinfo.output_scanline - 1;
@@ -1072,7 +1072,7 @@ ReadJPEG(const char *filename)
 }
 
 
-	
+
 
 int R2Image::
 WriteJPEG(const char *filename) const
@@ -1100,7 +1100,7 @@ WriteJPEG(const char *filename) const
   cinfo.optimize_coding = TRUE;
   jpeg_set_quality(&cinfo, 75, TRUE);
   jpeg_start_compress(&cinfo, TRUE);
-	
+
   // Output scan lines
   // First jpeg pixel is top-left, so write in opposite scan-line order
   while (cinfo.next_scanline < cinfo.image_height) {
@@ -1132,7 +1132,7 @@ WriteJPEG(const char *filename) const
 
 #define OMIT_TIFF
 #ifdef USE_TIFF
-# include "tiff/tiffio.h"
+# include <tiffio.h>
 #endif
 
 
@@ -1180,7 +1180,7 @@ ReadTIFF(const char *filename)
     return 0;
   }
 
-  // Fill R2Image pixel data 
+  // Fill R2Image pixel data
   uint32 *rasterp = raster;
   for (int j = 0; j < height; j++) {
     unsigned char *p = &pixels[j*rowsize];
@@ -1206,7 +1206,7 @@ ReadTIFF(const char *filename)
 #endif
 }
 
-	
+
 
 int R2Image::
 WriteTIFF(const char *filename) const
@@ -1269,7 +1269,7 @@ WriteTIFF(const char *filename) const
 
 //#define USE_PNG
 #ifdef USE_PNG
-# include "png/png.h"
+# include <png.h>
 #endif
 
 
@@ -1285,14 +1285,14 @@ ReadPNG(const char *filename)
     return 0;
    }
 
-  // Create and initialize the png_struct 
+  // Create and initialize the png_struct
   png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
   if (png_ptr == NULL) {
     fclose(fp);
     return 0;
   }
 
-  // Allocate/initialize the memory for image information. 
+  // Allocate/initialize the memory for image information.
   png_infop info_ptr = png_create_info_struct(png_ptr);
   if (info_ptr == NULL) {
     fclose(fp);
@@ -1300,13 +1300,13 @@ ReadPNG(const char *filename)
     return 0;
   }
 
-  // Set up the input control if you are using standard C streams 
+  // Set up the input control if you are using standard C streams
   png_init_io(png_ptr, fp);
 
-  // Read the png info 
+  // Read the png info
   png_read_info(png_ptr, info_ptr);
 
-  // Extract image info 
+  // Extract image info
   png_byte color_type = png_get_color_type(png_ptr, info_ptr);
   width = png_get_image_width(png_ptr, info_ptr);
   height = png_get_image_height(png_ptr, info_ptr);
@@ -1319,33 +1319,33 @@ ReadPNG(const char *filename)
   else if (color_type == PNG_COLOR_TYPE_GRAY_ALPHA) ncomponents = 2;
   else if (color_type == PNG_COLOR_TYPE_RGB) ncomponents = 3;
   else if (color_type == PNG_COLOR_TYPE_RGB_ALPHA) ncomponents = 4;
-  else { 
+  else {
     fclose(fp);
     png_destroy_read_struct(&png_ptr, NULL, NULL);
     return 0;
   }
 
-  // Allocate the pixels and row pointers 
-  pixels = new unsigned char [ height * rowsize ]; 
+  // Allocate the pixels and row pointers
+  pixels = new unsigned char [ height * rowsize ];
   png_bytep *row_pointers = (png_bytep *) png_malloc(png_ptr, height * png_sizeof(png_bytep));
   for (int i = 0; i < height; i++) row_pointers[i] = &pixels[ (height - i - 1) * rowsize ];
 
-  // Read the pixels 
+  // Read the pixels
   png_read_image(png_ptr, row_pointers);
 
-  // Finish reading 
+  // Finish reading
   png_read_end(png_ptr, info_ptr);
 
-  // Free the row pointers 
+  // Free the row pointers
   png_free(png_ptr, row_pointers);
 
-  // Clean up after the read, and free any memory allocated  
+  // Clean up after the read, and free any memory allocated
   png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
 
-  // Close the file 
+  // Close the file
   fclose(fp);
 
-  // Return success 
+  // Return success
   return 1;
 #else
   RNFail("PNG not supported");
@@ -1359,29 +1359,29 @@ int R2Image::
 WritePNG(const char *filename) const
 {
 #ifdef USE_PNG
-  // Open the file 
+  // Open the file
   FILE *fp = fopen(filename, "wb");
   if (fp == NULL) {
     fprintf(stderr, "Unable to open PNG file %s\n", filename);
     return 0;
   }
-  
-  // Create and initialize the png_struct 
+
+  // Create and initialize the png_struct
   png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
   if (png_ptr == NULL) {
     fclose(fp);
     return 0;
   }
-  
-  // Allocate/initialize the image information data. 
+
+  // Allocate/initialize the image information data.
   png_infop info_ptr = png_create_info_struct(png_ptr);
   if (info_ptr == NULL) {
     fclose(fp);
     png_destroy_write_struct(&png_ptr,  NULL);
     return 0;
   }
-  
-  // Determine color type  
+
+  // Determine color type
   png_byte color_type = 0;
   if (ncomponents == 1) color_type = PNG_COLOR_TYPE_GRAY;
   else if (ncomponents == 2) color_type = PNG_COLOR_TYPE_GRAY_ALPHA;
@@ -1389,34 +1389,34 @@ WritePNG(const char *filename) const
   else if (ncomponents == 4) color_type = PNG_COLOR_TYPE_RGB_ALPHA;
   else { fprintf(stderr, "Invalid number of components for %s\n", filename); return 0; }
 
-  // Fill in the image data 
+  // Fill in the image data
   png_set_IHDR(png_ptr, info_ptr, width, height,
     8, color_type, PNG_INTERLACE_NONE,
     PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
 
-  // Allocate the row pointers 
+  // Allocate the row pointers
   png_bytep *row_pointers = (png_bytep *) png_malloc(png_ptr, height * png_sizeof(png_bytep));
   for (int i = 0; i < height; i++) row_pointers[i] = &pixels[(height - i - 1) * rowsize];
-  
-  // Set up the output control 
+
+  // Set up the output control
   png_init_io(png_ptr, fp);
-  
-  // Write the png info 
+
+  // Write the png info
   png_write_info(png_ptr, info_ptr);
-  
-  // Write the pixels 
+
+  // Write the pixels
   png_write_image(png_ptr, row_pointers);
-  
-  // Finish writing 
+
+  // Finish writing
   png_write_end(png_ptr, info_ptr);
-  
-  // Free the row pointers 
+
+  // Free the row pointers
   png_free(png_ptr, row_pointers);
 
-  // Clean up after the write, and free any memory allocated 
+  // Clean up after the write, and free any memory allocated
   png_destroy_write_struct(&png_ptr, &info_ptr);
 
-  // Close the file 
+  // Close the file
   fclose(fp);
 
   // Return success
@@ -1506,7 +1506,7 @@ ReadRAW(const char *filename)
   fclose(fp);
 
   // Return number of bytes read
-  return width * height * ncomponents * sizeof(float);  
+  return width * height * ncomponents * sizeof(float);
 }
 
 
@@ -1562,7 +1562,7 @@ WriteRAW(const char *filename) const
   fclose(fp);
 
   // Return number of bytes written
-  return width * height * ncomponents * sizeof(float);  
+  return width * height * ncomponents * sizeof(float);
 }
 
 
