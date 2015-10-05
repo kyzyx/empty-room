@@ -56,4 +56,8 @@ bool readBinaryImageWithHeader(const std::string& filename,
         int& height,
         std::map<std::string, float>& header,
         bool preallocated=false);
+bool readImageHeader(const std::string& filename,
+        int& width,
+        int& height,
+        std::map<std::string, float>& header);
 };

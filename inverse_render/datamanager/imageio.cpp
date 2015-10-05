@@ -469,4 +469,32 @@ bool readBinaryImageWithHeader(const std::string& filename,
         return false;
     }
 }
+bool readImageHeader(const std::string& filename,
+        int& width,
+        int& height,
+        std::map<std::string, float>& header)
+{
+    try {
+        ifstream in(filename, ios::in | ios::binary);
+        string line;
+        getline(in, line);
+        bool bgr = false;
+        int bpp = 0;
+        while (line != "end_header") {
+            int n = line.find(' ');
+            if (n != string::npos) {
+                string key = line.substr(0, n);
+                if (key == "width") width = atoi(line.substr(n+1).c_str());
+                else if (key == "height") height = atoi(line.substr(n+1).c_str());
+                else if (key == "format") bgr = line.substr(n+1) == "BGR";
+                else if (key == "cameraModelName") ;
+                else header[key] = atof(line.substr(n+1).c_str());
+            }
+            getline(in, line);
+        }
+        return true;
+    } catch(...) {
+        return false;
+    }
+}
 };

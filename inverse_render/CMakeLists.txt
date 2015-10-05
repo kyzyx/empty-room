@@ -88,6 +88,9 @@ add_executable(wallfindapp apps/wallfindapp.cpp
 target_link_libraries(wallfindapp ${PCL_LIBRARIES} datamanager roommodel
     wallfinder)
 # ----------------------------------------------------------------------------
+add_executable(create_camfile EXCLUDE_FROM_ALL utils/create_camfile.cpp)
+target_link_libraries(create_camfile ${GAPS_LIBRARIES} datamanager)
+
 add_executable(invrender EXCLUDE_FROM_ALL monolithic/invrender.cpp
     reproject.h reproject.cpp
     clusterlights.cpp clusterlights.h
