@@ -1,4 +1,4 @@
-#include "opengl_compat.h"
+#include "rendering/opengl_compat.h"
 #include <pcl/io/io.h>
 #include <pcl/io/vtk_lib_io.h>
 #include <pcl/point_types.h>
@@ -10,8 +10,8 @@
 #include "datamanager/imageio.h"
 #include "reproject.h"
 #include "rerender.h"
-#include "orientation_finder.h"
-#include "wall_finder.h"
+#include "wallfinder/orientation_finder.h"
+#include "wallfinder/wall_finder.h"
 #include "clusterlights.h"
 #include "linefinder.h"
 #include "orientededgefilter.h"

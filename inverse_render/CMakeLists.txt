@@ -19,56 +19,86 @@ include_directories(${Boost_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
 find_package(OpenCV REQUIRED)
+find_package(JPEG REQUIRED)
+find_package(PNG REQUIRED)
 include_directories(. ../GAPS/)
+set(GAPS_LIBRARIES
+    R3Graphics.a R3Shapes.a R2Shapes.a RNBasics.a -ljpeg)
 link_directories(${PCL_LIBRARY_DIRS}
     ../GAPS/R3Graphics/ ../GAPS/R3Shapes/
-    ../GAPS/RNBasics/ ../GAPS/R2Shapes/
-    ../GAPS/jpeg/)
+    ../GAPS/RNBasics/ ../GAPS/R2Shapes/)
 
-add_subdirectory(datamanager .)
-add_subdirectory(roommodel .)
+# ----------------------------------------------------------------------------
+# Common libraries
+add_library(datamanager 
+    datamanager/camparams.h datamanager/material.h
+    datamanager/rgbe.h datamanager/rgbe.cpp
+    datamanager/meshmanager.cpp datamanager/meshmanager.h
+    datamanager/meshserver.cpp datamanager/meshserver.h
+    datamanager/imagemanager.cpp datamanager/imagemanager.h
+    datamanager/imageserver.cpp datamanager/imageserver.h
+    datamanager/imageio.cpp datamanager/imageio.h)
+target_include_directories(datamanager PRIVATE ${PNG_INCLUDE_DIRS})
+target_link_libraries(datamanager ${PCL_LIBRARIES} ${Boost_LIBRARIES}
+    ${GAPS_LIBRARIES} ${GLLIBS} ${PNG_LIBRARIES} IlmImf Half rt)
 
+add_executable(dataserver datamanager/dataserver.cpp)
+target_link_libraries(dataserver ${PCL_LIBRARIES} datamanager)
+
+add_library(roommodel 
+    roommodel/roommodel.h roommodel/RoomModel.cpp roommodel/RoomModel_Internal.h
+    roommodel/geometrygenerator.h roommodel/geometrygenerator.cpp
+    roommodel/rectanglerenderer.h roommodel/rectanglerenderer.cpp)
+target_link_libraries(roommodel datamanager
+    ${GAPS_LIBRARIES} ${GLLIBS})
 add_library(rendering
-    opengl_compat.h opengl_compat.cpp
-    loadshader.h loadshader.cpp
-    rendermanager.h rendermanager.cpp
-    hemicuberenderer.h hemicuberenderer.cpp)
+    rendering/opengl_compat.h rendering/opengl_compat.cpp
+    rendering/loadshader.h rendering/loadshader.cpp
+    rendering/rendermanager.h rendering/rendermanager.cpp
+    rendering/hemicuberenderer.h rendering/hemicuberenderer.cpp)
 target_link_libraries(rendering datamanager roommodel
-    R3Graphics.a R3Shapes.a R2Shapes.a RNBasics.a jpeg.a
-    ${GLLIBS})
-
-add_executable(reprojectapp reprojectapp.cpp invrenderapp.cpp invrenderapp.h
+    ${GAPS_LIBRARIES} ${GLLIBS})
+add_library(wallfinder
+    wallfinder/orientation_finder.h wallfinder/orientation_finder.cpp
+    wallfinder/wall_finder.h wallfinder/wall_finder.cpp
+    wallfinder/shortestpath.h wallfinder/shortestpath.cpp)
+target_link_libraries(wallfinder datamanager roommodel
+    ${GAPS_LIBRARIES} ${GLLIBS})
+# ----------------------------------------------------------------------------
+# Shared memory applications
+add_executable(reprojectapp apps/reprojectapp.cpp
+    apps/invrenderapp.cpp apps/invrenderapp.h
     reproject.cpp reproject.h clusterlights.cpp clusterlights.h)
 target_link_libraries(reprojectapp ${PCL_LIBRARIES} datamanager)
-add_executable(labelimageapp labelimageapp.cpp invrenderapp.cpp invrenderapp.h)
+add_executable(labelimageapp apps/labelimageapp.cpp
+    apps/invrenderapp.cpp apps/invrenderapp.h)
 target_link_libraries(labelimageapp ${PCL_LIBRARIES} ${GLUT_LIBRARY} datamanager rendering)
-add_executable(edgeimageapp edgeimageapp.cpp
-    orientededgefilter.cpp orientededgefilter.h
-    invrenderapp.cpp invrenderapp.h)
+add_executable(edgeimageapp apps/edgeimageapp.cpp
+    apps/invrenderapp.cpp apps/invrenderapp.h
+    orientededgefilter.cpp orientededgefilter.h)
 target_link_libraries(edgeimageapp ${PCL_LIBRARIES} ${OpenCV_LIBS} datamanager)
-add_executable(linefindapp linefindapp.cpp
-    wall_finder.h wall_finder.cpp
+add_executable(linefindapp apps/linefindapp.cpp
+    apps/invrenderapp.cpp apps/invrenderapp.h
     linefinder.cpp linefinder.h
-    shortestpath.h shortestpath.cpp orientededgefilter.cpp orientededgefilter.h
-    invrenderapp.cpp invrenderapp.h)
+    orientededgefilter.cpp orientededgefilter.h)
 target_link_libraries(linefindapp ${PCL_LIBRARIES} ${OpenCV_LIBS} datamanager
-    roommodel)
-add_executable(wallfindapp wallfindapp.cpp invrenderapp.cpp invrenderapp.h
-    orientation_finder.h orientation_finder.cpp wall_finder.h wall_finder.cpp
-    shortestpath.h shortestpath.cpp)
-target_link_libraries(wallfindapp ${PCL_LIBRARIES} datamanager roommodel)
-
-add_executable(invrender invrender.cpp
+    roommodel wallfinder)
+add_executable(wallfindapp apps/wallfindapp.cpp
+    apps/invrenderapp.cpp apps/invrenderapp.h)
+target_link_libraries(wallfindapp ${PCL_LIBRARIES} datamanager roommodel
+    wallfinder)
+# ----------------------------------------------------------------------------
+add_executable(invrender EXCLUDE_FROM_ALL monolithic/invrender.cpp
     reproject.h reproject.cpp
-    wall_finder.h wall_finder.cpp
-    orientation_finder.cpp orientation_finder.h
-    shortestpath.cpp shortestpath.h
-    Simplify.h eigen_nnls.h
-    linefinder.cpp linefinder.h
+    clusterlights.cpp clusterlights.h
     orientededgefilter.cpp orientededgefilter.h
-    solver.cpp solvetexture.cpp solver.h clusterlights.cpp clusterlights.h
-    display.cpp display.h parse_args.cpp parse_args.h rerender.cpp rerender.h)
+    linefinder.cpp linefinder.h 
+    Simplify.h eigen_nnls.h
+    rerender.cpp rerender.h
+    solver.cpp solvetexture.cpp solver.h
+    monolithic/display.cpp monolithic/display.h
+    monolithic/parse_args.cpp monolithic/parse_args.h)
 target_link_libraries(invrender ${PCL_LIBRARIES} ${OpenCV_LIBS}
-    R3Graphics.a R3Shapes.a R2Shapes.a RNBasics.a
-    jpeg.a ${GLLIBS} ${GLUT_LIBRARY} IlmImf Half datamanager rendering)
+    ${GAPS_LIBRARIES} ${GLLIBS} ${GLUT_LIBRARY} IlmImf Half datamanager rendering
+    wallfinder)
 set(CMAKE_CXX_FLAGS "-Wno-deprecated -std=c++0x")

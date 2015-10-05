@@ -46,6 +46,7 @@ unix:!macx {
     LIBS += -lGLEW
 }
 INCLUDEPATH += $$PWD/../../
+INCLUDEPATH += $$PWD/../../rendering/
 INCLUDEPATH += $$GAPS_DIR
 DEPENDPATH += $$PWD/../../
 

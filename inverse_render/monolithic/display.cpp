@@ -1,6 +1,6 @@
 #include "display.h"
 #include "parse_args.h"
-#include "hemicuberenderer.h"
+#include "rendering/hemicuberenderer.h"
 #include <pcl/visualization/image_viewer.h>
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/visualization/point_cloud_color_handlers.h>

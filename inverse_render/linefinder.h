@@ -1,7 +1,7 @@
 #ifndef _LINEFINDER_H
 #define _LINEFINDER_H
 #include "datamanager/imagemanager.h"
-#include "wall_finder.h"
+#include "wallfinder/wall_finder.h"
 
 class WallLine {
     public:

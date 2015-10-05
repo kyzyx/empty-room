@@ -1,5 +1,5 @@
 #include "solver.h"
-#include "wall_finder.h"
+#include "wallfinder/wall_finder.h"
 #include <deque>
 #include <opencv2/imgproc/imgproc.hpp>
 

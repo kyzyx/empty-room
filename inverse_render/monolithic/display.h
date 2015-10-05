@@ -3,7 +3,7 @@
 #include "datamanager/meshmanager.h"
 #include "datamanager/imagemanager.h"
 #include "solver.h"
-#include "wall_finder.h"
+#include "wallfinder/wall_finder.h"
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 

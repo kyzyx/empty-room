@@ -5,7 +5,7 @@
 #include "R3Shapes/R3Shapes.h"
 #include "datamanager/imagemanager.h"
 #include "datamanager/meshmanager.h"
-#include "hemicuberenderer.h"
+#include "rendering/hemicuberenderer.h"
 
 class InverseRender {
     public:

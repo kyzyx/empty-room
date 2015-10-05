@@ -1,5 +1,5 @@
 #include "invrenderapp.h"
-#include "wall_finder.h"
+#include "wallfinder/wall_finder.h"
 
 #include <string>
 #include <iostream>

@@ -1,6 +1,6 @@
 #ifndef _RERENDER_H
 #define _RERENDER_H
-#include "wall_finder.h"
+#include "wallfinder/wall_finder.h"
 #include "datamanager/meshmanager.h"
 #include "solver.h"
 #include "datamanager/camparams.h"

@@ -1,6 +1,6 @@
-#include "opengl_compat.h"
+#include "rendering/opengl_compat.h"
 #include "invrenderapp.h"
-#include "hemicuberenderer.h"
+#include "rendering/hemicuberenderer.h"
 #include <string>
 #include <iostream>
 #include <pcl/console/parse.h>
