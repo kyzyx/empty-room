@@ -93,6 +93,7 @@ target_link_libraries(create_camfile ${GAPS_LIBRARIES} datamanager)
 
 add_executable(split EXCLUDE_FROM_ALL utils/splitimagestream.cpp utils/yuv.h)
 add_executable(processdepth EXCLUDE_FROM_ALL utils/processdepthstream.cpp)
+target_link_libraries(processdepth ${PCL_LIBRARIES})
 
 add_executable(invrender EXCLUDE_FROM_ALL monolithic/invrender.cpp
     reproject.h reproject.cpp
