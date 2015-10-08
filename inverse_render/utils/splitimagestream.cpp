@@ -9,10 +9,11 @@ unsigned char tmp[1280*720*3];
 unsigned char yuv[1280*720*3/2];
 int main(int argc, char** argv) {
     if (argc < 3) {
-        printf("Usage: ./split filename.bin fmtstring.bin\n");
+        printf("Usage: ./split filename.bin imageposes.xforms outputfmtstring.bin\n");
         return 0;
     } else {
         ifstream in(argv[1], ios::in | ios::binary);
+        ifstream posein(argv[2], ios::in | ios::binary);
         string header;
         string line;
         getline(in, line); // ImageData
@@ -39,7 +40,7 @@ int main(int argc, char** argv) {
             in.read((char*) &ts, sizeof(double));
             if (ts < 0) break;
             char filename[40];
-            sprintf(filename, argv[2], count);
+            sprintf(filename, argv[3], count);
             FILE* out = fopen(filename, "w");
             fprintf(out, "ImageData\ntimestamp %f\n%s", ts, header.c_str());
             for (int i = 0; i < 3; i++) {
@@ -47,7 +48,7 @@ int main(int argc, char** argv) {
                     float f;
                     char ch;
                     int n;
-                    in.read((char*) &f, sizeof(float));
+                    posein.read((char*) &f, sizeof(float));
                     if (j == 3) {
                         ch = 'T';
                         n = i;
