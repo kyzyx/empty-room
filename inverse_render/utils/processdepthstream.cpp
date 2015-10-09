@@ -4,7 +4,7 @@
 #include <pcl/io/ply_io.h>
 #include <pcl/filters/filter.h>
 #include <pcl/features/integral_image_normal.h>
-#include <pcl/features/normal_3d_omp.h>
+#include <pcl/features/normal_3d.h>
 #include <pcl/visualization/cloud_viewer.h>
 #include <vector>
 
@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
     printf("Writing %d points\n", n);
     PointCloud<PointNormal>::Ptr fullcloud(new PointCloud<PointNormal>);
     PointCloud<PointXYZ>::Ptr allcloud(new PointCloud<PointXYZ>);
-    for (int i = 0; i < poses.size(); i++) {
+    for (int z = 0; z < poses.size(); z++) {
         fread(&ts, sizeof(double), 1, in);
         if (ts < 0) break;
         fread(&m, sizeof(int), 1, in);
@@ -69,15 +69,29 @@ int main(int argc, char** argv) {
 
         // -------------------------------------------------------
         PointCloud<PointXYZ>::Ptr cloud(new PointCloud<PointXYZ>);
+        PointCloud<PointNormal>::Ptr withnormals(new PointCloud<PointNormal>);
         cloud->resize(m);
         for (int j = 0; j < m; j++) {
             float v[3];
-            v[0] = dot(poses[i].m,   tmp+3*j) + poses[i].m[3];
-            v[1] = dot(poses[i].m+4, tmp+3*j) + poses[i].m[7];
-            v[2] = dot(poses[i].m+8, tmp+3*j) + poses[i].m[11];
+            v[0] = dot(poses[z].m,   tmp+3*j) + poses[z].m[3];
+            v[1] = dot(poses[z].m+4, tmp+3*j) + poses[z].m[7];
+            v[2] = dot(poses[z].m+8, tmp+3*j) + poses[z].m[11];
             cloud->at(j) = PointXYZ(v[0], v[1], v[2]);
         }
-        *allcloud += *cloud;
+
+        NormalEstimation<PointXYZ, PointNormal> ne;
+        ne.setInputCloud (cloud);
+        search::KdTree<PointXYZ>::Ptr tree (new search::KdTree<PointXYZ> ());
+        ne.setSearchMethod (tree);
+        ne.setRadiusSearch (0.1);
+        ne.compute (*withnormals);
+        for (int i = 0; i < m; i++) {
+            withnormals->at(i).x = cloud->at(i).x;
+            withnormals->at(i).y = cloud->at(i).y;
+            withnormals->at(i).z = cloud->at(i).z;
+        }
+        *fullcloud += *withnormals;
+        printf("Done %d/%d\n", z, poses.size());
         // -------------------------------------------------------
         /*
         PointCloud<PointXYZ>::Ptr cloud(new PointCloud<PointXYZ>(w, h));
@@ -115,20 +129,9 @@ int main(int argc, char** argv) {
         *fullcloud += *withnormals;*/
     }
     fclose(in);
-
-    NormalEstimationOMP<PointXYZ, PointNormal> ne;
-    ne.setInputCloud (allcloud);
-    search::KdTree<PointXYZ>::Ptr tree (new search::KdTree<PointXYZ> ());
-    ne.setSearchMethod (tree);
-    ne.setRadiusSearch (0.04);
-    ne.compute (*fullcloud);
-    for (int i = 0; i < n; i++) {
-        fullcloud->at(i).x = allcloud->at(i).x;
-        fullcloud->at(i).y = allcloud->at(i).y;
-        fullcloud->at(i).z = allcloud->at(i).z;
-    }
     vector<int> tmp;
     removeNaNNormalsFromPointCloud(*fullcloud, *fullcloud, tmp);
+        printf("Cleaned points %d\n", fullcloud->size());
 
     io::savePLYFileBinary<PointNormal>(argv[2], *fullcloud);
 }
