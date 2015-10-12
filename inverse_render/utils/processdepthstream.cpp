@@ -54,9 +54,10 @@ int main(int argc, char** argv) {
         poses.push_back(mat);
     }
     rewind(in);
-    printf("Writing %d points\n", n);
-    PointCloud<PointNormal>::Ptr fullcloud(new PointCloud<PointNormal>);
-    PointCloud<PointXYZ>::Ptr allcloud(new PointCloud<PointXYZ>);
+    printf("Processing %d points\n", n);
+    vector<float> scales;
+    vector<float> points;
+    vector<float> normals;
     for (int z = 0; z < poses.size(); z++) {
         fread(&ts, sizeof(double), 1, in);
         if (ts < 0) break;
@@ -69,7 +70,7 @@ int main(int argc, char** argv) {
 
         // -------------------------------------------------------
         PointCloud<PointXYZ>::Ptr cloud(new PointCloud<PointXYZ>);
-        PointCloud<PointNormal>::Ptr withnormals(new PointCloud<PointNormal>);
+        PointCloud<Normal>::Ptr withnormals(new PointCloud<Normal>);
         cloud->resize(m);
         for (int j = 0; j < m; j++) {
             float v[3];
@@ -79,59 +80,60 @@ int main(int argc, char** argv) {
             cloud->at(j) = PointXYZ(v[0], v[1], v[2]);
         }
 
-        NormalEstimation<PointXYZ, PointNormal> ne;
-        ne.setInputCloud (cloud);
-        search::KdTree<PointXYZ>::Ptr tree (new search::KdTree<PointXYZ> ());
-        ne.setSearchMethod (tree);
-        ne.setRadiusSearch (0.1);
-        ne.compute (*withnormals);
-        for (int i = 0; i < m; i++) {
-            withnormals->at(i).x = cloud->at(i).x;
-            withnormals->at(i).y = cloud->at(i).y;
-            withnormals->at(i).z = cloud->at(i).z;
-        }
-        *fullcloud += *withnormals;
-        printf("Done %d/%d\n", z, poses.size());
-        // -------------------------------------------------------
-        /*
-        PointCloud<PointXYZ>::Ptr cloud(new PointCloud<PointXYZ>(w, h));
-        PointCloud<PointNormal>::Ptr withnormals(new PointCloud<PointNormal>);
-        cloud->is_dense = false;
-        printf("Size %d x %d and %d x %d\n", w, h, cloud->width, cloud->height);
-        for (int i = 0; i < h; i++) {
-            for (int j = 0; j < w; j++) {
-                int idx = i*w + j;
-                int pid = indices[idx];
-                if (pid < 0) {
-                    cloud->at(j,i) = PointXYZ(NAN, NAN, NAN);
-                } else {
-                    float v[3];
-                    v[0] = dot(mat,   tmp+3*pid) + mat[3];
-                    v[1] = dot(mat+4, tmp+3*pid) + mat[7];
-                    v[2] = dot(mat+8, tmp+3*pid) + mat[11];
-                    cloud->at(j,i) = PointXYZ(v[0], v[1], v[2]);
-                }
-            }
-        }
-        IntegralImageNormalEstimation<PointXYZ, PointNormal> ne;
-        ne.setNormalEstimationMethod (ne.AVERAGE_3D_GRADIENT);
-        ne.setMaxDepthChangeFactor(0.05f);
-        ne.setNormalSmoothingSize(10.0f);
+        float radius = 0.1;
+        NormalEstimation<PointXYZ, Normal> ne;
         ne.setInputCloud(cloud);
+        search::KdTree<PointXYZ>::Ptr tree (new search::KdTree<PointXYZ>());
+        ne.setSearchMethod(tree);
+        ne.setRadiusSearch(radius);
         ne.compute(*withnormals);
-        for (int i = 0; i < h; i++) {
-            for (int j = 0; j < w; j++) {
-                withnormals->at(j,i).x = cloud->at(j,i).x;
-                withnormals->at(j,i).y = cloud->at(j,i).y;
-                withnormals->at(j,i).z = cloud->at(j,i).z;
+        for (int i = 0; i < m; i++) {
+            if (isFinite(cloud->at(i)) && isFinite(withnormals->at(i))) {
+                points.push_back(cloud->at(i).x);
+                points.push_back(cloud->at(i).y);
+                points.push_back(cloud->at(i).z);
+                normals.push_back(withnormals->at(i).normal_x);
+                normals.push_back(withnormals->at(i).normal_y);
+                normals.push_back(withnormals->at(i).normal_z);
+                float scale = 0;
+                int cnt = 0;
+                vector<int> knnidx;
+                vector<float> knnd;
+                int n = tree->nearestKSearch(cloud->at(i), 4, knnidx, knnd);
+                if (n == 0) fprintf(stderr, "Crap, 0\n");
+                for (int j = 0; j < knnd.size(); j++) {
+                    if (knnd[j] < radius*radius) {
+                        scale += sqrt(knnd[j]);
+                        ++cnt;
+                    }
+                }
+                scales.push_back(cnt?scale/cnt:0);
             }
         }
-        *fullcloud += *withnormals;*/
+        printf("Done %d/%d\n", z, poses.size());
+        getchar();
+        // -------------------------------------------------------
     }
     fclose(in);
-    vector<int> tmp;
-    removeNaNNormalsFromPointCloud(*fullcloud, *fullcloud, tmp);
-        printf("Cleaned points %d\n", fullcloud->size());
-
-    io::savePLYFileBinary<PointNormal>(argv[2], *fullcloud);
+    FILE* out = fopen(argv[2], "w");
+    fprintf(out, "ply\nformat binary_little_endian 1.0\n");
+    fprintf(out, "element vertex %d\n", scales.size());
+    fprintf(out, "property float x\n");
+    fprintf(out, "property float y\n");
+    fprintf(out, "property float z\n");
+    fprintf(out, "property float nx\n");
+    fprintf(out, "property float ny\n");
+    fprintf(out, "property float nz\n");
+    fprintf(out, "property float value\n");
+    fprintf(out, "end_header\n");
+    for (int i = 0; i < scales.size(); i++) {
+        fwrite(&points[3*i+0], sizeof(float), 1, out);
+        fwrite(&points[3*i+1], sizeof(float), 1, out);
+        fwrite(&points[3*i+2], sizeof(float), 1, out);
+        fwrite(&normals[3*i+0], sizeof(float), 1, out);
+        fwrite(&normals[3*i+1], sizeof(float), 1, out);
+        fwrite(&normals[3*i+2], sizeof(float), 1, out);
+        fwrite(&scales[i], sizeof(float), 1, out);
+    }
+    fclose(out);
 }
