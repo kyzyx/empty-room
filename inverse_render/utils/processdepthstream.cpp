@@ -24,11 +24,38 @@ using namespace std;
 float dot(float* a, float* b) {
     return a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
 }
+
+void writePlyFile(string filename, vector<float>& points, vector<float>& normals, vector<float>& scales) {
+    FILE* out = fopen(filename.c_str(), "w");
+    fprintf(out, "ply\nformat binary_little_endian 1.0\n");
+    fprintf(out, "element vertex %d\n", scales.size());
+    fprintf(out, "property float x\n");
+    fprintf(out, "property float y\n");
+    fprintf(out, "property float z\n");
+    fprintf(out, "property float nx\n");
+    fprintf(out, "property float ny\n");
+    fprintf(out, "property float nz\n");
+    fprintf(out, "property float value\n");
+    fprintf(out, "end_header\n");
+    for (int i = 0; i < scales.size(); i++) {
+        fwrite(&points[3*i+0], sizeof(float), 1, out);
+        fwrite(&points[3*i+1], sizeof(float), 1, out);
+        fwrite(&points[3*i+2], sizeof(float), 1, out);
+        fwrite(&normals[3*i+0], sizeof(float), 1, out);
+        fwrite(&normals[3*i+1], sizeof(float), 1, out);
+        fwrite(&normals[3*i+2], sizeof(float), 1, out);
+        fwrite(&scales[i], sizeof(float), 1, out);
+    }
+    fclose(out);
+}
+
 int main(int argc, char** argv) {
     if (argc < 3) {
-        printf("Usage: processdepth inputpts.pts output.ply\n");
+        printf("Usage: processdepth inputpts.pts output.ply [-separate]\n");
         return 0;
     }
+    bool singlefile = true;
+    if (argc > 3 && string(argv[4]) == "-separate") singlefile = false;
     FILE* in = fopen(argv[1], "r");
     int n = 0;
     int w, h;
@@ -87,6 +114,11 @@ int main(int argc, char** argv) {
         ne.setSearchMethod(tree);
         ne.setRadiusSearch(radius);
         ne.compute(*withnormals);
+        if (!singlefile) {
+            points.clear();
+            normals.clear();
+            scales.clear();
+        }
         for (int i = 0; i < m; i++) {
             if (isFinite(cloud->at(i)) && isFinite(withnormals->at(i))) {
                 points.push_back(cloud->at(i).x);
@@ -100,7 +132,6 @@ int main(int argc, char** argv) {
                 vector<int> knnidx;
                 vector<float> knnd;
                 int n = tree->nearestKSearch(cloud->at(i), 4, knnidx, knnd);
-                if (n == 0) fprintf(stderr, "Crap, 0\n");
                 for (int j = 0; j < knnd.size(); j++) {
                     if (knnd[j] < radius*radius) {
                         scale += sqrt(knnd[j]);
@@ -110,30 +141,16 @@ int main(int argc, char** argv) {
                 scales.push_back(cnt?scale/cnt:0);
             }
         }
+        if (!singlefile) {
+            char filename[40];
+            sprintf(filename, argv[2], z);
+            writePlyFile(filename, points, normals, scales);
+        }
         printf("Done %d/%d\n", z, poses.size());
-        getchar();
         // -------------------------------------------------------
     }
-    fclose(in);
-    FILE* out = fopen(argv[2], "w");
-    fprintf(out, "ply\nformat binary_little_endian 1.0\n");
-    fprintf(out, "element vertex %d\n", scales.size());
-    fprintf(out, "property float x\n");
-    fprintf(out, "property float y\n");
-    fprintf(out, "property float z\n");
-    fprintf(out, "property float nx\n");
-    fprintf(out, "property float ny\n");
-    fprintf(out, "property float nz\n");
-    fprintf(out, "property float value\n");
-    fprintf(out, "end_header\n");
-    for (int i = 0; i < scales.size(); i++) {
-        fwrite(&points[3*i+0], sizeof(float), 1, out);
-        fwrite(&points[3*i+1], sizeof(float), 1, out);
-        fwrite(&points[3*i+2], sizeof(float), 1, out);
-        fwrite(&normals[3*i+0], sizeof(float), 1, out);
-        fwrite(&normals[3*i+1], sizeof(float), 1, out);
-        fwrite(&normals[3*i+2], sizeof(float), 1, out);
-        fwrite(&scales[i], sizeof(float), 1, out);
+    if (singlefile) {
+        writePlyFile(argv[2], points, normals, scales);
     }
-    fclose(out);
+    fclose(in);
 }
