@@ -43,9 +43,9 @@ bool ImageServer::readCameraFile(const string& filename)
 {
     // Format:
     //    FrameCount Width Height vfov [transformfilename]
-    //    filename1 x y z Up_x Up_y Up_z Towards_x Towards_y Towards_z
-    //    filename2 x y z Up_x Up_y Up_z Towards_x Towards_y Towards_z
-    //    filename3 x y z Up_x Up_y Up_z Towards_x Towards_y Towards_z
+    //    filename1 x y z Up_x Up_y Up_z Towards_x Towards_y Towards_z [exp_r exp_g exp_b]
+    //    filename2 x y z Up_x Up_y Up_z Towards_x Towards_y Towards_z [exp_r exp_g exp_b]
+    //    filename3 x y z Up_x Up_y Up_z Towards_x Towards_y Towards_z [exp_r exp_g exp_b]
     //    ...
     //    Note: angles in degrees
     try {
@@ -62,24 +62,34 @@ bool ImageServer::readCameraFile(const string& filename)
         infoin >> sz >> w >> h >> vfov;
         double foc = h/(2*tan(vfov*M_PI/360));
         double a,b,c;
-        string s;
+        string s, line;
         CameraParams* curr = cameras;
         for (int i = 0; i < sz; ++i, ++curr) {
-            in >> s >> a >> b >> c;
+            getline(in, line);
+            int ntoks = count(line.begin(), line.end(), ' ') + 1;
+            bool hasExposures = (ntoks >= 13);
+            stringstream imagein(line);
+            imagein >> s >> a >> b >> c;
             bfpath filepath = bfpath(filename).parent_path();
             filepath /= bfpath(s);
             string fullpath = boost::filesystem::canonical(filepath).string();
             filenames.push_back(fullpath);
             curr->pos.Reset(a,b,c);
-            in >> a >> b >> c;
+            imagein >> a >> b >> c;
             curr->up.Reset(a,b,c);
-            in >> a >> b >> c;
+            imagein >> a >> b >> c;
             curr->towards.Reset(a,b,c);
             curr->right = curr->towards%curr->up;
             curr->width = w;
             curr->height = h;
             curr->focal_length = foc;
             curr->fov = vfov;
+            if (hasExposures) {
+                imagein >> a >> b >> c;
+                curr->exposure.Reset(a,b,c);
+            } else {
+                curr->exposure.Reset(1,1,1);
+            }
         }
         if (numparams > 4) {
             string camxform;
@@ -138,6 +148,14 @@ bool ImageServer::loadAllFiles() {
                 } else {
                     if (imagetypes[n].getType() == CV_32FC3) {
                         success = ImageIO::readFloatImage(f, im, w, h);
+                        if (imagetypes[n].getFlags() & ImageType::IT_APPLYEXPOSURE) {
+                            float* p = (float*) im;
+                            for (int j = 0; j < w*h; j++) {
+                                for (int k = 0; k < 3; k++) {
+                                    *p++ *= getCamera(i)->exposure[k];
+                                }
+                            }
+                        }
                     } else if (imagetypes[n].getType() == CV_32FC1) {
                         success = ImageIO::readFloatImage(f, im, w, h, 1);
                     } else if (imagetypes[n].getType() == CV_8UC3) {
@@ -148,8 +166,9 @@ bool ImageServer::loadAllFiles() {
                 }
 
                 if (success) {
-                    if (!(imagetypes[n].getFlags() & ImageType::IT_NOFLIP))
+                    if (!(imagetypes[n].getFlags() & ImageType::IT_NOFLIP)) {
                         flip((char*) im, w, h, imagetypes[n].getSize());
+                    }
                     flags[n*sz+i] |= DF_INITIALIZED;
                 }
             }
