@@ -24,6 +24,10 @@ find_package(PNG REQUIRED)
 include_directories(. ../GAPS/)
 set(GAPS_LIBRARIES
     R3Graphics.a R3Shapes.a R2Shapes.a RNBasics.a -ljpeg)
+
+find_package(Ceres REQUIRED)
+include_directories(${CERES_INCLUDE_DIRS})
+
 link_directories(${PCL_LIBRARY_DIRS}
     ../GAPS/R3Graphics/ ../GAPS/R3Shapes/
     ../GAPS/RNBasics/ ../GAPS/R2Shapes/)
@@ -70,19 +74,29 @@ add_executable(reprojectapp apps/reprojectapp.cpp
     apps/invrenderapp.cpp apps/invrenderapp.h
     reproject.cpp reproject.h clusterlights.cpp clusterlights.h)
 target_link_libraries(reprojectapp ${PCL_LIBRARIES} datamanager)
+
+add_executable(exposuresolverapp apps/exposuresolverapp.cpp
+    apps/invrenderapp.cpp apps/invrenderapp.h
+    exposuresolver.h exposuresolver.cpp)
+target_link_libraries(exposuresolverapp ${PCL_LIBRARIES} ${CERES_LIBRARIES}
+    datamanager)
+
 add_executable(labelimageapp apps/labelimageapp.cpp
     apps/invrenderapp.cpp apps/invrenderapp.h)
 target_link_libraries(labelimageapp ${PCL_LIBRARIES} ${GLUT_LIBRARY} datamanager rendering)
+
 add_executable(edgeimageapp apps/edgeimageapp.cpp
     apps/invrenderapp.cpp apps/invrenderapp.h
     orientededgefilter.cpp orientededgefilter.h)
 target_link_libraries(edgeimageapp ${PCL_LIBRARIES} ${OpenCV_LIBS} datamanager)
+
 add_executable(linefindapp apps/linefindapp.cpp
     apps/invrenderapp.cpp apps/invrenderapp.h
     linefinder.cpp linefinder.h
     orientededgefilter.cpp orientededgefilter.h)
 target_link_libraries(linefindapp ${PCL_LIBRARIES} ${OpenCV_LIBS} datamanager
     roommodel wallfinder)
+
 add_executable(wallfindapp apps/wallfindapp.cpp
     apps/invrenderapp.cpp apps/invrenderapp.h)
 target_link_libraries(wallfindapp ${PCL_LIBRARIES} datamanager roommodel
@@ -92,8 +106,12 @@ add_executable(create_camfile EXCLUDE_FROM_ALL utils/create_camfile.cpp)
 target_link_libraries(create_camfile ${GAPS_LIBRARIES} datamanager)
 
 add_executable(split EXCLUDE_FROM_ALL utils/splitimagestream.cpp utils/yuv.h)
+
 add_executable(processdepth EXCLUDE_FROM_ALL utils/processdepthstream.cpp)
 target_link_libraries(processdepth ${PCL_LIBRARIES})
+
+add_executable(generatemask EXCLUDE_FROM_ALL utils/generatemask.cpp)
+target_link_libraries(generatemask ${OpenCV_LIBS} datamanager)
 
 add_executable(invrender EXCLUDE_FROM_ALL monolithic/invrender.cpp
     reproject.h reproject.cpp
