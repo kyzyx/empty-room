@@ -98,6 +98,8 @@ private slots:
     void wallfindingDone();
     void partialVertexDataLoaded(int percent);
 
+    void on_actionReload_Per_Vertex_Samples_triggered();
+
 private:
     Ui::MainWindow *ui;
     ImageManager* imgr;

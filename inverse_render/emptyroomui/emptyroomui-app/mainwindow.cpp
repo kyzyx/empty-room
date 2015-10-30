@@ -357,6 +357,7 @@ void MainWindow::meshLoaded() {
     ui->wf_wallthresholdSlider->setEnabled(true);
     ui->showMeshCheckbox->setEnabled(true);
     ui->DebugWallfindingButton->setEnabled(true);
+    ui->actionReload_Per_Vertex_Samples->setEnabled(true);
     mmgr = new MeshManager(meshfilename.toStdString());
     ui->meshWidget->setMeshManager(mmgr);
 
@@ -518,6 +519,11 @@ void MainWindow::partialVertexDataLoaded(int percent) {
         boost::interprocess::sharable_lock<MeshManager::shmutex> lock(*(mmgr->getMutex(MeshManager::NUM_CHANNELS,0)));
         ui->meshWidget->setupMeshColors();
     }
+}
+
+void MainWindow::on_actionReload_Per_Vertex_Samples_triggered()
+{
+    samplesLoaded();
 }
 
 enum Label {

@@ -1080,6 +1080,8 @@
     <addaction name="separator"/>
     <addaction name="menuExport_Mesh"/>
     <addaction name="separator"/>
+    <addaction name="actionReload_Per_Vertex_Samples"/>
+    <addaction name="separator"/>
     <addaction name="actionQuit"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
@@ -1245,6 +1247,14 @@
    </property>
    <property name="text">
     <string>Export Mesh with Colors</string>
+   </property>
+  </action>
+  <action name="actionReload_Per_Vertex_Samples">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Reload Per-Vertex Samples</string>
    </property>
   </action>
  </widget>
