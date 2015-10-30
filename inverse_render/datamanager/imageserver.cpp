@@ -12,9 +12,13 @@ using namespace std;
 // Constructors and initialization
 // --------------------------------------------------------------
 using namespace boost::interprocess;
-ImageServer::ImageServer(const string& camfile, bool flipx, bool flipy, cb_type cb)
-    : flip_x(flipx), flip_y(flipy), progress_cb(cb)
+ImageServer::ImageServer(const string& camerafile, bool flipx, bool flipy, cb_type cb)
+    : flip_x(flipx), flip_y(flipy), progress_cb(cb), camfile(camerafile)
 {
+    initserver();
+}
+
+void ImageServer::initserver() {
     ifstream in(camfile.c_str());
     in >> sz >> w >> h;
     in.close();
@@ -184,7 +188,7 @@ bool ImageServer::loadAllFiles() {
         }
     }
 }
-void ImageServer::flip(char* a, int w, int h, size_t bytes) {
+void ImageServer::flip(char* a, int w, int h, size_t bytes) const {
     char* tmp = new char[bytes];
     if (flip_x) {
         for (int i = 0; i < h; ++i) {

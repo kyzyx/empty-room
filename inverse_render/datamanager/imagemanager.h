@@ -57,16 +57,16 @@ class ImageManager {
         virtual ~ImageManager() {;}
 
         const CameraParams* getCamera(int n) const;
-        unsigned char getFlags(const std::string& type, int n) const;
-        void setFlags(const std::string& type, int n, unsigned char value);
-        const void* getImage(const std::string& type, int n) const;
-        const void* getImage(int i, int n) const;
-        const void* getImage(int n) const;
-        void* getImageWriteable(const std::string& type, int n);
+        virtual unsigned char getFlags(const std::string& type, int n) const;
+        virtual void setFlags(const std::string& type, int n, unsigned char value);
+        const void* getImage(const std::string& type, int n);
+        virtual const void* getImage(int i, int n);
+        const void* getImage(int n);
+        virtual void* getImageWriteable(const std::string& type, int n);
         const R4Matrix& getDepthToRgbTransform() const;
 
-        void saveImage(int i, int n) const;
-        void saveImage(const std::string& type, int n) const;
+        virtual void saveImage(int i, int n);
+        void saveImage(const std::string& type, int n);
 
         ImageType getImageType(int n) const { return imagetypes[n]; }
         int getNumImageTypes() const { return imagetypes.size(); }
@@ -85,7 +85,7 @@ class ImageManager {
         void initializeImageTypes();
 
         void defaultinit(const std::string& camfile);
-        bool initializeSharedMemory();
+        virtual bool initializeSharedMemory();
 
         virtual bool readCameraFile(const std::string& filename);
 

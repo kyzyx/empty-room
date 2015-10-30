@@ -16,6 +16,7 @@ class EdgeImageApp : public InvrenderApp {
                 createEdgeImage(imgr->getCamera(i), imgr->getImage(i), imgr->getImageWriteable("edges",i));
                 int f = imgr->getFlags("edges", i);
                 imgr->setFlags("edges", i, f|ImageManager::DF_INITIALIZED);
+                if (noshm) imgr->saveImage("edges", i);
                 getProgressFunction(i,imgr->size())(100);
             }
             emitDone();

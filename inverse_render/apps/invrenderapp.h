@@ -5,7 +5,9 @@
 
 class InvrenderApp {
     public:
-        InvrenderApp() : emit_progress(false), mmgr(NULL), imgr(NULL) {;}
+        InvrenderApp() :
+            mmgr(NULL), imgr(NULL),
+            emit_progress(false), noshm(false) {;}
         int parseargs(int argc, char** argv);
         virtual int run() {;}
 
@@ -20,6 +22,7 @@ class InvrenderApp {
         ImageManager* imgr;
 
         bool emit_progress;
+        bool noshm;
 };
 
 #endif

@@ -41,6 +41,7 @@ add_library(datamanager
     datamanager/meshserver.cpp datamanager/meshserver.h
     datamanager/imagemanager.cpp datamanager/imagemanager.h
     datamanager/imageserver.cpp datamanager/imageserver.h
+    datamanager/fileimageserver.cpp datamanager/fileimageserver.h
     datamanager/imageio.cpp datamanager/imageio.h)
 target_include_directories(datamanager PRIVATE ${PNG_INCLUDE_DIRS})
 target_link_libraries(datamanager ${PCL_LIBRARIES} ${Boost_LIBRARIES}

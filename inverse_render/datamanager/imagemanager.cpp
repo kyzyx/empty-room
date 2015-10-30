@@ -129,13 +129,13 @@ bool ImageManager::readCameraFile(const std::string& filename)
     return true;
 }
 
-void ImageManager::saveImage(const string& type, int n) const {
+void ImageManager::saveImage(const string& type, int n) {
     int i = nameToIndex(type);
     if (i < 0) return;
     saveImage(i,n);
 }
 
-void ImageManager::saveImage(int i, int n) const {
+void ImageManager::saveImage(int i, int n) {
     string f = filenames[n];
     if (imagetypes[i].getExtension() != "") {
         f = ImageIO::replaceExtension(f, imagetypes[i].getExtension());
@@ -187,23 +187,18 @@ ImageManager::shmutex* ImageManager::getMutex(int t, int n) {
 // --------------------------------------------------------------
 // Accessors
 // --------------------------------------------------------------
-const void* ImageManager::getImage(const string& type, int n) const {
+const void* ImageManager::getImage(const string& type, int n) {
     int i = nameToIndex(type);
+    return getImage(i, n);
+}
+const void* ImageManager::getImage(int i, int n) {
     if (i < 0) return NULL;
     //boost::interprocess::shareable_lock<shmutex> lock(*getMutex(i,n));
     if (flags[i*sz+n] & DF_INITIALIZED) return images[i][n];
     else return NULL;
 }
-const void* ImageManager::getImage(int i, int n) const {
-    if (i < 0) return NULL;
-    //boost::interprocess::shareable_lock<shmutex> lock(*getMutex(i,n));
-    if (flags[i*sz+n] & DF_INITIALIZED) return images[i][n];
-    else return NULL;
-}
-const void* ImageManager::getImage(int n) const {
-    //boost::interprocess::shareable_lock<shmutex> lock(*getMutex(0,n));
-    if (flags[n] & DF_INITIALIZED) return images[0][n];
-    else return NULL;
+const void* ImageManager::getImage(int n) {
+    return getImage(0, n);
 }
 
 void* ImageManager::getImageWriteable(const string& type, int n) {

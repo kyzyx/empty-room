@@ -5,6 +5,7 @@ add_library(datamanager
     meshserver.cpp meshserver.h
     imagemanager.cpp imagemanager.h
     imageserver.cpp imageserver.h
+    fileimageserver.cpp fileimageserver.h
     imageio.cpp imageio.h)
 target_link_libraries(datamanager ${PCL_LIBRARIES} ${Boost_LIBRARIES}
     R3Graphics.a R3Shapes.a R2Shapes.a RNBasics.a jpeg.a
