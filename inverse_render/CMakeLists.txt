@@ -113,6 +113,12 @@ target_link_libraries(processdepth ${PCL_LIBRARIES})
 add_executable(generatemask EXCLUDE_FROM_ALL utils/generatemask.cpp)
 target_link_libraries(generatemask ${OpenCV_LIBS} datamanager)
 
+add_executable(generateconfidence EXCLUDE_FROM_ALL utils/confidence.cpp)
+target_link_libraries(generateconfidence datamanager)
+
+add_executable(convertimage EXCLUDE_FROM_ALL utils/convert.cpp)
+target_link_libraries(convertimage datamanager)
+
 add_executable(invrender EXCLUDE_FROM_ALL monolithic/invrender.cpp
     reproject.h reproject.cpp
     clusterlights.cpp clusterlights.h

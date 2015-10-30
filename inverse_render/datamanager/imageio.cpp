@@ -71,10 +71,7 @@ bool writeScalarMap(const string& filename, const void* image, int w, int h, int
     }
 }
 
-bool readFloatImage(const string& filename, void* image, int w, int h, int channels) {
-    int width = 0;
-    int height = 0;
-
+bool readFloatImage(const string& filename, void* image, int& width, int& height, int channels) {
     if (endswith(filename, ".hdr") || endswith(filename, ".pic")) {
         if (channels == 3) {
             if (!readHdrImage(filename, (float**) &image, width, height, true)) return false;
@@ -117,12 +114,10 @@ bool readFloatImage(const string& filename, void* image, int w, int h, int chann
         if (!readExrImage(filename, (float**) &image, width, height, channels, true)) return false;
     }
 
-    return width == w && height == h;
+    return true;
 }
 
-bool readRGBImage(const string& filename, void* image, int w, int h, int channels) {
-    int width = 0;
-    int height = 0;
+bool readRGBImage(const string& filename, void* image, int& width, int& height, int channels) {
     if (channels == 3) {
         if (endswith(filename, ".png")) {
             if (!readPngImage(filename, (unsigned char**) &image, width, height, true))
@@ -153,7 +148,7 @@ bool readRGBImage(const string& filename, void* image, int w, int h, int channel
         delete tmp;
     }
 
-    return width == w && height == h;
+    return true;
 }
 
 bool readPcdDepthImage(const string& filename,
