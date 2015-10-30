@@ -67,7 +67,7 @@ void ImageManager::initializeImageTypes() {
     imagetypes.push_back(ImageType("depth",      "pcd",  CV_32FC1, 0, ImageType::IT_DEPTHMAP));
     // Processed results
     imagetypes.push_back(ImageType("edges",      "edges.exr", CV_32FC3, ImageType::IT_COMPUTED));
-    imagetypes.push_back(ImageType("labels",     "lbl",  CV_8UC1, ImageType::IT_RENDERED));
+    imagetypes.push_back(ImageType("labels",     "lbl",  CV_8UC1, ImageType::IT_COMPUTED));
 
     images.resize(imagetypes.size());
 }
