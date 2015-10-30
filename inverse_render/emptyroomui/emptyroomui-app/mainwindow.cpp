@@ -511,14 +511,18 @@ void MainWindow::samplesLoaded() {
     connect(ui->lightThresholdSlider, SIGNAL(valueChanged(int)), ui->meshWidget->renderOptions(), SLOT(setLowerThreshold(int)));
 }
 void MainWindow::partialVertexDataLoaded(int percent) {
+    static int lastpercent = 0;
     if (percent == 100) {
         samplesLoaded();
         return;
     }
-    if (mmgr->loadSamples()) {
-        boost::interprocess::sharable_lock<MeshManager::shmutex> lock(*(mmgr->getMutex(MeshManager::NUM_CHANNELS,0)));
-        ui->meshWidget->setupMeshColors();
+    if (lastpercent/5 != percent/5) {
+        if (mmgr->loadSamples()) {
+            boost::interprocess::sharable_lock<MeshManager::shmutex> lock(*(mmgr->getMutex(MeshManager::NUM_CHANNELS,0)));
+            ui->meshWidget->setupMeshColors();
+        }
     }
+    lastpercent = percent;
 }
 
 void MainWindow::on_actionReload_Per_Vertex_Samples_triggered()

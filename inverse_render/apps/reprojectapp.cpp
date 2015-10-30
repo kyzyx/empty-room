@@ -33,8 +33,12 @@ class ReprojectApp : public InvrenderApp {
         }
     protected:
         void refreshingProgressFn(int percent) {
-            if (emit_progress) mmgr->commitSamples(false);
+            static int lastpercent = 0;
+            if (lastpercent/10 != percent/10) {
+                if (emit_progress) mmgr->commitSamples(false);
+            }
             getProgressFunction(0,1)(percent);
+            lastpercent = percent;
         }
         virtual void printargs() {
 cout << "       -project n: Reproject only image n\n" << endl;
