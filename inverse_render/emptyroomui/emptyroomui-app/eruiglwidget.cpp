@@ -140,6 +140,15 @@ void ERUIGLWidget::draw()
     if (renderoptions.shouldRenderRoom())
         rendermanager.renderRoom();
 
+    if (renderoptions.shouldRenderCameraTrajectory()) {
+        glDisable(GL_LIGHTING);
+        glBegin(GL_LINE_STRIP);
+        glColor4f(0,1,0,0.5);
+        for (size_t i = 0; i < camids.size(); ++i) {
+            glVertex3f(GLEXPAND(cameras[camids[i]].pos));
+        }
+        glEnd();
+    }
     if (renderoptions.shouldRenderAnyCameras()) {
         glEnable(GL_LIGHTING);
         glColor3f(1,1,1);

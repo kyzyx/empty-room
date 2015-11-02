@@ -17,6 +17,7 @@ public:
         qglw(parent),
         renderCameras(true),
         renderCurrentCamera(true),
+        renderCameraTrajectory(true),
         renderMesh(true),
         renderRoom(false),
         renderWfHistogram(false),
@@ -44,6 +45,7 @@ public:
     int getUpperThreshold() const { return overlayHiThreshold; }
     int getOverlayLabelIndex() const { return overlayIndex; }
     int getWfThreshold() const { return wfthreshold; }
+    bool shouldRenderCameraTrajectory() const { return renderCameraTrajectory; }
     bool shouldOverlay(int n) const { return renderOverlay[n]; }
     bool shouldRenderMesh() const { return renderMesh; }
     bool shouldRenderRoom() const { return renderRoom; }
@@ -60,6 +62,7 @@ protected:
     QOpenGLWidget* qglw;
     bool renderCameras;
     bool renderCurrentCamera;
+    bool renderCameraTrajectory;
     bool renderMesh;
     bool renderRoom;
     bool renderWfHistogram;
@@ -94,6 +97,11 @@ public slots:
         renderRoom = shouldRenderRoom;
         if (qglw) qglw->update();
     }
+    void setRenderTrajectory(bool shouldRenderTrajectory) {
+        renderCameraTrajectory = shouldRenderTrajectory;
+        if (qglw) qglw->update();
+    }
+
     void setCameraRenderFormat(int camformat) {
         cameraRenderFormat = camformat;
         if (qglw) qglw->update();

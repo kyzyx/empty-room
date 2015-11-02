@@ -47,6 +47,7 @@ private slots:
     void onCameraSelection(int selected);
     void on_showCurrentCameraCheckbox_toggled(bool checked);
     void on_autoLookCheckbox_toggled(bool checked);
+    void on_showTrajectoryCheckbox_toggled(bool checked);
 
     // Data communications
     void addLine(QString l);
@@ -81,6 +82,7 @@ private slots:
     void on_actionExport_Room_Model_triggered();
     void on_actionExport_Mesh_with_Colors_triggered();
 
+    void on_actionReload_Per_Vertex_Samples_triggered();
 
     // Data Completions
     void meshLoaded();
@@ -98,7 +100,7 @@ private slots:
     void wallfindingDone();
     void partialVertexDataLoaded(int percent);
 
-    void on_actionReload_Per_Vertex_Samples_triggered();
+
 
 private:
     Ui::MainWindow *ui;

@@ -298,6 +298,11 @@ void MainWindow::on_showRoomCheckbox_toggled(bool checked)
     ui->meshWidget->renderOptions()->setRenderRoom(checked);
 }
 
+void MainWindow::on_showTrajectoryCheckbox_toggled(bool checked)
+{
+    ui->meshWidget->renderOptions()->setRenderTrajectory(checked);
+}
+
 void MainWindow::showwfrestooltip(int v) {
     QToolTip::showText(QCursor::pos(), QString::number(v*0.001), ui->wf_resolutionSlider);
 }
@@ -464,6 +469,7 @@ void MainWindow::meshAndImagesLoaded() {
         ui->showCameraCheckbox->setEnabled(true);
         ui->showCurrentCameraCheckbox->setEnabled(true);
         ui->autoLookCheckbox->setEnabled(true);
+        ui->showTrajectoryCheckbox->setEnabled(true);
         // Render cameras
         ui->meshWidget->setupCameras(imgr);
         connect(ui->meshWidget, SIGNAL(cameraSelected(int)), this, SLOT(onCameraSelection(int)));
@@ -775,9 +781,12 @@ void MainWindow::on_hemicubeButton_clicked()
             hemicubecams.push_back(cam);
         }
         ui->meshWidget->setupCameras(hemicubecams);
+        ui->showTrajectoryCheckbox->setEnabled(false);
+        ui->showTrajectoryCheckbox->setChecked(false);
         ui->hemicubeButton->setText("Revert display to cameras");
     } else {
         ui->meshWidget->setupCameras(imgr);
+        ui->showTrajectoryCheckbox->setEnabled(true);
         ui->hemicubeButton->setText("Render hemicubes");
     }
     imagedisplaymode = -imagedisplaymode;
