@@ -38,6 +38,7 @@ public:
             return CAMRENDER_NONE;
         }
     }
+    int getCurrentCamera() const { return currentCamera; }
     int getMeshRenderFormat() const { return meshRenderFormat; }
     int getLowerThreshold() const { return overlayLoThreshold; }
     int getUpperThreshold() const { return overlayHiThreshold; }

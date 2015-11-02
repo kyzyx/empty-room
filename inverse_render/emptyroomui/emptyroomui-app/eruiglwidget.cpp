@@ -53,12 +53,14 @@ void ERUIGLWidget::updateMeshAuxiliaryData() {
 
 void ERUIGLWidget::setupCameras(ImageManager* imgr) {
     cameras.clear();
+    for (int i = 0; i < imgr->size(); i++) {
+        cameras.push_back(*imgr->getCamera(i));
+    }
     int inc = 1;
     if (imgr->size() > MAX_CAMERAS) {
         inc = imgr->size()/MAX_CAMERAS + 1;
     }
     for (int i = 0; i < imgr->size(); i += inc) {
-        cameras.push_back(*imgr->getCamera(i));
         camids.push_back(i);
     }
     update();
@@ -66,12 +68,14 @@ void ERUIGLWidget::setupCameras(ImageManager* imgr) {
 
 void ERUIGLWidget::setupCameras(std::vector<CameraParams>& cams) {
     cameras.clear();
+    for (int i = 0; i < cams.size(); i++) {
+        cameras.push_back(cams[i]);
+    }
     int inc = 1;
     if (cams.size() > MAX_CAMERAS) {
         inc = cams.size()/MAX_CAMERAS + 1;
     }
     for (int i = 0; i < cams.size(); i += inc) {
-        cameras.push_back(cams[i]);
         camids.push_back(i);
     }
     update();
@@ -79,10 +83,6 @@ void ERUIGLWidget::setupCameras(std::vector<CameraParams>& cams) {
 
 
 void ERUIGLWidget::highlightCamera(int cameraindex) {
-    std::vector<int>::iterator it = std::lower_bound(camids.begin(), camids.end(), cameraindex);
-    if (it == camids.end()) return;
-    int idx = *it;
-    selectedCamera = it - camids.begin();
     renderoptions.setCurrentCamera(cameraindex);
     update();
 }
@@ -120,6 +120,7 @@ QString ERUIGLWidget::helpString() const
   text += "Press <b>Escape</b> to exit the viewer.";
   return text;
 }
+#define GLEXPAND(x) (x)[0], (x)[1], (x)[2]
 static R3DirectionalLight l(R3Vector(0.3, 0.5, -1), RNRgb(1, 1, 1), 1, TRUE);
 static R3Brdf b(RNRgb(0.2,0.2,0.2), RNRgb(0.8,0.8,0.8),
                 RNRgb(0,0,0), RNRgb(0,0,0));
@@ -132,7 +133,7 @@ void ERUIGLWidget::draw()
     if (renderoptions.shouldRenderMesh()) {
         if (renderoptions.getMeshRenderFormat() == VIEW_SINGLEIMAGE) {
             rendermanager.setShaderAuxInt(0,0);
-            rendermanager.setShaderAuxInt(camids[selectedCamera], 1);
+            rendermanager.setShaderAuxInt(renderoptions.getCurrentCamera(), 1);
         }
         rendermanager.renderMesh(renderoptions.getMeshRenderFormat());
     }
@@ -144,14 +145,15 @@ void ERUIGLWidget::draw()
         glColor3f(1,1,1);
         b.Draw();
         l.Draw(0);
-        for (size_t i = 0; i < cameras.size(); ++i) {
-            if (renderoptions.getCameraFormat(i == selectedCamera)) {
-                if (i == selectedCamera)
-                    glColor4f(1,0,1,0.5);
-                else
-                    glColor4f(0,1,0,0.5);
-                renderCamera(cameras[i]);
+        for (size_t i = 0; i < camids.size(); ++i) {
+            if (renderoptions.getCameraFormat() && camids[i] != renderoptions.getCurrentCamera()) {
+                glColor4f(0,1,0,0.5);
+                renderCamera(cameras[camids[i]]);
             }
+        }
+        if (renderoptions.getCurrentCamera() < cameras.size() && renderoptions.getCameraFormat(true)) {
+            glColor4f(1,0,1,0.5);
+            renderCamera(cameras[renderoptions.getCurrentCamera()]);
         }
         glDisable(GL_LIGHTING);
     }
@@ -182,22 +184,26 @@ void ERUIGLWidget::draw()
 }
 
 void ERUIGLWidget::drawWithNames() {
+    float col[3];
     glClearColor(0,0,0,1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     if (renderoptions.shouldRenderAnyCameras()) {
-        float col[3];
-        for (int i = 0; i < cameras.size(); ++i) {
-            IndexToRGB(i, col);
-            glPushName(i);
-            glColor3fv(col);
-            if (renderoptions.getCameraFormat(i == selectedCamera)) renderCamera(cameras[i], true);
-            glPopName();
+        if (renderoptions.getCameraFormat()) {
+            for (int i = 0; i < camids.size(); ++i) {
+                IndexToRGB(i, col);
+                glPushName(i);
+                glColor3fv(col);
+                renderCamera(cameras[camids[i]], true);
+                glPopName();
+            }
         }
     }
 }
 
 void ERUIGLWidget::postSelection(const QPoint &point) {
-    if (selectedName() >= 0) emit cameraSelected(camids[selectedName()]);
+    int id = selectedName();
+    if (id >= 0 && id < camids.size())
+        emit cameraSelected(camids[id]);
 }
 
 void ERUIGLWidget::lookThroughCamera(const CameraParams* cam) {
@@ -248,7 +254,6 @@ void ERUIGLWidget::computeWallFindingHistogram(double res) {
     gmax = *std::max_element(grid, grid+gw*gh);
 }
 
-#define GLEXPAND(x) (x)[0], (x)[1], (x)[2]
 void ERUIGLWidget::renderCamera(const CameraParams &cam, bool id_only) {
     R3Point p = cam.pos;
     float f = 0.1;
