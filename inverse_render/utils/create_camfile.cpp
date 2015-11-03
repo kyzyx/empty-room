@@ -11,7 +11,7 @@ int main(int argc, char** argv) {
     string line;
     int w, h;
     double vfov;
-    int n;
+    int n = 0;
     vector<string> filenames;
     vector<R3Point> p;
     vector<R3Vector> u;
@@ -40,13 +40,23 @@ int main(int argc, char** argv) {
         m[14] = 0;
         m[15] = 1;
         R4Matrix rt(m);
-        R4Matrix rtinv = rt.Inverse();
-        R3Point pos = rtinv*R3Point(0,0,0);
-        p.push_back(pos);
-        R3Vector up = rtinv*R3Vector(0,-1,0);
-        u.push_back(up);
-        R3Vector towards = rtinv*R3Vector(0,0,1);
-        t.push_back(towards);
+        bool invert = false;
+        if (invert) {
+            R4Matrix rtinv = rt.Inverse();
+            R3Point pos = rtinv*R3Point(0,0,0);
+            p.push_back(pos);
+            R3Vector up = rtinv*R3Vector(0,-1,0);
+            u.push_back(up);
+            R3Vector towards = rtinv*R3Vector(0,0,1);
+            t.push_back(towards);
+        } else {
+            R3Point pos = rt*R3Point(0,0,0);
+            p.push_back(pos);
+            R3Vector up = rt*R3Vector(0,-1,0);
+            u.push_back(up);
+            R3Vector towards = rt*R3Vector(0,0,1);
+            t.push_back(towards);
+        }
 
         double foc = header["fy"];
         vfov = atan(0.5/foc)*360/M_PI;
