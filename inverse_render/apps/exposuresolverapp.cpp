@@ -1,11 +1,13 @@
 #include "invrenderapp.h"
 #include "exposuresolver.h"
 #include <iostream>
+#include <pcl/console/parse.h>
 
 using namespace std;
 
 class ExposureSolverApp : public InvrenderApp {
     public:
+        ExposureSolverApp() : subsample(0) {}
         virtual int run() {
             vector<int> indices;
             int n = 0;
@@ -19,6 +21,12 @@ class ExposureSolverApp : public InvrenderApp {
                 }
             }
             n++;
+            if (subsample > 1) {
+                cout << "Subsampling " << subsample << endl;
+                random_shuffle(indices.begin(), indices.end());
+                indices.resize(indices.size()/subsample);
+            }
+
             double* exposures = new double[3*n];
             for (int i = 0; i < 3*n; i++) exposures[i] = 1;
             double* radiances = new double[indices.size()];
@@ -39,7 +47,11 @@ class ExposureSolverApp : public InvrenderApp {
         }
         virtual int _parseargs(int argc, char** argv) {
             if (!mmgr) return 0;
+            if (pcl::console::find_argument(argc, argv, "-subsample") >= 0) {
+                pcl::console::parse_argument(argc, argv, "-subsample", subsample);
+            }
         }
+        int subsample;
 };
 
 int main(int argc, char** argv) {
