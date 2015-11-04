@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "datamanager/fileimageserver.h"
 #include <QKeyEvent>
 #include <QFileDialog>
 #include <QIntValidator>
@@ -76,8 +77,10 @@ class ImageDialog : public QFileDialog
             QHBoxLayout *hbl = new QHBoxLayout();
             flipx = new QCheckBox(QString("Flip horizontally"), this);
             flipy = new QCheckBox(QString("Flip vertically"), this);
+            lazyload = new QCheckBox(QString("Lazily Load Images"), this);
             hbl->addWidget(flipx);
             hbl->addWidget(flipy);
+            hbl->addWidget(lazyload);
             QGridLayout* mainLayout = dynamic_cast<QGridLayout*>(layout());
             if (mainLayout) {
                 int numRows = mainLayout->rowCount();
@@ -99,16 +102,24 @@ class ImageDialog : public QFileDialog
             if (flipy) return flipy->isChecked();
             return false;
         }
+        bool isLazyLoad() const {
+            if (lazyload) return lazyload->isChecked();
+            return false;
+        }
     private:
         QCheckBox *flipx;
         QCheckBox *flipy;
+        QCheckBox *lazyload;
 };
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
     imgr(NULL), mmgr(NULL),
-    typeindex(0), imageindex(0), room(NULL), orientationtransform(NULL), imagedisplaymode(1)
+    typeindex(0), imageindex(0),
+    room(NULL), orientationtransform(NULL),
+    lazyloadimages(false),
+    imagedisplaymode(1)
 {
     ui->setupUi(this);
 
@@ -397,24 +408,35 @@ void MainWindow::on_actionOpen_Images_triggered()
         settings->setValue("lastworkingdirectory", cwd.canonicalPath());
         QString cmd = settings->value("loadimage_binary", "dataserver -camfile %1 -p").toString();
         cmd = cmd.arg(camfilename);
+        bool flipx = false;
+        bool flipy = false;
+        if (idialog.isFlipX()) flipx = true;
+        if (idialog.isFlipY()) flipy = true;
+        if (idialog.isLazyLoad()) lazyloadimages = true;
         QString extraflags = "";
         if (idialog.isFlipX()) extraflags = extraflags + " -flip_x";
         if (idialog.isFlipY()) extraflags = extraflags + " -flip_y";
         cmd += extraflags;
         settings->setValue("lastimageflags", extraflags);
-        progressbar->setValue(0);
-        SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
-        workers.push_back(w);
-        QThread* thread = new QThread;
-        connect(thread, SIGNAL(started()), w, SLOT(run()));
-        connect(w, SIGNAL(percentChanged(int)), progressbar, SLOT(setValue(int)));
-        connect(w, SIGNAL(done()), this, SLOT(imagesLoaded()));
-        w->moveToThread(thread);
-        thread->start();
+
+        if (lazyloadimages) {
+            imgr = new FileImageServer(camfilename.toStdString(), flipx, flipy);
+            imagesLoaded();
+        } else {
+            progressbar->setValue(0);
+            SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
+            workers.push_back(w);
+            QThread* thread = new QThread;
+            connect(thread, SIGNAL(started()), w, SLOT(run()));
+            connect(w, SIGNAL(percentChanged(int)), progressbar, SLOT(setValue(int)));
+            connect(w, SIGNAL(done()), this, SLOT(imagesLoaded()));
+            w->moveToThread(thread);
+            thread->start();
+        }
     }
 }
 void MainWindow::imagesLoaded() {
-    imgr = new ImageManager(camfilename.toStdString());
+    if (!lazyloadimages) imgr = new ImageManager(camfilename.toStdString());
     ui->imageTypeComboBox->setEnabled(true);
     ui->nextImageButton->setEnabled(true);
     ui->imageNumBox->setEnabled(true);
@@ -611,6 +633,7 @@ void MainWindow::on_reprojectButton_clicked()
     QString cmd = settings->value("reproject_binary", "reprojectapp -camfile %1 -meshfile %2 -p").toString();
     cmd = cmd.arg(camfilename, meshfilename);
     QString extraflags;
+    if (lazyloadimages) extraflags += " -noshm";
     cmd += extraflags;
     progressbar->setValue(0);
     SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
@@ -628,6 +651,7 @@ void MainWindow::on_commitLightsButton_clicked()
     QString cmd = settings->value("reproject_binary", "reprojectapp -camfile %1 -meshfile %2 -p").toString();
     cmd = cmd.arg(camfilename, meshfilename);
     QString extraflags = " -label_lights_only -hdr_threshold %1";
+    if (lazyloadimages) extraflags += " -noshm";
     cmd += extraflags.arg(QString::number(ui->lightThresholdSlider->value()));
     progressbar->setValue(0);
     SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
@@ -785,6 +809,9 @@ void MainWindow::on_computeLabelImagesButton_clicked()
         ui->meshWidget->renderManager()->createLabelImage(imgr->getCamera(i), imgr->getImageWriteable("labels",i));
         int f = imgr->getFlags("labels", i);
         imgr->setFlags("labels", i, f|ImageManager::DF_INITIALIZED);
+        if (lazyloadimages) {
+            imgr->saveImage("labels", i);
+        }
     }
     progressbar->setValue(100);
 }
@@ -847,6 +874,7 @@ void MainWindow::on_edgeFilterButton_clicked()
     QString cmd = settings->value("compute_edges_binary", "edgeimageapp -camfile %1 -p").toString();
     cmd = cmd.arg(camfilename);
     QString extraflags = "";
+    if (lazyloadimages) extraflags += " -noshm";
     cmd += extraflags;
     progressbar->setValue(0);
     SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
@@ -881,6 +909,7 @@ void MainWindow::on_computeVerticalLinesButton_clicked()
     QString cmd = settings->value("compute_rwo_binary", "linefindapp -camfile %1 -roommodel %2 -p").toString();
     cmd = cmd.arg(camfilename, roommodelfile);
     QString extraflags = "";
+    if (lazyloadimages) extraflags += " -noshm";
     cmd += extraflags;
     progressbar->setValue(0);
     SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
@@ -951,7 +980,7 @@ void MainWindow::on_actionSave_Edge_Images_triggered()
 }
 
 void MainWindow::saveAllImages(const char *type) {
-    if (imgr) {
+    if (imgr && !lazyloadimages) {
         progressbar->setValue(0);
         for (int i = 0; i < imgr->size(); ++i) {
             progressbar->setValue(100*i/imgr->size());

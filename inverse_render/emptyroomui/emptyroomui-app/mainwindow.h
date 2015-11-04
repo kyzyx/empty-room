@@ -112,6 +112,7 @@ private:
 
     std::vector<SubprocessWorker*> workers;
     QProgressBar* progressbar;
+    bool lazyloadimages;
 
     QString meshfilename;
     QString camfilename;
