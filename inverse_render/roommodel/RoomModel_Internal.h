@@ -174,9 +174,10 @@ public:
 		walls.push_back(wall);
 		height = h;
 	}
-	RoomModel() {
+	RoomModel() :
+        height(1), originalFloor(0), baseboardHeight(0), baseboardDepth(0)
+    {
         globaltransform = IdentityMatrix;
-        originalFloor = 0;
     }
 
 	RoomModel(const std::string& filename);

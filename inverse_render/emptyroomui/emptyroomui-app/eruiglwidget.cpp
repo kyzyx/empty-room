@@ -6,6 +6,7 @@
 
 ERUIGLWidget::ERUIGLWidget(QWidget *parent) :
     HDRQGlViewerWidget(parent),
+    orientationroommodel(NULL),
     renderoptions(this),
     selectedCamera(0),
     grid(NULL)
@@ -236,10 +237,15 @@ void ERUIGLWidget::lookThroughCamera(const CameraParams* cam) {
 
 #include <limits>
 void ERUIGLWidget::computeWallFindingHistogram(double res) {
-    roommodel::RoomModel* room = rendermanager.getRoomModel();
-    if (!room) return;
     gres = res;
-    R4Matrix m = room->globaltransform;
+    R4Matrix m;
+    if (rendermanager.getRoomModel()) {
+        m = rendermanager.getRoomModel()->globaltransform;
+    } else if (orientationroommodel) {
+        m = orientationroommodel->globaltransform;
+    } else {
+        return;
+    }
     float maxx = -std::numeric_limits<float>::max();
     float maxz = -std::numeric_limits<float>::max();
 
@@ -333,9 +339,17 @@ void ERUIGLWidget::renderHistogram() {
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
     glEnable(GL_COLOR_MATERIAL);
-    R4Matrix m = rendermanager.getRoomModel()->globaltransform;
+    R4Matrix m;
+    double scale;
+    if (rendermanager.getRoomModel()) {
+        m = rendermanager.getRoomModel()->globaltransform;
+        scale = rendermanager.getRoomModel()->height/gmax;
+    } else if (orientationroommodel) {
+        m = orientationroommodel->globaltransform;
+        scale = orientationroommodel->height/gmax;
+    }
     m = m.Inverse();
-    double scale = rendermanager.getRoomModel()->height/gmax;
+
     glBegin(GL_QUADS);
     for (int i = 0; i < gh; ++i) {
         for (int j = 0; j < gw; ++j) {

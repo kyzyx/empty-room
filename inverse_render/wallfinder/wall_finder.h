@@ -88,7 +88,7 @@ class WallFinder {
          * considered on the same plane
          *
          */
-        void findWalls(
+        bool findWalls(
                 OrientationFinder* of,
                 std::vector<char>& labels,
                 int wallthreshold=200,

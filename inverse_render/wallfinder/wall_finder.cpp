@@ -244,7 +244,7 @@ class Grid {
         double resolution;
 };
 
-void WallFinder::findWalls(
+bool WallFinder::findWalls(
         OrientationFinder* of,
         vector<char>& labels,
         int wallthreshold,
@@ -389,7 +389,7 @@ void WallFinder::findWalls(
     }
     if (maxidx == -1) {
         cerr << "Error! No walls found!" << endl;
-        return;
+        return false;
     }
 
     // Create edge cost matrix based on compatibility
@@ -563,6 +563,7 @@ void WallFinder::findWalls(
             }
         }
     }
+    return true;
 }
 
 void WallFinder::loadWalls(string filename, vector<char>& labels, OrientationFinder& of) {

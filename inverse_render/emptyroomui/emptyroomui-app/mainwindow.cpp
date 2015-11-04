@@ -108,7 +108,7 @@ MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
     imgr(NULL), mmgr(NULL),
-    typeindex(0), imageindex(0), room(NULL), imagedisplaymode(1)
+    typeindex(0), imageindex(0), room(NULL), orientationtransform(NULL), imagedisplaymode(1)
 {
     ui->setupUi(this);
 
@@ -720,8 +720,10 @@ void MainWindow::on_actionLoad_Wallfinding_Floor_Plan_triggered()
 
 void MainWindow::on_wf_resolutionSlider_valueChanged(int value)
 {
-    if (ui->meshWidget->renderOptions()->shouldRenderWfHistogram())
-        ui->meshWidget->computeWallFindingHistogram(ui->wf_resolutionSlider->value()*0.001);
+    if (ui->meshWidget->renderOptions()->shouldRenderWfHistogram()) {
+        if (room || orientationtransform)
+            ui->meshWidget->computeWallFindingHistogram(ui->wf_resolutionSlider->value()*0.001);
+      }
 }
 
 void MainWindow::on_DebugWallfindingButton_clicked()
@@ -730,13 +732,47 @@ void MainWindow::on_DebugWallfindingButton_clicked()
         ui->DebugWallfindingButton->setText("Debug Wallfinding");
         ui->meshWidget->renderOptions()->setRenderWfHistogram(false);
     } else {
-        ui->DebugWallfindingButton->setText("Hide Wallfinding Debug");
-        ui->meshWidget->computeWallFindingHistogram(ui->wf_resolutionSlider->value()*0.001);
-        ui->meshWidget->renderOptions()->setRenderWfHistogram(true);
-        ui->meshWidget->renderOptions()->setWfThreshold(ui->wf_wallthresholdSlider->value());
-        connect(ui->wf_wallthresholdSlider, SIGNAL(valueChanged(int)), ui->meshWidget->renderOptions(), SLOT(setWfThreshold(int)));
+        if (room || orientationtransform) {
+            ui->DebugWallfindingButton->setText("Hide Wallfinding Debug");
+            ui->meshWidget->computeWallFindingHistogram(ui->wf_resolutionSlider->value()*0.001);
+            ui->meshWidget->renderOptions()->setRenderWfHistogram(true);
+            ui->meshWidget->renderOptions()->setWfThreshold(ui->wf_wallthresholdSlider->value());
+            connect(ui->wf_wallthresholdSlider, SIGNAL(valueChanged(int)), ui->meshWidget->renderOptions(), SLOT(setWfThreshold(int)));
+        } else {
+            ui->DebugWallfindingButton->setEnabled(false);
+            temproommodel = new QTemporaryFile();
+            temproommodel->open();
+            temproommodel->close();
+            QString cmd = settings->value("wallfind_binary", "wallfindapp -meshfile %1 -outputroommodel %2 -p").toString();
+            cmd = cmd.arg(meshfilename, temproommodel->fileName());
+            QString extraflags = " -orientation ";
+            cmd += extraflags;
+            progressbar->setValue(0);
+            SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
+            workers.push_back(w);
+            QThread* thread = new QThread;
+            connect(thread, SIGNAL(started()), w, SLOT(run()));
+            connect(w, SIGNAL(percentChanged(int)), progressbar, SLOT(setValue(int)));
+            connect(w, SIGNAL(done()), this, SLOT(orientationfindingDone()));
+            w->moveToThread(thread);
+            thread->start();
+        }
     }
 }
+
+void MainWindow::orientationfindingDone() {
+    orientationtransform = new roommodel::RoomModel;
+    roommodel::load(*orientationtransform, temproommodel->fileName().toStdString());
+    ui->meshWidget->setOrientation(orientationtransform);
+
+    ui->DebugWallfindingButton->setEnabled(true);
+    ui->DebugWallfindingButton->setText("Hide Wallfinding Debug");
+    ui->meshWidget->computeWallFindingHistogram(ui->wf_resolutionSlider->value()*0.001);
+    ui->meshWidget->renderOptions()->setRenderWfHistogram(true);
+    ui->meshWidget->renderOptions()->setWfThreshold(ui->wf_wallthresholdSlider->value());
+    connect(ui->wf_wallthresholdSlider, SIGNAL(valueChanged(int)), ui->meshWidget->renderOptions(), SLOT(setWfThreshold(int)));
+}
+
 
 // ------------------------
 // Inverse Lighting Actions

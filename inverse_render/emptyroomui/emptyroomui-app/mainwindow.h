@@ -98,6 +98,7 @@ private slots:
 
     // Task Completions
     void wallfindingDone();
+    void orientationfindingDone();
     void partialVertexDataLoaded(int percent);
 
 
@@ -107,6 +108,7 @@ private:
     ImageManager* imgr;
     MeshManager* mmgr;
     roommodel::RoomModel* room;
+    roommodel::RoomModel* orientationtransform;
 
     std::vector<SubprocessWorker*> workers;
     QProgressBar* progressbar;

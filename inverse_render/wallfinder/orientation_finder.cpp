@@ -143,9 +143,11 @@ bool OrientationFinder::computeOrientation(double anglethreshold, int resolution
 void OrientationFinder::normalize()
 {
     // Find axis closest to vertical
+    int upaxis = 2;
     for (int i = 1; i < 3; ++i) {
-        if (axes[i](1) > axes[0](1)) swap(axes[i], axes[0]);
+        if (abs(axes[i](upaxis)) > abs(axes[0](upaxis))) swap(axes[i], axes[0]);
     }
+    if (axes[0](upaxis) < 0) axes[0] = -axes[0];
     Eigen::Vector3f up = axes[0];
     Eigen::Vector3f right = axes[1];
     Eigen::Vector3f towards = right.cross(up);

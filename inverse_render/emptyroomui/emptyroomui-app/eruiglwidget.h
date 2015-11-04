@@ -171,6 +171,9 @@ public:
     void lookThroughCamera(const CameraParams* cam);
     void setupCameras(ImageManager* imgr);
     void setupCameras(std::vector<CameraParams>& cams);
+    void setOrientation(roommodel::RoomModel* room) {
+        orientationroommodel = room;
+    }
 
     void computeWallFindingHistogram(double resolution);
 protected:
@@ -186,6 +189,7 @@ protected:
     RenderManager rendermanager;
     std::vector<CameraParams> cameras;
     std::vector<int> camids;
+    roommodel::RoomModel* orientationroommodel;
 
     ERUIRenderOptions renderoptions;
     int selectedCamera;
@@ -240,6 +244,9 @@ public:
     }
     void computeWallFindingHistogram(double resolution) {
         v->computeWallFindingHistogram(resolution);
+    }
+    void setOrientation(roommodel::RoomModel* room) {
+        v->setOrientation(room);
     }
 
 signals:
