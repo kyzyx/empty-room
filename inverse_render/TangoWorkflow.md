@@ -40,21 +40,39 @@ Workflow for Project Tango Data Capture
 5. Preprocess the depth data using Poisson Surface Reconstruction or Floating Scale Surface Reconstruction
    Poisson:
        a. Run the following commands
-            > processdepth data.pts > data.ply
+            > processdepth data.pts data.ply
        b. Open data.ply in Meshlab and verify it looks correct
        c. In Meshlab, go to Filters > Remeshing, Simplification, and Reconstruction > Surface Reconstruction: Poisson
        d. Set Octree Depth to 8 or 9 and press "Apply"
        e. Save the resulting mesh as e.g. mesh.ply
    FSSR:
        a. Run the following commands
-            > processdepth data.pts > data.ply
+            > processdepth data.pts data.ply
        b. Navigate to the FSSR folder and run
             > mve/apps/fssrecon/fssrecon -s 2 data.ply raw.ply
             > mve/apps/meshclean/meshclean -c 100 raw.ply mesh.ply
-6. Load the data into the visualizer
+6. Load the data into the visualizer to ensure no coordinates are flipped.
      > emptyroomui
    File > Open Mesh, select mesh.ply
    File > Open Camera File, select data.cam. You probably want to select "Flip Vertical"
+
+Radiometric Calibration
+-----------------------
+1. Generate masked confidence files for reprojection
+     $ generatemask camfile.cam
+2. Reproject & solve
+     $ dataserver -meshfile mesh.ply -ccw &
+     $ reprojectapp -camfile camfile.cam -meshfile mesh.ply -noshm -flip_y
+     $ exposuresolverapp -meshfile mesh.ply > exposures.txt
+   Note that if your mesh is very large, it can take a long time to run the
+   exposuresolverapp. To make this faster, we can solve on only a subset of
+   the mesh vertices by using -subsample n, to sample only 1/n of the vertices.
+3. Update camera file
+     $ paste --delimiters='' camfile.cam exposures.txt > camfileexp.cam
+4. Regenerate confidence files
+     $ mkdir masks && mv *.conf masks/
+     $ confidence camfile.cam
+
 
 Troubleshooting
 ---------------
@@ -67,4 +85,9 @@ Troubleshooting
     - Make sure USB MTP is turned on: On the Tango, go to 
          Settings > Storage > ... > USB computer connection
       and check Media device (MTP)
+ - Poor alignment
+    - Make sure the ADF you are using is accurate, i.e. has the same lighting
+      and the same scene layout as when you scan.
+    - Capture the ADF very slowly, carefully, and completely. The ADF size is
+      miniscule compared to the data capture size, so take your time.
 

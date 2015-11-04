@@ -51,7 +51,7 @@ class ExposureSolverApp : public InvrenderApp {
                 pcl::console::parse_argument(argc, argv, "-subsample", subsample);
             }
         }
-        int subsample;
+        float subsample;
 };
 
 int main(int argc, char** argv) {

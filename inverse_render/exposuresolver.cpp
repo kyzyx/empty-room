@@ -58,9 +58,10 @@ double solveExposure(
         }
         problem.SetParameterBlockConstant(&exps[0]);
         ceres::Solver::Options options;
-        options.linear_solver_type = ceres::DENSE_SCHUR;
-        //options.linear_solver_type = ceres::SPARSE_SCHUR;
+        //options.linear_solver_type = ceres::DENSE_SCHUR;
+        options.linear_solver_type = ceres::SPARSE_SCHUR;
         options.minimizer_progress_to_stdout = true;
+        options.use_inner_iterations = true;
         ceres::Solver::Summary summary;
         ceres::Solve(options, &problem, &summary);
         //std::cout << summary.FullReport() << "\n";
