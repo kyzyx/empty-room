@@ -571,6 +571,7 @@ void MainWindow::labelDataLoaded() {
     ui->meshWidget->updateMeshAuxiliaryData();
     ui->actionSave_Per_Vertex_Labels->setEnabled(true);
     ui->overlayTypeComboBox->setEnabled(true);
+    ui->overlayTypeComboBox->clear();
     ui->overlayTypeComboBox->insertItem(0,"No Overlay");
     ui->overlayTypeComboBox->insertItem(1,"Overlay identified lights");
     ui->overlayTypeComboBox->insertItem(2,"Overlay semantic data");
@@ -882,7 +883,7 @@ void MainWindow::on_edgeFilterButton_clicked()
     QThread* thread = new QThread;
     connect(thread, SIGNAL(started()), w, SLOT(run()));
     connect(w, SIGNAL(percentChanged(int)), progressbar, SLOT(setValue(int)));
-    connect(w, SIGNAL(done()), progressbar, SLOT(edgeImagesLoaded()));
+    connect(w, SIGNAL(done()), this, SLOT(edgeImagesLoaded()));
     w->moveToThread(thread);
     thread->start();
 }

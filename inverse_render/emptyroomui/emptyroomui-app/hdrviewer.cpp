@@ -108,6 +108,7 @@ void HDRViewer::saveSettings(int index) {
 }
 
 void HDRViewer::loadSettings(int index) {
+    if (currentindex >= savedsettings.size()) savedsettings.resize(currentindex+1);
     savedsettings[currentindex] = currsettings;
     currentindex = index;
     if (index >= savedsettings.size() || index < 0) return;

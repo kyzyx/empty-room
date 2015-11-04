@@ -25,7 +25,7 @@ FileImageServer::FileImageServer(const string& camerafile, bool flipx, bool flip
 bool FileImageServer::initializeSharedMemory() {
     cameras = new CameraParams[sz];
     depth2rgb = new R4Matrix;
-    flags = new unsigned char[sz];
+    flags = new unsigned char[sz*imagetypes.size()];
     mutexes = new shmutex[imagetypes.size()];
     currimages.resize(imagetypes.size());
     for (int i = 0; i < imagetypes.size(); ++i) {
@@ -34,9 +34,9 @@ bool FileImageServer::initializeSharedMemory() {
 }
 
 FileImageServer::~FileImageServer() {
-    delete [] cameras;
-    delete depth2rgb;
-    delete [] flags;
+    if (cameras) delete [] cameras;
+    if (depth2rgb) delete depth2rgb;
+    if (flags) delete [] flags;
     for (int i = 0; i < currimages.size(); i++) {
         delete [] currimages[i];
     }
