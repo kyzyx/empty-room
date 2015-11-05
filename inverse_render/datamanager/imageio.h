@@ -7,6 +7,7 @@
 
 namespace ImageIO {
 std::string replaceExtension(const std::string& s, std::string newext);
+void flip(char* a, int w, int h, size_t bytes, bool flip_x=false, bool flip_y=true);
 bool readDepthMap(const std::string& filename, void* image, int w, int h);
 bool readScalarMap(const std::string& filename, void* image, int w, int h, int bytes);
 bool writeScalarMap(const std::string& filename, const void* image, int w, int h, int bytes);

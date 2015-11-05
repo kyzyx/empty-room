@@ -66,6 +66,7 @@ class ImageManager {
         const R4Matrix& getDepthToRgbTransform() const;
 
         virtual void saveImage(int i, int n);
+        virtual void saveImage(int i, int n, bool flip_x, bool flip_y);
         void saveImage(const std::string& type, int n);
 
         ImageType getImageType(int n) const { return imagetypes[n]; }

@@ -34,6 +34,28 @@ bool endswith(const string& s, string e) {
     else
         return false;
 }
+void flip(char* a, int w, int h, size_t bytes, bool flip_x, bool flip_y) {
+    if (flip_x) {
+        char* tmp = new char[bytes];
+        for (int i = 0; i < h; ++i) {
+            for (int j = 0; j < w/2; ++j) {
+                memcpy(tmp, a+(i*w+j)*bytes, bytes);
+                memcpy(a+(i*w+j)*bytes, a+(i*w+w-j-1)*bytes, bytes);
+                memcpy(a+(i*w+w-j-1)*bytes, tmp, bytes);
+            }
+        }
+        delete tmp;
+    }
+    if (flip_y) {
+        char* tmp = new char[bytes*w];
+        for (int i = 0; i < h/2; ++i) {
+            memcpy(tmp, a+i*w*bytes, bytes*w);
+            memcpy(a+i*w*bytes, a+(h-i-1)*w*bytes, bytes*w);
+            memcpy(a+(h-i-1)*w*bytes, tmp, bytes*w);
+        }
+        delete tmp;
+    }
+}
 
 bool readDepthMap(const string& filename, void* image, int w, int h) {
     int width = 0;

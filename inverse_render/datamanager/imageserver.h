@@ -12,12 +12,15 @@ class ImageServer : public ImageManager {
                 cb_type cb=NULL);
         ~ImageServer();
 
+        virtual void saveImage(int i, int n) {
+            ImageManager::saveImage(i, n, flip_x, flip_y);
+        }
+
     protected:
         ImageServer() {}
         virtual bool readCameraFile(const std::string& filename);
         virtual void initserver();
         void transformAllCameras(const R4Matrix& m);
-        void flip(char* a, int w, int h, size_t bytes) const;
 
         virtual bool loadAllFiles();
 

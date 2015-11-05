@@ -65,7 +65,6 @@ void orientedEdgeFilterVP(const char* image, float* edges, int w, int h, vector<
     float* copy = new float[w*h*3];
     memcpy(copy, image, w*h*3*sizeof(float));
     Mat img(h, w, CV_32FC3, copy);
-    flip(img,img,0);
     cvtColor(img, img, CV_BGR2HSV);
     for (int i = 0; i < h; ++i) {
         for (int j = 0; j < w; ++j) {

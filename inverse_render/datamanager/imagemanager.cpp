@@ -136,6 +136,9 @@ void ImageManager::saveImage(const string& type, int n) {
 }
 
 void ImageManager::saveImage(int i, int n) {
+    saveImage(i, n, false, false);
+}
+void ImageManager::saveImage(int i, int n, bool flip_x, bool flip_y) {
     string f = filenames[n];
     if (imagetypes[i].getExtension() != "") {
         f = ImageIO::replaceExtension(f, imagetypes[i].getExtension());
@@ -143,17 +146,25 @@ void ImageManager::saveImage(int i, int n) {
     if (imagetypes[i].getFileFormat() == ImageType::IT_DEPTHMAP) {
         // TODO: Unimplemented
     } else if (imagetypes[i].getFileFormat() == ImageType::IT_SCALAR) {
-        ImageIO::writeScalarMap(f, getImage(i,n), w, h, imagetypes[i].getSize());
+        char* tmp = new char[w*h*imagetypes[i].getSize()];
+        memcpy(tmp, getImage(i,n), w*h*imagetypes[i].getSize());
+        ImageIO::flip(tmp, w, h, imagetypes[i].getSize(), flip_x, flip_y);
+        ImageIO::writeScalarMap(f, tmp, w, h, imagetypes[i].getSize());
+        delete tmp;
     } else {
+        char* tmp = new char[w*h*imagetypes[i].getSize()];
+        memcpy(tmp, getImage(i,n), w*h*imagetypes[i].getSize());
+        ImageIO::flip(tmp, w, h, imagetypes[i].getSize(), flip_x, flip_y);
         if (imagetypes[i].getType() == CV_32FC3) {
-            ImageIO::writeExrImage(f, (const float*) getImage(i,n), w, h);
+            ImageIO::writeExrImage(f, (const float*) tmp, w, h);
         } else if (imagetypes[i].getType() == CV_32FC1) {
-            ImageIO::writeExrImage(f, (const float*) getImage(i,n), w, h, 1);
+            ImageIO::writeExrImage(f, (const float*) tmp, w, h, 1);
         } else if (imagetypes[i].getType() == CV_8UC3) {
-            ImageIO::writePngImage(f, (const unsigned char*) getImage(i,n), w, h);
+            ImageIO::writePngImage(f, (const unsigned char*) tmp, w, h);
         } else if (imagetypes[i].getType() == CV_8UC1) {
-            ImageIO::writePngImage(f, (const unsigned char*) getImage(i,n), w, h, 1);
+            ImageIO::writePngImage(f, (const unsigned char*) tmp, w, h, 1);
         }
+        delete tmp;
     }
 
 }

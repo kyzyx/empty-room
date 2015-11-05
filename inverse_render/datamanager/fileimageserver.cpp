@@ -92,7 +92,7 @@ bool FileImageServer::loadImages(int i) {
 
             if (success) {
                 if (!(imagetypes[n].getFlags() & ImageType::IT_NOFLIP)) {
-                    flip((char*) im, w, h, imagetypes[n].getSize());
+                    ImageIO::flip((char*) im, w, h, imagetypes[n].getSize(), flip_x, flip_y);
                 }
                 flags[n*sz+i] |= DF_INITIALIZED;
             }
