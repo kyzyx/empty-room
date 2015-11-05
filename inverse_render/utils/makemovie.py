@@ -28,10 +28,11 @@ else:
                 expr = float(toks[-3])*scale
                 expg = float(toks[-2])*scale
                 expb = float(toks[-1])*scale
-                cmd = [convert_binary, toks[0], outfile, str(expr), str(expg), str(expb)];
+                expstr = "%f,%f,%f"%(expr,expg,expb)
+                cmd = [convert_binary, toks[0], outfile, '-colorscale', expstr];
                 cmds.append(cmd)
             else:
-                cmd = [convert_binary, toks[0], outfile, str(scale)]
+                cmd = [convert_binary, toks[0], outfile, '-intensityscale', str(scale)]
                 cmds.append(cmd)
             n += 1
 
