@@ -37,9 +37,8 @@ int main(int argc, char** argv) {
     for (int i = 0; i < sz; i++) {
         getline(in, line);
         string filename = line.substr(0, line.find(' '));
-        map<string, float> header;
         int ww, hh;
-        ImageIO::readBinaryImageWithHeader(filename, &image, ww, hh, header, true);
+        ImageIO::readRGBImage(filename, image, ww, hh);
         for (int j = 0; j < w*h; j++) {
             conf[j] = confidence(image + 3*j);
         }
