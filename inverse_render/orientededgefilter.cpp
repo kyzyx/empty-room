@@ -28,10 +28,10 @@ cv::Vec3f getPixel(const cv::Mat& img, double px, double py) {
 }
 
 void findVanishingPoints(const CameraParams& cam, R4Matrix normalization, vector<Eigen::Vector3d>& vps) {
-    R3Vector a = normalization.Inverse()*cam.towards;
-    R3Vector b = normalization.Inverse()*cam.up;
-    R3Vector c = normalization.Inverse()*cam.right;
-    R3Point p = normalization.Inverse()*cam.pos;
+    R3Vector a = normalization*cam.towards;
+    R3Vector b = normalization*cam.up;
+    R3Vector c = normalization*cam.right;
+    R3Point p = normalization*cam.pos;
     R4Matrix t(
         c[0], b[0], -a[0], p[0],
         c[1], b[1], -a[1], p[1],
@@ -47,8 +47,8 @@ void findVanishingPoints(const CameraParams& cam, R4Matrix normalization, vector
             Vector3d vp(a[0],a[1],0);
             vps.push_back(vp);
         } else {
-            Vector3d vp(a[0]/a[2]*cam.focal_length + cam.width/2,
-                        a[1]/a[2]*cam.focal_length + cam.height/2,
+            Vector3d vp(-a[0]/a[2]*cam.focal_length + cam.width/2,
+                        -a[1]/a[2]*cam.focal_length + cam.height/2,
                         1);
             vps.push_back(vp);
         }
