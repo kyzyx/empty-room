@@ -74,22 +74,24 @@ target_link_libraries(wallfinder datamanager roommodel
 add_executable(reprojectapp apps/reprojectapp.cpp
     apps/invrenderapp.cpp apps/invrenderapp.h
     reproject.cpp reproject.h clusterlights.cpp clusterlights.h)
-target_link_libraries(reprojectapp ${PCL_LIBRARIES} datamanager)
+target_link_libraries(reprojectapp ${PCL_LIBRARIES} datamanager roommodel)
 
 add_executable(exposuresolverapp apps/exposuresolverapp.cpp
     apps/invrenderapp.cpp apps/invrenderapp.h
     exposuresolver.h exposuresolver.cpp)
 target_link_libraries(exposuresolverapp ${PCL_LIBRARIES} ${CERES_LIBRARIES}
-    datamanager)
+    datamanager roommodel)
 
 add_executable(labelimageapp apps/labelimageapp.cpp
     apps/invrenderapp.cpp apps/invrenderapp.h)
-target_link_libraries(labelimageapp ${PCL_LIBRARIES} ${GLUT_LIBRARY} datamanager rendering)
+target_link_libraries(labelimageapp ${PCL_LIBRARIES} ${GLUT_LIBRARY} datamanager
+    rendering roommodel)
 
 add_executable(edgeimageapp apps/edgeimageapp.cpp
     apps/invrenderapp.cpp apps/invrenderapp.h
     orientededgefilter.cpp orientededgefilter.h)
-target_link_libraries(edgeimageapp ${PCL_LIBRARIES} ${OpenCV_LIBS} datamanager)
+target_link_libraries(edgeimageapp ${PCL_LIBRARIES} ${OpenCV_LIBS} datamanager
+    roommodel)
 
 add_executable(linefindapp apps/linefindapp.cpp
     apps/invrenderapp.cpp apps/invrenderapp.h

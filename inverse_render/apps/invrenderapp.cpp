@@ -16,7 +16,7 @@ int InvrenderApp::parseargs(int argc, char** argv) {
     if (argc < 3) {
         cout <<
          "Usage: " << argv[0] <<
-                      " -meshfile mesh.ply -camfile camera.cam [args]\n" \
+                      " -meshfile mesh.ply -camfile camera.cam -roommodel room.json [args]\n" \
          "   Arguments:\n" \
          "       -p: Emit progress in percent\n" \
          "   Camfile Arguments:\n" \
@@ -26,7 +26,7 @@ int InvrenderApp::parseargs(int argc, char** argv) {
         printargs();
         return false;
     }
-    string meshfile, camfile;
+    string meshfile, camfile, roomfile;
     bool image_flip_x = false;
     bool image_flip_y = false;
     if (pcl::console::find_switch(argc, argv, "-p")) emit_progress = true;
@@ -36,6 +36,10 @@ int InvrenderApp::parseargs(int argc, char** argv) {
     if (pcl::console::find_argument(argc, argv, "-meshfile") >= 0) {
         pcl::console::parse_argument(argc, argv, "-meshfile", meshfile);
         mmgr = new MeshManager(meshfile);
+    }
+    if (pcl::console::find_argument(argc, argv, "-roommodel") >= 0) {
+        pcl::console::parse_argument(argc, argv, "-roommodel", roomfile);
+        room = new roommodel::RoomModel(roomfile);
     }
     if (pcl::console::find_argument(argc, argv, "-camfile") >= 0) {
         pcl::console::parse_argument(argc, argv, "-camfile", camfile);

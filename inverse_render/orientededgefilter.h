@@ -14,4 +14,5 @@ void orientedEdgeFilterVP(
     std::vector<Eigen::Vector3d>& vps,
     int windowy=21, int windowx=5);
 void createEdgeImage(const CameraParams* cam, const void* colorimage, void* image);
+void createEdgeImage(const CameraParams* cam, R4Matrix normalization, const void* colorimage, void* image);
 #endif

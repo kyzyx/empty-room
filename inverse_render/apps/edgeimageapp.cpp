@@ -13,7 +13,11 @@ class EdgeImageApp : public InvrenderApp {
 
         virtual int run() {
             for (int i = 0; i < imgr->size(); ++i) {
-                createEdgeImage(imgr->getCamera(i), imgr->getImage(i), imgr->getImageWriteable("edges",i));
+                if (room) {
+                    createEdgeImage(imgr->getCamera(i), room->globaltransform, imgr->getImage(i), imgr->getImageWriteable("edges",i));
+                } else {
+                    createEdgeImage(imgr->getCamera(i), imgr->getImage(i), imgr->getImageWriteable("edges",i));
+                }
                 int f = imgr->getFlags("edges", i);
                 imgr->setFlags("edges", i, f|ImageManager::DF_INITIALIZED);
                 if (noshm) imgr->saveImage("edges", i);

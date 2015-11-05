@@ -123,7 +123,10 @@ void orientedEdgeFilterVP(const char* image, float* edges, int w, int h, vector<
     delete [] window[1];
 }
 void createEdgeImage(const CameraParams* cam, const void* colorimage, void* image) {
+    createEdgeImage(cam, R4identity_matrix, colorimage, image);
+}
+void createEdgeImage(const CameraParams* cam, R4Matrix normalization, const void* colorimage, void* image) {
     vector<Vector3d> vps;
-    findVanishingPoints(*cam, R4identity_matrix, vps);
+    findVanishingPoints(*cam, normalization, vps);
     orientedEdgeFilterVP((const char*) colorimage, (float*) image, cam->width, cam->height, vps);
 }

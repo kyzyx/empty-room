@@ -2,12 +2,14 @@
 #define _INVRENDER_APP_H
 #include "datamanager/imagemanager.h"
 #include "datamanager/meshmanager.h"
+#include "roommodel/roommodel.h"
 
 class InvrenderApp {
     public:
         InvrenderApp() :
-            mmgr(NULL), imgr(NULL),
+            mmgr(NULL), imgr(NULL), room(NULL),
             emit_progress(false), noshm(false) {;}
+        ~InvrenderApp() { if (room) delete room; }
         int parseargs(int argc, char** argv);
         virtual int run() {;}
 
@@ -20,6 +22,7 @@ class InvrenderApp {
         boost::function<void(int)> getProgressFunction(int partnum, int totalparts);
         MeshManager* mmgr;
         ImageManager* imgr;
+        roommodel::RoomModel* room;
 
         bool emit_progress;
         bool noshm;
