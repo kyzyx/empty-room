@@ -34,6 +34,7 @@ pid_t popen2(char * const command[], int *outfp)
     {
         if (p_stdout[1] != fileno(stdout)) {
             dup2(p_stdout[1], fileno(stdout));
+            dup2(p_stdout[1], fileno(stderr));
             close(p_stdout[1]);
         }
         close(p_stdout[0]);
@@ -105,6 +106,9 @@ void SubprocessWorker::run() {
                 emit percentChanged(n);
             }
         }
+    }
+    if (!isdone) {
+        printf("Error executing command \"%s\"\n", command.toStdString().c_str());
     }
     fclose(fp);
     pclose2(pid);
