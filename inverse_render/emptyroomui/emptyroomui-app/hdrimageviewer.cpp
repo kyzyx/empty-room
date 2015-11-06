@@ -19,13 +19,14 @@ bool HDRImageViewer::setFloatImage(const float* data, int w, int h, int channels
         glBindTexture(GL_TEXTURE_2D, tex);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, w, h, 0, GL_RGB, GL_FLOAT, 0);
         glBindTexture(GL_TEXTURE_2D, 0);
-    }
-    currw = w;
-    currh = h;
-    if (w*h*3 > currsz) {
-        currsz = w*h*3;
-        if (image) delete [] image;
-        image = new float[currsz];
+
+        currw = w;
+        currh = h;
+        if (w*h*3 > currsz) {
+            currsz = w*h*3;
+            if (image) delete [] image;
+            image = new float[currsz];
+        }
     }
     currch = channels;
 
@@ -65,13 +66,14 @@ bool HDRImageViewer::setRGBImage(const unsigned char* data, int w, int h, int ch
         glBindTexture(GL_TEXTURE_2D, tex);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, w, h, 0, GL_RGB, GL_FLOAT, 0);
         glBindTexture(GL_TEXTURE_2D, 0);
-    }
-    currw = w;
-    currh = h;
-    if (w*h*3 > currsz) {
-        currsz = w*h*3;
-        if (image) delete [] image;
-        image = new float[currsz];
+
+        currw = w;
+        currh = h;
+        if (w*h*3 > currsz) {
+            currsz = w*h*3;
+            if (image) delete [] image;
+            image = new float[currsz];
+        }
     }
     currch = channels;
 
@@ -94,6 +96,42 @@ bool HDRImageViewer::setRGBImage(const unsigned char* data, int w, int h, int ch
     update();
     return true;
 }
+
+void HDRImageViewer::setErrorImage(int w, int h) {
+    makeCurrent();
+    setMinimumSize(w,h);
+    setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    glBindTexture(GL_TEXTURE_2D, tex);
+
+    if (w != currw || h != currh) {
+        glBindTexture(GL_TEXTURE_2D, tex);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, w, h, 0, GL_RGB, GL_FLOAT, 0);
+        glBindTexture(GL_TEXTURE_2D, 0);
+
+        currw = w;
+        currh = h;
+        if (w*h*3 > currsz) {
+            currsz = w*h*3;
+            if (image) delete [] image;
+            image = new float[currsz];
+        }
+    }
+
+    float* cf = image;
+    for (int i = 0; i < h; i++) {
+        for (int j = 0; j < w; j++) {
+            for (int k = 0; k < 3; k++) {
+                *cf++ = ((i/20) + (j/20))%2==0?1.f:0.f;
+            }
+        }
+    }
+
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h, GL_RGB, GL_FLOAT, (GLvoid*) image);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    update();
+}
+
 void HDRImageViewer::_dorender() {
     glViewport(0, 0, currw, currh);
     glMatrixMode(GL_PROJECTION);

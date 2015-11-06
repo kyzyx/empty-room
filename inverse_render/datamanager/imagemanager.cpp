@@ -227,6 +227,9 @@ const CameraParams* ImageManager::getCamera(int n) const {
 
 unsigned char ImageManager::getFlags(const string& type, int n) const {
     int i = nameToIndex(type);
+    return getFlags(i, n);
+}
+unsigned char ImageManager::getFlags(int i, int n) const {
     if (i < 0) return DF_ERROR;
     if (n < 0 || n >= sz) return DF_ERROR;
     //boost::interprocess::shareable_lock<shmutex> lock(*getMutex(i,n));

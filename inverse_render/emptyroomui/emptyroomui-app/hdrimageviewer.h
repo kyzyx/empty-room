@@ -10,7 +10,7 @@ public:
 
     bool setFloatImage(const float* data, int w, int h, int channels);
     bool setRGBImage(const unsigned char* data, int w, int h, int channels);
-
+    void setErrorImage(int w, int h);
     void addLine(int x1, int y1, int x2, int y2) {
         lines.push_back(x1);
         lines.push_back(y1);

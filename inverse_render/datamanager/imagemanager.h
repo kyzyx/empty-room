@@ -58,6 +58,7 @@ class ImageManager {
 
         const CameraParams* getCamera(int n) const;
         virtual unsigned char getFlags(const std::string& type, int n) const;
+        virtual unsigned char getFlags(int i, int n) const;
         virtual void setFlags(const std::string& type, int n, unsigned char value);
         const void* getImage(const std::string& type, int n);
         virtual const void* getImage(int i, int n);

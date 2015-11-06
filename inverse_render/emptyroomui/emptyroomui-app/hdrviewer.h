@@ -96,6 +96,10 @@ public:
     bool setRGBImage(const unsigned char* data, int w, int h, int channels) {
         return v->setRGBImage(data, w, h, channels);
     }
+    void setErrorImage(int w, int h) {
+        return v->setErrorImage(w, h);
+    }
+
     void addLine(int x1, int y1, int x2, int y2) {
         v->addLine(x1,y1,x2,y2);
     }

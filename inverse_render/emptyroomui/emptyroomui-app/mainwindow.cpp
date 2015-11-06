@@ -170,28 +170,35 @@ void MainWindow::updateImage(int idx, int type)
         typeindex = type%imgr->getNumImageTypes();
         int w = imgr->getCamera(0)->width;
         int h = imgr->getCamera(0)->height;
-        switch (imgr->getImageType(typeindex).getType()) {
-            case CV_32FC3:
-                ui->imageWidget->setFloatImage((const float*) imgr->getImage(typeindex, imageindex), w, h, 3);
-                break;
-            case CV_32FC1:
-                ui->imageWidget->setFloatImage((const float*) imgr->getImage(typeindex, imageindex), w, h, 1);
-                break;
-            case CV_8UC3:
-                ui->imageWidget->setRGBImage((const unsigned char*) imgr->getImage(typeindex, imageindex), w, h, 3);
-                break;
-            case CV_8UC1:
-                ui->imageWidget->setRGBImage((const unsigned char*) imgr->getImage(typeindex, imageindex), w, h, 1);
-                break;
-            default:
-                return;
-        }
-        ui->imageWidget->clearLines();
-        for (int i = 0; i < lines.size(); i+=5) {
-            if (lines[i] == imageindex) {
-                ui->imageWidget->addLine(lines[i+1], lines[i+2], lines[i+3], lines[i+4]);
+        const void* img = imgr->getImage(typeindex, imageindex);
+        if (imgr->getFlags(typeindex, imageindex) & ImageManager::DF_INITIALIZED) {
+            switch (imgr->getImageType(typeindex).getType()) {
+                case CV_32FC3:
+                    ui->imageWidget->setFloatImage((const float*) img, w, h, 3);
+                    break;
+                case CV_32FC1:
+                    ui->imageWidget->setFloatImage((const float*) img, w, h, 1);
+                    break;
+                case CV_8UC3:
+                    ui->imageWidget->setRGBImage((const unsigned char*) img, w, h, 3);
+                    break;
+                case CV_8UC1:
+                    ui->imageWidget->setRGBImage((const unsigned char*) img, w, h, 1);
+                    break;
+                default:
+                    return;
+            }
+            ui->imageWidget->clearLines();
+            for (int i = 0; i < lines.size(); i+=5) {
+                if (lines[i] == imageindex) {
+                    ui->imageWidget->addLine(lines[i+1], lines[i+2], lines[i+3], lines[i+4]);
+                }
             }
         }
+        else {
+            ui->imageWidget->setErrorImage(w, h);
+        }
+
         ui->meshWidget->highlightCamera(idx);
         if (ui->autoLookCheckbox->isChecked()) ui->meshWidget->lookThroughCamera(imgr->getCamera(idx));
 
