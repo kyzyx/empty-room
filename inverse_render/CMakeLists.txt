@@ -13,7 +13,7 @@ else()
     set(GLLIBS ${OPENGL_LIBRARIES} ${GLEW_LIBRARIES})
 endif()
 
-find_package(PCL 1.7 REQUIRED)
+find_package(PCL REQUIRED)
 find_package(Boost 1.54.0 COMPONENTS system REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
 add_definitions(${PCL_DEFINITIONS})
@@ -121,6 +121,10 @@ target_link_libraries(generateconfidence datamanager)
 
 add_executable(convertimage EXCLUDE_FROM_ALL utils/convert.cpp)
 target_link_libraries(convertimage ${OpenCV_LIBS} datamanager)
+
+add_custom_target(captureutils DEPENDS create_camfile split processdepth
+    generatemask generateconfidence)
+add_custom_target(utils DEPENDS captureutils convertimage)
 
 add_executable(invrender EXCLUDE_FROM_ALL monolithic/invrender.cpp
     reproject.h reproject.cpp
