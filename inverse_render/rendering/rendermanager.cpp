@@ -71,6 +71,7 @@ RenderManager::RenderManager(MeshManager* meshmanager) {
     room = NULL;
     numroomtriangles = 0;
     samples_initialized = false;
+    shaders_initialized = false;
     initShaderTypes();
     precalculated = -1;
     setMeshManager(meshmanager);

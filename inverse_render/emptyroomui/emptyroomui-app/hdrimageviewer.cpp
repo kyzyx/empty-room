@@ -119,8 +119,8 @@ void HDRImageViewer::_dorender() {
     glColor3f(100,0,0);
     glBegin(GL_LINES);
         for (int i = 0; i < lines.size(); i+=4) {
-            glVertex3f(lines[i], lines[i+1], 0);
-            glVertex3f(lines[i+2], lines[i+3], 0);
+            glVertex3f(lines[i], currh-lines[i+1], 0);
+            glVertex3f(lines[i+2], currh-lines[i+3], 0);
         }
     glEnd();
     glBindTexture(GL_TEXTURE_2D, 0);

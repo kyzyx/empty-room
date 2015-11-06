@@ -26,6 +26,7 @@ bool FileImageServer::initializeSharedMemory() {
     cameras = new CameraParams[sz];
     depth2rgb = new R4Matrix;
     flags = new unsigned char[sz*imagetypes.size()];
+    memset(flags, 0, sz*imagetypes.size());
     mutexes = new shmutex[imagetypes.size()];
     currimages.resize(imagetypes.size());
     for (int i = 0; i < imagetypes.size(); ++i) {

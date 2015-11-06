@@ -1,6 +1,7 @@
 #include "rendering/opengl_compat.h"
 #include "invrenderapp.h"
 #include "rendering/hemicuberenderer.h"
+#include "datamanager/imageio.h"
 #include <string>
 #include <iostream>
 #include <pcl/console/parse.h>
@@ -21,6 +22,10 @@ class LabelImageApp : public InvrenderApp {
                 int f = imgr->getFlags("labels", i);
                 imgr->setFlags("labels", i, f|ImageManager::DF_INITIALIZED);
                 getProgressFunction(i,imgr->size())(100);
+                ImageIO::flip((char*) imgr->getImageWriteable("labels", i), imgr->width(), imgr->height(), imgr->getImageType("labels").getSize());
+                if (noshm) {
+                    imgr->saveImage("labels", i);
+                }
             }
             emitDone();
             return 0;

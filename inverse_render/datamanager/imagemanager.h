@@ -3,7 +3,7 @@
 
 #include <string>
 #include <vector>
-#include <opencv2/core/types_c.h>
+#include <opencv2/core/cvdef.h>
 
 #include <boost/interprocess/mapped_region.hpp>
 #include <boost/interprocess/sync/interprocess_sharable_mutex.hpp>
@@ -70,6 +70,8 @@ class ImageManager {
         void saveImage(const std::string& type, int n);
 
         ImageType getImageType(int n) const { return imagetypes[n]; }
+        ImageType getImageType(const std::string& type) const {
+            return imagetypes[nameToIndex(type)]; }
         int getNumImageTypes() const { return imagetypes.size(); }
 
         int width() const { return w; }

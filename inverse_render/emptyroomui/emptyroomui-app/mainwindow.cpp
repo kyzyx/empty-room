@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "datamanager/fileimageserver.h"
+#include "datamanager/imageio.h"
 #include <QKeyEvent>
 #include <QFileDialog>
 #include <QIntValidator>
@@ -808,6 +809,7 @@ void MainWindow::on_computeLabelImagesButton_clicked()
     for (int i = 0; i < imgr->size(); ++i) {
         progressbar->setValue(100*i/imgr->size());
         ui->meshWidget->renderManager()->createLabelImage(imgr->getCamera(i), imgr->getImageWriteable("labels",i));
+        ImageIO::flip((char*)imgr->getImageWriteable("labels", i), imgr->width(), imgr->height(), imgr->getImageType("labels").getSize());
         int f = imgr->getFlags("labels", i);
         imgr->setFlags("labels", i, f|ImageManager::DF_INITIALIZED);
         if (lazyloadimages) {
