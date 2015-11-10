@@ -54,7 +54,7 @@ void RenderManager::initShaderTypes() {
         SHADERFLAGS_USEU_COLOR|SHADERFLAGS_USEU_AUX));
     shaders.push_back(ShaderType("labels",
         "Per-Vertex Light IDs, Visibility, and Auxiliary Labels",
-        SHADERFLAGS_USESH_FLAT_FRAG));
+        SHADERFLAGS_USEU_AUX|SHADERFLAGS_USESH_FLAT_FRAG));
     shaders.push_back(ShaderType("overlay",
         "Overlay Labels",
         SHADERFLAGS_PASS|SHADERFLAGS_USESH_FLAT_FRAG));

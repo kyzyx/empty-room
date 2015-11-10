@@ -9,7 +9,9 @@ static const char* shadername[NUM_TMOS] = {
     "linear shader",
     "logarithmic shader",
     "gamma shader",
-    "float-as-int shader"
+    "float-as-int categorical shader",
+    "float-as-int scalar shader",
+    "float-as-8-bit-int categorical shader",
 };
 static const char* vertexshadertext =
 "#version 400\n" \
@@ -59,11 +61,10 @@ static const char* shadertext[NUM_TMOS] = {
         "if (f.a < 0.8) color = vec4(channelselect,1)*f;\n" \
         "else color = vec4(channelselect,1)*clamp(pow((f-hdr_bounds[0])/(hdr_bounds[1]-hdr_bounds[0]),hdr_bounds[2]*vec4(1,1,1,1)), 0, 1);\n" \
     "}",
-    // Float-as-int shader
+    // Float-as-int categorical shader
     "#version 400\n" \
     "uniform sampler2D rendered_image;\n" \
     "in vec2 f_texcoord;\n" \
-    "uniform vec3 hdr_bounds;\n" \
     "uniform vec3 channelselect;\n" \
     "out vec4 color;\n" \
     "const int NUM_KELLY_COLORS = 20;\n" \
@@ -91,15 +92,61 @@ static const char* shadertext[NUM_TMOS] = {
     ");\n" \
     "void main(void) {\n" \
         "vec4 f = texture2D(rendered_image, f_texcoord);\n" \
-        "int id = int(f.r*255 + 0.5);\n" \
-        "if (id == 0) color = vec4(0,0,0,0.5);\n" \
+        "int id = floatBitsToInt(f.r);\n" \
+        "if (f.a < 0.8) color = vec4(channelselect,1)*f;\n" \
+        "else if (id == 0) color = vec4(0,0,0,0.5);\n" \
         "else color = KellyColors[id%NUM_KELLY_COLORS];\n" \
-        /*"if (f.a < 0.8) color = vec4(channelselect,1)*f;\n" \
-        "else color = vec4(channelselect,1)*clamp((floatBitsToInt(f)-hdr_bounds[0])/(hdr_bounds[1]-hdr_bounds[0]), 0, 1);\n" \*/
+    "}",
+    // Float-as-int scalar shader
+    "#version 400\n" \
+    "uniform sampler2D rendered_image;\n" \
+    "in vec2 f_texcoord;\n" \
+    "uniform vec3 hdr_bounds;\n" \
+    "uniform vec3 channelselect;\n" \
+    "out vec4 color;\n" \
+    "void main(void) {\n" \
+        "vec4 f = texture2D(rendered_image, f_texcoord);\n" \
+        "vec3 c = clamp(vec3(floatBitsToInt(f.rgb))/hdr_bounds[1], 0, 1);\n" \
+        "if (f.a < 0.8) color = vec4(channelselect,1)*f;\n" \
+        "else color = vec4(channelselect*c,f.a);\n" \
+    "}",
+    // Float-as-8-bit scalar shader
+    "#version 400\n" \
+    "uniform sampler2D rendered_image;\n" \
+    "in vec2 f_texcoord;\n" \
+    "uniform vec3 channelselect;\n" \
+    "out vec4 color;\n" \
+    "const int NUM_KELLY_COLORS = 20;\n" \
+    "uniform vec4 KellyColors[NUM_KELLY_COLORS] = vec4[NUM_KELLY_COLORS](\n" \
+        "vec4(255, 179, 0, 128)/255,\n" \
+        "vec4(128, 62, 117, 128)/255,\n" \
+        "vec4(255, 104, 0, 128)/255,\n" \
+        "vec4(166, 189, 215, 128)/255,\n" \
+        "vec4(193, 0, 32, 128)/255,\n" \
+        "vec4(206, 162, 98, 128)/255,\n" \
+        "vec4(129, 112, 102, 128)/255,\n" \
+        "vec4(0, 125, 52, 128)/255,\n" \
+        "vec4(246, 118, 142, 128)/255,\n" \
+        "vec4(0, 83, 138, 128)/255,\n" \
+        "vec4(255, 122, 92, 128)/255,\n" \
+        "vec4(83, 55, 122, 128)/255,\n" \
+        "vec4(255, 142, 0, 128)/255,\n" \
+        "vec4(179, 40, 81, 128)/255,\n" \
+        "vec4(244, 200, 0, 128)/255,\n" \
+        "vec4(127, 24, 13, 128)/255,\n" \
+        "vec4(147, 170, 0, 128)/255,\n" \
+        "vec4(89, 51, 21, 128)/255,\n" \
+        "vec4(241, 58, 19, 128)/255,\n" \
+        "vec4(35, 44, 22, 128)/255\n" \
+    ");\n" \
+    "void main(void) {\n" \
+        "vec4 f = texture2D(rendered_image, f_texcoord);\n" \
+        "int id = int(f.r*255 + 0.5);\n"
+        "if (f.a < 0.8) color = vec4(channelselect,1)*f;\n" \
+        "else if (id == 0) color = vec4(0,0,0,0.5);\n" \
+        "else color = KellyColors[id%NUM_KELLY_COLORS];\n" \
     "}",
 };
-
-
 HDRGlHelper::HDRGlHelper() :
     mapping(TMO_LINEAR), mini(0), maxi(1), channelsToRender(ALL_CHANNELS)
 {
@@ -190,7 +237,6 @@ void HDRGlHelper::initializeHelper() {
             progs[i].uniform_ids[j] = glGetUniformLocation(progs[i].progid, uniforms[j]);
             if (progs[i].uniform_ids[j] == -1) {
                 qDebug("Error binding uniform %s in %s", uniforms[j], shadername[i]);
-                return;
             }
         }
     }
