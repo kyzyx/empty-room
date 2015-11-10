@@ -258,7 +258,6 @@ void MainWindow::updateImage(int idx, int type)
             memcpy(img + 2*w*3*(w/2+i)+3*3*w/2, face + i*w*3, w/2*3*sizeof(float));
         }
         // TODO: !!! Display type
-        // TODO: !!! Normalization transform on sample cameras
         // TODO: !!! Display stats (Total incoming light, etc.)
         ui->imageWidget->setFloatImage(img, 2*w, 2*w, 3);
         ui->meshWidget->highlightCamera(idx);
@@ -849,6 +848,10 @@ void MainWindow::on_hemicubeButton_clicked()
             cam.pos = mmgr->VertexPosition(wallindices[n]);
             cam.towards = mmgr->VertexNormal(wallindices[n]);
             cam.up = R3yaxis_vector;
+            if (room) cam.up = room->globaltransform.Inverse()*cam.up;
+            else if (orientationtransform) cam.up = orientationtransform->globaltransform.Inverse()*cam.up;
+            cam.towards -= cam.up.Dot(cam.towards)*cam.up;
+            cam.towards.Normalize();
             cam.right = cam.towards;
             cam.right.Cross(cam.up);
             cam.focal_length = cam.width/2;
