@@ -38,10 +38,29 @@ void HemicubeRenderer::computeHemicubeFF() {
         float z = 1./res;
         for (int j = 1; j <= res/2; ++j, z += d) {
             float denom = z*z + x*x + 1;
-            sideHemicubeFF[o+i-1][o+j-1] = d*d*z/(M_PI*denom*denom);
-            sideHemicubeFF[o+i-1][o-j] = sideHemicubeFF[o+i-1][o+j-1];
-            sideHemicubeFF[o-i][o-j]   = sideHemicubeFF[o+i-1][o+j-1];
-            sideHemicubeFF[o-i][o+j-1] = sideHemicubeFF[o+i-1][o+j-1];
+            sideHemicubeFF[o+i-1][o+j-1] = d*d*x/(M_PI*denom*denom);
+            sideHemicubeFF[o+i-1][o-j]   = sideHemicubeFF[o+i-1][o+j-1];
+            sideHemicubeFF[o-i][o+j-1]   = sideHemicubeFF[o+i-1][o+j-1];
+            sideHemicubeFF[o-i][o-j]     = sideHemicubeFF[o+i-1][o+j-1];
+        }
+    }
+}
+
+void HemicubeRenderer::weightTopHemicube(float* img, float factor) const {
+    for (int i = 0; i < res; i++) {
+        for (int j = 0; j < res; j++) {
+            for (int k = 0; k < 3; k++) {
+                *img++ *= topHemicubeFF[i][j]*factor;
+            }
+        }
+    }
+}
+void HemicubeRenderer::weightSideHemicube(float* img, float factor) const {
+    for (int i = 0; i < res; i++) {
+        for (int j = 0; j < res; j++) {
+            for (int k = 0; k < 3; k++) {
+                *img++ *= sideHemicubeFF[i][j]*factor;
+            }
         }
     }
 }
@@ -65,15 +84,15 @@ float HemicubeRenderer::renderHemicube(
     for (int o = 0; o < 4; ++o) {
         renderFace(pp, orientations[o], n, image, VIEW_AVERAGE);
         renderFace(pp, orientations[o], n, light, VIEW_LABELS);
-        for (int i = 0; i < res/2; ++i) {
+        for (int i = res/2; i < res; ++i) {
             for (int j = 0; j < res; ++j) {
                 int visibility = *reinterpret_cast<int*>(&light[3*(i*res+j)]);
                 int lightid = *reinterpret_cast<int*>(&light[3*(i*res+j)+1]);
-                if (lightid >= 0 && visibility > 0) {
+                if (lightid > 0) {
                     lightid--;
                     if (lightid >= lightareas.size()) lightareas.resize(lightid+1);
                     lightareas[lightid] += sideHemicubeFF[i][j];
-                } else if (lightid < 0 && visibility == 0) {
+                } else if (visibility <= 0) {
                     blank += sideHemicubeFF[i][j];
                 } else {
                     m.r += sideHemicubeFF[i][j]*image[3*(i*res+j)];
@@ -89,11 +108,11 @@ float HemicubeRenderer::renderHemicube(
         for (int j = 0; j < res; ++j) {
             int visibility = *reinterpret_cast<int*>(&light[3*(i*res+j)]);
             int lightid = *reinterpret_cast<int*>(&light[3*(i*res+j)+1]);
-            if (lightid != 0 && visibility > 0) {
+            if (lightid > 0) {
                 lightid--;
                 if (lightid >= lightareas.size()) lightareas.resize(lightid+1);
                 lightareas[lightid] += topHemicubeFF[i][j];
-            } else if (lightid == 0 && visibility == 0) {
+            } else if (visibility <= 0) {
                 blank += topHemicubeFF[i][j];
             } else {
                 m.r += topHemicubeFF[i][j]*image[3*(i*res+j)];

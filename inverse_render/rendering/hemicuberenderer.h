@@ -29,6 +29,9 @@ class HemicubeRenderer {
                 Material& m, std::vector<float>& lightareas, float* color,
                 float* light);
         int getHemicubeResolution() const { return res; }
+        SampleData computeSample(int n, float* radimage, float* lightimage);
+        void weightTopHemicube(float* img, float factor=1) const;
+        void weightSideHemicube(float* img, float factor=1) const;
 
         void render(const CameraParams* cam, float* image, int mode=VIEW_AVERAGE);
     private:
