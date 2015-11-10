@@ -76,7 +76,7 @@ float HemicubeRenderer::renderHemicube(
     if (image == NULL) image = new float[3*res*res];
     if (light == NULL) light = new float[3*res*res];
     R3Point pp = p + 0.0001*n;
-    R3Vector x = abs(n[0])>abs(n[1])?R3yaxis_vector:R3xaxis_vector;
+    R3Vector x = abs(n[0])>abs(n[2])?R3zaxis_vector:R3xaxis_vector;
     x.Cross(n);
     x.Normalize();
     R3Vector y = n%x;

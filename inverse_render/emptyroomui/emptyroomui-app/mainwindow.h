@@ -6,6 +6,7 @@
 #include "datamanager/imagemanager.h"
 #include "subprocessworker.h"
 #include "roommodel/roommodel.h"
+#include "rendering/hemicuberenderer.h"
 #include <QProgressBar>
 #include <QSettings>
 #include <QTemporaryFile>
@@ -107,6 +108,7 @@ private:
     Ui::MainWindow *ui;
     ImageManager* imgr;
     MeshManager* mmgr;
+    HemicubeRenderer* hr;
     roommodel::RoomModel* room;
     roommodel::RoomModel* orientationtransform;
 
@@ -133,6 +135,7 @@ private:
 
     int imagedisplaymode;
     std::vector<CameraParams> hemicubecams;
+    std::vector<int> hemicubeindices;
     std::vector<int> wallindices;
     std::vector<int> floorindices;
 };

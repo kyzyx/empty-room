@@ -35,7 +35,6 @@ class HemicubeRenderer {
 
         void render(const CameraParams* cam, float* image, int mode=VIEW_AVERAGE);
     private:
-        SampleData computeSample(int n, float* radimage, float* lightimage);
         void renderFace(const R3Point& p,
                 const R3Vector& towards, const R3Vector& up,
                 float* image, int mode);

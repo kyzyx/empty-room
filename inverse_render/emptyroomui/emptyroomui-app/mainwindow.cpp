@@ -119,7 +119,7 @@ MainWindow::MainWindow(QWidget *parent) :
     imgr(NULL), mmgr(NULL),
     typeindex(0), imageindex(0),
     room(NULL), orientationtransform(NULL),
-    lazyloadimages(false),
+    lazyloadimages(false), hr(NULL),
     imagedisplaymode(1)
 {
     ui->setupUi(this);
@@ -163,6 +163,19 @@ void MainWindow::keyPressEvent(QKeyEvent *e)
 // -----------------
 // Interface Actions
 // -----------------
+void transpose(float* f, int w) {
+    float tmp;
+    for (int i = 0; i < w; i++) {
+        for (int j = i+1; j < w; j++) {
+            for (int k = 0; k < 3; k++) {
+                tmp = f[3*(i*w+j)+k];
+                f[3*(i*w+j)+k] = f[3*(j*w+i)+k];
+                f[3*(j*w+i)+k] = tmp;
+            }
+        }
+    }
+}
+
 void MainWindow::updateImage(int idx, int type)
 {
     if (imagedisplaymode > 0) {
@@ -211,55 +224,111 @@ void MainWindow::updateImage(int idx, int type)
         else ui->nextImageButton->setEnabled(true);
         ui->imageNumBox->setText(QString::number(imageindex));
     } else {
+        ui->meshWidget->renderManager(); // Get the correct OpenGL Context
         imageindex = idx%hemicubecams.size();
+        typeindex = type%6;
         int w = hemicubecams[imageindex].width;
         float* face = new float[w*w*3];
         float* img = new float[4*w*w*3];
         bzero(img, 4*w*w*3*sizeof(float));
-        int type = VIEW_AVERAGE;
-        // center
-        ui->meshWidget->renderManager()->readFromRender(&hemicubecams[imageindex], face, type, true);
-        for (int i = 0; i < w; ++i) {
-            float* row = img + 2*w*3 * (w/2+i);
-            memcpy(row + w/2*3, face + i*w*3, w*3*sizeof(float));
+        int rtype = (typeindex&1)?VIEW_LABELS:VIEW_AVERAGE;
+        if (hr) {
+            int camidx = hemicubeindices[imageindex];
+            bool envmap = !(typeindex&1);
+            SampleData s = hr->computeSample(camidx, envmap?face:NULL, envmap?NULL:face);
+            s.netIncoming /= (1-s.fractionUnknown);
+            RNRgb rgb;
+            rgb[0] = s.radiosity.r/s.netIncoming.r;
+            rgb[1] = s.radiosity.g/s.netIncoming.g;
+            rgb[2] = s.radiosity.b/s.netIncoming.b;
+            std::cout << "Sample " << camidx << ": ";
+            std::cout << s.radiosity.r << "," << s.radiosity.g << "," << s.radiosity.b << " ";
+            std::cout << s.netIncoming.r << "," << s.netIncoming.g << "," << s.netIncoming.b << " ";
+            std::cout << rgb[0] << "," << rgb[1] << "," << rgb[2] << " ";
+            std::cout << s.fractionUnknown << std::endl;
         }
-        // top
-        CameraParams cam = hemicubecams[imageindex];
-        std::swap(cam.towards, cam.up);
-        cam.up = -cam.up;
-        cam.right = -cam.right;
-        ui->meshWidget->renderManager()->readFromRender(&cam, face, type, true);
-        for (int i = 0; i < w/2; ++i) {
-            float* row = img + 2*w*3 * (3*w/2 + i);
-            memcpy(row + w/2*3, face + i*w*3, w*3*sizeof(float));
+        if (typeindex < 2) {
+            for (int i = 0; i < w; ++i) {
+                float* row = img + 2*w*3 * (w/2+i);
+                memcpy(row + w/2*3, face + i*w*3, w*3*sizeof(float));
+            }
+        } else {
+            if (typeindex == 5) {
+                for (int i = 0; i < w*w*3; i++) face[i] = 1;
+            }
+            // center
+            if (typeindex != 5) ui->meshWidget->renderManager()->readFromRender(&hemicubecams[imageindex], face, rtype, true);
+            if (typeindex&4) hr->weightTopHemicube(face, w*w*M_PI/4);
+            for (int i = 0; i < w; ++i) {
+                float* row = img + 2*w*3 * (w/2+i);
+                memcpy(row + w/2*3, face + i*w*3, w*3*sizeof(float));
+            }
+            // top
+            CameraParams cam = hemicubecams[imageindex];
+            std::swap(cam.towards, cam.up);
+            cam.up = -cam.up;
+            cam.right = -cam.right;
+            if (typeindex == 5) {
+                for (int i = 0; i < w*w*3; i++) face[i] = 1;
+            }
+            if (typeindex != 5) ui->meshWidget->renderManager()->readFromRender(&cam, face, rtype, true);
+            if (typeindex&4) hr->weightSideHemicube(face, w*w*M_PI/4);
+            for (int i = 0; i < w/2; ++i) {
+                float* row = img + 2*w*3 * (3*w/2 + i);
+                memcpy(row + w/2*3, face + i*w*3, w*3*sizeof(float));
+            }
+            // bottom
+            cam.towards = -cam.towards;
+            cam.up = -cam.up;
+            if (typeindex == 5) {
+                for (int i = 0; i < w*w*3; i++) face[i] = 1;
+            }
+            if (typeindex != 5) ui->meshWidget->renderManager()->readFromRender(&cam, face, rtype, true);
+            if (typeindex&4) hr->weightSideHemicube(face, w*w*M_PI/4);
+            for (int i = 0; i < w/2; ++i) {
+                float* row = img + 2*w*3 * (w/2-i-1);
+                memcpy(row + w/2*3, face + (w-i-1)*w*3, w*3*sizeof(float));
+            }
+            // left
+            cam = hemicubecams[imageindex];
+            std::swap(cam.towards, cam.right);
+            cam.towards = -cam.towards;
+            if (typeindex == 5) {
+                for (int i = 0; i < w*w*3; i++) face[i] = 1;
+            }
+            if (typeindex != 5) ui->meshWidget->renderManager()->readFromRender(&cam, face, rtype, true);
+            if (typeindex&4) {
+                transpose(face, w);
+                hr->weightSideHemicube(face, w*w*M_PI/4);
+                transpose(face, w);
+            }
+            for (int i = 0; i < w; ++i) {
+                memcpy(img + 2*w*3*(w/2+i), face + i*w*3 + 3*w/2, w/2*3*sizeof(float));
+            }
+            // right
+            cam = hemicubecams[imageindex];
+            std::swap(cam.towards, cam.right);
+            cam.right = -cam.right;
+            if (typeindex == 5) {
+                for (int i = 0; i < w*w*3; i++) face[i] = 1;
+            }
+            if (typeindex != 5) ui->meshWidget->renderManager()->readFromRender(&cam, face, rtype, true);
+            if (typeindex&4) {
+                transpose(face, w);
+                hr->weightSideHemicube(face, w*w*M_PI/4);
+                transpose(face, w);
+            }
+            for (int i = 0; i < w; ++i) {
+                memcpy(img + 2*w*3*(w/2+i)+3*3*w/2, face + i*w*3, w/2*3*sizeof(float));
+            }
         }
-        // bottom
-        cam.towards = -cam.towards;
-        cam.up = -cam.up;
-        ui->meshWidget->renderManager()->readFromRender(&cam, face, type, true);
-        for (int i = 0; i < w/2; ++i) {
-            float* row = img + 2*w*3 * (w/2-i-1);
-            memcpy(row + w/2*3, face + (w-i)*w*3, w*3*sizeof(float));
-        }
-        // left
-        cam = hemicubecams[imageindex];
-        std::swap(cam.towards, cam.right);
-        cam.towards = -cam.towards;
-        ui->meshWidget->renderManager()->readFromRender(&cam, face, type, true);
-        for (int i = 0; i < w; ++i) {
-            memcpy(img + 2*w*3*(w/2+i), face + i*w*3 + 3*w/2, w/2*3*sizeof(float));
-        }
-        // right
-        cam = hemicubecams[imageindex];
-        std::swap(cam.towards, cam.right);
-        cam.right = -cam.right;
-        ui->meshWidget->renderManager()->readFromRender(&cam, face, type, true);
-        for (int i = 0; i < w; ++i) {
-            memcpy(img + 2*w*3*(w/2+i)+3*3*w/2, face + i*w*3, w/2*3*sizeof(float));
-        }
+        ui->imageWidget->setFloatImage(img, 2*w, 2*w, 3);
+        delete [] img;
+        delete [] face;
+
         // TODO: !!! Display type
         // TODO: !!! Display stats (Total incoming light, etc.)
-        ui->imageWidget->setFloatImage(img, 2*w, 2*w, 3);
+
         ui->meshWidget->highlightCamera(idx);
         if (ui->autoLookCheckbox->isChecked()) ui->meshWidget->lookThroughCamera(&hemicubecams[imageindex]);
         if (imageindex == 0) ui->prevImageButton->setEnabled(false);
@@ -831,6 +900,8 @@ void MainWindow::on_computeLabelImagesButton_clicked()
 void MainWindow::on_hemicubeButton_clicked()
 {
     if (imagedisplaymode > 0) {
+        if (!hr) hr = new HemicubeRenderer(ui->meshWidget->renderManager(), ui->hemicubeResLineEdit->text().toInt());
+        ui->meshWidget->updateMeshAuxiliaryData();
         hemicubecams.clear();
         int numsamples = ui->numSamplesLineEdit->text().toInt();
         std::default_random_engine generator;
@@ -856,15 +927,27 @@ void MainWindow::on_hemicubeButton_clicked()
             cam.right.Cross(cam.up);
             cam.focal_length = cam.width/2;
             hemicubecams.push_back(cam);
+            hemicubeindices.push_back(wallindices[n]);
         }
         ui->meshWidget->setupCameras(hemicubecams);
         ui->showTrajectoryCheckbox->setEnabled(false);
         ui->showTrajectoryCheckbox->setChecked(false);
         ui->hemicubeButton->setText("Revert display to cameras");
+        ui->imageTypeComboBox->clear();
+        ui->imageTypeComboBox->insertItem(0, QString("Hemicube Face"));
+        ui->imageTypeComboBox->insertItem(1, QString("Hemicube Face Visibility & Labels"));
+        ui->imageTypeComboBox->insertItem(2, QString("Environment cubemap"));
+        ui->imageTypeComboBox->insertItem(3, QString("Environment cubemap Visibility & Labels"));
+        ui->imageTypeComboBox->insertItem(4, QString("Hemicube-weighted Environment cubemap"));
+        ui->imageTypeComboBox->insertItem(5, QString("Hemicube weights"));
     } else {
         ui->meshWidget->setupCameras(imgr);
         ui->showTrajectoryCheckbox->setEnabled(true);
         ui->hemicubeButton->setText("Render hemicubes");
+        ui->imageTypeComboBox->clear();
+        for (int i = 0; i < imgr->getNumImageTypes(); ++i) {
+            ui->imageTypeComboBox->insertItem(i, QString::fromStdString(imgr->getImageType(i).getName()));
+        }
     }
     imagedisplaymode = -imagedisplaymode;
     updateImage(0);
