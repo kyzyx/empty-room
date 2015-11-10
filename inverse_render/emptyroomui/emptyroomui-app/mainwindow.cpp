@@ -600,6 +600,7 @@ void MainWindow::labelDataLoaded() {
 void MainWindow::checkEnableHemicubes() {
     if (mmgr->hasSamples() && ui->computeLabelImagesButton->isEnabled()) {
         ui->hemicubeButton->setEnabled(true);
+        ui->solveButton->setEnabled(true);
         ui->hemicubeResLineEdit->setEnabled(true);
         ui->numSamplesLineEdit->setEnabled(true);
 
@@ -874,6 +875,33 @@ void MainWindow::on_hemicubeButton_clicked()
     std::vector<float*> images;
     hr.computeSamples(samples, wallindices, ui->numSamplesLineEdit->text().toInt(), 1., &images);
     progressbar->setValue(100);*/
+}
+
+
+void MainWindow::on_solveButton_clicked()
+{
+    QString cmd = settings->value("solver_binary", "solverapp -meshfile %1 -p").toString();
+    cmd = cmd.arg(meshfilename);
+    QString extraflags = "";
+    extraflags += " -hemicuberesolution " + ui->hemicubeResLineEdit->text();
+    extraflags += " -numsamples " + ui->numSamplesLineEdit->text();
+    cmd += extraflags;
+    progressbar->setValue(0);
+    SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
+    workers.push_back(w);
+    QThread* thread = new QThread;
+    connect(thread, SIGNAL(started()), w, SLOT(run()));
+    connect(w, SIGNAL(percentChanged(int)), progressbar, SLOT(setValue(int)));
+    connect(w, SIGNAL(data(QString)), this, SLOT(solveCompleted(QString)));
+    w->moveToThread(thread);
+    thread->start();
+}
+
+void MainWindow::solveCompleted(QString s) {
+    QStringList toks = s.split(" ");
+    if (room && toks[0] == QString("WallMaterial")) {
+        room->wallMaterial = roommodel::Material(toks[1].toInt(), toks[2].toInt(), toks[3].toInt());
+    }
 }
 
 // ---------------------------

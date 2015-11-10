@@ -9,6 +9,7 @@ using namespace std;
 using namespace Eigen;
 
 void solveLights(vector<SampleData>& data, vector<int>& indices, vector<Material>& lights, double r, int ch) {
+    if (lights.empty()) return;
     VectorXd b(indices.size());
     MatrixXd A(indices.size(), lights.size());
     for (int i = 0; i < indices.size(); ++i) {
@@ -111,6 +112,7 @@ bool InverseRender::solveAll(vector<SampleData>& data) {
         }
         if (inliers.size() > bestinliers.size()) swap(inliers, bestinliers);
         if (i%100 == 0) cout << "Iteration " << i << endl;
+        if (cb) cb(100*i/numRansacIters);
     }
     cout << "Inlier proportion: " << bestinliers.size()/(double) data.size() << endl;
 
@@ -132,9 +134,10 @@ void InverseRender::computeSamples(
         vector<int> indices,
         int numsamples,
         double discardthreshold,
-        bool saveImages)
+        bool saveImages,
+        boost::function<void(int)> callback)
 {
-    hr->computeSamples(data, indices, numsamples, discardthreshold, saveImages?&images:NULL);
+    hr->computeSamples(data, indices, numsamples, discardthreshold, saveImages?&images:NULL, callback);
     for (int i = 0; i < data.size(); ++i) {
         data[i].lightamount.resize(numlights, 0);
     }

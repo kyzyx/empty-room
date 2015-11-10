@@ -9,9 +9,10 @@
 
 class InverseRender {
     public:
-        InverseRender(MeshManager* m, int nlights, int hemicubeResolution=150)
+        InverseRender(MeshManager* m, int nlights, int hemicubeResolution=150, boost::function<void(int)> callback=NULL)
             : mesh(m), numlights(nlights),
-              maxPercentErr(0.1), numRansacIters(1000)
+              maxPercentErr(0.1), numRansacIters(1000),
+              cb(callback)
         {
             rm = new RenderManager(m);
             rm->setupMeshColors();
@@ -33,7 +34,8 @@ class InverseRender {
                 std::vector<int> indices,
                 int numsamples,
                 double discardthreshold=1,
-                bool saveImages=true);
+                bool saveImages=true,
+                boost::function<void(int)> callback=NULL);
 
         void writeVariablesMatlab(std::vector<SampleData>& data, std::string filename);
         void writeVariablesBinary(std::vector<SampleData>& data, std::string filename);
@@ -58,6 +60,7 @@ class InverseRender {
 
         int numRansacIters;
         double maxPercentErr;
+        boost::function<void(int)> cb;
     public:
         std::vector<float*> images;
         MeshManager* mesh;

@@ -64,6 +64,7 @@ private slots:
     void on_commitLightsButton_clicked();
     void on_computeVerticalLinesButton_clicked();
     void on_hemicubeButton_clicked();
+    void on_solveButton_clicked();
 
     // Load/Save
     void on_actionOpen_Mesh_triggered();
@@ -93,6 +94,7 @@ private slots:
     void floorPlanLoaded();
     void edgeImagesLoaded();
     void edgesAndFloorPlanLoaded();
+    void solveCompleted(QString s);
 
     void checkEnableHemicubes();
 
@@ -100,8 +102,6 @@ private slots:
     void wallfindingDone();
     void orientationfindingDone();
     void partialVertexDataLoaded(int percent);
-
-
 
 private:
     Ui::MainWindow *ui;
