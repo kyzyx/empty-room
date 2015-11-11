@@ -499,6 +499,11 @@ void RenderManager::readFromRender(const CameraParams* cam, float*& image, int r
     glPopAttrib();
 }
 
+const int FLOAT_SIG_BITS = 23;
+const int FLOAT_EXP_MASK = 1 + (1 << FLOAT_SIG_BITS);
+inline int ftoi(float f) {
+    return (*reinterpret_cast<int*>(&f)) - FLOAT_EXP_MASK;
+}
 void RenderManager::createLabelImage(const CameraParams* cam, void* image) {
     int w = cam->width;
     int h = cam->height;
@@ -508,7 +513,7 @@ void RenderManager::createLabelImage(const CameraParams* cam, void* image) {
     for (int i = 0; i < h; ++i) {
         for (int j = 0; j < w; ++j) {
             int idx = i*w+j;
-            ret[i*w+j] = (char) *reinterpret_cast<int*>(&rendered[3*idx+2]);
+            ret[i*w+j] = (char) ftoi(rendered[3*idx+2]);
         }
     }
     delete [] rendered;

@@ -90,9 +90,11 @@ static const char* shadertext[NUM_TMOS] = {
         "vec4(241, 58, 19, 128)/255,\n" \
         "vec4(35, 44, 22, 128)/255\n" \
     ");\n" \
+    "const int FLOAT_SIG_BITS = 23;\n" \
+    "const int FLOAT_EXP_MASK = 1 + (1 << FLOAT_SIG_BITS);\n" \
     "void main(void) {\n" \
         "vec4 f = texture2D(rendered_image, f_texcoord);\n" \
-        "int id = floatBitsToInt(f.r);\n" \
+        "int id = floatBitsToInt(f.r) - FLOAT_EXP_MASK;\n" \
         "if (f.a < 0.8) color = vec4(channelselect,1)*f;\n" \
         "else if (id == 0) color = vec4(0,0,0,0.5);\n" \
         "else color = KellyColors[id%NUM_KELLY_COLORS];\n" \
@@ -104,9 +106,11 @@ static const char* shadertext[NUM_TMOS] = {
     "uniform vec3 hdr_bounds;\n" \
     "uniform vec3 channelselect;\n" \
     "out vec4 color;\n" \
+    "const int FLOAT_SIG_BITS = 23;\n" \
+    "const int FLOAT_EXP_MASK = 1 + (1 << FLOAT_SIG_BITS);\n" \
     "void main(void) {\n" \
         "vec4 f = texture2D(rendered_image, f_texcoord);\n" \
-        "vec3 c = clamp(vec3(floatBitsToInt(f.rgb))/hdr_bounds[1], 0, 1);\n" \
+        "vec3 c = clamp(vec3(floatBitsToInt(f.rgb) - FLOAT_EXP_MASK)/hdr_bounds[1], 0, 1);\n" \
         "if (f.a < 0.8) color = vec4(channelselect,1)*f;\n" \
         "else color = vec4(channelselect*c,f.a);\n" \
     "}",

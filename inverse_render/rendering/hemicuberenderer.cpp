@@ -65,6 +65,12 @@ void HemicubeRenderer::weightSideHemicube(float* img, float factor) const {
     }
 }
 
+const int FLOAT_SIG_BITS = 23;
+const int FLOAT_EXP_MASK = 1 + (1 << FLOAT_SIG_BITS);
+inline int ftoi(float f) {
+    return (*reinterpret_cast<int*>(&f)) - FLOAT_EXP_MASK;
+}
+
 float HemicubeRenderer::renderHemicube(
         const R3Point& p,
         const R3Vector& n,
@@ -86,8 +92,8 @@ float HemicubeRenderer::renderHemicube(
         renderFace(pp, orientations[o], n, light, VIEW_LABELS);
         for (int i = res/2; i < res; ++i) {
             for (int j = 0; j < res; ++j) {
-                int visibility = *reinterpret_cast<int*>(&light[3*(i*res+j)]);
-                int lightid = *reinterpret_cast<int*>(&light[3*(i*res+j)+1]);
+                int visibility = ftoi(light[3*(i*res+j)]);
+                int lightid = ftoi(light[3*(i*res+j)+1]);
                 if (lightid > 0) {
                     lightid--;
                     if (lightid >= lightareas.size()) lightareas.resize(lightid+1);
@@ -106,8 +112,8 @@ float HemicubeRenderer::renderHemicube(
     renderFace(pp, n, y, light, VIEW_LABELS);
     for (int i = 0; i < res; ++i) {
         for (int j = 0; j < res; ++j) {
-            int visibility = *reinterpret_cast<int*>(&light[3*(i*res+j)]);
-            int lightid = *reinterpret_cast<int*>(&light[3*(i*res+j)+1]);
+            int visibility = ftoi(light[3*(i*res+j)]);
+            int lightid = ftoi(light[3*(i*res+j)+1]);
             if (lightid > 0) {
                 lightid--;
                 if (lightid >= lightareas.size()) lightareas.resize(lightid+1);
