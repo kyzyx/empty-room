@@ -497,6 +497,7 @@ void MainWindow::on_actionOpen_Images_triggered()
 
         if (lazyloadimages) {
             imgr = new FileImageServer(camfilename.toStdString(), flipx, flipy);
+            settings->setValue("lazyloadimages", "1");
             imagesLoaded();
         } else {
             progressbar->setValue(0);
@@ -508,6 +509,7 @@ void MainWindow::on_actionOpen_Images_triggered()
             connect(w, SIGNAL(done()), this, SLOT(imagesLoaded()));
             w->moveToThread(thread);
             thread->start();
+            settings->setValue("lazyloadimages", "0");
         }
     }
 }
@@ -543,22 +545,46 @@ void MainWindow::on_actionLoad_Last_Mesh_Camera_File_triggered()
 {
     camfilename = settings->value("lastcamerafile", "").toString();
     meshfilename = settings->value("lastmeshfile", "").toString();
-    QString cmd = settings->value("loadall_binary", "dataserver -camfile %1 -meshfile %2 -p").toString();
-    cmd = cmd.arg(camfilename, meshfilename);
-    QString extraflags = settings->value("lastimageflags", "").toString();
-    cmd += extraflags;
-    extraflags = settings->value("lastmeshflags", "").toString();
-    cmd += extraflags;
-    progressbar->setValue(0);
-    SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
-    workers.push_back(w);
-    QThread* thread = new QThread;
-    connect(thread, SIGNAL(started()), w, SLOT(run()));
-    connect(w, SIGNAL(percentChanged(int)), progressbar, SLOT(setValue(int)));
-    connect(w, SIGNAL(done()), this, SLOT(imagesLoaded()));
-    connect(w, SIGNAL(done()), this, SLOT(meshLoaded()));
-    w->moveToThread(thread);
-    thread->start();
+    QString imageflags = settings->value("lastimageflags", "").toString();
+    QString meshflags = settings->value("lastmeshflags", "").toString();
+
+    int r = settings->value("lazyloadimages", "0").toInt();
+    if (r) {
+        lazyloadimages = true;
+        bool flipx = imageflags.contains("-flip_x");
+        bool flipy = imageflags.contains("-flip_y");
+        imgr = new FileImageServer(camfilename.toStdString(), flipx, flipy);
+        imagesLoaded();
+
+        QString cmd = settings->value("loadmesh_binary", "dataserver -meshfile %1 -p").toString();
+        cmd = cmd.arg(meshfilename);
+        cmd += meshflags;
+        progressbar->setValue(0);
+        SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
+        workers.push_back(w);
+        QThread* thread = new QThread;
+        connect(thread, SIGNAL(started()), w, SLOT(run()));
+        connect(w, SIGNAL(percentChanged(int)), progressbar, SLOT(setValue(int)));
+        connect(w, SIGNAL(done()), this, SLOT(meshLoaded()));
+        w->moveToThread(thread);
+        thread->start();
+    } else {
+        lazyloadimages = false;
+        QString cmd = settings->value("loadall_binary", "dataserver -camfile %1 -meshfile %2 -p").toString();
+        cmd = cmd.arg(camfilename, meshfilename);
+        cmd += imageflags;
+        cmd += meshflags;
+        progressbar->setValue(0);
+        SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
+        workers.push_back(w);
+        QThread* thread = new QThread;
+        connect(thread, SIGNAL(started()), w, SLOT(run()));
+        connect(w, SIGNAL(percentChanged(int)), progressbar, SLOT(setValue(int)));
+        connect(w, SIGNAL(done()), this, SLOT(imagesLoaded()));
+        connect(w, SIGNAL(done()), this, SLOT(meshLoaded()));
+        w->moveToThread(thread);
+        thread->start();
+    }
 }
 
 void MainWindow::meshAndImagesLoaded() {
