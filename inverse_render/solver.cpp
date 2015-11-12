@@ -121,7 +121,7 @@ bool InverseRender::solveAll(vector<SampleData>& data) {
 }
 
 void InverseRender::solve(vector<SampleData>& data) {
-    if (!numlights) return;
+    //if (!numlights) return;
     solveAll(data);
     lights.resize(numlights);
     cout << "Material estimate: (" << wallMaterial(0) << "," << wallMaterial(1) << "," << wallMaterial(2) << ")" << endl;
