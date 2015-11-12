@@ -40,7 +40,7 @@ ImageManager::ImageManager(int width, int height, int numImages)
 ImageManager::ImageManager(const string& camfile)
 {
     ifstream in(camfile.c_str());
-    in >> sz >> w >> h;
+    if (!readCameraFileHeader(in)) return;
     in.close();
 
     defaultinit(camfile);
@@ -56,6 +56,57 @@ void ImageManager::defaultinit(const string& camfile) {
     stringstream ss;
     ss << setbase(16) << SHM_IMAGEDATA_ID << str_hash(fullpath);
     shmname = ss.str();
+}
+
+bool ImageManager::readCameraFileHeader(ifstream& in, map<string, string>* vars) {
+    sz = 0;
+    w = 0;
+    h = 0;
+    string infoline;
+    getline(in, infoline);
+    size_t numparams = count(infoline.begin(), infoline.end(), ' ') + 1;
+    if (numparams == 1 && infoline == "CAMFILE_HEADER") {
+        // Format:
+        // CAMFILE_HEADER
+        // FrameCount n
+        // Width w
+        // Height h
+        // Vfov f
+        // Gamma g
+        // ...
+        // end_header
+        getline(in, infoline);
+        while (infoline != "end_header") {
+            stringstream infoin(infoline);
+            string key, val;
+            infoin >> key >> val;
+            transform(key.begin(), key.end(), key.begin(), ::tolower);
+            if (key == "framecount") {
+                sz = atoi(val.c_str());
+            } else if (key == "width") {
+                w = atoi(val.c_str());
+            } else if (key == "height") {
+                h = atoi(val.c_str());
+            } else if (vars) {
+                (*vars)[key] = val;
+            }
+            getline(in, infoline);
+        }
+        if (!sz || !w || !h) {
+            cerr << "Error! Incomplete header!" << endl;
+            return false;
+        }
+    }
+    else if (numparams < 4) {
+        cerr << "Error! Invalid camera file!" << endl;
+        return false;
+    } else {
+        stringstream infoin(infoline);
+        string vfov;
+        infoin >> sz >> w >> h >> vfov;
+        if (vars) (*vars)["vfov"] = vfov;
+    }
+    return true;
 }
 
 // Sets up what types of image
@@ -106,13 +157,7 @@ bool ImageManager::readCameraFile(const std::string& filename)
 {
     try {
         ifstream in(filename.c_str());
-        string infoline;
-        getline(in, infoline);
-        size_t numparams = count(infoline.begin(), infoline.end(), ' ') + 1;
-        if (numparams < 4) {
-            cerr << "Error! Invalid camera file!" << endl;
-            return false;
-        }
+        if (!readCameraFileHeader(in)) return false;
         double a;
         string s;
         for (int i = 0; i < sz; ++i) {

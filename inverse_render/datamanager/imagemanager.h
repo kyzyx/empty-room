@@ -91,6 +91,7 @@ class ImageManager {
         void defaultinit(const std::string& camfile);
         virtual bool initializeSharedMemory();
 
+        virtual bool readCameraFileHeader(std::ifstream& in, std::map<std::string, std::string>* vars=NULL);
         virtual bool readCameraFile(const std::string& filename);
 
         size_t computeSize() const;

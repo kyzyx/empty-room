@@ -20,7 +20,7 @@ ImageServer::ImageServer(const string& camerafile, bool flipx, bool flipy, cb_ty
 
 void ImageServer::initserver() {
     ifstream in(camfile.c_str());
-    in >> sz >> w >> h;
+    if (!readCameraFileHeader(in)) return;
     in.close();
 
     defaultinit(camfile);
@@ -46,7 +46,7 @@ typedef boost::filesystem::path bfpath;
 bool ImageServer::readCameraFile(const string& filename)
 {
     // Format:
-    //    FrameCount Width Height vfov [transformfilename]
+    //    FrameCount Width Height vfov
     //    filename1 x y z Up_x Up_y Up_z Towards_x Towards_y Towards_z [exp_r exp_g exp_b]
     //    filename2 x y z Up_x Up_y Up_z Towards_x Towards_y Towards_z [exp_r exp_g exp_b]
     //    filename3 x y z Up_x Up_y Up_z Towards_x Towards_y Towards_z [exp_r exp_g exp_b]
@@ -54,17 +54,28 @@ bool ImageServer::readCameraFile(const string& filename)
     //    Note: angles in degrees
     try {
         ifstream in(filename.c_str());
-        double hfov, vfov;
-        string infoline;
-        getline(in, infoline);
-        size_t numparams = count(infoline.begin(), infoline.end(), ' ') + 1;
-        stringstream infoin(infoline);
-        if (numparams < 4) {
-            cerr << "Error! Invalid camera file!" << endl;
+        map<string, string> vars;
+        if (!readCameraFileHeader(in, &vars)) return false;
+        double hfov, vfov, foc;
+        double gamma = 1;
+        if (vars.count("yfov")) {
+            vfov = atof(vars["yfov"].c_str());
+            foc = h/(2*tan(vfov*M_PI/360));
+        } else if (vars.count("vfov")) {
+            vfov = atof(vars["vfov"].c_str());
+            foc = h/(2*tan(vfov*M_PI/360));
+        } else if (vars.count("xfov")) {
+            hfov = atof(vars["xfov"].c_str());
+            foc = w/(2*tan(hfov*M_PI/360));
+            vfov = atan(h/(2*foc))*360/M_PI;
+        } else if (vars.count("hfov")) {
+            hfov = atof(vars["hfov"].c_str());
+            foc = w/(2*tan(hfov*M_PI/360));
+            vfov = atan(h/(2*foc))*360/M_PI;
+        } else {
+            cerr << "Missing field of view" << endl;
             return false;
         }
-        infoin >> sz >> w >> h >> vfov;
-        double foc = h/(2*tan(vfov*M_PI/360));
         double a,b,c;
         string s, line;
         CameraParams* curr = cameras;
@@ -95,11 +106,9 @@ bool ImageServer::readCameraFile(const string& filename)
                 curr->exposure.Reset(1,1,1);
             }
         }
-        if (numparams > 4) {
-            string camxform;
-            infoin >> camxform;
+        if (vars.count("camxform")) {
             bfpath filepath = bfpath(filename).parent_path();
-            filepath /= bfpath(camxform);
+            filepath /= bfpath(vars["camxform"]);
             string fullpath = boost::filesystem::canonical(filepath).string();
             ifstream xformin(fullpath);
             double m[16];
