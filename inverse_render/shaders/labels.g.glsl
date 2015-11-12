@@ -11,8 +11,9 @@ in ivec3 id[];
 uniform ivec3 auxdata;
 
 void main(void) {
-    bvec3 mask = equal(id[0], id[1]) && equal(id[1], id[2]);
-    flatcolor = mix(vec4(0,0,0,1), computed_color[0], bvec4(mask,true));
+    ivec3 zero = ivec3(0,0,0);
+    bvec3 mask = equal(id[0], zero) || equal(id[1], zero) || equal(id[2], zero);
+    flatcolor = mix(computed_color[0], vec4(0,0,0,1), bvec4(mask,false));
     for (int i = 0; i < 3; i++) {
         gl_Position = gl_in[i].gl_Position;
         EmitVertex();
