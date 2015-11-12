@@ -56,6 +56,7 @@ void ERUIGLWidget::setupCameras(ImageManager* imgr) {
     cameras.clear();
     for (int i = 0; i < imgr->size(); i++) {
         cameras.push_back(*imgr->getCamera(i));
+        camcolors.push_back(RNRgb(0,1,0));
     }
     int inc = 1;
     if (imgr->size() > MAX_CAMERAS) {
@@ -71,6 +72,7 @@ void ERUIGLWidget::setupCameras(std::vector<CameraParams>& cams) {
     cameras.clear();
     for (int i = 0; i < cams.size(); i++) {
         cameras.push_back(cams[i]);
+        camcolors.push_back(RNRgb(0,1,0));
     }
     int inc = 1;
     if (cams.size() > MAX_CAMERAS) {
@@ -157,7 +159,8 @@ void ERUIGLWidget::draw()
         l.Draw(0);
         for (size_t i = 0; i < camids.size(); ++i) {
             if (renderoptions.getCameraFormat() && camids[i] != renderoptions.getCurrentCamera()) {
-                glColor4f(0,1,0,0.5);
+                RNRgb rgb = camcolors[camids[i]];
+                glColor4f(rgb[0], rgb[1], rgb[2], 0.5);
                 renderCamera(cameras[camids[i]]);
             }
         }

@@ -246,6 +246,7 @@ void MainWindow::updateImage(int idx, int type)
             std::cout << s.netIncoming.r << "," << s.netIncoming.g << "," << s.netIncoming.b << " ";
             std::cout << rgb[0] << "," << rgb[1] << "," << rgb[2] << " ";
             std::cout << s.fractionUnknown << std::endl;
+            ui->meshWidget->setCameraColor(imageindex, rgb);
         }
         if (typeindex < 2) {
             for (int i = 0; i < w; ++i) {

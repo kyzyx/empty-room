@@ -171,6 +171,7 @@ public:
     void lookThroughCamera(const CameraParams* cam);
     void setupCameras(ImageManager* imgr);
     void setupCameras(std::vector<CameraParams>& cams);
+    void setCameraColor(int i, RNRgb rgb) { camcolors[i] = rgb; }
     void setOrientation(roommodel::RoomModel* room) {
         orientationroommodel = room;
     }
@@ -189,6 +190,7 @@ protected:
     RenderManager rendermanager;
     std::vector<CameraParams> cameras;
     std::vector<int> camids;
+    std::vector<RNRgb> camcolors;
     roommodel::RoomModel* orientationroommodel;
 
     ERUIRenderOptions renderoptions;
@@ -247,6 +249,9 @@ public:
     }
     void setOrientation(roommodel::RoomModel* room) {
         v->setOrientation(room);
+    }
+    void setCameraColor(int i, RNRgb rgb) {
+        v->setCameraColor(i, rgb);
     }
 
 signals:
