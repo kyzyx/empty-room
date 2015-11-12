@@ -112,7 +112,7 @@ bool ImageManager::readCameraFileHeader(ifstream& in, map<string, string>* vars)
 // Sets up what types of image
 void ImageManager::initializeImageTypes() {
     // Raw input data
-    imagetypes.push_back(ImageType("color",      "",     CV_32FC3, ImageType::IT_APPLYEXPOSURE));
+    imagetypes.push_back(ImageType("color",      "",     CV_32FC3, ImageType::IT_APPLYCORRECTION));
     // Custom types begin here
     imagetypes.push_back(ImageType("confidence", "conf", CV_32FC1, 0, ImageType::IT_SCALAR));
     imagetypes.push_back(ImageType("depth",      "pcd",  CV_32FC1, 0, ImageType::IT_DEPTHMAP));

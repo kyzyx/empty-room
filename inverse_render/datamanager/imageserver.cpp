@@ -76,6 +76,9 @@ bool ImageServer::readCameraFile(const string& filename)
             cerr << "Missing field of view" << endl;
             return false;
         }
+        if (vars.count("gamma")) {
+            gamma = atof(vars["gamma"].c_str());
+        }
         double a,b,c;
         string s, line;
         CameraParams* curr = cameras;
@@ -99,6 +102,7 @@ bool ImageServer::readCameraFile(const string& filename)
             curr->height = h;
             curr->focal_length = foc;
             curr->fov = vfov;
+            curr->gamma = gamma;
             if (hasExposures) {
                 imagein >> a >> b >> c;
                 curr->exposure.Reset(a,b,c);
@@ -161,11 +165,12 @@ bool ImageServer::loadAllFiles() {
                 } else {
                     if (imagetypes[n].getType() == CV_32FC3) {
                         success = ImageIO::readFloatImage(f, im, w, h);
-                        if (imagetypes[n].getFlags() & ImageType::IT_APPLYEXPOSURE) {
+                        if (imagetypes[n].getFlags() & ImageType::IT_APPLYCORRECTION) {
                             float* p = (float*) im;
                             for (int j = 0; j < w*h; j++) {
                                 for (int k = 0; k < 3; k++) {
-                                    *p++ *= getCamera(i)->exposure[k];
+                                    *p = pow(*p, getCamera(i)->gamma)*getCamera(i)->exposure[k];
+                                    p++;
                                 }
                             }
                         }

@@ -10,6 +10,7 @@ struct CameraParams {
     R3Vector right;
 
     RNRgb exposure;
+    float gamma;
 
     int width;
     int height;

@@ -74,11 +74,12 @@ bool FileImageServer::loadImages(int i) {
             } else {
                 if (imagetypes[n].getType() == CV_32FC3) {
                     success = ImageIO::readFloatImage(f, im, w, h);
-                    if (imagetypes[n].getFlags() & ImageType::IT_APPLYEXPOSURE) {
+                    if (imagetypes[n].getFlags() & ImageType::IT_APPLYCORRECTION) {
                         float* p = (float*) im;
                         for (int j = 0; j < w*h; j++) {
                             for (int k = 0; k < 3; k++) {
-                                *p++ *= getCamera(i)->exposure[k];
+                                *p = pow(*p, getCamera(i)->gamma)*getCamera(i)->exposure[k];
+                                p++;
                             }
                         }
                     }

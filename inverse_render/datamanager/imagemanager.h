@@ -38,7 +38,7 @@ class ImageType {
         enum {
             IT_COMPUTED=1,
             IT_NOFLIP=2,
-            IT_APPLYEXPOSURE=4,
+            IT_APPLYCORRECTION=4,
         };
     private:
         std::string n;
