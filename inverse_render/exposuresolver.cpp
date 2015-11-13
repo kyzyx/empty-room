@@ -54,7 +54,9 @@ double solveExposure(
                 else if (ch == 2) costfn = CostFunctor::Create(s.b);
                 problem.AddResidualBlock(
                     costfn, NULL, &exps[s.id], &radiances[i]);
+                problem.SetParameterLowerBound(&exps[s.id], 0, 0);
             }
+            problem.SetParameterLowerBound(&radiances[i], 0, 0);
         }
         problem.SetParameterBlockConstant(&exps[0]);
         ceres::Solver::Options options;
