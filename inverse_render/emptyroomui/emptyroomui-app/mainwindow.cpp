@@ -738,7 +738,10 @@ void MainWindow::on_reprojectButton_clicked()
     QString cmd = settings->value("reproject_binary", "reprojectapp -camfile %1 -meshfile %2 -p").toString();
     cmd = cmd.arg(camfilename, meshfilename);
     QString extraflags;
-    if (lazyloadimages) extraflags += " -noshm";
+    if (lazyloadimages) {
+        extraflags += settings->value("lastimageflags", "").toString();
+        extraflags += " -noshm";
+    }
     cmd += extraflags;
     progressbar->setValue(0);
     SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
@@ -1025,7 +1028,10 @@ void MainWindow::on_edgeFilterButton_clicked()
     QString cmd = settings->value("compute_edges_binary", "edgeimageapp -camfile %1 -p").toString();
     cmd = cmd.arg(camfilename);
     QString extraflags = "";
-    if (lazyloadimages) extraflags += " -noshm";
+    if (lazyloadimages) {
+        extraflags += settings->value("lastimageflags", "").toString();
+        extraflags += " -noshm";
+    }
     cmd += extraflags;
     progressbar->setValue(0);
     SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
@@ -1060,7 +1066,10 @@ void MainWindow::on_computeVerticalLinesButton_clicked()
     QString cmd = settings->value("compute_rwo_binary", "linefindapp -camfile %1 -roommodel %2 -p").toString();
     cmd = cmd.arg(camfilename, roommodelfile);
     QString extraflags = "";
-    if (lazyloadimages) extraflags += " -noshm";
+    if (lazyloadimages) {
+        extraflags += settings->value("lastimageflags", "").toString();
+        extraflags += " -noshm";
+    }
     cmd += extraflags;
     progressbar->setValue(0);
     SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
