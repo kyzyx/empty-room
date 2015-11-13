@@ -50,6 +50,7 @@ class ExposureSolverApp : public InvrenderApp {
             if (pcl::console::find_argument(argc, argv, "-subsample") >= 0) {
                 pcl::console::parse_argument(argc, argv, "-subsample", subsample);
             }
+            return 1;
         }
         float subsample;
 };
