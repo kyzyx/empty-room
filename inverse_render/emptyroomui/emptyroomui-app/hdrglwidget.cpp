@@ -59,7 +59,10 @@ static const char* shadertext[NUM_TMOS] = {
     "void main(void) {\n" \
         "vec4 f = texture2D(rendered_image, f_texcoord);\n" \
         "if (f.a < 0.8) color = vec4(channelselect,1)*f;\n" \
-        "else color = vec4(channelselect,1)*clamp(pow((f-hdr_bounds[0])/(hdr_bounds[1]-hdr_bounds[0]),hdr_bounds[2]*vec4(1,1,1,1)), 0, 1);\n" \
+        "else {\n" \
+            "vec4 g = pow(f, vec4(hdr_bounds[2]*vec3(1,1,1), 1));\n" \
+            "color = vec4(channelselect,1)*clamp((g-hdr_bounds[0])/(hdr_bounds[1]-hdr_bounds[0]), 0, 1);\n" \
+        "}\n" \
     "}",
     // Float-as-int categorical shader
     "#version 400\n" \
@@ -270,7 +273,7 @@ void HDRGlHelper::paintHelper() {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, fbo_tex);
     glUniform1i(p.uniform_ids[UNIFORM_FBO_TEXTURE], 0);
-    glUniform3f(p.uniform_ids[UNIFORM_HDR_BOUNDS], mini, maxi, 2.2);
+    glUniform3f(p.uniform_ids[UNIFORM_HDR_BOUNDS], mini, maxi, 1/2.2);
     glUniform3f(p.uniform_ids[UNIFORM_CHANNEL_SELECT],
                 (channelsToRender&RED_CHANNEL)  ?1.f:0.f,
                 (channelsToRender&GREEN_CHANNEL)?1.f:0.f,
