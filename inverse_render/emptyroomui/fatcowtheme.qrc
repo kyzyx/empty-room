@@ -1,0 +1,38 @@
+<RCC>
+    <qresource prefix="/icons/FatCow">
+        <file alias="index.theme">icons/FatCow/index.theme</file>
+
+        <file alias="16x16/camera.png">icons/FatCow/16x16/camera.png</file>
+        <file alias="32x32/camera.png">icons/FatCow/32x32/camera.png</file>
+
+        <file alias="16x16/draw_polygon.png">icons/FatCow/16x16/draw_polygon.png</file>
+        <file alias="32x32/draw_polygon.png">icons/FatCow/32x32/draw_polygon.png</file>
+
+        <file alias="16x16/layer_open.png">icons/FatCow/16x16/layer_open.png</file>
+        <file alias="32x32/layer_open.png">icons/FatCow/32x32/layer_open.png</file>
+
+        <file alias="16x16/joystick.png">icons/FatCow/16x16/joystick.png</file>
+        <file alias="32x32/joystick.png">icons/FatCow/32x32/joystick.png</file>
+
+        <file alias="16x16/layer_add.png">icons/FatCow/16x16/layer_add.png</file>
+        <file alias="32x32/layer_add.png">icons/FatCow/32x32/layer_add.png</file>
+
+        <file alias="16x16/layer_delete.png">icons/FatCow/16x16/layer_delete.png</file>
+        <file alias="32x32/layer_delete.png">icons/FatCow/32x32/layer_delete.png</file>
+
+        <file alias="16x16/layer_select.png">icons/FatCow/16x16/layer_select.png</file>
+        <file alias="32x32/layer_select.png">icons/FatCow/32x32/layer_select.png</file>
+
+        <file alias="16x16/layer_transparent.png">icons/FatCow/16x16/layer_transparent.png</file>
+        <file alias="32x32/layer_transparent.png">icons/FatCow/32x32/layer_transparent.png</file>
+
+        <file alias="16x16/pencil.png">icons/FatCow/16x16/pencil.png</file>
+        <file alias="32x32/pencil.png">icons/FatCow/32x32/pencil.png</file>
+
+        <file alias="16x16/pencil_add.png">icons/FatCow/16x16/pencil_add.png</file>
+        <file alias="32x32/pencil_add.png">icons/FatCow/32x32/pencil_add.png</file>
+
+        <file alias="16x16/pencil_delete.png">icons/FatCow/16x16/pencil_delete.png</file>
+        <file alias="32x32/pencil_delete.png">icons/FatCow/32x32/pencil_delete.png</file>
+    </qresource>
+</RCC>

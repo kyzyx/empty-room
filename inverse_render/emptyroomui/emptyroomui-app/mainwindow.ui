@@ -1147,8 +1147,27 @@
     <addaction name="separator"/>
     <addaction name="menuSave_Generated_Images"/>
    </widget>
+   <widget class="QMenu" name="menuSelect">
+    <property name="title">
+     <string>Select</string>
+    </property>
+    <addaction name="actionCursor_Mode_Select"/>
+    <addaction name="actionCursor_Mode_Trackball"/>
+    <addaction name="separator"/>
+    <addaction name="actionSelect_All_Vertices"/>
+    <addaction name="actionSelect_Wall_Vertices"/>
+    <addaction name="actionSelect_Floor_Vertices"/>
+    <addaction name="actionSelect_Ceiling_Vertices"/>
+    <addaction name="actionSelect_None"/>
+    <addaction name="separator"/>
+    <addaction name="actionIncrease_Selection_Brush_Size"/>
+    <addaction name="actionDecrease_Selection_Brush_Size"/>
+    <addaction name="actionAdd_To_Selection"/>
+    <addaction name="actionRemove_From_Selection"/>
+   </widget>
    <addaction name="menuEmpty_Room_Editor"/>
    <addaction name="menuIntermediates"/>
+   <addaction name="menuSelect"/>
    <addaction name="menuHelp"/>
   </widget>
   <widget class="QToolBar" name="mainToolBar">
@@ -1161,13 +1180,21 @@
    <addaction name="actionOpen_Mesh"/>
    <addaction name="actionOpen_Images"/>
    <addaction name="separator"/>
+   <addaction name="actionCursor_Mode_Trackball"/>
+   <addaction name="actionCursor_Mode_Select"/>
+   <addaction name="separator"/>
+   <addaction name="actionSelect_All_Vertices"/>
+   <addaction name="actionSelect_None"/>
+   <addaction name="actionIncrease_Selection_Brush_Size"/>
+   <addaction name="actionDecrease_Selection_Brush_Size"/>
+   <addaction name="actionAdd_To_Selection"/>
+   <addaction name="actionRemove_From_Selection"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
   <action name="actionOpen_Mesh">
    <property name="icon">
-    <iconset theme="document-open">
-     <normaloff/>
-    </iconset>
+    <iconset resource="../fatcowtheme.qrc">
+     <normaloff>:/icons/FatCow/32x32/draw_polygon.png</normaloff>:/icons/FatCow/32x32/draw_polygon.png</iconset>
    </property>
    <property name="text">
     <string>Open Mesh...</string>
@@ -1178,9 +1205,8 @@
   </action>
   <action name="actionOpen_Images">
    <property name="icon">
-    <iconset theme="folder-open">
-     <normaloff/>
-    </iconset>
+    <iconset resource="../fatcowtheme.qrc">
+     <normaloff>:/icons/FatCow/32x32/camera.png</normaloff>:/icons/FatCow/32x32/camera.png</iconset>
    </property>
    <property name="text">
     <string>Open Camera File</string>
@@ -1292,6 +1318,174 @@
     <string>Reload Per-Vertex Samples</string>
    </property>
   </action>
+  <action name="actionCursor_Mode_Select">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../fatcowtheme.qrc">
+     <normaloff>:/icons/FatCow/32x32/pencil.png</normaloff>:/icons/FatCow/32x32/pencil.png</iconset>
+   </property>
+   <property name="text">
+    <string>Cursor Mode: Select</string>
+   </property>
+   <property name="toolTip">
+    <string>Cursor Mode: Select Vertices</string>
+   </property>
+  </action>
+  <action name="actionCursor_Mode_Trackball">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../fatcowtheme.qrc">
+     <normaloff>:/icons/FatCow/32x32/joystick.png</normaloff>:/icons/FatCow/32x32/joystick.png</iconset>
+   </property>
+   <property name="text">
+    <string>Cursor Mode: Trackball</string>
+   </property>
+   <property name="toolTip">
+    <string>Cursor Mode: Manipulate scene</string>
+   </property>
+  </action>
+  <action name="actionSelect_All_Vertices">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../fatcowtheme.qrc">
+     <normaloff>:/icons/FatCow/32x32/layer_select.png</normaloff>:/icons/FatCow/32x32/layer_select.png</iconset>
+   </property>
+   <property name="text">
+    <string>Select All Vertices</string>
+   </property>
+   <property name="toolTip">
+    <string>Select All Vertices</string>
+   </property>
+  </action>
+  <action name="actionSelect_None">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../fatcowtheme.qrc">
+     <normaloff>:/icons/FatCow/32x32/layer_transparent.png</normaloff>:/icons/FatCow/32x32/layer_transparent.png</iconset>
+   </property>
+   <property name="text">
+    <string>Select None</string>
+   </property>
+   <property name="toolTip">
+    <string>Deselect All Vertices</string>
+   </property>
+  </action>
+  <action name="actionIncrease_Selection_Brush_Size">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../fatcowtheme.qrc">
+     <normaloff>:/icons/FatCow/32x32/pencil_add.png</normaloff>:/icons/FatCow/32x32/pencil_add.png</iconset>
+   </property>
+   <property name="text">
+    <string>Increase Selection Brush Size</string>
+   </property>
+   <property name="toolTip">
+    <string>Increase the size of the vertex selection brush</string>
+   </property>
+  </action>
+  <action name="actionDecrease_Selection_Brush_Size">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../fatcowtheme.qrc">
+     <normaloff>:/icons/FatCow/32x32/pencil_delete.png</normaloff>:/icons/FatCow/32x32/pencil_delete.png</iconset>
+   </property>
+   <property name="text">
+    <string>Decrease Selection Brush Size</string>
+   </property>
+   <property name="toolTip">
+    <string>Decrease the size of the vertex selection brush</string>
+   </property>
+  </action>
+  <action name="actionAdd_To_Selection">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../fatcowtheme.qrc">
+     <normaloff>:/icons/FatCow/32x32/layer_add.png</normaloff>:/icons/FatCow/32x32/layer_add.png</iconset>
+   </property>
+   <property name="text">
+    <string>Add To Selection</string>
+   </property>
+   <property name="toolTip">
+    <string>Brush adds vertices to selection</string>
+   </property>
+  </action>
+  <action name="actionRemove_From_Selection">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../fatcowtheme.qrc">
+     <normaloff>:/icons/FatCow/32x32/layer_delete.png</normaloff>:/icons/FatCow/32x32/layer_delete.png</iconset>
+   </property>
+   <property name="text">
+    <string>Remove From Selection</string>
+   </property>
+   <property name="toolTip">
+    <string>Brush removes vertices from selection</string>
+   </property>
+  </action>
+  <action name="actionSelect_Wall_Vertices">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Select Wall Vertices</string>
+   </property>
+   <property name="toolTip">
+    <string>Select all vertices labelled as Wall</string>
+   </property>
+  </action>
+  <action name="actionSelect_Floor_Vertices">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Select Floor Vertices</string>
+   </property>
+   <property name="toolTip">
+    <string>Select all vertices labelled as Floor</string>
+   </property>
+  </action>
+  <action name="actionSelect_Ceiling_Vertices">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Select Ceiling Vertices</string>
+   </property>
+   <property name="toolTip">
+    <string>Select all vertices labelled as Ceiling</string>
+   </property>
+  </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <customwidgets>
@@ -1308,7 +1502,9 @@
    <container>1</container>
   </customwidget>
  </customwidgets>
- <resources/>
+ <resources>
+  <include location="../fatcowtheme.qrc"/>
+ </resources>
  <connections>
   <connection>
    <sender>loadReprojectButton</sender>

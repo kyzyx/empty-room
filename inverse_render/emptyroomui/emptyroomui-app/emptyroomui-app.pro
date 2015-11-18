@@ -73,3 +73,6 @@ OTHER_FILES += \
 
 QMAKE_POST_LINK += cp $$SHADER_DIR/* ../
 
+RESOURCES += \
+    ../fatcowtheme.qrc
+
