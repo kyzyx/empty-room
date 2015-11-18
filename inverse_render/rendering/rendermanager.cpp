@@ -15,14 +15,27 @@ const GLchar* uniformnames[NUM_UNIFORMS] = {
 };
 
 std::string flatfragshadername = "flat.f.glsl";
-std::string defaultfragshadername = "default.f.glsl";
 
 void ShaderType::init() {
+    ShaderProgram* prog;
     if (f&SHADERFLAGS_USESH_FLAT_FRAG) {
-        progid = LoadShaderFromFiles(n+".v.glsl", flatfragshadername, n+".g.glsl");
+        prog = new GeometryShader(
+                   new FileShaderProgram(n+".v.glsl", flatfragshadername),
+                   n+".g.glsl"
+               );
+    } else if (f&SHADERFLAGS_VERTEX_COMPUTE) {
+        std::vector<std::string> varyings;
+        varyings.push_back("status");
+        prog = new TransformFeedbackShader(
+                   new VertexFileShaderProgram(n+".v.glsl"),
+                   varyings
+               );
     } else {
-        progid = LoadShaderFromFiles(n+".v.glsl", defaultfragshadername);
+        prog = new VertexFileShaderProgram(n+".v.glsl");
     }
+    prog->init();
+    progid = prog->getProgId();
+    delete prog;
     glUseProgram(progid);
     for (int j = 0; j < NUM_UNIFORM_TEXTURES; ++j) {
         if (f&(1<<j)) {

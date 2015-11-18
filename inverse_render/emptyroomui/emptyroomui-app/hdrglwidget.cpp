@@ -234,7 +234,10 @@ void HDRGlHelper::initializeHelper() {
     };
     GLchar* attribute_name = "v_coord";
     for (int i = 0; i < NUM_TMOS; ++i) {
-        progs[i].progid = LoadShader(vertexshadertext, shadertext[i]);
+        ShaderProgram* prog = new SourceShaderProgram(vertexshadertext, shadertext[i]);
+        prog->init();
+        progs[i].progid = prog->getProgId();
+        delete prog;
         progs[i].v_coord = glGetAttribLocation(progs[i].progid, attribute_name);
         if (progs[i].v_coord == -1) {
             qDebug("Error binding attribute %s in %s", attribute_name, shadername[i]);

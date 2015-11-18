@@ -4,6 +4,8 @@
 #include <vector>
 #include <cstring>
 
+const char* VertexFileShaderProgram::DEFAULTFRAGFILE = "default.f.glsl";
+
 std::string readFile(const char *filePath) {
     std::string content;
     std::ifstream fileStream(filePath, std::ios::in);
@@ -23,13 +25,19 @@ std::string readFile(const char *filePath) {
     return content;
 }
 
-GLuint LoadShaderFromFiles(const std::string& vertex_path, const std::string& fragment_path, const std::string& geometry_path) {
-    return LoadShaderFromFiles(vertex_path.c_str(), fragment_path.c_str(), geometry_path.c_str());
+void FileShaderProgram::compile()
+{
+    std::string vertShaderStr = readFile(vfile.c_str());
+    std::string fragShaderStr = readFile(ffile.c_str());
+    const char *vertShaderSrc = vertShaderStr.c_str();
+    const char *fragShaderSrc = fragShaderStr.c_str();
+    compileFromSource(vertShaderSrc, fragShaderSrc);
 }
-GLuint LoadShader(const char *vertShaderSrc, const char *fragShaderSrc, const char *geomShaderSrc) {
-    GLuint vertShader = glCreateShader(GL_VERTEX_SHADER);
-    GLuint fragShader = glCreateShader(GL_FRAGMENT_SHADER);
-    GLuint geomShader;
+
+void ShaderProgram::compileFromSource(const char* vertShaderSrc, const char* fragShaderSrc)
+{
+    vertShader = glCreateShader(GL_VERTEX_SHADER);
+    fragShader = glCreateShader(GL_FRAGMENT_SHADER);
 
     GLint result = GL_FALSE;
     int logLength;
@@ -57,28 +65,19 @@ GLuint LoadShader(const char *vertShaderSrc, const char *fragShaderSrc, const ch
     std::vector<char> fragShaderError((logLength > 1) ? logLength : 1);
     glGetShaderInfoLog(fragShader, logLength, NULL, &fragShaderError[0]);
     std::cout << &fragShaderError[0] << std::endl;
+}
 
-    bool useGeometry = geomShaderSrc && strlen(geomShaderSrc) > 0;
-    if (useGeometry) {
-        // Compile geometry shader
-        geomShader = glCreateShader(GL_GEOMETRY_SHADER);
-        std::cout << "Compiling geometry shader." << std::endl;
-        glShaderSource(geomShader, 1, &geomShaderSrc, NULL);
-        glCompileShader(geomShader);
-
-        // Check geometry shader
-        glGetShaderiv(geomShader, GL_COMPILE_STATUS, &result);
-        glGetShaderiv(geomShader, GL_INFO_LOG_LENGTH, &logLength);
-        std::vector<char> geomShaderError((logLength > 1) ? logLength : 1);
-        glGetShaderInfoLog(geomShader, logLength, NULL, &geomShaderError[0]);
-        std::cout << &geomShaderError[0] << std::endl;
-    }
-
-    std::cout << "Linking program" << std::endl;
-    GLuint program = glCreateProgram();
+void ShaderProgram::prelink()
+{
+    program = glCreateProgram();
     glAttachShader(program, vertShader);
     glAttachShader(program, fragShader);
-    if (useGeometry) glAttachShader(program, geomShader);
+}
+
+void ShaderProgram::link()
+{
+    GLint result = GL_FALSE;
+    int logLength;
     glLinkProgram(program);
     glGetProgramiv(program, GL_LINK_STATUS, &result);
     if (!result) {
@@ -95,22 +94,59 @@ GLuint LoadShader(const char *vertShaderSrc, const char *fragShaderSrc, const ch
         glGetProgramInfoLog(program, logLength, NULL, &programError[0]);
         std::cout << &programError[0] << std::endl;
     }
-    glDeleteShader(vertShader);
-    glDeleteShader(fragShader);
-    if (useGeometry) glDeleteShader(geomShader);
-
-    return program;
 }
 
+void ShaderProgram::cleanup()
+{
+    glDeleteShader(vertShader);
+    glDeleteShader(fragShader);
+}
 
-GLuint LoadShaderFromFiles(const char *vertex_path, const char *fragment_path, const char *geometry_path) {
-    // Read shaders
-    std::string vertShaderStr = readFile(vertex_path);
-    std::string fragShaderStr = readFile(fragment_path);
-    std::string geomShaderStr;
-    bool useGeometry = strlen(geometry_path) > 0;
-    if (useGeometry) geomShaderStr = readFile(geometry_path);
-    const char *vertShaderSrc = vertShaderStr.c_str();
-    const char *fragShaderSrc = fragShaderStr.c_str();
-    return LoadShader(vertShaderSrc, fragShaderSrc, useGeometry?geomShaderStr.c_str():NULL);
+void GeometryShader::docompile() {
+    GLint result = GL_FALSE;
+    int logLength;
+    // Compile geometry shader
+    geomShader = glCreateShader(GL_GEOMETRY_SHADER);
+    std::string geomShaderStr = readFile(gfile.c_str());
+    const char *geomShaderSrc = geomShaderStr.c_str();
+    std::cout << "Compiling geometry shader." << std::endl;
+    glShaderSource(geomShader, 1, &geomShaderSrc, NULL);
+    glCompileShader(geomShader);
+
+    // Check geometry shader
+    glGetShaderiv(geomShader, GL_COMPILE_STATUS, &result);
+    glGetShaderiv(geomShader, GL_INFO_LOG_LENGTH, &logLength);
+    std::vector<char> geomShaderError((logLength > 1) ? logLength : 1);
+    glGetShaderInfoLog(geomShader, logLength, NULL, &geomShaderError[0]);
+    std::cout << &geomShaderError[0] << std::endl;
+}
+
+void GeometryShader::doprelink() {
+    glAttachShader(program, geomShader);
+}
+
+void GeometryShader::docleanup() {
+    glDeleteShader(geomShader);
+}
+
+TransformFeedbackShader::TransformFeedbackShader(ShaderProgram* component, std::vector<std::string> names)
+    : ShaderProgramDecorator(component)
+{
+    numvaryings = names.size();
+    varyings = new GLchar*[numvaryings];
+    for (int i = 0; i < numvaryings; i++) {
+        varyings[i] = new GLchar[names[i].length()+1];
+        strcpy(varyings[i], names[i].c_str());
+    }
+}
+
+TransformFeedbackShader::~TransformFeedbackShader() {
+    for (int i = 0; i < numvaryings; i++) {
+        delete [] varyings[i];
+    }
+    delete varyings;
+}
+
+void TransformFeedbackShader::doprelink() {
+    glTransformFeedbackVaryings(program, numvaryings, (const GLchar**) varyings, GL_INTERLEAVED_ATTRIBS);
 }
