@@ -31,7 +31,12 @@ HEADERS  += mainwindow.h \
 FORMS    += mainwindow.ui
 
 GAPS_DIR = $$PWD/../../../GAPS/
-INVRENDER_DIR = $$PWD/../../build/
+CONFIG(debug, debug|release) {
+INVRENDER_DIR = $$PWD/../../Debug
+}
+CONFIG(release,debug|release) {
+INVRENDER_DIR = $$PWD/../../build
+}
 SHADER_DIR = $$PWD/../../shaders/
 unix: {
     LIBS += -L$$INVRENDER_DIR \

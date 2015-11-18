@@ -13,7 +13,7 @@ void HDRViewer::init() {
     connect(rendercontrol, SIGNAL(fixParams(int,int,int)), this, SLOT(fixRange(int,int,int)));
     connect(rendercontrol, SIGNAL(suggestRange(int,int)), this, SLOT(setSuggestRange(int,int)));
 
-    savedsettings.resize(1);
+    savedsettings.resize(8);
     QWidget* container = new QWidget(this);
 
     red_check = new QCheckBox(this);
