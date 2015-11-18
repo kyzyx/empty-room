@@ -18,7 +18,8 @@ SOURCES += main.cpp\
     qxtspanslider.cpp \
     subprocessworker.cpp \
     hdrglwidget.cpp \
-    hdrimageviewer.cpp
+    hdrimageviewer.cpp \
+    vertexselector.cpp
 
 HEADERS  += mainwindow.h \
             eruiglwidget.h \
@@ -26,7 +27,8 @@ HEADERS  += mainwindow.h \
     qxtspanslider.h \
     subprocessworker.h \
     hdrglwidget.h \
-    hdrimageviewer.h
+    hdrimageviewer.h \
+    vertexselector.h
 
 FORMS    += mainwindow.ui
 
