@@ -71,7 +71,11 @@ OTHER_FILES += \
     $$SHADER_DIR/labels.g.glsl \
     $$SHADER_DIR/overlay.g.glsl \
     $$SHADER_DIR/threshold.v.glsl \
-    $$SHADER_DIR/threshold.g.glsl
+    $$SHADER_DIR/threshold.g.glsl \
+    $$SHADER_DIR/selectdiff.v.glsl \
+    $$SHADER_DIR/selectunion.v.glsl \
+    $$SHADER_DIR/selectoverlay.v.glsl \
+    $$SHADER_DIR/selectoverlay.g.glsl
 
 QMAKE_POST_LINK += cp $$SHADER_DIR/* ../
 

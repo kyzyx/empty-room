@@ -13,7 +13,10 @@ enum {
     VIEW_LABELS,
     VIEW_LABELOVERLAY,
     VIEW_THRESHOLD,
+    VIEW_SELECTOVERLAY,
     PRECALCULATE,
+    SELECT_UNION,
+    SELECT_DIFF,
     NUM_VIEW_TYPES,
 };
 
@@ -86,8 +89,19 @@ public:
     void readFromRender(const CameraParams* cam, float*& image, int rendermode, bool preallocated=false);
     void renderMesh(int rendermode);
     void renderRoom();
+    void saveMatricesForSelection() {
+        for (int i = 0; i < 16; i++) {
+            selmodelview[i] = modelview[i];
+            selprojection[i] = projection[i];
+        }
+    }
 
     void lookThroughCamera(const CameraParams* cam);
+
+    void getSelectedVertices(std::vector<int>& vertices);
+    void selectVertices(int x, int y, int w, int h, int r, int op=SELECT_UNION);
+    void clearSelectedVertices();
+    void selectVertices(std::vector<int>& vertices);
 
     MeshManager* getMeshManager() { return mmgr; }
 
@@ -124,6 +138,18 @@ protected:
     std::vector<ShaderType> shaders;
     //   Read-from-render textures
     GLuint rfr_fbo, rfr_tex, rfr_fbo_z;
+    //   GPU selection data
+    GLuint selectvbo[2];
+    int selectvbooutput;
+    GLfloat selmodelview[16];
+    GLfloat selprojection[16];
+
+    // Buffer holding per-vertex selection data
+    GLuint* selectbuf;
+
+    // Last modelview and projection matrices
+    GLfloat modelview[16];
+    GLfloat projection[16];
 
     bool samples_initialized;
     bool shaders_initialized;

@@ -57,7 +57,11 @@ class ShaderProgramDecorator : public ShaderProgram {
         ShaderProgramDecorator(ShaderProgram* component) : prog(component) {;}
 
         virtual void compile() override { prog->compile(); docompile(); }
-        virtual void prelink() override { prog->prelink(); doprelink(); }
+        virtual void prelink() override {
+            prog->prelink();
+            program = prog->getProgId();
+            doprelink();
+        }
         virtual void cleanup() override { prog->cleanup(); docleanup(); }
 
     protected:

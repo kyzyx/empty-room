@@ -75,9 +75,18 @@ void RenderManager::initShaderTypes() {
         "Highlight pixels within a threshold",
         //SHADERFLAGS_USEU_COLOR|SHADERFLAGS_USEU_AUX|SHADERFLAGS_PASS|SHADERFLAGS_USESH_FLAT_FRAG));
         SHADERFLAGS_PASS|SHADERFLAGS_USESH_FLAT_FRAG));
+    shaders.push_back(ShaderType("selectoverlay",
+        "Selected vertices",
+        SHADERFLAGS_PASS|SHADERFLAGS_USESH_FLAT_FRAG));
     shaders.push_back(ShaderType("precalculated",
         "Precalculated Colors",
         SHADERFLAGS_PASS));
+    shaders.push_back(ShaderType("selectunion",
+        "GPU Vertex Selection - Add to selection",
+        SHADERFLAGS_USEU_AUX|SHADERFLAGS_PASS|SHADERFLAGS_VERTEX_COMPUTE));
+    shaders.push_back(ShaderType("selectdiff",
+        "GPU Vertex Selection - Remove from selection",
+        SHADERFLAGS_USEU_AUX|SHADERFLAGS_PASS|SHADERFLAGS_VERTEX_COMPUTE));
 }
 
 RenderManager::RenderManager(MeshManager* meshmanager) {
@@ -88,6 +97,7 @@ RenderManager::RenderManager(MeshManager* meshmanager) {
     initShaderTypes();
     precalculated = -1;
     setMeshManager(meshmanager);
+    selectbuf = NULL;
 }
 
 RenderManager::~RenderManager() {
@@ -98,6 +108,7 @@ RenderManager::~RenderManager() {
         glDeleteBuffers(1, &roomcbo);
         if (samples_initialized) glDeleteTextures(3, sampletex);
     }
+    if (selectbuf) delete selectbuf;
 }
 
 void RenderManager::init() {
@@ -207,6 +218,17 @@ void RenderManager::setupMeshGeometry() {
     glEnableVertexAttribArray(3);
     glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glBindVertexArray(0);
+
+    // Set up vertex selection buffers
+    glGenBuffers(2, selectvbo);
+    for (int i = 0; i < 2; i++) {
+        glBindBuffer(GL_ARRAY_BUFFER, selectvbo[i]);
+        glBufferData(GL_ARRAY_BUFFER,
+                sizeof(GLuint)*mmgr->NVertices(),
+                0, GL_DYNAMIC_READ);
+    }
+    selectvbooutput = 0;
+    selectbuf = new GLuint[mmgr->NVertices()];
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -423,17 +445,30 @@ void RenderManager::renderMesh(int rendermode) {
             }
         }
     }
-    GLfloat modelview[16];
-    GLfloat projection[16];
-    glGetFloatv(GL_MODELVIEW_MATRIX, modelview);
-    glGetFloatv(GL_PROJECTION_MATRIX, projection);
-    glUniformMatrix4fv(shaders[rendermode].projectionUniform(), 1, GL_FALSE, projection);
-    glUniformMatrix4fv(shaders[rendermode].modelviewUniform(), 1, GL_FALSE, modelview);
     glUniform3iv(shaders[rendermode].getUniform(UNIFORM_AUXDATA), 1, auxint);
 
     glBindVertexArray(vaoid);
-    glDrawElements(GL_TRIANGLES, mmgr->NFaces()*3, GL_UNSIGNED_INT, 0);
-    //glDrawElements(GL_POINTS, mmgr->NFaces()*3, GL_UNSIGNED_INT, 0);
+    glBindBuffer(GL_ARRAY_BUFFER, selectvbo[selectvbooutput]);
+    glEnableVertexAttribArray(4);
+    glVertexAttribPointer(4, 1, GL_UNSIGNED_INT, GL_FALSE, 0, 0);
+    if (shaders[rendermode].getFlags()&SHADERFLAGS_VERTEX_COMPUTE) {
+        glUniformMatrix4fv(shaders[rendermode].projectionUniform(), 1, GL_FALSE, selprojection);
+        glUniformMatrix4fv(shaders[rendermode].modelviewUniform(), 1, GL_FALSE, selmodelview);
+        selectvbooutput = 1 - selectvbooutput;
+        glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, selectvbo[selectvbooutput]);
+        glEnable(GL_RASTERIZER_DISCARD);
+        glBeginTransformFeedback(GL_POINTS);
+            glDrawArrays(GL_POINTS, 0, mmgr->NVertices());
+        glEndTransformFeedback();
+        glFlush();
+        glDisable(GL_RASTERIZER_DISCARD);
+    } else {
+        glGetFloatv(GL_MODELVIEW_MATRIX, modelview);
+        glGetFloatv(GL_PROJECTION_MATRIX, projection);
+        glUniformMatrix4fv(shaders[rendermode].projectionUniform(), 1, GL_FALSE, projection);
+        glUniformMatrix4fv(shaders[rendermode].modelviewUniform(), 1, GL_FALSE, modelview);
+        glDrawElements(GL_TRIANGLES, mmgr->NFaces()*3, GL_UNSIGNED_INT, 0);
+    }
     glBindVertexArray(0);
     glBindTexture(GL_TEXTURE_2D, 0);
     glUseProgram(0);
@@ -510,6 +545,55 @@ void RenderManager::readFromRender(const CameraParams* cam, float*& image, int r
     glReadPixels(0,0,w,h,GL_RGB,GL_FLOAT,(void*)image);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glPopAttrib();
+}
+
+void RenderManager::getSelectedVertices(std::vector<int>& vertices) {
+    glBindBuffer(GL_ARRAY_BUFFER, selectvbo[selectvbooutput]);
+    glGetBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(GLuint)*mmgr->NVertices(), selectbuf);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    for (int i = 0; i < mmgr->NVertices(); i++) {
+        if (selectbuf[i]) vertices.push_back(i);
+    }
+}
+
+void RenderManager::selectVertices(int x, int y, int w, int h, int r, int op) {
+    // Prep shader data
+    setShaderAuxInt((x<<16)|(h-y), 0);
+    setShaderAuxInt((w<<16)|h, 1);
+    setShaderAuxInt(r, 2);
+    // Borrow rfr buffer
+    resizeReadFromRenderBuffer(w,h);
+    // Use last called mvp matrices
+    glMatrixMode(GL_MODELVIEW_MATRIX);
+    glLoadMatrixf(selmodelview);
+    glMatrixMode(GL_PROJECTION_MATRIX);
+    glLoadMatrixf(selprojection);
+    // Render
+    glBindFramebuffer(GL_FRAMEBUFFER, rfr_fbo);
+    glClearColor(0.,0.,0.,0.);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    // FIXME: Depth test
+    if (op == SELECT_UNION || op == SELECT_DIFF) renderMesh(op);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void RenderManager::clearSelectedVertices() {
+    for (int i = 0; i < 2; i++) {
+        glBindBuffer(GL_ARRAY_BUFFER, selectvbo[i]);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(GLuint)*mmgr->NVertices(), 0);
+    }
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+void RenderManager::selectVertices(std::vector<int>& vertices) {
+    memset(selectbuf, 0, sizeof(GLuint)*mmgr->NVertices());
+    for (int i = 0; i < vertices.size(); i++) {
+        selectbuf[vertices[i]] = 1;
+    }
+    for (int i = 0; i < 2; i++) {
+        glBindBuffer(GL_ARRAY_BUFFER, selectvbo[i]);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(GLuint)*mmgr->NVertices(), selectbuf);
+    }
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 const int FLOAT_SIG_BITS = 23;
