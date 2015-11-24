@@ -1,6 +1,7 @@
 #include "opengl_compat.h"
 #include "eruiglwidget.h"
 #include "R3Graphics/R3Graphics.h"
+#include <QMouseEvent>
 
 #define MAX_CAMERAS 100
 
@@ -9,12 +10,18 @@ ERUIGLWidget::ERUIGLWidget(QWidget *parent) :
     orientationroommodel(NULL),
     renderoptions(this),
     selectedCamera(0),
+    vertexselectmode(SELECT_UNION),
+    vertexbrushsize(10),
     grid(NULL)
 {
     renderoptions.setRenderManager(&rendermanager);
+
 }
 
 ERUIGLWidget::~ERUIGLWidget() {
+}
+
+void ERUIGLWidget::_dosetup() {
 }
 
 void ERUIGLWidget::setMeshManager(MeshManager* manager) {
@@ -50,6 +57,26 @@ void ERUIGLWidget::updateMeshAuxiliaryData() {
     makeCurrent();
     rendermanager.updateMeshAuxiliaryData();
     update();
+}
+
+void ERUIGLWidget::setInteractionMode(int mode) {
+    interactionmode = mode;
+    setMouseBinding(Qt::ControlModifier, Qt::LeftButton, NO_CLICK_ACTION);
+    setMouseBinding(Qt::ControlModifier, Qt::MiddleButton, NO_CLICK_ACTION);
+    setMouseBinding(Qt::ControlModifier, Qt::RightButton, NO_CLICK_ACTION);
+    if (interactionmode == INTERACTIONMODE_SELECT) {
+        setMouseBinding(Qt::NoModifier, Qt::LeftButton, NO_CLICK_ACTION, true);
+        setMouseBinding(Qt::NoModifier, Qt::LeftButton, CAMERA, NO_MOUSE_ACTION);
+        setMouseBinding(Qt::NoModifier, Qt::MiddleButton, CAMERA, NO_MOUSE_ACTION);
+        setMouseBinding(Qt::NoModifier, Qt::RightButton, CAMERA, NO_MOUSE_ACTION);
+        setMouseBinding(Qt::ControlModifier, Qt::LeftButton, CAMERA, ROTATE);
+        setMouseBinding(Qt::ControlModifier, Qt::MiddleButton, CAMERA, ZOOM);
+        setMouseBinding(Qt::ControlModifier, Qt::RightButton, CAMERA, TRANSLATE);
+    } else {
+        setMouseBinding(Qt::NoModifier, Qt::LeftButton, CAMERA, ROTATE);
+        setMouseBinding(Qt::NoModifier, Qt::MiddleButton, CAMERA, ZOOM);
+        setMouseBinding(Qt::NoModifier, Qt::RightButton, CAMERA, TRANSLATE);
+    }
 }
 
 void ERUIGLWidget::setupCameras(ImageManager* imgr) {
@@ -123,6 +150,35 @@ QString ERUIGLWidget::helpString() const
   text += "Press <b>Escape</b> to exit the viewer.";
   return text;
 }
+
+void ERUIGLWidget::mousePressEvent(QMouseEvent* e) {
+    if (e->button() == Qt::LeftButton &&
+        (e->modifiers() == Qt::ControlModifier) !=
+         (interactionmode == INTERACTIONMODE_SELECT))
+    {
+            makeCurrent();
+            if (interactionmode != INTERACTIONMODE_SELECT) renderoptions.showSelected();
+            rendermanager.selectVertices(e->x(), e->y(), width(), height(), vertexbrushsize, vertexselectmode);
+            update();
+    } else {
+      HDRQGlViewerWidget::mousePressEvent(e);
+    }
+}
+
+void ERUIGLWidget::mouseMoveEvent(QMouseEvent* e) {
+    if ((e->buttons() & Qt::LeftButton) == Qt::LeftButton &&
+        (e->modifiers() == Qt::ControlModifier) !=
+         (interactionmode == INTERACTIONMODE_SELECT))
+    {
+            makeCurrent();
+            if (interactionmode != INTERACTIONMODE_SELECT) renderoptions.showSelected();
+            rendermanager.selectVertices(e->x(), e->y(), width(), height(), vertexbrushsize, vertexselectmode);
+            update();
+    } else {
+      HDRQGlViewerWidget::mouseMoveEvent(e);
+    }
+}
+
 #define GLEXPAND(x) (x)[0], (x)[1], (x)[2]
 static R3DirectionalLight l(R3Vector(0.3, 0.5, -1), RNRgb(1, 1, 1), 1, TRUE);
 static R3Brdf b(RNRgb(0.2,0.2,0.2), RNRgb(0.8,0.8,0.8),
@@ -184,6 +240,9 @@ void ERUIGLWidget::draw()
             }
             rendermanager.renderMesh(VIEW_LABELOVERLAY);
         }
+        if (renderoptions.shouldOverlay(VIEW_SELECTOVERLAY)) {
+            rendermanager.renderMesh(VIEW_SELECTOVERLAY);
+        }
         //glDisable(GL_BLEND);
     }
     if (renderoptions.shouldRenderWfHistogram()) {
@@ -194,6 +253,7 @@ void ERUIGLWidget::draw()
         renderHistogram();
         glDisable(GL_LIGHTING);
     }
+    rendermanager.saveMatricesForSelection();
 }
 
 void ERUIGLWidget::drawWithNames() {

@@ -104,6 +104,22 @@ private slots:
     void orientationfindingDone();
     void partialVertexDataLoaded(int percent);
 
+    // Interaction modes
+    void on_actionCursor_Mode_Select_triggered();
+    void on_actionCursor_Mode_Trackball_triggered();
+    void selectAction(int n);
+
+    // Vertex Selection Actions
+    void on_actionSelect_All_Vertices_triggered();
+    void on_actionSelect_None_triggered();
+    void on_actionAdd_To_Selection_triggered();
+    void on_actionRemove_From_Selection_triggered();
+    void on_actionSelect_Wall_Vertices_triggered();
+    void on_actionSelect_Floor_Vertices_triggered();
+    void on_actionSelect_Ceiling_Vertices_triggered();
+    void on_actionIncrease_Selection_Brush_Size_triggered();
+    void on_actionDecrease_Selection_Brush_Size_triggered();
+
 private:
     Ui::MainWindow *ui;
     ImageManager* imgr;
@@ -136,8 +152,10 @@ private:
     int imagedisplaymode;
     std::vector<CameraParams> hemicubecams;
     std::vector<int> hemicubeindices;
+
     std::vector<int> wallindices;
     std::vector<int> floorindices;
+    std::vector<int> ceilingindices;
 };
 
 #endif // MAINWINDOW_H

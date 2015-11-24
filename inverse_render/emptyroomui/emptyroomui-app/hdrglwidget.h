@@ -127,6 +127,9 @@ class HDRQGlViewerWidget : public QGLViewer {
 
     HDRGlHelper* getHelper() { return &helper; }
 
+    virtual void mousePressEvent(QMouseEvent* e) { QGLViewer::mousePressEvent(e); }
+    virtual void mouseMoveEvent(QMouseEvent* e) { QGLViewer::mouseMoveEvent(e); }
+
     static int RGBToIndex(float* rgb);
     static void IndexToRGB(int i, float* rgb);
 protected:

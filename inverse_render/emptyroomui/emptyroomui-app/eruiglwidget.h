@@ -119,6 +119,11 @@ public slots:
             renderer->precalculateSingleImage(currentCamera);
         if (qglw) qglw->update();
     }
+    void showSelected(bool show=true) {
+        renderOverlay[VIEW_SELECTOVERLAY] = show;
+        if (qglw) qglw->update();
+    }
+
     void setOverlay(int overlay) {
         if (overlay) {
             renderOverlay[VIEW_LABELOVERLAY] = true;
@@ -175,9 +180,24 @@ public:
     void setOrientation(roommodel::RoomModel* room) {
         orientationroommodel = room;
     }
+    virtual void mousePressEvent(QMouseEvent* e);
+    virtual void mouseMoveEvent(QMouseEvent* e);
+
+    void setVertexSelectMode(int mode) { vertexselectmode = mode; }
+    void setVertexBrushSize(int size) { vertexbrushsize = size; }
+    int getVertexBrushSize() const { return vertexbrushsize; }
+    void setInteractionMode(int mode);
 
     void computeWallFindingHistogram(double resolution);
+
+    int interactionmode;
+    enum {
+        INTERACTIONMODE_TRACKBALL,
+        INTERACTIONMODE_SELECT,
+        NUMINTERACTIONMODES,
+    };
 protected:
+    virtual void _dosetup();
     virtual void draw();
     virtual void init();
     virtual void drawWithNames();
@@ -195,6 +215,8 @@ protected:
 
     ERUIRenderOptions renderoptions;
     int selectedCamera;
+
+    int vertexselectmode, vertexbrushsize;
 
     int* grid;
     int gw, gh, gmax;
@@ -252,6 +274,18 @@ public:
     }
     void setCameraColor(int i, RNRgb rgb) {
         v->setCameraColor(i, rgb);
+    }
+    void setVertexSelectMode(int mode) {
+        v->setVertexSelectMode(mode);
+    }
+    void setVertexBrushSize(int size) {
+        v->setVertexBrushSize(size);
+    }
+    int getVertexBrushSize() {
+        return v->getVertexBrushSize();
+    }
+    void setInteractionMode(int mode) {
+        v->setInteractionMode(mode);
     }
 
 signals:

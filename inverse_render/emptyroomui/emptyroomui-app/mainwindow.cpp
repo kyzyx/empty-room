@@ -451,6 +451,18 @@ void MainWindow::meshLoaded() {
     ui->showMeshCheckbox->setEnabled(true);
     ui->DebugWallfindingButton->setEnabled(true);
     ui->actionReload_Per_Vertex_Samples->setEnabled(true);
+
+    ui->actionCursor_Mode_Select->setEnabled(true);
+    ui->actionSelect_All_Vertices->setEnabled(true);
+    ui->actionSelect_Ceiling_Vertices->setEnabled(true);
+    ui->actionSelect_Floor_Vertices->setEnabled(true);
+    ui->actionSelect_Wall_Vertices->setEnabled(true);
+    ui->actionSelect_None->setEnabled(true);
+    ui->actionAdd_To_Selection->setEnabled(true);
+    ui->actionRemove_From_Selection->setEnabled(true);
+    ui->actionIncrease_Selection_Brush_Size->setEnabled(true);
+    ui->actionDecrease_Selection_Brush_Size->setEnabled(true);
+
     mmgr = new MeshManager(meshfilename.toStdString());
     ui->meshWidget->setMeshManager(mmgr);
 
@@ -687,6 +699,7 @@ void MainWindow::labelDataLoaded() {
             char label =  mmgr->getLabel(i, MeshManager::TYPE_CHANNEL);
             if (label == LABEL_WALL) wallindices.push_back(i);
             else if (label == LABEL_FLOOR) floorindices.push_back(i);
+            else if (label == LABEL_CEILING) ceilingindices.push_back(i);
         }
     }
     checkEnableHemicubes();
@@ -1167,4 +1180,95 @@ void MainWindow::on_actionExport_Mesh_with_Colors_triggered()
         QString filename = QFileDialog::getSaveFileName(this, "Save Mesh as PLY", lwd, "PLY files (*.ply)");
         if (!filename.isEmpty()) mmgr->writePlyMesh(filename.toStdString(), 1/ui->meshWidget->getUpperBound());
     }
+}
+
+// -----------------
+// Interaction Modes
+// -----------------
+void MainWindow::on_actionCursor_Mode_Select_triggered()
+{
+    selectAction(ERUIGLWidget::INTERACTIONMODE_SELECT);
+    ui->meshWidget->renderOptions()->showSelected();
+}
+
+void MainWindow::on_actionCursor_Mode_Trackball_triggered()
+{
+    selectAction(ERUIGLWidget::INTERACTIONMODE_TRACKBALL);
+}
+void MainWindow::selectAction(int n) {
+    std::vector<QAction*> actions;
+    actions.push_back(ui->actionCursor_Mode_Trackball);
+    actions.push_back(ui->actionCursor_Mode_Select);
+
+    for (int i = 0; i < ERUIGLWidget::NUMINTERACTIONMODES; i++) {
+        actions[i]->setChecked(i == n);
+    }
+    ui->meshWidget->setInteractionMode(n);
+}
+
+// ------------------------
+// Vertex Selection Actions
+// ------------------------
+void MainWindow::on_actionSelect_All_Vertices_triggered()
+{
+    std::vector<int> allindices;
+    for (int i = 0; i < mmgr->size(); i++) allindices.push_back(i);
+    ui->meshWidget->renderManager()->selectVertices(allindices);
+    ui->meshWidget->renderOptions()->showSelected();
+}
+
+void MainWindow::on_actionSelect_None_triggered()
+{
+    ui->meshWidget->renderManager()->clearSelectedVertices();
+    ui->meshWidget->renderOptions()->showSelected(false);
+}
+
+void MainWindow::on_actionAdd_To_Selection_triggered()
+{
+    ui->meshWidget->setVertexSelectMode(SELECT_UNION);
+    ui->actionAdd_To_Selection->setChecked(true);
+    ui->actionRemove_From_Selection->setChecked(false);
+}
+
+void MainWindow::on_actionRemove_From_Selection_triggered()
+{
+    ui->meshWidget->setVertexSelectMode(SELECT_DIFF);
+    ui->actionAdd_To_Selection->setChecked(false);
+    ui->actionRemove_From_Selection->setChecked(true);
+}
+
+void MainWindow::on_actionSelect_Wall_Vertices_triggered()
+{
+    ui->meshWidget->renderManager()->selectVertices(wallindices);
+    ui->meshWidget->renderOptions()->showSelected();
+}
+
+void MainWindow::on_actionSelect_Floor_Vertices_triggered()
+{
+    ui->meshWidget->renderManager()->selectVertices(floorindices);
+    ui->meshWidget->renderOptions()->showSelected();
+}
+
+void MainWindow::on_actionSelect_Ceiling_Vertices_triggered()
+{
+    ui->meshWidget->renderManager()->selectVertices(ceilingindices);
+    ui->meshWidget->renderOptions()->showSelected();
+}
+
+void MainWindow::on_actionIncrease_Selection_Brush_Size_triggered()
+{
+    int currsize = ui->meshWidget->getVertexBrushSize();
+    currsize++;
+    ui->meshWidget->setVertexBrushSize(currsize);
+    std::cout << "Set brush size to " << ui->meshWidget->getVertexBrushSize() << " px." << std::endl;
+}
+
+void MainWindow::on_actionDecrease_Selection_Brush_Size_triggered()
+{
+    int currsize = ui->meshWidget->getVertexBrushSize();
+    if (currsize > 1) {
+        currsize--;
+        ui->meshWidget->setVertexBrushSize(currsize);
+    }
+    std::cout << "Set brush size to " << ui->meshWidget->getVertexBrushSize() << " px." << std::endl;
 }
