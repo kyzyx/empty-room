@@ -18,11 +18,12 @@ ivec2 unpackInt(int n) {
 }
 
 void main(void) {
-    vec4 v = projectionmatrix*modelviewmatrix*vec4(position,1);
+    vec4 camv = modelviewmatrix*vec4(position,1);
+    vec4 v = projectionmatrix*camv;
     vec4 n = modelviewmatrix*vec4(normal, 0);
     vec2 dims = vec2(unpackInt(auxdata.y));
     vec2 r = vec2(unpackInt(auxdata.x)) - dims*(1+(v.xy/v.w))/2;
-    bool inselection = dot(r,r) <= auxdata.z*auxdata.z && n.z > 0;
+    bool inselection = dot(r,r) <= auxdata.z*auxdata.z && n.z > 0 && camv.z < 0;
     status = int(prevstatus>0 || inselection);
     gl_Position = v;
 }

@@ -13,7 +13,7 @@ void main(void) {
     if (id[0].r > 0 && id[0].r == id[1].r && id[1].r == id[2].r) {
         flatcolor = computed_color[0];
         for (int i = 0; i < 3; i++) {
-            gl_Position = gl_in[i].gl_Position - vec4(0,0,0.01,0);
+            gl_Position = gl_in[i].gl_Position - vec4(0,0,0.001,0);
             EmitVertex();
         }
         EndPrimitive();
