@@ -5,6 +5,7 @@
 #include <QKeyEvent>
 #include <QFileDialog>
 #include <QIntValidator>
+#include <QInputDialog>
 #include <QCheckBox>
 #include <QThread>
 #include <QToolTip>
@@ -462,6 +463,7 @@ void MainWindow::meshLoaded() {
     ui->actionRemove_From_Selection->setEnabled(true);
     ui->actionIncrease_Selection_Brush_Size->setEnabled(true);
     ui->actionDecrease_Selection_Brush_Size->setEnabled(true);
+    ui->actionSave_Selected_Vertices->setEnabled(true);
 
     mmgr = new MeshManager(meshfilename.toStdString());
     ui->meshWidget->setMeshManager(mmgr);
@@ -1271,4 +1273,21 @@ void MainWindow::on_actionDecrease_Selection_Brush_Size_triggered()
         ui->meshWidget->setVertexBrushSize(currsize);
     }
     std::cout << "Set brush size to " << ui->meshWidget->getVertexBrushSize() << " px." << std::endl;
+}
+
+void MainWindow::on_actionSave_Selected_Vertices_triggered()
+{
+    bool ok;
+    int lbl = QInputDialog::getInt(this, "Commit selected vertices to label...", "Label: ", 1, 0, 1024, 1, &ok);
+    if (ok) {
+        std::vector<int> selected;
+        ui->meshWidget->renderManager()->getSelectedVertices(selected);
+        for (int i = 0; i < selected.size(); i++) {
+            mmgr->setLabel(selected[i], lbl, MeshManager::TYPE_CHANNEL);
+        }
+        ui->meshWidget->renderManager()->updateMeshAuxiliaryData();
+        if (lbl == LABEL_WALL) {
+            wallindices = selected;
+        }
+    }
 }

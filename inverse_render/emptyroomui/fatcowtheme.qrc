@@ -11,6 +11,9 @@
         <file alias="16x16/layer_open.png">icons/FatCow/16x16/layer_open.png</file>
         <file alias="32x32/layer_open.png">icons/FatCow/32x32/layer_open.png</file>
 
+        <file alias="16x16/layer_save.png">icons/FatCow/16x16/layer_save.png</file>
+        <file alias="32x32/layer_save.png">icons/FatCow/32x32/layer_save.png</file>
+
         <file alias="16x16/joystick.png">icons/FatCow/16x16/joystick.png</file>
         <file alias="32x32/joystick.png">icons/FatCow/32x32/joystick.png</file>
 

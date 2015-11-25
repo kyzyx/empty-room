@@ -1164,6 +1164,8 @@
     <addaction name="actionDecrease_Selection_Brush_Size"/>
     <addaction name="actionAdd_To_Selection"/>
     <addaction name="actionRemove_From_Selection"/>
+    <addaction name="separator"/>
+    <addaction name="actionSave_Selected_Vertices"/>
    </widget>
    <addaction name="menuEmpty_Room_Editor"/>
    <addaction name="menuIntermediates"/>
@@ -1484,6 +1486,21 @@
    </property>
    <property name="toolTip">
     <string>Select all vertices labelled as Ceiling</string>
+   </property>
+  </action>
+  <action name="actionSave_Selected_Vertices">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../fatcowtheme.qrc">
+     <normaloff>:/icons/FatCow/16x16/layer_save.png</normaloff>:/icons/FatCow/16x16/layer_save.png</iconset>
+   </property>
+   <property name="text">
+    <string>Commit Selected Vertices</string>
+   </property>
+   <property name="toolTip">
+    <string>Label and store the selected vertices</string>
    </property>
   </action>
  </widget>

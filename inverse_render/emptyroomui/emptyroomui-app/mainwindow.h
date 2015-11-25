@@ -119,6 +119,7 @@ private slots:
     void on_actionSelect_Ceiling_Vertices_triggered();
     void on_actionIncrease_Selection_Brush_Size_triggered();
     void on_actionDecrease_Selection_Brush_Size_triggered();
+    void on_actionSave_Selected_Vertices_triggered();
 
 private:
     Ui::MainWindow *ui;
