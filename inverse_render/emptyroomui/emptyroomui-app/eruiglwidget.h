@@ -1,6 +1,7 @@
 #ifndef ERUIGLWIDGET_H
 #define ERUIGLWIDGET_H
 
+#include <QCursor>
 #include <QOpenGLWidget>
 #include "hdrglwidget.h"
 #include "datamanager/meshmanager.h"
@@ -183,8 +184,10 @@ public:
     virtual void mousePressEvent(QMouseEvent* e);
     virtual void mouseMoveEvent(QMouseEvent* e);
 
+    void updateCursor();
+
     void setVertexSelectMode(int mode) { vertexselectmode = mode; }
-    void setVertexBrushSize(int size) { vertexbrushsize = size; }
+    void setVertexBrushSize(int size) { vertexbrushsize = size; updateCursor(); }
     int getVertexBrushSize() const { return vertexbrushsize; }
     void setInteractionMode(int mode);
 
@@ -221,6 +224,8 @@ protected:
     int* grid;
     int gw, gh, gmax;
     double gres;
+    QCursor* cursor;
+    QCursor* defaultcursor;
 signals:
     void cameraSelected(int cameraindex);
 public slots:

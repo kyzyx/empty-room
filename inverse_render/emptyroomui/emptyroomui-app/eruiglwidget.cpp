@@ -2,6 +2,7 @@
 #include "eruiglwidget.h"
 #include "R3Graphics/R3Graphics.h"
 #include <QMouseEvent>
+#include <QBitmap>
 
 #define MAX_CAMERAS 100
 
@@ -12,16 +13,20 @@ ERUIGLWidget::ERUIGLWidget(QWidget *parent) :
     selectedCamera(0),
     vertexselectmode(SELECT_UNION),
     vertexbrushsize(10),
-    grid(NULL)
+    grid(NULL), cursor(NULL), defaultcursor(NULL)
 {
     renderoptions.setRenderManager(&rendermanager);
 
 }
 
 ERUIGLWidget::~ERUIGLWidget() {
+    if (defaultcursor) delete defaultcursor;
+    if (cursor) delete cursor;
 }
 
 void ERUIGLWidget::_dosetup() {
+    defaultcursor = new QCursor(Qt::OpenHandCursor);
+    setCursor(*defaultcursor);
 }
 
 void ERUIGLWidget::setMeshManager(MeshManager* manager) {
@@ -72,10 +77,12 @@ void ERUIGLWidget::setInteractionMode(int mode) {
         setMouseBinding(Qt::ControlModifier, Qt::LeftButton, CAMERA, ROTATE);
         setMouseBinding(Qt::ControlModifier, Qt::MiddleButton, CAMERA, ZOOM);
         setMouseBinding(Qt::ControlModifier, Qt::RightButton, CAMERA, TRANSLATE);
+        updateCursor();
     } else {
         setMouseBinding(Qt::NoModifier, Qt::LeftButton, CAMERA, ROTATE);
         setMouseBinding(Qt::NoModifier, Qt::MiddleButton, CAMERA, ZOOM);
         setMouseBinding(Qt::NoModifier, Qt::RightButton, CAMERA, TRANSLATE);
+        setCursor(*defaultcursor);
     }
 }
 
@@ -177,6 +184,70 @@ void ERUIGLWidget::mouseMoveEvent(QMouseEvent* e) {
     } else {
       HDRQGlViewerWidget::mouseMoveEvent(e);
     }
+}
+void DrawCircle(QBitmap* img, QBitmap* mask, int r) {
+    img->fill(Qt::color0);
+    mask->fill(Qt::color0);
+    QPainter* iptr = new QPainter(img);
+    QPainter* mptr = new QPainter(mask);
+    iptr->setPen(Qt::color1);
+    mptr->setPen(Qt::color1);
+    int w = img->width();
+    int h = img->height();
+    int x0 = w/2;
+    int y0 = h/2;
+    int x = r;
+    int y = 0;
+    int d = 1 - r;
+    while (y <= x) {
+        iptr->drawPoint( x + x0,  y + y0); // Octant 1
+        iptr->drawPoint( y + x0,  x + y0); // Octant 2
+        iptr->drawPoint(-x + x0,  y + y0); // Octant 4
+        iptr->drawPoint(-y + x0,  x + y0); // Octant 3
+        iptr->drawPoint(-x + x0, -y + y0); // Octant 5
+        iptr->drawPoint(-y + x0, -x + y0); // Octant 6
+        iptr->drawPoint( x + x0, -y + y0); // Octant 8
+        iptr->drawPoint( y + x0, -x + y0); // Octant 7
+        mptr->drawPoint( x + x0,  y + y0); // Octant 1
+        mptr->drawPoint( y + x0,  x + y0); // Octant 2
+        mptr->drawPoint(-x + x0,  y + y0); // Octant 4
+        mptr->drawPoint(-y + x0,  x + y0); // Octant 3
+        mptr->drawPoint(-x + x0, -y + y0); // Octant 5
+        mptr->drawPoint(-y + x0, -x + y0); // Octant 6
+        mptr->drawPoint( x + x0, -y + y0); // Octant 8
+        mptr->drawPoint( y + x0, -x + y0); // Octant 7
+        y++;
+        if (d <= 0) {
+            d += 2*y+1;
+        } else {
+            x--;
+            d += 2*(y-x)+1;
+        }
+    }
+}
+
+void ERUIGLWidget::updateCursor() {
+    QCursor* oldcursor = cursor;
+    if (vertexbrushsize > 32) {
+        cursor = new QCursor(Qt::CrossCursor);
+    } else {
+        QBitmap* bitmap;
+        QBitmap* maskmap;
+        if (vertexbrushsize <= 16) {
+            bitmap = new QBitmap(32,32);
+            maskmap = new QBitmap(32,32);
+        } else if (vertexbrushsize <= 32) {
+            bitmap = new QBitmap(64,64);
+            maskmap = new QBitmap(64,64);
+        }
+
+        DrawCircle(bitmap, maskmap, vertexbrushsize);
+
+        cursor = new QCursor(*bitmap,*maskmap);
+    }
+
+    setCursor(*cursor);
+    if (oldcursor) delete oldcursor;
 }
 
 #define GLEXPAND(x) (x)[0], (x)[1], (x)[2]

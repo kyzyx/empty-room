@@ -1260,19 +1260,21 @@ void MainWindow::on_actionSelect_Ceiling_Vertices_triggered()
 void MainWindow::on_actionIncrease_Selection_Brush_Size_triggered()
 {
     int currsize = ui->meshWidget->getVertexBrushSize();
-    currsize++;
+    currsize += 3;
     ui->meshWidget->setVertexBrushSize(currsize);
-    std::cout << "Set brush size to " << ui->meshWidget->getVertexBrushSize() << " px." << std::endl;
+    QString msg = QString("Set brush size to %1 px").arg(ui->meshWidget->getVertexBrushSize());
+    ui->statusBar->showMessage(msg);
 }
 
 void MainWindow::on_actionDecrease_Selection_Brush_Size_triggered()
 {
     int currsize = ui->meshWidget->getVertexBrushSize();
     if (currsize > 1) {
-        currsize--;
+        currsize -= 3;
         ui->meshWidget->setVertexBrushSize(currsize);
     }
-    std::cout << "Set brush size to " << ui->meshWidget->getVertexBrushSize() << " px." << std::endl;
+    QString msg = QString("Set brush size to %1 px").arg(ui->meshWidget->getVertexBrushSize());
+    ui->statusBar->showMessage(msg);
 }
 
 void MainWindow::on_actionSave_Selected_Vertices_triggered()
