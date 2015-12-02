@@ -1284,9 +1284,15 @@ void MainWindow::on_actionSave_Selected_Vertices_triggered()
     if (ok) {
         std::vector<int> selected;
         ui->meshWidget->renderManager()->getSelectedVertices(selected);
+        for (int i = 0; i < mmgr->size(); i++) {
+            if (mmgr->getLabel(i, MeshManager::TYPE_CHANNEL) == lbl) {
+                mmgr->setLabel(i, 0, MeshManager::TYPE_CHANNEL);
+            }
+        }
         for (int i = 0; i < selected.size(); i++) {
             mmgr->setLabel(selected[i], lbl, MeshManager::TYPE_CHANNEL);
         }
+
         ui->meshWidget->renderManager()->updateMeshAuxiliaryData();
         if (lbl == LABEL_WALL) {
             wallindices = selected;
