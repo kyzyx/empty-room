@@ -24,4 +24,10 @@ void findWallLinesInImage(
 );
 void findWallLines(ImageManager& imgr, WallFinder& wf, std::vector<WallLine>& lines, double resolution=0.02, bool getvotes=false);
 
+Eigen::Vector3d projectOntoWall(
+        double x, double y,
+        const CameraParams& cam,
+        double ceilingplane, double floorplane,
+        R4Matrix normalization,
+        Segment& s);
 #endif

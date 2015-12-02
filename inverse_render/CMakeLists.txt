@@ -84,6 +84,13 @@ add_executable(reprojectapp apps/reprojectapp.cpp
     reproject.cpp reproject.h clusterlights.cpp clusterlights.h)
 target_link_libraries(reprojectapp ${PCL_LIBRARIES} datamanager roommodel)
 
+add_executable(baseboardapp apps/baseboardapp.cpp
+    apps/invrenderapp.cpp apps/invrenderapp.h
+    findbaseboard.cpp findbaseboard.h linefinder.cpp linefinder.h
+    orientededgefilter.cpp orientededgefilter.h)
+target_link_libraries(baseboardapp ${PCL_LIBRARIES} ${OpenCV_LIBS} datamanager roommodel
+    wallfinder)
+
 add_executable(exposuresolverapp apps/exposuresolverapp.cpp
     apps/invrenderapp.cpp apps/invrenderapp.h
     exposuresolver.h exposuresolver.cpp)
