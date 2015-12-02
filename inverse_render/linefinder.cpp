@@ -202,10 +202,12 @@ Vector3d projectOntoWall(
     p1 = normalization*p1;
     p2 = normalization*p2;
 
-    R3Vector n = s.direction?R3posz_vector:R3posx_vector;
-    R3Plane plane(n*s.norm, -s.coord*s.norm);
+    R3Vector n = s.direction?R3posx_vector:R3posz_vector;
+    R3Plane plane(n*s.norm, s.coord*s.norm);
+    R3Ray ray(p1, p2);
     R3Point hit;
-    if (R3Intersects(R3Ray(p1,p2), plane, &hit) && hit.Y() < ceilingplane+margin && hit.Y() > floorplane-margin) {
+    RNClassID rncid = R3Intersects(ray, plane, &hit);
+    if (rncid && hit.Y() < ceilingplane+margin && hit.Y() > floorplane-margin) {
         double x = s.direction?hit.X():hit.Z();
         return Vector3d(x - s.start, hit.Y(), (hit-cam.pos).Length());
     } else {

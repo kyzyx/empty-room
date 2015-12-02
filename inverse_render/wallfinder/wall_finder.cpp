@@ -714,6 +714,7 @@ void WallFinder::loadFromRoomModel(roommodel::RoomModel* rm) {
         s.start = (i&1)?px:py;
         s.end = (i&1)?cx:cy;
         s.coord = (i&1)?py:px;
+        s.norm = nn;
 
         px = cx;
         py = cy;
