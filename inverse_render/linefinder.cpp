@@ -162,7 +162,8 @@ void VPHough(const float* image, const char* labelimage, int w, int h, vector<Ve
     for (int i = 0; i < h; ++i) {
         for (int j = 0; j < w; ++j) {
             if (!labelimage || labelimage[i*w+j] == WallFinder::LABEL_WALL) {
-                lookup->addVote(image[3*((h-i-1)*w+j)+v], j, i, minw);
+                //lookup->addVote(image[3*((h-i-1)*w+j)+v], j, i, minw);
+                lookup->addVote(image[3*(i*w+j)+v], j, i, minw);
             }
         }
     }
