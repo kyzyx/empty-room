@@ -216,6 +216,36 @@ Vector3d projectOntoWall(
     }
 }
 
+Eigen::Vector3d projectOntoFloorplan(
+        double x, double y,
+        const CameraParams& cam,
+        WallFinder& wf)
+{
+    Matrix4f m4dn = wf.getNormalizationTransform();
+    R4Matrix norm(
+            m4dn(0,0), m4dn(0,1), m4dn(0,2), m4dn(0,3),
+            m4dn(1,0), m4dn(1,1), m4dn(1,2), m4dn(1,3),
+            m4dn(2,0), m4dn(2,1), m4dn(2,2), m4dn(2,3),
+            m4dn(3,0), m4dn(3,1), m4dn(3,2), m4dn(3,3)
+            );
+    Vector3d best;
+    int bestj = -1;
+    for (int j = 0; j < wf.wallsegments.size(); j++) {
+        Eigen::Vector3d p = projectOntoWall(
+                x, y, cam,
+                wf.ceilplane, wf.floorplane,
+                norm,
+                wf.wallsegments[j]);
+        if (p[0] < margin || p[0] > wf.wallsegments[j].length() - margin)
+            continue;
+        if (p[2] < best[2]) {
+            best = p;
+            bestj = j;
+        }
+    }
+    return Vector3d(bestj, best[0], best[1]);
+}
+
 void findWallLinesInImage(
         ImageManager& imgr,
         int idx,
@@ -226,7 +256,7 @@ void findWallLinesInImage(
 {
     const CameraParams& cam = *(imgr.getCamera(idx));
     const char* image = (const char*) imgr.getImage(idx);
-    vector<Vector4d> verticallines;
+    vector<Vector4d> lines;
     vector<Vector3d> vps;
 
     findVanishingPoints(cam, norm, vps);
@@ -238,39 +268,22 @@ void findWallLinesInImage(
         cerr << "Please precompute label images before linefinding" << endl;
         return;
     }
-    VPHough((const float*) imgr.getImage("edges", idx), (const char*) imgr.getImage("labels", idx), cam.width, cam.height, vps, 1, verticallines);
+    VPHough((const float*) imgr.getImage("edges", idx), (const char*) imgr.getImage("labels", idx), cam.width, cam.height, vps, 1, lines);
 
-    for (int k = 0; k < verticallines.size(); ++k) {
-        cout << ">>data:" << idx << " " << verticallines[k][0] << " " <<  verticallines[k][1] << " " << verticallines[k][2] << " " << verticallines[k][3] << endl;
+    for (int k = 0; k < lines.size(); ++k) {
+        cout << ">>data:" << idx << " " << lines[k][0] << " " <<  lines[k][1] << " " << lines[k][2] << " " << lines[k][3] << endl;
         Vector3d bestpt[2];
-        int bestwall[2];
-        bestwall[0] = -1;
-        bestwall[1] = -1;
-        double closest[2];
-        closest[0] = numeric_limits<double>::infinity();
-        closest[1] = numeric_limits<double>::infinity();
-        for (int j = 0; j < votes.size(); ++j) {
-            for (int i = 0; i < 2; ++i) {
-                Vector3d x = projectOntoWall(
-                        verticallines[k][2*i], verticallines[k][2*i+1],
-                        cam, wf.ceilplane, wf.floorplane,
-                        norm, wf.wallsegments[j]
-                        );
-                // Prune points that don't intersect the wall
-                if (x[0] < margin || x[0] > wf.wallsegments[j].length() - margin)
-                    continue;
-                if (x[2] < closest[i]) {
-                    bestpt[i] = x;
-                    bestwall[i] = j;
-                    closest[i] = x[2];
-                }
-            }
-        }
-        if (bestwall[0] == bestwall[1] && bestwall[0] >= 0) {
-            Vector3d seg((bestpt[0][0]+bestpt[1][0])/2,
-                         bestpt[0][1],
-                         bestpt[1][1]);
-            votes[bestwall[0]].push_back(seg);
+        Vector3d start = projectOntoFloorplan(
+                    lines[k][0], lines[k][1],
+                    cam, wf);
+        Vector3d end = projectOntoFloorplan(
+                    lines[k][2], lines[k][3],
+                    cam, wf);
+        if (start[0] == end[1] && start[0] >= 0) {
+            Vector3d seg((start[1]+end[1])/2,
+                         start[2],
+                         end[2]);
+            votes[start[0]].push_back(seg);
         }
     }
 }

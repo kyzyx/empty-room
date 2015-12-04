@@ -17,28 +17,14 @@ void BaseboardFinder::compute(float resolution, float edgethreshold) {
                 if (mask[y*cam->width+x] != WallFinder::LABEL_WALL) continue;
                 if ((!isinf(img[idx]) && img[idx] > edgethreshold) ||
                     (!isinf(img[idx+2]) && img[idx+2] > edgethreshold)) {
-                    double bestd = numeric_limits<double>::infinity();
-                    double besth = 0;
-                    int bestj = -1;
-                    for (int j = 0; j < wf.wallsegments.size(); j++) {
-                        Eigen::Vector3d p = projectOntoWall(
-                                x, y, *cam,
-                                wf.ceilplane, wf.floorplane,
-                                floorplan->globaltransform,
-                                wf.wallsegments[j]);
-                        if (p[2] < bestd) {
-                            bestd = p[2];
-                            besth = p[1];
-                            bestj = j;
-                        }
-                    }
-                    if (bestd < numeric_limits<double>::infinity()) {
-                        int id = (besth - wf.floorplane)/resolution;
+                    Eigen::Vector3d p = projectOntoFloorplan(x, y, *cam, wf);
+                    if (p[0] >= 0) {
+                        int id = (p[2] - wf.floorplane)/resolution;
                         if (id >= hist.size()) id = hist.size()-1;
                         float v = 0;
-                        if (wf.wallsegments[bestj].direction == 0 && !isinf(img[idx]))
+                        if (wf.wallsegments[p[0]].direction == 0 && !isinf(img[idx]))
                             v = img[idx];
-                        if (wf.wallsegments[bestj].direction == 1 && !isinf(img[idx+2]))
+                        if (wf.wallsegments[p[0]].direction == 1 && !isinf(img[idx+2]))
                             v = img[idx+2];
                         hist[id] += log(v+1);
                     }
