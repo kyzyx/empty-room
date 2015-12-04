@@ -236,6 +236,7 @@ Eigen::Vector3d projectOntoFloorplan(
                 wf.ceilplane, wf.floorplane,
                 norm,
                 wf.wallsegments[j]);
+        cout << "Wall " << j << ": " << p[2] << " " << p[0] << " " << p[1] << endl;
         if (p[0] < margin || p[0] > wf.wallsegments[j].length() - margin)
             continue;
         if (p[2] < best[2]) {
