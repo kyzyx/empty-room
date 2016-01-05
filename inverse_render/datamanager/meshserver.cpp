@@ -75,12 +75,14 @@ bool MeshServer::loadMesh(PolygonMesh::ConstPtr mesh, bool ccw) {
         for (int j = 0; j < 3; ++j) {
             f[j] = mesh->polygons[i].vertices[j];
         }
+        if (ccw) {
+            swap(f[0], f[2]);
+        }
 
         // Face normal
         R3Vector a = pos[f[0]] - pos[f[1]];
         R3Vector b = pos[f[2]] - pos[f[1]];
         R3Vector c = a%b;
-        if (ccw) c = -c;
 
         // Update vertex normals
         for (int j = 0; j < 3; ++j) {
