@@ -20,7 +20,12 @@ else:
     tmpdir = tempfile.mkdtemp()
 
     try:
-        for line in open(sys.argv[1]).readlines()[1:]:
+        lines = [l.strip() for l in open(sys.argv[1]).readlines()]
+        if lines[0].strip() == "CAMFILE_HEADER":
+            lines = lines[lines.index("end_header")+1:];
+        else:
+            lines = lines[1:]
+        for line in lines:
             toks = line.split()
             outfile = "%s/image%04d.png"%(tmpdir, n)
 
