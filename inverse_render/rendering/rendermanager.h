@@ -10,6 +10,7 @@ enum {
     VIEW_NORMALS,
     VIEW_AVERAGE,
     VIEW_SINGLEIMAGE,
+    VIEW_VARIANCE,
     VIEW_LABELS,
     VIEW_LABELOVERLAY,
     VIEW_THRESHOLD,
@@ -84,6 +85,7 @@ public:
     void updateMeshAuxiliaryData();
     void precalculateAverageSamples();
     void precalculateSingleImage(int n);
+    void precalculateVariance();
     bool hasPrecalculatedColors() const { return precalculated >= 0; }
 
     void readFromRender(const CameraParams* cam, float*& image, int rendermode, bool preallocated=false);

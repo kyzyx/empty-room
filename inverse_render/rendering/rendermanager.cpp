@@ -65,6 +65,9 @@ void RenderManager::initShaderTypes() {
     shaders.push_back(ShaderType("singleimage",
         "Reprojection of Single Image",
         SHADERFLAGS_USEU_COLOR|SHADERFLAGS_USEU_AUX));
+    shaders.push_back(ShaderType("variance",
+        "Surface Appearance Variance",
+        SHADERFLAGS_USEU_COLOR|SHADERFLAGS_USEU_AUX));
     shaders.push_back(ShaderType("labels",
         "Per-Vertex Light IDs, Visibility, and Auxiliary Labels",
         SHADERFLAGS_USEU_AUX|SHADERFLAGS_USESH_FLAT_FRAG));
@@ -366,7 +369,7 @@ void RenderManager::precalculateAverageSamples() {
             totalweight += w;
         }
         if (totalweight > 0) {
-            for (int j = 0; j < 3; ++j) curr[j] /= totalweight;
+            for (int z = 0; z < 3; ++z) curr[z] /= totalweight;
         }
         curr += 3;
     }
@@ -377,6 +380,52 @@ void RenderManager::precalculateAverageSamples() {
     glBindVertexArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     precalculated = VIEW_AVERAGE;
+}
+
+void RenderManager::precalculateVariance() {
+    glBindVertexArray(vaoid);
+    glBindBuffer(GL_ARRAY_BUFFER, precalcvbo);
+    float* colors = new float[3*mmgr->NVertices()];
+    memset(colors, 0, sizeof(float)*3*mmgr->NVertices());
+
+    float* curr = colors;
+    float avg[3];
+    for (int i = 0; i < mmgr->NVertices(); ++i) {
+        double totalweight = 0;
+        for (int z = 0; z < 3; z++) avg[z] = 0;
+        for (int j = 0; j < mmgr->getVertexSampleCount(i); ++j) {
+            Sample sample = mmgr->getSample(i, j);
+            float w = std::abs(sample.confidence*sample.dA);
+            avg[0] += sample.r*w;
+            avg[1] += sample.g*w;
+            avg[2] += sample.b*w;
+            totalweight += w;
+        }
+        if (totalweight > 0) {
+            for (int z = 0; z < 3; ++z) avg[z] /= totalweight;
+        }
+        double dev = 0;
+        for (int j = 0; j < mmgr->getVertexSampleCount(i); ++j) {
+            Sample sample = mmgr->getSample(i, j);
+            float w = std::abs(sample.confidence*sample.dA);
+            dev += (avg[0] - sample.r)*(avg[0] - sample.r)*w/((1+sample.r)*(1+sample.r));
+            dev += (avg[1] - sample.g)*(avg[1] - sample.g)*w/((1+sample.g)*(1+sample.g));
+            dev += (avg[2] - sample.b)*(avg[2] - sample.b)*w/((1+sample.b)*(1+sample.g));
+        }
+        if (totalweight > 0) {
+            dev /= totalweight;
+            for (int z = 0; z < 3; ++z) curr[z] = dev;
+        }
+        curr += 3;
+    }
+
+    glBufferData(GL_ARRAY_BUFFER,
+            3*mmgr->NVertices()*sizeof(float),
+            colors, GL_STATIC_DRAW);
+    delete [] colors;
+    glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    precalculated = VIEW_VARIANCE;
 }
 
 void RenderManager::setupRoomGeometry(roommodel::RoomModel* model) {

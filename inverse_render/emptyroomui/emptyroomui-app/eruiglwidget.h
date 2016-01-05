@@ -118,6 +118,8 @@ public slots:
             renderer->precalculateAverageSamples();
         else if (meshRenderFormat == VIEW_SINGLEIMAGE && renderer)
             renderer->precalculateSingleImage(currentCamera);
+        else if (meshRenderFormat == VIEW_VARIANCE && renderer)
+            renderer->precalculateVariance();
         if (qglw) qglw->update();
     }
     void showSelected(bool show=true) {
