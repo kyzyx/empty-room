@@ -76,8 +76,8 @@ void FloorplanHelper::loadFromRoomModel(roommodel::RoomModel* rm) {
     for (int i = 0; i < rm->walls.size(); ++i) {
         int nn = rm->walls[i].normal;
         double l = rm->walls[i].length*nn;
-        double cx = (i&1)?px+l:px;
-        double cy = (i&1)?py:py-l;
+        double cx = (i&1)?px-l:px;
+        double cy = (i&1)?py:py+l;
 
         Segment s;
         s.direction = i&1?1:0;

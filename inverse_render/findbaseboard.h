@@ -12,7 +12,7 @@ class BaseboardFinder {
             : imgr(imagemanager), floorplan(room), solved(false)
         { ; }
 
-        void compute(float resolution=0.02, float edgethreshold=6);
+        void compute(float resolution=0.02, float edgethreshold=15);
 
         roommodel::Color getBaseboardColor() {
             if (!solved) compute();

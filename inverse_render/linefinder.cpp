@@ -197,19 +197,19 @@ Vector3d projectOntoWall(
 {
     R3Point p1 = cam.pos;
     R3Vector v = cam.focal_length*cam.towards
-               - (x - cam.width/2 - 0.5)*cam.right
-               - (y - cam.height/2 - 0.5)*cam.up;
+               + (x - cam.width/2 - 0.5)*cam.right
+               + (y - cam.height/2 - 0.5)*cam.up;
     R3Point p2 = p1+v;
     p1 = normalization*p1;
     p2 = normalization*p2;
 
     R3Vector n = s.direction?R3posx_vector:R3posz_vector;
-    R3Plane plane(n*s.norm, s.coord*s.norm);
+    R3Plane plane(n*s.norm, -s.coord*s.norm);
     R3Ray ray(p1, p2);
     R3Point hit;
     RNClassID rncid = R3Intersects(ray, plane, &hit);
     if (rncid && hit.Y() < ceilingplane+margin && hit.Y() > floorplane-margin) {
-        double x = s.direction?hit.X():hit.Z();
+        double x = s.direction?hit.Z():hit.X();
         return Vector3d(x - s.start, hit.Y(), (hit-cam.pos).Length());
     } else {
         return Vector3d(-numeric_limits<double>::infinity(), 0, numeric_limits<double>::infinity());
@@ -228,7 +228,7 @@ Eigen::Vector3d projectOntoFloorplan(
             m4dn(2,0), m4dn(2,1), m4dn(2,2), m4dn(2,3),
             m4dn(3,0), m4dn(3,1), m4dn(3,2), m4dn(3,3)
             );
-    Vector3d best;
+    Vector3d best(1,1,numeric_limits<double>::infinity());
     int bestj = -1;
     for (int j = 0; j < wf.wallsegments.size(); j++) {
         Eigen::Vector3d p = projectOntoWall(
@@ -236,7 +236,6 @@ Eigen::Vector3d projectOntoFloorplan(
                 wf.ceilplane, wf.floorplane,
                 norm,
                 wf.wallsegments[j]);
-        cout << "Wall " << j << ": " << p[2] << " " << p[0] << " " << p[1] << endl;
         if (p[0] < margin || p[0] > wf.wallsegments[j].length() - margin)
             continue;
         if (p[2] < best[2]) {
