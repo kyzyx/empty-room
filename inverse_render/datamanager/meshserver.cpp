@@ -80,8 +80,8 @@ bool MeshServer::loadMesh(PolygonMesh::ConstPtr mesh, bool ccw) {
         }
 
         // Face normal
-        R3Vector a = pos[f[0]] - pos[f[1]];
-        R3Vector b = pos[f[2]] - pos[f[1]];
+        R3Vector a = pos[f[2]] - pos[f[1]];
+        R3Vector b = pos[f[0]] - pos[f[1]];
         R3Vector c = a%b;
 
         // Update vertex normals
