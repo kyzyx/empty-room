@@ -16,6 +16,8 @@ int main(int argc, char** argv) {
     vector<R3Point> p;
     vector<R3Vector> u;
     vector<R3Vector> t;
+    bool invert = false;
+    if (argc > 1 && strcmp(argv[1], "-i") == 0) invert = true;
     // Read in list of filenames
     while (getline(cin, line)) {
         filenames.push_back(line);
@@ -40,7 +42,6 @@ int main(int argc, char** argv) {
         m[14] = 0;
         m[15] = 1;
         R4Matrix rt(m);
-        bool invert = false;
         if (invert) {
             R4Matrix rtinv = rt.Inverse();
             R3Point pos = rtinv*R3Point(0,0,0);
