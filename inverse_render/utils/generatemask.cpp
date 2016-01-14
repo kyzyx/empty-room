@@ -45,12 +45,17 @@ void generateEdgeMask(Mat& image, Mat& mask) {
 
 int main(int argc, char** argv) {
     if (argc < 2) {
-        cout << "Usage: generatemask camfile.cam" << endl;
+        cout << "Usage: generatemask camfile.cam [blur kernel size]" << endl;
         return 0;
     }
     ifstream in(argv[1]);
     int sz;
     int w, h;
+    int blur = 0;
+    if (argc > 2) {
+        blur = atoi(argv[2]);
+        if (blur > 1 && blur%2 == 0) blur++;
+    }
 
     string line;
     getline(in, line);
@@ -67,6 +72,7 @@ int main(int argc, char** argv) {
         map<string, float> header;
         int ww, hh;
         ImageIO::readRGBImage(filename, image, ww, hh);
+        if (blur) GaussianBlur(im, im, Size(blur,blur), blur/3);
         generateEdgeMask(im, mask);
         multiply(mask, im, masked);
         for (int j = 0; j < w*h; j++) {
