@@ -66,7 +66,7 @@ int main(int argc, char** argv) {
         string filename = line.substr(0, line.find(' '));
         map<string, float> header;
         int ww, hh;
-        ImageIO::readBinaryImageWithHeader(filename, &image, ww, hh, header, true);
+        ImageIO::readRGBImage(filename, image, ww, hh);
         generateEdgeMask(im, mask);
         multiply(mask, im, masked);
         for (int j = 0; j < w*h; j++) {
