@@ -10,7 +10,7 @@ int minpix = 20;
 int maxpix = 230;
 
 float ConfidenceFn(unsigned char f) {
-    return f > 127? (255-f)/127. : f/127.; // Hat function
+    return f > 127? (256-f)/127. : f/127.; // Hat function, but with 255 > 0
 }
 float confidence(unsigned char* rgb) {
     return max(max(ConfidenceFn(rgb[0]),
