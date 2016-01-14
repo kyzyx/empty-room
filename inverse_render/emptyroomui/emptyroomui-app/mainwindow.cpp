@@ -1078,6 +1078,7 @@ void MainWindow::addLine(QString l) {
 
 void MainWindow::on_computeVerticalLinesButton_clicked()
 {
+    lines.clear();
     QString cmd = settings->value("compute_rwo_binary", "linefindapp -camfile %1 -roommodel %2 -p").toString();
     cmd = cmd.arg(camfilename, roommodelfile);
     QString extraflags = "";
