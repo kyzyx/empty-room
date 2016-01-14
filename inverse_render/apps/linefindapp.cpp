@@ -14,9 +14,7 @@ class LineFindApp : public InvrenderApp {
 
         virtual int run() {
             WallFinder wf;
-            roommodel::RoomModel rm;
-            roommodel::load(rm, roommodelname);
-            wf.loadFromRoomModel(&rm);
+            wf.loadFromRoomModel(room);
             vector<vector<Vector3d> > votes(wf.wallsegments.size());
             Matrix4f m4dn = wf.getNormalizationTransform();
             R4Matrix norm(
@@ -43,15 +41,9 @@ class LineFindApp : public InvrenderApp {
     protected:
         virtual int _parseargs(int argc, char** argv) {
             if (!imgr) return 0;
-            if (pcl::console::find_argument(argc, argv, "-roommodel") >= 0) {
-                pcl::console::parse_argument(argc, argv, "-roommodel", roommodelname);
-            } else {
-                return 0;
-            }
+            if (!room) return 0;
             return 1;
         }
-
-        string roommodelname;
 };
 
 int main(int argc, char** argv) {
