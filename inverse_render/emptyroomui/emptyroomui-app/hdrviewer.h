@@ -18,6 +18,7 @@ public:
     ~HDRViewer();
 
     void copySettings(HDRViewer* v);
+    int getCurrentMapping() const { return currentindex; }
     double getLowerBound() { return HDRGlHelper::LINTOLOG(currsettings.lo); }
     double getUpperBound() { return HDRGlHelper::LINTOLOG(currsettings.hi); };
 protected:

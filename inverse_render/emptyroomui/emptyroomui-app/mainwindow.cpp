@@ -1180,7 +1180,13 @@ void MainWindow::on_actionExport_Mesh_with_Colors_triggered()
     if (mmgr) {
         QString lwd = settings->value("lastworkingdirectory", "").toString();
         QString filename = QFileDialog::getSaveFileName(this, "Save Mesh as PLY", lwd, "PLY files (*.ply)");
-        if (!filename.isEmpty()) mmgr->writePlyMesh(filename.toStdString(), 1/ui->meshWidget->getUpperBound());
+        if (!filename.isEmpty()) {
+            if (ui->meshWidget->getCurrentMapping() == TMO_GAMMA22) {
+                mmgr->writePlyMesh(filename.toStdString(), 1/ui->meshWidget->getUpperBound(), 2.2);
+            } else {
+                mmgr->writePlyMesh(filename.toStdString(), 1/ui->meshWidget->getUpperBound());
+            }
+        }
     }
 }
 
