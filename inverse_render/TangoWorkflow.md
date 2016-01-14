@@ -37,14 +37,36 @@ Workflow for Project Tango Data Capture
         > ls image????.bin | create_camfile -i > data.cam
       This should create a bunch of image files as well as a camera file
       containing image filenames and pose data.
+
+      Note that if a gamma transform is required (usually true) then
+      the header of the camfile needs to be adjusted. Here is an example
+        CAMFILE_HEADER
+        FrameCount 1345
+        Width 640
+        Height 360
+        Vfov 38.0509
+        Gamma 2.2
+        end_header
+
+      It is recommended to resize images larger than about 640x480 to under this
+      size for efficiency purposes. We typically run on sets of under 1500 images
+      at 640x480 resolution. You can use the batchconvert utility script to
+      transform images listed in a camfile:
+          > ./batchconvert.py data.cam png -scale 0.5
+      Don't forget to generate a new camfile with the new filenames:
+          > sed s/bin/png/ <data.cam >lowres.cam
+      batchconvert runs the convert utility on each file
+          > ./convert image0000.bin image0000.png -scale 0.5
 5. Preprocess the depth data using Poisson Surface Reconstruction or Floating Scale Surface Reconstruction
-   Poisson:
+   Poisson (Meshlab):
        a. Run the following commands
             > processdepth data.pts data.ply
        b. Open data.ply in Meshlab and verify it looks correct
        c. In Meshlab, go to Filters > Remeshing, Simplification, and Reconstruction > Surface Reconstruction: Poisson
        d. Set Octree Depth to 8 or 9 and press "Apply"
        e. Save the resulting mesh as e.g. mesh.ply
+   Screened Poisson Surface Reconstruction:
+       a. > PoissonRecon --in data.ply --out poisson.ply --depth 8
    FSSR:
        a. Run the following commands
             > processdepth data.pts data.ply
@@ -71,8 +93,12 @@ Radiometric Calibration
      $ paste --delimiters='' camfile.cam exposures.txt > camfileexp.cam
 4. Regenerate confidence files
      $ mkdir masks && mv *.conf masks/
-     $ confidence camfile.cam
+     $ generateconfidence camfile.cam
 
+Next Steps
+----------
+Open up the visualizer app and load the mesh and camera file.
+See help for more details.
 
 Troubleshooting
 ---------------
