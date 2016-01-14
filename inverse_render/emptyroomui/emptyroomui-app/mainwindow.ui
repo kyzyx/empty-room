@@ -402,7 +402,7 @@
                    </sizepolicy>
                   </property>
                   <property name="minimum">
-                   <number>50</number>
+                   <number>30</number>
                   </property>
                   <property name="maximum">
                    <number>300</number>
@@ -1123,6 +1123,7 @@
     <property name="title">
      <string>Help</string>
     </property>
+    <addaction name="actionHelp"/>
    </widget>
    <widget class="QMenu" name="menuIntermediates">
     <property name="title">
@@ -1501,6 +1502,11 @@
    </property>
    <property name="toolTip">
     <string>Label and store the selected vertices</string>
+   </property>
+  </action>
+  <action name="actionHelp">
+   <property name="text">
+    <string>Help...</string>
    </property>
   </action>
  </widget>
