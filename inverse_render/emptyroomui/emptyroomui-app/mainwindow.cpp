@@ -1031,7 +1031,7 @@ void MainWindow::on_solveButton_clicked()
 void MainWindow::solveCompleted(QString s) {
     QStringList toks = s.split(" ");
     if (room && toks[0] == QString("WallMaterial")) {
-        room->wallMaterial = roommodel::Material(toks[1].toInt(), toks[2].toInt(), toks[3].toInt());
+        room->wallMaterial = roommodel::Material(toks[1].toFloat(), toks[2].toFloat(), toks[3].toFloat());
     }
 }
 
