@@ -100,11 +100,7 @@ int main(int argc, char** argv) {
         PointCloud<Normal>::Ptr withnormals(new PointCloud<Normal>);
         cloud->resize(m);
         for (int j = 0; j < m; j++) {
-            float v[3];
-            v[0] = dot(poses[z].m,   tmp+3*j) + poses[z].m[3];
-            v[1] = dot(poses[z].m+4, tmp+3*j) + poses[z].m[7];
-            v[2] = dot(poses[z].m+8, tmp+3*j) + poses[z].m[11];
-            cloud->at(j) = PointXYZ(v[0], v[1], v[2]);
+            cloud->at(j) = PointXYZ(tmp[3*j], tmp[3*j+1], tmp[3*j+2]);
         }
 
         float radius = 0.1;
@@ -121,12 +117,19 @@ int main(int argc, char** argv) {
         }
         for (int i = 0; i < m; i++) {
             if (isFinite(cloud->at(i)) && isFinite(withnormals->at(i))) {
-                points.push_back(cloud->at(i).x);
-                points.push_back(cloud->at(i).y);
-                points.push_back(cloud->at(i).z);
-                normals.push_back(withnormals->at(i).normal_x);
-                normals.push_back(withnormals->at(i).normal_y);
-                normals.push_back(withnormals->at(i).normal_z);
+                float v[3];
+                v[0] = cloud->at(i).x;
+                v[1] = cloud->at(i).y;
+                v[2] = cloud->at(i).z;
+                points.push_back(dot(poses[z].m,   v) + poses[z].m[3]);
+                points.push_back(dot(poses[z].m+4, v) + poses[z].m[7]);
+                points.push_back(dot(poses[z].m+8, v) + poses[z].m[11]);
+                v[0] = withnormals->at(i).normal_x;
+                v[1] = withnormals->at(i).normal_y;
+                v[2] = withnormals->at(i).normal_z;
+                normals.push_back(dot(poses[z].m,   v));
+                normals.push_back(dot(poses[z].m+4, v));
+                normals.push_back(dot(poses[z].m+8, v));
                 float scale = 0;
                 int cnt = 0;
                 vector<int> knnidx;
