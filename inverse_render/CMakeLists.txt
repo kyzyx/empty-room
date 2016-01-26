@@ -107,6 +107,7 @@ target_link_libraries(wallfindapp ${PCL_LIBRARIES} datamanager roommodel
 
 add_executable(solverapp apps/solverapp.cpp
     apps/invrenderapp.cpp apps/invrenderapp.h
+    rerender.h rerender.cpp
     solver.cpp solver.h solvetexture.cpp)
 target_link_libraries(solverapp ${PCL_LIBRARIES} ${OpenCV_LIBS} ${GLUT_LIBRARY} datamanager roommodel
     wallfinder rendering)

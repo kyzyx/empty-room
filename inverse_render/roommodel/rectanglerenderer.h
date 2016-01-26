@@ -73,6 +73,7 @@ void rectanglesToTriangles(
         std::vector<Rect>& rectangles,
         std::vector<double>& triangles,
         bool includebackfaces=true,
-        bool includenormals=false);
+        bool includenormals=false,
+        bool includeuvs=false);
 }
 #endif

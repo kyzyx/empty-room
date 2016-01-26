@@ -2,6 +2,7 @@
 #include "invrenderapp.h"
 #include "wallfinder/wall_finder.h"
 #include "solver.h"
+#include "rerender.h"
 #include <iostream>
 #include <pcl/console/parse.h>
 
@@ -9,14 +10,14 @@ using namespace std;
 
 class SolverApp : public InvrenderApp {
     public:
-        SolverApp() : numlights(0), hemicuberesolution(150), numiters(1000), maxerr(0.1), discardthreshold(0.25), matlabfilename("") {}
+        SolverApp() : numlights(0), hemicuberesolution(150), numiters(1000), maxerr(0.1), discardthreshold(0.25), matlabfilename(""), label(WallFinder::LABEL_WALL), cameranum(0) {}
         virtual int run() {
             mmgr->loadSamples();
             InverseRender ir(mmgr, numlights, hemicuberesolution, getProgressFunction(1,2));
             vector<SampleData> walldata;
             vector<int> wallindices;
             for (int i = 0; i < mmgr->size(); i++) {
-                if (mmgr->getLabel(i, 1) == WallFinder::LABEL_WALL)
+                if (mmgr->getLabel(i, 1) == label)
                     wallindices.push_back(i);
             }
             ir.computeSamples(walldata, wallindices, numsamples, discardthreshold, false, getProgressFunction(0,2));
@@ -27,7 +28,24 @@ class SolverApp : public InvrenderApp {
             ir.solve(walldata);
             cout << "data:WallMaterial " << ir.wallMaterial.r << " " << ir.wallMaterial.g << " " << ir.wallMaterial.b << endl;
             for (int i = 0; i < numlights; i++) {
-                cout << "data:Light" << i << " " << ir.lights[i].r << " " << ir.lights[i].g << " " << ir.lights[i].b << endl;
+                cout << "data:Light " << i << " " << ir.lights[i].r << " " << ir.lights[i].g << " " << ir.lights[i].b << endl;
+            }
+            if (pbrtfilename.length()) {
+                room->wallMaterial.diffuse.r = ir.wallMaterial.r;
+                room->wallMaterial.diffuse.g = ir.wallMaterial.g;
+                room->wallMaterial.diffuse.b = ir.wallMaterial.b;
+                if (imgr && room) {
+                    for (int i = 0; i < numlights; i++) {
+                        ir.lights[i].r = 1;
+                        ir.lights[i].g = 1;
+                        ir.lights[i].b = 1;
+                    }
+                    outputPbrtFile(
+                            pbrtfilename, room, *mmgr, ir.lights,
+                            imgr->getCamera(cameranum));
+                } else {
+                    cout << "Error - need to supply imagemanager and roommodel to output pbrt file" << endl;
+                }
             }
         }
     protected:
@@ -38,6 +56,9 @@ class SolverApp : public InvrenderApp {
             if (!mmgr) return 0;
             if (pcl::console::find_argument(argc, argv, "-hemicuberesolution") >= 0) {
                 pcl::console::parse_argument(argc, argv, "-hemicuberesolution", hemicuberesolution);
+            }
+            if (pcl::console::find_argument(argc, argv, "-label") >= 0) {
+                pcl::console::parse_argument(argc, argv, "-label", label);
             }
             if (pcl::console::find_argument(argc, argv, "-numlights") >= 0) {
                 pcl::console::parse_argument(argc, argv, "-numlights", numlights);
@@ -57,6 +78,9 @@ class SolverApp : public InvrenderApp {
             if (pcl::console::find_argument(argc, argv, "-outputsamplesfile") >= 0) {
                 pcl::console::parse_argument(argc, argv, "-outputsamplesfile", matlabfilename);
             }
+            if (pcl::console::find_argument(argc, argv, "-outputpbrtfile") >= 0) {
+                pcl::console::parse_argument(argc, argv, "-outputpbrtfile", pbrtfilename);
+            }
             return true;
         }
         int numiters;
@@ -66,6 +90,9 @@ class SolverApp : public InvrenderApp {
         int hemicuberesolution;
         int numlights;
         string matlabfilename;
+        string pbrtfilename;
+        int cameranum;
+        int label;
 };
 
 int main(int argc, char** argv) {

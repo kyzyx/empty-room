@@ -129,7 +129,8 @@ void rectanglesToTriangles(
         vector<Rect>& rectangles,
         vector<double>& triangles,
         bool includebackfaces,
-        bool includenormals)
+        bool includenormals,
+        bool includeuvs)
 {
     for (int i = 0; i < rectangles.size(); ++i) {
         Rect& r = rectangles[i];
@@ -152,6 +153,17 @@ void rectanglesToTriangles(
             2,3,0,
             2,0,3,
         };
+
+        double uvs[8];
+        uvs[0] = 0;
+        uvs[1] = 0;
+        uvs[2] = rectangles[i].w;
+        uvs[3] = 0;
+        uvs[4] = rectangles[i].w;
+        uvs[5] = rectangles[i].h;
+        uvs[6] = 0;
+        uvs[7] = rectangles[i].h;
+
         FVector norm(0,0,0);
         norm[r.axis] = 1;
         norm *= r.normal;
@@ -170,6 +182,10 @@ void rectanglesToTriangles(
                     for (int z = 0; z < 3; ++z) {
                         triangles.push_back(norm[z]);
                     }
+                }
+                if (includeuvs) {
+                    triangles.push_back(uvs[2*indices[j*3+k]+0]);
+                    triangles.push_back(uvs[2*indices[j*3+k]+1]);
                 }
             }
         }

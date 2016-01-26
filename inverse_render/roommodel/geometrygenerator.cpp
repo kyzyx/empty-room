@@ -66,18 +66,18 @@ void GeometryGenerator::generate() {
 			trect.p[2] -= rwo.trimWidth;
 			trect.h = rwo.trimWidth;
 			trect.depth = rwo.trimDepth;
-			otherRectangles.push_back(trect);
+			trimRectangles.push_back(trect);
 
 			trect.p[2] += wRect.h+rwo.trimWidth;
-			otherRectangles.push_back(trect);
-			
+			trimRectangles.push_back(trect);
+
 			trect.h = wRect.h + 2*rwo.trimWidth;
 			trect.w = rwo.trimWidth;
 			trect.p[2] = wRect.p[2] - rwo.trimWidth;
-			otherRectangles.push_back(trect);
+			trimRectangles.push_back(trect);
 
 			trect.p[trect.axis?0:1] += wRect.w+rwo.trimWidth;
-			otherRectangles.push_back(trect);
+			trimRectangles.push_back(trect);
 
 			if (rwo.recessed != 0) {
 				for (int k = 1; k <= 2; k ++)
@@ -146,15 +146,17 @@ void GeometryGenerator::generate() {
     Rect floorRect(minx-delta, miny-delta, 0, maxx+delta, maxy+delta, 0);
     floorRect.material = &(model->floorMaterial);
     floorRect.normal = 1;
-    otherRectangles.push_back(floorRect);
+    floorRectangles.push_back(floorRect);
     Rect ceilRect(minx-delta, miny-delta, h, maxx+delta, maxy+delta, h);
     ceilRect.material = &(model->ceilingMaterial);
     ceilRect.normal = -1;
-    otherRectangles.push_back(ceilRect);
+    ceilRectangles.push_back(ceilRect);
 }
 
 void GeometryGenerator::getRectangles(vector<Rect>& rectangles) {
-	rectangles.insert(rectangles.end(), otherRectangles.begin(), otherRectangles.end());
+	rectangles.insert(rectangles.end(), floorRectangles.begin(), floorRectangles.end());
+	rectangles.insert(rectangles.end(), ceilRectangles.begin(), ceilRectangles.end());
+	rectangles.insert(rectangles.end(), trimRectangles.begin(), trimRectangles.end());
 	rectangles.insert(rectangles.end(), wallRectangles.begin(), wallRectangles.end());
 	rectangles.insert(rectangles.end(), baseboardRectangles.begin(), baseboardRectangles.end());
 }
@@ -175,7 +177,6 @@ void GeometryGenerator::getTriangleVertexColors(std::vector<double>& colors) {
         }
     }
 }
-
 
 Rect GeometryGenerator::getRectangleForWindow(RectangleWallObject* rwo) {
 	return windowRectangles[rwo];

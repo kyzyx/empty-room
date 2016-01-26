@@ -719,6 +719,7 @@ void WallFinder::loadFromRoomModel(roommodel::RoomModel* rm) {
         px = cx;
         py = cy;
 
+        forwards.push_back(i&1);
         wallsegments.push_back(s);
     }
 }
