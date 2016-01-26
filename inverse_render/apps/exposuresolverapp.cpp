@@ -7,7 +7,7 @@ using namespace std;
 
 class ExposureSolverApp : public InvrenderApp {
     public:
-        ExposureSolverApp() : subsample(0) {}
+        ExposureSolverApp() : subsample(0), scale(-1){}
         virtual int run() {
             vector<int> indices;
             int n = 0;
@@ -33,7 +33,11 @@ class ExposureSolverApp : public InvrenderApp {
             for (int i = 0; i < indices.size(); i++) radiances[i] = 50;
             cerr << "Computing " << indices.size() << " vertex radiances ";
             cerr << "with " << n << " images" << endl;
-            solveExposure(mmgr, n, exposures, radiances, indices);
+            if (scale > 0) {
+                solveExposure(mmgr, n, exposures, radiances, indices, LOSS_HUBER, scale);
+            } else {
+                solveExposure(mmgr, n, exposures, radiances, indices);
+            }
             for (int i = 0; i < n; i++) {
                 for (int ch = 0; ch < 3; ch++) {
                     if (ch) cout << " ";
@@ -50,9 +54,13 @@ class ExposureSolverApp : public InvrenderApp {
             if (pcl::console::find_argument(argc, argv, "-subsample") >= 0) {
                 pcl::console::parse_argument(argc, argv, "-subsample", subsample);
             }
+            if (pcl::console::find_argument(argc, argv, "-scale") >= 0) {
+                pcl::console::parse_argument(argc, argv, "-scale", scale);
+            }
             return 1;
         }
         float subsample;
+        float scale;
 };
 
 int main(int argc, char** argv) {

@@ -4,6 +4,22 @@
 using namespace std;
 using namespace ceres;
 
+struct OverexposedFunctor {
+    OverexposedFunctor(float lambda) : l(lambda) {}
+    template <typename T>
+    bool operator()(
+            const T* const camera,
+            const T* const point,
+            T* residual) const
+    {
+        residual[0] = camera[0]*point[0] - T(1.f);
+        if (camera[0]*point[0] > T(1.f)) residual[0] *= T(l);
+        return true;
+    }
+
+    float l;
+};
+
 struct CostFunctor {
     CostFunctor(float pixelvalue) : v(pixelvalue) {}
     template <typename T>
@@ -15,20 +31,30 @@ struct CostFunctor {
         residual[0] = camera[0]*point[0] - T(v);
         return true;
     }
-    static CostFunction* Create(float pixelvalue) {
+    float v;
+};
+
+const float lambda = 0.f;
+
+CostFunction* Create(float pixelvalue) {
+    if (pixelvalue >= 1.f) {
+        return (new ceres::AutoDiffCostFunction<OverexposedFunctor, 1, 1, 1>(
+                    new OverexposedFunctor(lambda)));
+    } else {
         return (new ceres::AutoDiffCostFunction<CostFunctor, 1, 1, 1>(
                     new CostFunctor(pixelvalue)));
     }
+}
 
-    float v;
-};
 
 double solveExposure(
         MeshManager* manager,
         int n,
         double* exposures,
         double* radiances,
-        std::vector<int>& indices)
+        std::vector<int>& indices,
+        int lossfn,
+        float scale)
 {
     google::InitGoogleLogging("solveExposure()");
     if (indices.empty()) {
@@ -49,11 +75,19 @@ double solveExposure(
             for (int j = 0; j < manager->getVertexSampleCount(indices[i]); j++) {
                 Sample s = manager->getSample(indices[i], j);
                 ceres::CostFunction* costfn;
-                if (ch == 0) costfn = CostFunctor::Create(s.r);
-                else if (ch == 1) costfn = CostFunctor::Create(s.g);
-                else if (ch == 2) costfn = CostFunctor::Create(s.b);
-                problem.AddResidualBlock(
-                    costfn, NULL, &exps[s.id], &radiances[i]);
+                if (ch == 0) costfn = Create(s.r);
+                else if (ch == 1) costfn = Create(s.g);
+                else if (ch == 2) costfn = Create(s.b);
+                if (lossfn == LOSS_CAUCHY) {
+                    problem.AddResidualBlock(
+                            costfn, new ceres::CauchyLoss(scale), &exps[s.id], &radiances[i]);
+                } else if (lossfn == LOSS_HUBER) {
+                    problem.AddResidualBlock(
+                            costfn, new ceres::HuberLoss(scale), &exps[s.id], &radiances[i]);
+                } else {
+                    problem.AddResidualBlock(
+                            costfn, NULL, &exps[s.id], &radiances[i]);
+                }
                 problem.SetParameterLowerBound(&exps[s.id], 0, 0);
             }
             problem.SetParameterLowerBound(&radiances[i], 0, 0);
