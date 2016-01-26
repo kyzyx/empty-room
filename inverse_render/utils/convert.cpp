@@ -25,11 +25,12 @@ std::vector<std::string> &split(const std::string &s, char delim, std::vector<st
 
 int main(int argc, char** argv) {
     if (argc < 3) {
-        cout << "Usage: convertimage inputimage outputformat [-intensityscale outputscale] [-colorscale scaler,scaleg,scaleb] [-scale scale]" << endl;
+        cout << "Usage: convertimage inputimage outputformat [-intensityscale outputscale] [-colorscale scaler,scaleg,scaleb] [-scale scale] [-flip_y] [-flip_x]" << endl;
         return 0;
     }
     double intensityscale[3];
     float scale = 1;
+    float gamma = 0;
     for (int i = 0; i < 3; i++) intensityscale[i] = 1;
     if (pcl::console::find_argument(argc, argv, "-intensityscale") >= 0) {
         double d;
@@ -46,17 +47,30 @@ int main(int argc, char** argv) {
     if (pcl::console::find_argument(argc, argv, "-scale") >= 0) {
         pcl::console::parse_argument(argc, argv, "-scale", scale);
     }
+    if (pcl::console::find_argument(argc, argv, "-gamma") >= 0) {
+        pcl::console::parse_argument(argc, argv, "-gamma", gamma);
+    }
+    bool flip_y = false;
+    bool flip_x = false;
+    if (pcl::console::find_switch(argc, argv, "-flip_y")) {
+        flip_y = true;
+    }
+    if (pcl::console::find_switch(argc, argv, "-flip_x")) {
+        flip_x = true;
+    }
     int w, h;
     if (!ImageIO::readFloatImage(argv[1], image, w, h)) {
         cout << "Error reading file" << endl;
         return 0;
     }
+    if (flip_x || flip_y) ImageIO::flip(image, w, h, sizeof(float)*3, flip_x, flip_y);
     //string fmt = argv[2];
     //string outfile = ImageIO::replaceExtension(argv[1], fmt);
     string outfile = argv[2];
     string fmt = outfile.substr(outfile.find_last_of(".")+1);
     for (int i = 0; i < w*h; i++) {
         for (int j = 0; j < 3; j++) {
+            if (gamma > 0) image[3*i+j] = pow(image[3*i+j], gamma);
             image[3*i+j] *= intensityscale[j];
         }
     }

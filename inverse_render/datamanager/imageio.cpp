@@ -34,7 +34,8 @@ bool endswith(const string& s, string e) {
     else
         return false;
 }
-void flip(char* a, int w, int h, size_t bytes, bool flip_x, bool flip_y) {
+void flip(void* arr, int w, int h, size_t bytes, bool flip_x, bool flip_y) {
+    char* a = (char*) arr;
     if (flip_x) {
         char* tmp = new char[bytes];
         for (int i = 0; i < h; ++i) {

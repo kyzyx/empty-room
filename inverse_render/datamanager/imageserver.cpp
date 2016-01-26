@@ -185,7 +185,7 @@ bool ImageServer::loadAllFiles() {
 
                 if (success) {
                     if (!(imagetypes[n].getFlags() & ImageType::IT_NOFLIP)) {
-                        ImageIO::flip((char*) im, w, h, imagetypes[n].getSize(), flip_x, flip_y);
+                        ImageIO::flip(im, w, h, imagetypes[n].getSize(), flip_x, flip_y);
                     }
                     flags[n*sz+i] |= DF_INITIALIZED;
                 }
