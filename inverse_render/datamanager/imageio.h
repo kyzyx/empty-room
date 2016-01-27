@@ -14,6 +14,11 @@ bool writeScalarMap(const std::string& filename, const void* image, int w, int h
 bool readFloatImage(const std::string& filename, void* image, int& w, int& h, int channels=3);
 bool readRGBImage(const std::string& filename, void* image, int& w, int& h, int channels=3);
 
+bool readCameraFileHeader(
+        std::ifstream& in,
+        int& sz, int& w, int& h,
+        std::map<std::string, std::string>* vars=NULL);
+
 // Particular file formats
 bool readPcdDepthImage(const std::string& filename,
         float** image,

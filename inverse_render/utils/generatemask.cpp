@@ -58,9 +58,7 @@ int main(int argc, char** argv) {
     }
 
     string line;
-    getline(in, line);
-    stringstream infoin(line);
-    infoin >> sz >> w >> h;
+    ImageIO::readCameraFileHeader(in, sz, w, h);
 
     Mat im, mask, masked;
     unsigned char* image = new unsigned char[w*h*3];

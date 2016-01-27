@@ -28,9 +28,7 @@ int main(int argc, char** argv) {
     int w, h;
 
     string line;
-    getline(in, line);
-    stringstream infoin(line);
-    infoin >> sz >> w >> h;
+    ImageIO::readCameraFileHeader(in, sz, w, h);
 
     unsigned char* image = new unsigned char[w*h*3];
     float* conf = new float[w*h];

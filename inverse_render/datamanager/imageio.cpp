@@ -173,6 +173,60 @@ bool readRGBImage(const string& filename, void* image, int& width, int& height, 
 
     return true;
 }
+bool readCameraFileHeader(
+        std::ifstream& in,
+        int& sz, int& w, int& h,
+        std::map<std::string, std::string>* vars)
+{
+    sz = 0;
+    w = 0;
+    h = 0;
+    string infoline;
+    getline(in, infoline);
+    size_t numparams = count(infoline.begin(), infoline.end(), ' ') + 1;
+    if (numparams == 1 && infoline == "CAMFILE_HEADER") {
+        // Format:
+        // CAMFILE_HEADER
+        // FrameCount n
+        // Width w
+        // Height h
+        // Vfov f
+        // Gamma g
+        // ...
+        // end_header
+        getline(in, infoline);
+        while (infoline != "end_header") {
+            stringstream infoin(infoline);
+            string key, val;
+            infoin >> key >> val;
+            transform(key.begin(), key.end(), key.begin(), ::tolower);
+            if (key == "framecount") {
+                sz = atoi(val.c_str());
+            } else if (key == "width") {
+                w = atoi(val.c_str());
+            } else if (key == "height") {
+                h = atoi(val.c_str());
+            } else if (vars) {
+                (*vars)[key] = val;
+            }
+            getline(in, infoline);
+        }
+        if (!sz || !w || !h) {
+            cerr << "Error! Incomplete header!" << endl;
+            return false;
+        }
+    }
+    else if (numparams < 4) {
+        cerr << "Error! Invalid camera file!" << endl;
+        return false;
+    } else {
+        stringstream infoin(infoline);
+        string vfov;
+        infoin >> sz >> w >> h >> vfov;
+        if (vars) (*vars)["vfov"] = vfov;
+    }
+    return true;
+}
 
 bool readPcdDepthImage(const string& filename,
         float** image,
