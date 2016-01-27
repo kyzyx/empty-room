@@ -17,7 +17,21 @@ int main(int argc, char** argv) {
     vector<R3Vector> u;
     vector<R3Vector> t;
     bool invert = false;
-    if (argc > 1 && strcmp(argv[1], "-i") == 0) invert = true;
+    bool longheader = false;
+    int skip = 1;
+    int target = 0;
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-i") == 0) invert = true;
+        else if (strcmp(argv[i], "-l") == 0) longheader = true;
+        else if (strcmp(argv[i], "-n") == 0) {
+            i++;
+            skip = atoi(argv[i]);
+        }
+        else if (strcmp(argv[i], "-t") == 0) {
+            i++;
+            target = atoi(argv[i]);
+        }
+    }
     // Read in list of filenames
     while (getline(cin, line)) {
         filenames.push_back(line);
@@ -63,8 +77,22 @@ int main(int argc, char** argv) {
         vfov = atan(0.5/foc)*360/M_PI;
         n++;
     }
-    cout << n << " " << w << " " << h << " " << vfov << endl;
-    for (int i = 0; i < n; i++) {
+    if (target) {
+        skip = n/target;
+    }
+    int nim = (n-skip+1)/skip;
+    if (longheader) {
+        cout << "CAMFILE_HEADER" << endl;
+        cout << "FrameCount " << nim << endl;
+        cout << "Width " << w << endl;
+        cout << "Height " << h << endl;
+        cout << "Vfov " << vfov << endl;
+        cout << "Gamma " << 2.2 << endl;
+        cout << "end_header" << endl;
+    } else {
+        cout << nim << " " << w << " " << h << " " << vfov << endl;
+    }
+    for (int i = skip-1; i < n; i += skip) {
         cout << filenames[i] << " ";
         cout << p[i][0] << " " << p[i][1] << " " << p[i][2] << " ";
         cout << u[i][0] << " " << u[i][1] << " " << u[i][2] << " ";
