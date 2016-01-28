@@ -48,6 +48,7 @@ class MeshManager {
         int VertexOnFace(int n, int i) const;
         char getLabel(int n, int ch=0) const;
         Sample getSample(int n, int i) const;
+        Material getMedianVertexColor(int n) const;
         Material getVertexColor(int n) const;
         int getVertexSampleCount(int n) const;
         int getTotalSamples();

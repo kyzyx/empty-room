@@ -359,19 +359,8 @@ void RenderManager::precalculateAverageSamples() {
     memset(colors, 0, sizeof(float)*3*mmgr->NVertices());
     float* curr = colors;
     for (int i = 0; i < mmgr->NVertices(); ++i) {
-        float totalweight = 0;
-        for (int j = 0; j < mmgr->getVertexSampleCount(i); ++j) {
-            Sample sample = mmgr->getSample(i, j);
-            float w = std::abs(sample.confidence*sample.dA);
-            curr[0] += sample.r*w;
-            curr[1] += sample.g*w;
-            curr[2] += sample.b*w;
-            totalweight += w;
-        }
-        if (totalweight > 0) {
-            for (int z = 0; z < 3; ++z) curr[z] /= totalweight;
-        }
-        curr += 3;
+        Material m = mmgr->getMedianVertexColor(i);
+        for (int z = 0; z < 3; z++) *(curr++) = m(z);
     }
     glBufferData(GL_ARRAY_BUFFER,
             3*mmgr->NVertices()*sizeof(float),

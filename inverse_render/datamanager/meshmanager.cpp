@@ -258,6 +258,35 @@ bool MeshManager::loadSamples() {
     return false;
 }
 
+Material MeshManager::getMedianVertexColor(int n) const {
+    Material m(0,0,0);
+    double total = 0;
+    vector<pair<float,float> > currsamples[3];
+    for (int i = 0; i < vertexsamples[n]; ++i) {
+        const Sample& s = samples[n][i];
+        if (s.confidence > 0) {
+            float w = abs(s.dA*s.confidence);
+            currsamples[0].push_back(make_pair(s.r, w));
+            currsamples[1].push_back(make_pair(s.g, w));
+            currsamples[2].push_back(make_pair(s.b, w));
+            total += w;
+        }
+    }
+    if (total > 0) {
+        for (int z = 0; z < 3; z++) {
+            std::sort(currsamples[z].begin(), currsamples[z].end());
+            float t = 0;
+            for (int x = 0; x < currsamples[z].size(); x++) {
+                t += currsamples[z][x].second;
+                if (t > total/2) {
+                    m(z) = currsamples[z][x].first;
+                    break;
+                }
+            }
+        }
+    }
+    return m;
+}
 Material MeshManager::getVertexColor(int n) const {
     Material m(0,0,0);
     double total = 0;
@@ -265,7 +294,7 @@ Material MeshManager::getVertexColor(int n) const {
         const Sample& s = samples[n][i];
         if (s.confidence > 0) {
             m += Material(s.r,s.g,s.b)*abs(s.dA)*s.confidence;
-            total += s.dA*s.confidence;
+            total += abs(s.dA*s.confidence);
         }
     }
     if (total > 0) {
@@ -380,7 +409,7 @@ void MeshManager::writePlyMesh(const string& filename, double scalefactor, doubl
     for (int i = 0; i < nvertices; ++i) {
         R3Point p = VertexPosition(i);
         out << p[0] << " " << p[1] << " " << p[2] << " ";
-        Material m = getVertexColor(i);
+        Material m = getMedianVertexColor(i);
         m.r = pow(m.r,gamma)*255*scalefactor;
         m.g = pow(m.g,gamma)*255*scalefactor;
         m.b = pow(m.b,gamma)*255*scalefactor;
