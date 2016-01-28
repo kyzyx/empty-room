@@ -72,6 +72,7 @@ int main(int argc, char** argv) {
         for (int j = 0; j < 3; j++) {
             if (gamma > 0) image[3*i+j] = pow(image[3*i+j], gamma);
             image[3*i+j] *= intensityscale[j];
+            if (gamma > 0) image[3*i+j] = pow(image[3*i+j], 1./gamma);
         }
     }
     cv::Mat im(h, w, CV_32FC3, image);

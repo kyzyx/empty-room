@@ -18,11 +18,16 @@ else:
     pool = multiprocessing.Pool(None)
     cmds = []
     tmpdir = tempfile.mkdtemp()
+    gamma = 1
 
     try:
         lines = [l.strip() for l in open(sys.argv[1]).readlines()]
         if lines[0].strip() == "CAMFILE_HEADER":
-            lines = lines[lines.index("end_header")+1:];
+            hdr = lines[0:lines.index("end_header")]
+            g = [float(s.split()[1]) for s in hdr if s.split()[0] == "Gamma"]
+            if len(g) > 0:
+                gamma = g[0]
+            lines = lines[lines.index("end_header")+1:]
         else:
             lines = lines[1:]
         for line in lines:
@@ -34,10 +39,10 @@ else:
                 expg = float(toks[-2])*scale
                 expb = float(toks[-1])*scale
                 expstr = "%f,%f,%f"%(expr,expg,expb)
-                cmd = [convert_binary, toks[0], outfile, '-colorscale', expstr];
+                cmd = [convert_binary, toks[0], outfile, '-colorscale', expstr, '-gamma', str(gamma)]
                 cmds.append(cmd)
             else:
-                cmd = [convert_binary, toks[0], outfile, '-intensityscale', str(scale)]
+                cmd = [convert_binary, toks[0], outfile, '-intensityscale', str(scale), '-gamma', str(gamma)]
                 cmds.append(cmd)
             n += 1
 
