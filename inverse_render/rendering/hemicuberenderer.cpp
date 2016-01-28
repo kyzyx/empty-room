@@ -94,7 +94,6 @@ float HemicubeRenderer::renderHemicube(
             for (int j = 0; j < res; ++j) {
                 int visibility = ftoi(light[3*(i*res+j)]);
                 int lightid = ftoi(light[3*(i*res+j)+1]);
-                lightid = 0;
                 if (lightid > 0) {
                     lightid--;
                     if (lightid >= lightareas.size()) lightareas.resize(lightid+1);
@@ -115,7 +114,6 @@ float HemicubeRenderer::renderHemicube(
         for (int j = 0; j < res; ++j) {
             int visibility = ftoi(light[3*(i*res+j)]);
             int lightid = ftoi(light[3*(i*res+j)+1]);
-                lightid = 0;
             if (lightid > 0) {
                 lightid--;
                 if (lightid >= lightareas.size()) lightareas.resize(lightid+1);
