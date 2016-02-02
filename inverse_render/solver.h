@@ -16,6 +16,7 @@ class InverseRender {
         {
             rm = new RenderManager(m);
             rm->setupMeshColors();
+            rm->precalculateAverageSamples();
             hr = new HemicubeRenderer(rm, hemicubeResolution);
             lights.resize(numlights);
         }

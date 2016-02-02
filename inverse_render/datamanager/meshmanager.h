@@ -59,6 +59,7 @@ class MeshManager {
         R3Mesh* getMesh();
 
         void writePlyMesh(const std::string& filename, double scalefactor=1, double gamma=1);
+        void writePlyMesh(const std::string& filename, std::vector<Material> customcolors, double scalefactor=1, double gamma=1);
 
         // Size accessors
         int size() const { return nvertices; }

@@ -393,6 +393,13 @@ void MeshManager::writeLabelsToFile(const string& labelsfile, cb_type cb) {
 }
 
 void MeshManager::writePlyMesh(const string& filename, double scalefactor, double gamma) {
+    vector<Material> customcolors;
+    for (int i = 0; i < nvertices; i++) {
+        customcolors.push_back(getMedianVertexColor(i));
+    }
+    writePlyMesh(filename, customcolors, scalefactor, gamma);
+}
+void MeshManager::writePlyMesh(const string& filename, vector<Material> customcolors, double scalefactor, double gamma) {
     ofstream out(filename);
     out << "ply" << endl;
     out << "format ascii 1.0" << endl;
@@ -409,7 +416,7 @@ void MeshManager::writePlyMesh(const string& filename, double scalefactor, doubl
     for (int i = 0; i < nvertices; ++i) {
         R3Point p = VertexPosition(i);
         out << p[0] << " " << p[1] << " " << p[2] << " ";
-        Material m = getMedianVertexColor(i);
+        Material m = customcolors[i];
         m.r = pow(m.r,gamma)*255*scalefactor;
         m.g = pow(m.g,gamma)*255*scalefactor;
         m.b = pow(m.b,gamma)*255*scalefactor;
