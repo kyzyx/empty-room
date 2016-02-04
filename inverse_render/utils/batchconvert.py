@@ -15,7 +15,13 @@ else:
     cmds = []
     fmt = sys.argv[2]
 
-    for line in open(sys.argv[1]).readlines()[1:]:
+    lines = [l.strip() for l in open(sys.argv[1]).readlines()]
+    if lines[0].strip() == "CAMFILE_HEADER":
+        lines = lines[lines.index("end_header")+1:];
+    else:
+        lines = lines[1:]
+
+    for line in lines:
         toks = line.split()
         outfile = toks[0][0:toks[0].rfind('.')] + "." + fmt
         cmd = [convert_binary, toks[0], outfile] + sys.argv[3:]
