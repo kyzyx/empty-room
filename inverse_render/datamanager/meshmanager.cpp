@@ -392,14 +392,14 @@ void MeshManager::writeLabelsToFile(const string& labelsfile, cb_type cb) {
     if (cb) cb(100);
 }
 
-void MeshManager::writePlyMesh(const string& filename, double scalefactor, double gamma) {
+void MeshManager::writePlyMesh(const string& filename, double scalefactor, double gamma, bool hdr) {
     vector<Material> customcolors;
     for (int i = 0; i < nvertices; i++) {
         customcolors.push_back(getMedianVertexColor(i));
     }
-    writePlyMesh(filename, customcolors, scalefactor, gamma);
+    writePlyMesh(filename, customcolors, scalefactor, gamma, hdr);
 }
-void MeshManager::writePlyMesh(const string& filename, vector<Material> customcolors, double scalefactor, double gamma) {
+void MeshManager::writePlyMesh(const string& filename, vector<Material> customcolors, double scalefactor, double gamma, bool hdr) {
     ofstream out(filename);
     out << "ply" << endl;
     out << "format ascii 1.0" << endl;
@@ -407,9 +407,15 @@ void MeshManager::writePlyMesh(const string& filename, vector<Material> customco
     out << "property float x" << endl;
     out << "property float y" << endl;
     out << "property float z" << endl;
-    out << "property uchar red" << endl;
-    out << "property uchar green" << endl;
-    out << "property uchar blue" << endl;
+    if (hdr) {
+        out << "property float red" << endl;
+        out << "property float green" << endl;
+        out << "property float blue" << endl;
+    } else {
+        out << "property uchar red" << endl;
+        out << "property uchar green" << endl;
+        out << "property uchar blue" << endl;
+    }
     out << "element face " << nfaces << endl;
     out << "property list uchar int vertex_indices" << endl;
     out << "end_header" << endl;
@@ -417,10 +423,17 @@ void MeshManager::writePlyMesh(const string& filename, vector<Material> customco
         R3Point p = VertexPosition(i);
         out << p[0] << " " << p[1] << " " << p[2] << " ";
         Material m = customcolors[i];
-        m.r = pow(m.r,gamma)*255*scalefactor;
-        m.g = pow(m.g,gamma)*255*scalefactor;
-        m.b = pow(m.b,gamma)*255*scalefactor;
-        out << min((int)m.r,255) << " " << min((int)m.g,255) << " " << min((int)m.b,255) << endl;
+        if (hdr) {
+            m.r = pow(m.r,gamma)*scalefactor;
+            m.g = pow(m.g,gamma)*scalefactor;
+            m.b = pow(m.b,gamma)*scalefactor;
+            out << m.r << " " << m.g << " " << m.b << endl;
+        } else {
+            m.r = pow(m.r,gamma)*255*scalefactor;
+            m.g = pow(m.g,gamma)*255*scalefactor;
+            m.b = pow(m.b,gamma)*255*scalefactor;
+            out << min((int)m.r,255) << " " << min((int)m.g,255) << " " << min((int)m.b,255) << endl;
+        }
     }
     for (int i = 0; i < nfaces; ++i) {
         out << "3";
