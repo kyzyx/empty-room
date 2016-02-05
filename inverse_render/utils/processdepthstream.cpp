@@ -5,7 +5,6 @@
 #include <pcl/filters/filter.h>
 #include <pcl/features/integral_image_normal.h>
 #include <pcl/features/normal_3d.h>
-#include <pcl/visualization/cloud_viewer.h>
 #include <vector>
 
 float tmp[640*480*3];
