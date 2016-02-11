@@ -428,6 +428,8 @@ void MainWindow::on_actionOpen_Mesh_triggered()
         if (mdialog.isCcw()) {
             cmd = cmd + " -ccw";
             settings->setValue("lastmeshflags", " -ccw");
+        } else {
+            settings->setValue("lastmeshflags", "");
         }
         progressbar->setValue(0);
         SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
