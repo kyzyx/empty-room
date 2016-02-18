@@ -25,9 +25,9 @@ class HemicubeRenderer {
                 std::vector<float*>* images=NULL,
                 boost::function<void(int)> cb=NULL
                 );
-        float renderHemicube(const R3Point& p, const R3Vector& n,
-                Material& m, std::vector<float>& lightareas, float* color,
-                float* light);
+        void renderHemicube(const R3Point& p, const R3Vector& n,
+                Material& m, std::vector<float>& lightareas, float& fractionUnknown,
+                float* color, float* light);
         int getHemicubeResolution() const { return res; }
         SampleData computeSample(int n, float* radimage, float* lightimage);
         void weightTopHemicube(float* img, float factor=1) const;
@@ -38,6 +38,11 @@ class HemicubeRenderer {
         void renderFace(const R3Point& p,
                 const R3Vector& towards, const R3Vector& up,
                 float* image, int mode);
+        bool processHemicubeCell(
+                const R3Point& p, const R3Vector& n, const R3Vector& up,
+                float weight, float* image, float* light,
+                Material& m, std::vector<float>& lightareas,
+                int i, int j);
 
         void computeHemicubeFF();
 

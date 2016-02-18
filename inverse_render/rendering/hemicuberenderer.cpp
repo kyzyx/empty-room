@@ -65,20 +65,23 @@ void HemicubeRenderer::weightSideHemicube(float* img, float factor) const {
     }
 }
 
+const int LIGHT_TYPESHIFT = 8;
+const int LIGHT_IDMASK = (1 << LIGHT_TYPESHIFT)-1;
 const int FLOAT_SIG_BITS = 23;
 const int FLOAT_EXP_MASK = 1 + (1 << FLOAT_SIG_BITS);
 inline int ftoi(float f) {
     return (*reinterpret_cast<int*>(&f)) - FLOAT_EXP_MASK;
 }
 
-float HemicubeRenderer::renderHemicube(
+void HemicubeRenderer::renderHemicube(
         const R3Point& p,
         const R3Vector& n,
         Material& m,
         vector<float>& lightareas,
+        float& fractionUnknown,
         float* image, float* light)
 {
-    double blank = 0;
+    fractionUnknown = 0;
     if (image == NULL) image = new float[3*res*res];
     if (light == NULL) light = new float[3*res*res];
     R3Point pp = p + 0.0001*n;
@@ -92,19 +95,11 @@ float HemicubeRenderer::renderHemicube(
         renderFace(pp, orientations[o], n, light, VIEW_LABELS);
         for (int i = res/2; i < res; ++i) {
             for (int j = 0; j < res; ++j) {
-                int visibility = ftoi(light[3*(i*res+j)]);
-                int lightid = ftoi(light[3*(i*res+j)+1]);
-                if (lightid > 0) {
-                    lightid--;
-                    if (lightid >= lightareas.size()) lightareas.resize(lightid+1);
-                    lightareas[lightid] += sideHemicubeFF[i][j];
-                } else if (visibility <= 0) {
-                    blank += sideHemicubeFF[i][j];
-                } else {
-                    m.r += sideHemicubeFF[i][j]*image[3*(i*res+j)];
-                    m.g += sideHemicubeFF[i][j]*image[3*(i*res+j)+1];
-                    m.b += sideHemicubeFF[i][j]*image[3*(i*res+j)+2];
-                }
+                bool occupied = processHemicubeCell(
+                        p, orientations[o], n,
+                        sideHemicubeFF[i][j], light + 3*(i*res+j), image + 3*(i*res+j),
+                        m, lightareas, i, j);
+                if (!occupied) fractionUnknown += sideHemicubeFF[i][j];
             }
         }
     }
@@ -112,22 +107,36 @@ float HemicubeRenderer::renderHemicube(
     renderFace(pp, n, y, light, VIEW_LABELS);
     for (int i = 0; i < res; ++i) {
         for (int j = 0; j < res; ++j) {
-            int visibility = ftoi(light[3*(i*res+j)]);
-            int lightid = ftoi(light[3*(i*res+j)+1]);
-            if (lightid > 0) {
-                lightid--;
-                if (lightid >= lightareas.size()) lightareas.resize(lightid+1);
-                lightareas[lightid] += topHemicubeFF[i][j];
-            } else if (visibility <= 0) {
-                blank += topHemicubeFF[i][j];
-            } else {
-                m.r += topHemicubeFF[i][j]*image[3*(i*res+j)];
-                m.g += topHemicubeFF[i][j]*image[3*(i*res+j)+1];
-                m.b += topHemicubeFF[i][j]*image[3*(i*res+j)+2];
-            }
+                bool occupied = processHemicubeCell(
+                        p, n, y,
+                        topHemicubeFF[i][j], light + 3*(i*res+j), image + 3*(i*res+j),
+                        m, lightareas, i, j);
+                if (!occupied) fractionUnknown += topHemicubeFF[i][j];
         }
     }
-    return blank;
+}
+bool HemicubeRenderer::processHemicubeCell(
+        const R3Point& p, const R3Vector& towards, const R3Vector& up,
+        float weight, float* image, float* light,
+        Material& m, std::vector<float>& lightareas,
+        int i, int j)
+{
+        int visibility = ftoi(light[0]);
+        int lightinfo = ftoi(light[1]);
+        int lightid = lightinfo & LIGHT_IDMASK;
+        int lighttype = lightinfo >> LIGHT_TYPESHIFT;
+        if (lightid > 0) {
+            lightid--;
+            if (lightid >= lightareas.size()) lightareas.resize(lightid+1);
+            lightareas[lightid] += weight;
+        } else if (visibility <= 0) {
+            return false;
+        } else {
+            m.r += weight*image[0];
+            m.g += weight*image[1];
+            m.b += weight*image[2];
+        }
+        return true;
 }
 
 void HemicubeRenderer::renderFace(const R3Point& p,
@@ -192,10 +201,11 @@ SampleData HemicubeRenderer::computeSample(int n, float* radimage, float* lighti
     SampleData sd;
     sd.vertexid = n;
     sd.radiosity = rendermanager->getMeshManager()->getVertexColor(n);
-    sd.fractionUnknown = renderHemicube(
+    renderHemicube(
             rendermanager->getMeshManager()->VertexPosition(n),
             rendermanager->getMeshManager()->VertexNormal(n),
-            sd.netIncoming, sd.lightamount, radimage, lightimage
+            sd.netIncoming, sd.lightamount, sd.fractionUnknown,
+            radimage, lightimage
             );
     return sd;
 }
