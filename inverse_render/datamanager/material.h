@@ -28,6 +28,11 @@ class Material {
             : r(red), g(green), b(blue), t() {;}
         Material()
             : r(0), g(0), b(0), t() {;}
+        const float& operator[](int n) const {
+            if (n == 0) return r;
+            else if (n == 1) return g;
+            else return b;
+        }
         float& operator()(int n) {
             if (n == 0) return r;
             else if (n == 1) return g;

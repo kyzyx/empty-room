@@ -7,11 +7,17 @@
 #include "datamanager/meshmanager.h"
 #include "rendering/hemicuberenderer.h"
 
+enum {
+    LOSS_L2,
+    LOSS_CAUCHY,
+    LOSS_HUBER,
+};
+
 class InverseRender {
     public:
         InverseRender(MeshManager* m, int nlights, int hemicubeResolution=150, boost::function<void(int)> callback=NULL)
             : mesh(m), numlights(nlights),
-              maxPercentErr(0.1), numRansacIters(1000),
+              lossfn(LOSS_L2), scale(1),
               cb(callback)
         {
             rm = new RenderManager(m);
@@ -42,14 +48,11 @@ class InverseRender {
         void writeVariablesBinary(std::vector<SampleData>& data, std::string filename);
         void loadVariablesBinary(std::vector<SampleData>& data, std::string filename);
 
-        void setNumRansacIters(int n) { numRansacIters = n; }
-        void setMaxPercentErr(double d) { maxPercentErr = d; }
+        void setLossFunction(int fn) { lossfn = fn; }
+        void setLossFunctionScale(double s) { scale = s; }
+
         RenderManager* getRenderManager() { return rm; }
     private:
-        // Inverse Rendering helpers
-        bool calculateWallMaterialFromUnlit(std::vector<SampleData>& data);
-        bool solveAll(std::vector<SampleData>& data);
-
         // Texture recovery helpers
         Material computeAverageMaterial(
                 std::vector<SampleData>& data,
@@ -59,8 +62,9 @@ class InverseRender {
         HemicubeRenderer* hr;
         RenderManager* rm;
 
-        int numRansacIters;
-        double maxPercentErr;
+        int lossfn;
+        double scale;
+
         boost::function<void(int)> cb;
     public:
         std::vector<float*> images;

@@ -108,15 +108,17 @@ target_link_libraries(wallfindapp ${PCL_LIBRARIES} datamanager roommodel
 add_executable(solverapp apps/solverapp.cpp
     apps/invrenderapp.cpp apps/invrenderapp.h
     rerender.h rerender.cpp
-    solver.cpp solver.h solvetexture.cpp)
-target_link_libraries(solverapp ${PCL_LIBRARIES} ${OpenCV_LIBS} ${GLUT_LIBRARY} datamanager roommodel
+    solver.cpp solver.h inverselighting.cpp solvetexture.cpp)
+target_link_libraries(solverapp ${PCL_LIBRARIES} ${OpenCV_LIBS} ${GLUT_LIBRARY}
+    ${CERES_LIBRARIES} datamanager roommodel
     wallfinder rendering)
 
 add_executable(intrinsicapp apps/intrinsicapp.cpp
     apps/invrenderapp.cpp apps/invrenderapp.h
     rerender.h rerender.cpp
-    solver.cpp solver.h solvetexture.cpp)
-target_link_libraries(intrinsicapp ${PCL_LIBRARIES} ${OpenCV_LIBS} ${GLUT_LIBRARY} datamanager roommodel
+    solver.cpp solver.h inverselighting.cpp solvetexture.cpp)
+target_link_libraries(intrinsicapp ${PCL_LIBRARIES} ${OpenCV_LIBS}
+    ${GLUT_LIBRARY} ${CERES_LIBRARIES} datamanager roommodel
     wallfinder rendering)
 # ----------------------------------------------------------------------------
 add_executable(create_camfile EXCLUDE_FROM_ALL utils/create_camfile.cpp)

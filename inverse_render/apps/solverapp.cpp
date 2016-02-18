@@ -10,7 +10,7 @@ using namespace std;
 
 class SolverApp : public InvrenderApp {
     public:
-        SolverApp() : numlights(0), hemicuberesolution(150), numiters(1000), maxerr(0.1), discardthreshold(0.25), matlabfilename(""), label(WallFinder::LABEL_WALL), cameranum(0) {}
+        SolverApp() : numlights(0), hemicuberesolution(150), discardthreshold(0.25), matlabfilename(""), label(WallFinder::LABEL_WALL), cameranum(0), scale(0) {}
         virtual int run() {
             mmgr->loadSamples();
             InverseRender ir(mmgr, numlights, hemicuberesolution, getProgressFunction(1,2));
@@ -23,8 +23,10 @@ class SolverApp : public InvrenderApp {
             ir.computeSamples(walldata, wallindices, numsamples, discardthreshold, false, getProgressFunction(0,2));
             if (matlabfilename.length())
                 ir.writeVariablesMatlab(walldata, matlabfilename);
-            ir.setNumRansacIters(numiters);
-            ir.setMaxPercentErr(maxerr);
+            if (scale > 0) {
+                ir.setLossFunction(LOSS_HUBER);
+                ir.setLossFunctionScale(scale);
+            }
             ir.solve(walldata);
             cout << "data:WallMaterial " << ir.wallMaterial.r << " " << ir.wallMaterial.g << " " << ir.wallMaterial.b << endl;
             for (int i = 0; i < numlights; i++) {
@@ -69,11 +71,8 @@ class SolverApp : public InvrenderApp {
             if (pcl::console::find_argument(argc, argv, "-numsamples") >= 0) {
                 pcl::console::parse_argument(argc, argv, "-numsamples", numsamples);
             }
-            if (pcl::console::find_argument(argc, argv, "-numiters") >= 0) {
-                pcl::console::parse_argument(argc, argv, "-numiters", numiters);
-            }
-            if (pcl::console::find_argument(argc, argv, "-maxerr") >= 0) {
-                pcl::console::parse_argument(argc, argv, "-maxerr", maxerr);
+            if (pcl::console::find_argument(argc, argv, "-scale") >= 0) {
+                pcl::console::parse_argument(argc, argv, "-scale", scale);
             }
             if (pcl::console::find_argument(argc, argv, "-outputsamplesfile") >= 0) {
                 pcl::console::parse_argument(argc, argv, "-outputsamplesfile", matlabfilename);
@@ -83,10 +82,9 @@ class SolverApp : public InvrenderApp {
             }
             return true;
         }
-        int numiters;
         int numsamples;
         float discardthreshold;
-        float maxerr;
+        float scale;
         int hemicuberesolution;
         int numlights;
         string matlabfilename;
