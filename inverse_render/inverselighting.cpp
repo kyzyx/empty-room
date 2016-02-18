@@ -7,6 +7,8 @@ using namespace ceres;
 
 // Params: robustness, robustness scale
 
+const double MINRELATIVEERROR = 0.01;
+
 struct IncidentFunctor {
     IncidentFunctor(SampleData& data, int channel)
         : d(data), ch(channel) { }
@@ -18,6 +20,7 @@ struct IncidentFunctor {
     {
         T computed = materials[0]*T(d.netIncoming[ch]*(1-d.fractionUnknown));
         residual[0] = computed - T(d.radiosity[ch]);
+        residual[0] /= T(d.radiosity[ch] + MINRELATIVEERROR);
         return true;
     }
 
@@ -41,6 +44,7 @@ struct AreaLightFunctor {
         }
         computed *= materials[0]*T(1-d.fractionUnknown);
         residual[0] = computed - T(d.radiosity[ch]);
+        residual[0] /= T(d.radiosity[ch] + MINRELATIVEERROR);
         return true;
     }
 
