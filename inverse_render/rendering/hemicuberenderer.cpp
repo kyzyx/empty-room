@@ -96,7 +96,7 @@ void HemicubeRenderer::renderHemicube(
             for (int j = 0; j < res; ++j) {
                 bool occupied = processHemicubeCell(
                         p, orientations[o], n,
-                        sideHemicubeFF[i][j], light + 3*(i*res+j), image + 3*(i*res+j),
+                        sideHemicubeFF[i][j], image + 3*(i*res+j), light + 3*(i*res+j),
                         m, lightareas, i, j);
                 if (!occupied) fractionUnknown += sideHemicubeFF[i][j];
             }
@@ -108,7 +108,7 @@ void HemicubeRenderer::renderHemicube(
         for (int j = 0; j < res; ++j) {
                 bool occupied = processHemicubeCell(
                         p, n, y,
-                        topHemicubeFF[i][j], light + 3*(i*res+j), image + 3*(i*res+j),
+                        topHemicubeFF[i][j], image + 3*(i*res+j), light + 3*(i*res+j),
                         m, lightareas, i, j);
                 if (!occupied) fractionUnknown += topHemicubeFF[i][j];
         }

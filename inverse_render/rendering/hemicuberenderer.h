@@ -21,7 +21,7 @@ enum LightType {
     NUMLIGHTTYPES,
 };
 
-const int LIGHT_TYPESHIFT = 8;
+const int LIGHT_TYPESHIFT = 6;
 const int LIGHT_IDMASK = (1 << LIGHT_TYPESHIFT)-1;
 inline int LIGHTID(int lightinfo) { return lightinfo & LIGHT_IDMASK; }
 inline int LIGHTTYPE(int lightinfo) { return lightinfo >> LIGHT_TYPESHIFT; }
@@ -29,9 +29,9 @@ const int NUM_SH_BANDS = 3;
 const int ENVMAP_RES = 4;
 const int LightTypeNumCoefficients[] =
 {
-    1,                                  // LIGHTTYPE_AREA
-    NUM_SH_BANDS*(NUM_SH_BANDS+1)/2,    // LIGHTTYPE_SH
-    6*ENVMAP_RES*ENVMAP_RES,            // LIGHTTYPE_ENVMAP
+    1,                            // LIGHTTYPE_AREA
+    NUM_SH_BANDS*NUM_SH_BANDS,    // LIGHTTYPE_SH
+    6*ENVMAP_RES*ENVMAP_RES,      // LIGHTTYPE_ENVMAP
 };
 
 class HemicubeRenderer {
