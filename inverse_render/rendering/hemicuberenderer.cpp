@@ -139,12 +139,12 @@ bool HemicubeRenderer::processHemicubeCell(
             R3Vector v = (i-res/2 + 0.5)*x*cellsize + (j-res/2 + 0.5)*y*cellsize + towards;
             v.Normalize();
             int idx = 0;
-            /*for (int band = 0; band < NUM_SH_BANDS; band++) {
+            for (int band = 0; band < NUM_SH_BANDS; band++) {
                 for (int m = -band; m <= band; m++) {
                     lightareas[lightid][idx++] +=
                         weight*SH(band, m, v[0], v[1], v[2]);
                 }
-            }*/
+            }
         } else if (lighttype == LIGHTTYPE_ENVMAP) {
             // FIXME: Implement me! (Nearest or gaussian)
         }
