@@ -15,8 +15,8 @@ enum {
 
 class InverseRender {
     public:
-        InverseRender(MeshManager* m, int nlights, int hemicubeResolution=150, boost::function<void(int)> callback=NULL)
-            : mesh(m), numlights(nlights),
+        InverseRender(MeshManager* m, int hemicubeResolution=150, boost::function<void(int)> callback=NULL)
+            : mesh(m),
               lossfn(LOSS_L2), scale(1),
               cb(callback)
         {
@@ -24,7 +24,7 @@ class InverseRender {
             rm->setupMeshColors();
             rm->precalculateAverageSamples();
             hr = new HemicubeRenderer(rm, hemicubeResolution);
-            lights.resize(numlights);
+            lights.resize(countLightParameters(m));
         }
         ~InverseRender() {
             if (hr) delete hr;
@@ -58,6 +58,7 @@ class InverseRender {
                 std::vector<SampleData>& data,
                 std::vector<Material>& lightintensies);
         double generateBinaryMask(const CameraParams* cam, const char* labelimage, std::vector<bool>& mask, int label);
+        int countLightParameters(MeshManager* m);
 
         HemicubeRenderer* hr;
         RenderManager* rm;
@@ -69,7 +70,6 @@ class InverseRender {
     public:
         std::vector<float*> images;
         MeshManager* mesh;
-        int numlights;
         std::vector<Material> lights;
         Material wallMaterial;
 };

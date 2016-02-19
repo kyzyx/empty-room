@@ -1,4 +1,5 @@
 #include "hemicuberenderer.h"
+#include "sh.h"
 #include <iostream>
 
 #define MAX_LIGHTS 127
@@ -65,8 +66,6 @@ void HemicubeRenderer::weightSideHemicube(float* img, float factor) const {
     }
 }
 
-const int LIGHT_TYPESHIFT = 8;
-const int LIGHT_IDMASK = (1 << LIGHT_TYPESHIFT)-1;
 const int FLOAT_SIG_BITS = 23;
 const int FLOAT_EXP_MASK = 1 + (1 << FLOAT_SIG_BITS);
 inline int ftoi(float f) {

@@ -122,8 +122,8 @@ CostFunction* Create(SampleData& sd, int numlights, int ch) {
 void InverseRender::solve(vector<SampleData>& data) {
     google::InitGoogleLogging("solveExposure()");
     double mat = 0.6;
-    double* ls = new double[numlights];
-    for (int i = 0; i < numlights; i++) ls[i] = 10;
+    double* ls = new double[lights.size()];
+    for (int i = 0; i < lights.size(); i++) ls[i] = lights[i](0);
     for (int z = 0; z < 3; z++) {
         ceres::Problem problem;
         for (int i = 0; i < data.size(); i++) {
@@ -133,21 +133,21 @@ void InverseRender::solve(vector<SampleData>& data) {
             } else if (lossfn == LOSS_HUBER) {
                 fn = new ceres::HuberLoss(scale);
             }
-            if (numlights) {
-                problem.AddResidualBlock(Create(data[i], numlights, z), fn, &mat, ls);
+            if (lights.size()) {
+                problem.AddResidualBlock(Create(data[i], lights.size(), z), fn, &mat, ls);
             } else {
-                problem.AddResidualBlock(Create(data[i], numlights, z), fn, &mat);
+                problem.AddResidualBlock(Create(data[i], lights.size(), z), fn, &mat);
             }
         }
         problem.SetParameterLowerBound(&mat, 0, 0);
         problem.SetParameterUpperBound(&mat, 0, 1);
-        for (int i = 0; i < numlights; i++) problem.SetParameterLowerBound(ls, i, 0);
+        for (int i = 0; i < lights.size(); i++) problem.SetParameterLowerBound(ls, i, 0);
         ceres::Solver::Options options;
         options.minimizer_progress_to_stdout = true;
         ceres::Solver::Summary summary;
         ceres::Solve(options, &problem, &summary);
         std::cout << summary.FullReport() << "\n";
         wallMaterial(z) = mat;
-        for (int i = 0; i < numlights; i++) lights[i](z) = ls[i];
+        for (int i = 0; i < lights.size(); i++) lights[i](z) = ls[i];
     }
 }

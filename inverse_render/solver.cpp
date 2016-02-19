@@ -1,4 +1,5 @@
 #include "solver.h"
+#include <set>
 #include <random>
 #include <fstream>
 
@@ -27,18 +28,30 @@ void InverseRender::computeSamples(
 {
     hr->computeSamples(data, indices, numsamples, discardthreshold, saveImages?&images:NULL, callback);
     for (int i = 0; i < data.size(); ++i) {
-        data[i].lightamount.resize(numlights, 0);
+        data[i].lightamount.resize(lights.size(), 0);
     }
+}
+
+int InverseRender::countLightParameters(MeshManager* m) {
+    int ret = 0;
+    set<int> lightids;
+    for (int i = 0; i < m->size(); i++) {
+        lightids.insert(m->getLabel(i,0));
+    }
+    for (auto lightinfo : lightids) {
+        ret += LightTypeNumCoefficients[LIGHTTYPE(lightinfo)];
+    }
+    return ret;
 }
 
 void InverseRender::writeVariablesMatlab(vector<SampleData>& data, string filename) {
     ofstream out(filename);
     out << "A = [";
     for (int i = 0; i < data.size(); ++i) {
-        for (int j = 0; j < numlights; ++j) {
+        for (int j = 0; j < lights.size(); ++j) {
             if (j < data[i].lightamount.size()) out << data[i].lightamount[j];
             else out << 0;
-            if (j != numlights-1) out << ",";
+            if (j != lights.size()-1) out << ",";
         }
         if (i != data.size()-1) out << ";" << endl;
     }
@@ -69,7 +82,7 @@ void InverseRender::writeVariablesBinary(vector<SampleData>& data, string filena
     ofstream out(filename, ofstream::binary);
     uint32_t sz = data.size();
     out.write((char*) &sz, 4);
-    sz = numlights;
+    sz = lights.size();
     out.write((char*) &sz, 4);
     for (int i = 0; i < data.size(); ++i) {
         out.write((char*)&(data[i].fractionUnknown), sizeof(float));
@@ -80,7 +93,7 @@ void InverseRender::writeVariablesBinary(vector<SampleData>& data, string filena
         out.write((char*)&(data[i].netIncoming(0)), sizeof(float));
         out.write((char*)&(data[i].netIncoming(1)), sizeof(float));
         out.write((char*)&(data[i].netIncoming(2)), sizeof(float));
-        for (int j = 0; j < numlights; ++j) {
+        for (int j = 0; j < lights.size(); ++j) {
             static float zero = 0.f;
             if (j < data[i].lightamount.size()) out.write((char*)&(data[i].lightamount[j]), sizeof(float));
             else out.write((char*)&zero, sizeof(float));

@@ -10,10 +10,10 @@ using namespace std;
 
 class SolverApp : public InvrenderApp {
     public:
-        SolverApp() : numlights(0), hemicuberesolution(150), discardthreshold(0.25), matlabfilename(""), label(WallFinder::LABEL_WALL), cameranum(0), scale(0) {}
+        SolverApp() : hemicuberesolution(150), discardthreshold(0.25), matlabfilename(""), label(WallFinder::LABEL_WALL), cameranum(0), scale(0) {}
         virtual int run() {
             mmgr->loadSamples();
-            InverseRender ir(mmgr, numlights, hemicuberesolution, getProgressFunction(1,2));
+            InverseRender ir(mmgr, hemicuberesolution, getProgressFunction(1,2));
             vector<SampleData> walldata;
             vector<int> wallindices;
             for (int i = 0; i < mmgr->size(); i++) {
@@ -29,7 +29,7 @@ class SolverApp : public InvrenderApp {
             }
             ir.solve(walldata);
             cout << "data:WallMaterial " << ir.wallMaterial.r << " " << ir.wallMaterial.g << " " << ir.wallMaterial.b << endl;
-            for (int i = 0; i < numlights; i++) {
+            for (int i = 0; i < ir.lights.size(); i++) {
                 cout << "data:Light " << i << " " << ir.lights[i].r << " " << ir.lights[i].g << " " << ir.lights[i].b << endl;
             }
             if (pbrtfilename.length()) {
@@ -37,11 +37,6 @@ class SolverApp : public InvrenderApp {
                 room->wallMaterial.diffuse.g = ir.wallMaterial.g;
                 room->wallMaterial.diffuse.b = ir.wallMaterial.b;
                 if (imgr && room) {
-                    for (int i = 0; i < numlights; i++) {
-                        ir.lights[i].r = 1;
-                        ir.lights[i].g = 1;
-                        ir.lights[i].b = 1;
-                    }
                     outputPbrtFile(
                             pbrtfilename, room, *mmgr, ir.lights,
                             imgr->getCamera(cameranum));
@@ -61,9 +56,6 @@ class SolverApp : public InvrenderApp {
             }
             if (pcl::console::find_argument(argc, argv, "-label") >= 0) {
                 pcl::console::parse_argument(argc, argv, "-label", label);
-            }
-            if (pcl::console::find_argument(argc, argv, "-numlights") >= 0) {
-                pcl::console::parse_argument(argc, argv, "-numlights", numlights);
             }
             if (pcl::console::find_argument(argc, argv, "-discardthreshold") >= 0) {
                 pcl::console::parse_argument(argc, argv, "-discardthreshold", discardthreshold);
@@ -86,7 +78,6 @@ class SolverApp : public InvrenderApp {
         float discardthreshold;
         float scale;
         int hemicuberesolution;
-        int numlights;
         string matlabfilename;
         string pbrtfilename;
         int cameranum;
