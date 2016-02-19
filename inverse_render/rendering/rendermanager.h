@@ -69,6 +69,16 @@ class ShaderType {
         std::vector<GLuint> uniforms;
 };
 
+const int FLOAT_SIG_BITS = 23;
+const int FLOAT_EXP_MASK = 1 + (1 << FLOAT_SIG_BITS);
+inline int ftoi(float f) {
+    return (*reinterpret_cast<int*>(&f)) - FLOAT_EXP_MASK;
+}
+inline float itof(int i) {
+    int tmp = i + FLOAT_EXP_MASK;
+    return (*reinterpret_cast<float*>(&tmp));
+}
+
 class RenderManager {
 public:
     RenderManager() : mmgr(NULL), room(NULL), numroomtriangles(0), samples_initialized(false), shaders_initialized(false), precalculated(-1) { initShaderTypes(); }

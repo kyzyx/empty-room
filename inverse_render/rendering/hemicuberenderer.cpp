@@ -66,12 +66,6 @@ void HemicubeRenderer::weightSideHemicube(float* img, float factor) const {
     }
 }
 
-const int FLOAT_SIG_BITS = 23;
-const int FLOAT_EXP_MASK = 1 + (1 << FLOAT_SIG_BITS);
-inline int ftoi(float f) {
-    return (*reinterpret_cast<int*>(&f)) - FLOAT_EXP_MASK;
-}
-
 void HemicubeRenderer::renderHemicube(
         const R3Point& p,
         const R3Vector& n,

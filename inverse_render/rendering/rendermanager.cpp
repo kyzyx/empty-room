@@ -576,7 +576,12 @@ void RenderManager::readFromRender(const CameraParams* cam, float*& image, int r
     resizeReadFromRenderBuffer(w,h);
     lookThroughCamera(cam);
     glBindFramebuffer(GL_FRAMEBUFFER, rfr_fbo);
-    glClearColor(0.,0.,0.,0.);
+    if (rendermode == VIEW_LABELS) {
+        float f = itof(0);
+        glClearColor(f,f,f,f);
+    } else {
+        glClearColor(0.,0.,0.,0.);
+    }
     glEnable(GL_DEPTH_TEST);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     renderMesh(rendermode);
@@ -634,11 +639,6 @@ void RenderManager::selectVertices(std::vector<int>& vertices) {
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-const int FLOAT_SIG_BITS = 23;
-const int FLOAT_EXP_MASK = 1 + (1 << FLOAT_SIG_BITS);
-inline int ftoi(float f) {
-    return (*reinterpret_cast<int*>(&f)) - FLOAT_EXP_MASK;
-}
 void RenderManager::createLabelImage(const CameraParams* cam, void* image) {
     int w = cam->width;
     int h = cam->height;
