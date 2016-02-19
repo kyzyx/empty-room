@@ -46,7 +46,7 @@ class HemicubeRenderer {
                 boost::function<void(int)> cb=NULL
                 );
         void renderHemicube(const R3Point& p, const R3Vector& n,
-                Material& m, std::vector<float>& lightareas, float& fractionUnknown,
+                Material& m, std::vector<std::vector<float> >& lightareas, float& fractionUnknown,
                 float* color, float* light);
         int getHemicubeResolution() const { return res; }
         SampleData computeSample(int n, float* radimage, float* lightimage);
@@ -61,7 +61,7 @@ class HemicubeRenderer {
         bool processHemicubeCell(
                 const R3Point& p, const R3Vector& n, const R3Vector& up,
                 float weight, float* image, float* light,
-                Material& m, std::vector<float>& lightareas,
+                Material& m, std::vector<std::vector<float> >& lightareas,
                 int i, int j);
 
         void computeHemicubeFF();

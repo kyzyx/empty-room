@@ -76,7 +76,7 @@ void HemicubeRenderer::renderHemicube(
         const R3Point& p,
         const R3Vector& n,
         Material& m,
-        vector<float>& lightareas,
+        vector<vector<float> >& lightareas,
         float& fractionUnknown,
         float* image, float* light)
 {
@@ -117,25 +117,45 @@ void HemicubeRenderer::renderHemicube(
 bool HemicubeRenderer::processHemicubeCell(
         const R3Point& p, const R3Vector& towards, const R3Vector& up,
         float weight, float* image, float* light,
-        Material& m, std::vector<float>& lightareas,
+        Material& m, vector<vector<float> >& lightareas,
         int i, int j)
 {
-        int visibility = ftoi(light[0]);
-        int lightinfo = ftoi(light[1]);
-        int lightid = lightinfo & LIGHT_IDMASK;
-        int lighttype = lightinfo >> LIGHT_TYPESHIFT;
-        if (lightid > 0) {
-            lightid--;
-            if (lightid >= lightareas.size()) lightareas.resize(lightid+1);
-            lightareas[lightid] += weight;
-        } else if (visibility <= 0) {
-            return false;
-        } else {
-            m.r += weight*image[0];
-            m.g += weight*image[1];
-            m.b += weight*image[2];
+    int visibility = ftoi(light[0]);
+    int lightinfo = ftoi(light[1]);
+    int lightid = LIGHTID(lightinfo);
+    int lighttype = LIGHTTYPE(lightinfo);
+    if (lightid > 0) {
+        lightid--;
+        if (lightid >= lightareas.size()) {
+            lightareas.resize(lightid+1);
+            lightareas[lightid].resize(LightTypeNumCoefficients[lighttype],0);
         }
-        return true;
+        if (lighttype == LIGHTTYPE_AREA) {
+            lightareas[lightid][0] += weight;
+        } else if (lighttype == LIGHTTYPE_SH) {
+            R3Vector x = towards%up;
+            R3Vector y = -up;
+            double cellsize = 2./res;
+            R3Vector v = (i-res/2 + 0.5)*x*cellsize + (j-res/2 + 0.5)*y*cellsize + towards;
+            v.Normalize();
+            int idx = 0;
+            /*for (int band = 0; band < NUM_SH_BANDS; band++) {
+                for (int m = -band; m <= band; m++) {
+                    lightareas[lightid][idx++] +=
+                        weight*SH(band, m, v[0], v[1], v[2]);
+                }
+            }*/
+        } else if (lighttype == LIGHTTYPE_ENVMAP) {
+            // FIXME: Implement me! (Nearest or gaussian)
+        }
+    } else if (visibility <= 0) {
+        return false;
+    } else {
+        m.r += weight*image[0];
+        m.g += weight*image[1];
+        m.b += weight*image[2];
+    }
+    return true;
 }
 
 void HemicubeRenderer::renderFace(const R3Point& p,
@@ -200,11 +220,20 @@ SampleData HemicubeRenderer::computeSample(int n, float* radimage, float* lighti
     SampleData sd;
     sd.vertexid = n;
     sd.radiosity = rendermanager->getMeshManager()->getVertexColor(n);
+    vector<vector<float> > lightareas;
+    sd.lightamount.resize(0);
     renderHemicube(
             rendermanager->getMeshManager()->VertexPosition(n),
             rendermanager->getMeshManager()->VertexNormal(n),
-            sd.netIncoming, sd.lightamount, sd.fractionUnknown,
+            sd.netIncoming, lightareas, sd.fractionUnknown,
             radimage, lightimage
             );
+    int k = 0;
+    for (int i = 0; i < lightareas.size(); i++) {
+        sd.lightamount.resize(sd.lightamount.size() + lightareas[i].size());
+        for (int j = 0; j < lightareas[i].size(); j++) {
+            sd.lightamount[k++] = lightareas[i][j];
+        }
+    }
     return sd;
 }
