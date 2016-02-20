@@ -141,7 +141,10 @@ void InverseRender::solve(vector<SampleData>& data) {
         }
         problem.SetParameterLowerBound(&mat, 0, 0);
         problem.SetParameterUpperBound(&mat, 0, 1);
-        for (int i = 0; i < lights.size(); i++) problem.SetParameterLowerBound(ls, i, 0);
+        for (int i = 0; i < lights.size(); i++) {
+            if (coeftype[i] != LIGHTTYPE_SH)
+                problem.SetParameterLowerBound(ls, i, 0);
+        }
         ceres::Solver::Options options;
         options.minimizer_progress_to_stdout = true;
         ceres::Solver::Summary summary;

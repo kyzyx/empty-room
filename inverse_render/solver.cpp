@@ -32,7 +32,10 @@ void InverseRender::computeSamples(
     }
 }
 
-int InverseRender::countLightParameters(MeshManager* m) {
+int InverseRender::setupLightParameters(MeshManager* m) {
+    lights.clear();
+    coeftype.clear();
+
     int ret = 0;
     set<int> lightids;
     for (int i = 0; i < m->size(); i++) {
@@ -40,8 +43,13 @@ int InverseRender::countLightParameters(MeshManager* m) {
         if (l) lightids.insert(l);
     }
     for (auto lightinfo : lightids) {
-        ret += LightTypeNumCoefficients[LIGHTTYPE(lightinfo)];
+        int n = LightTypeNumCoefficients[LIGHTTYPE(lightinfo)];
+        for (int i = 0; i < n; i++) {
+            coeftype.push_back(LIGHTTYPE(lightinfo));
+        }
+        ret += n;
     }
+    lights.resize(ret);
     return ret;
 }
 

@@ -24,8 +24,7 @@ class InverseRender {
             rm->setupMeshColors();
             rm->precalculateAverageSamples();
             hr = new HemicubeRenderer(rm, hemicubeResolution);
-            lights.clear();
-            lights.resize(countLightParameters(m));
+            setupLightParameters(m);
         }
         ~InverseRender() {
             if (hr) delete hr;
@@ -59,7 +58,7 @@ class InverseRender {
                 std::vector<SampleData>& data,
                 std::vector<Material>& lightintensies);
         double generateBinaryMask(const CameraParams* cam, const char* labelimage, std::vector<bool>& mask, int label);
-        int countLightParameters(MeshManager* m);
+        int setupLightParameters(MeshManager* m);
 
         HemicubeRenderer* hr;
         RenderManager* rm;
@@ -72,6 +71,7 @@ class InverseRender {
         std::vector<float*> images;
         MeshManager* mesh;
         std::vector<Material> lights;
+        std::vector<int> coeftype;
         Material wallMaterial;
 };
 
