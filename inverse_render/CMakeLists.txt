@@ -139,9 +139,12 @@ target_link_libraries(generateconfidence datamanager)
 add_executable(convertimage EXCLUDE_FROM_ALL utils/convert.cpp)
 target_link_libraries(convertimage ${OpenCV_LIBS} datamanager)
 
+add_executable(envmap EXCLUDE_FROM_ALL utils/envmap.cpp)
+target_link_libraries(envmap datamanager rendering)
+
 add_custom_target(captureutils DEPENDS create_camfile split processdepth
     generatemask generateconfidence)
-add_custom_target(utils DEPENDS captureutils convertimage)
+add_custom_target(utils DEPENDS captureutils convertimage envmap)
 
 add_executable(invrender EXCLUDE_FROM_ALL monolithic/invrender.cpp
     reproject.h reproject.cpp
