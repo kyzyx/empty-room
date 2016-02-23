@@ -27,7 +27,7 @@ double sample(double theta, double phi, vector<double>& coef) {
 
 int main(int argc, char** argv) {
     if (argc < 4) {
-        cout << "Usage: envmap coefficents.txt output.exr resolution [-cubemap]" << endl;
+        cout << "Usage: envmap coefficents.txt output.exr resolution [--cubemap] [--allow-negative-values]" << endl;
         cout << "Generates environment maps from spherical harmonic coefficients." << endl;
         cout << "By default, generates one [2*resolution]x[resolution] image such" << endl;
         cout << "that u = phi, v = theta. This is suitable for use in PBRT." << endl;
@@ -41,9 +41,13 @@ int main(int argc, char** argv) {
     string outfile = argv[2];
     int res = atoi(argv[3]);
     bool cubemap = false;
-    if (argc > 4) {
-        if (strcmp(argv[4], "-cubemap") == 0) {
+    bool negative = false;
+    for (int i = 4; i < argc; i++) {
+        if (strcmp(argv[i], "--cubemap") == 0) {
             cubemap = true;
+        }
+        else if (strcmp(argv[i], "--allow-negative-values") == 0) {
+            negative = true;
         }
     }
 
@@ -63,7 +67,9 @@ int main(int argc, char** argv) {
             for (int ch = 0; ch < 3; ch++) {
                 double theta = M_PI*(j-res)/res;
                 double phi = M_PI*i/res;
-                image[3*(i*res*2+j) + ch] = sample(theta, phi, coef[ch]);
+                double v = sample(theta, phi, coef[ch]);
+                if (!negative) v = max(v, 0.);
+                image[3*(i*res*2+j) + ch] = v;
             }
         }
     }
