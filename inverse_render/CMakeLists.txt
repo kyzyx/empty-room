@@ -53,6 +53,7 @@ target_link_libraries(dataserver ${PCL_LIBRARIES} datamanager)
 add_library(roommodel 
     roommodel/roommodel.h roommodel/RoomModel.cpp roommodel/RoomModel_Internal.h
     roommodel/geometrygenerator.h roommodel/geometrygenerator.cpp
+    roommodel/floorplanhelper.h roommodel/floorplanhelper.cpp
     roommodel/rectanglerenderer.h roommodel/rectanglerenderer.cpp)
 target_link_libraries(roommodel datamanager
     ${GAPS_LIBRARIES} ${GLLIBS})

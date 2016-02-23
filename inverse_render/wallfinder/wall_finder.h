@@ -1,64 +1,10 @@
 #ifndef _WALL_FINDER_H
 #define _WALL_FINDER_H
 
-#include <pcl/PolygonMesh.h>
-#include <pcl/point_types.h>
 #include "orientation_finder.h"
-#include "roommodel/roommodel.h"
+#include "roommodel/floorplanhelper.h"
 
 #include <vector>
-
-class GridSegment {
-    public:
-    GridSegment(int d, int s, int e, int c) : direction(d), start(s), end(e), coord(c) {;}
-    GridSegment() {;}
-    std::pair<int,int> getCoords(int s) const {
-        if (direction) return std::make_pair(s, coord);
-        else           return std::make_pair(coord, s);
-    }
-    int direction;
-    int start;
-    int end;
-    int norm;
-    int coord;
-};
-class Segment {
-    public:
-    Segment(const GridSegment& g, double resolution) {
-        direction = g.direction;
-        norm = g.norm;
-        start = g.start*resolution;
-        end = g.end*resolution;
-        coord = g.coord*resolution;
-    }
-    Segment() {;}
-    std::pair<double,double> getCoords(double s) const {
-        if (direction) return std::make_pair(s, coord);
-        else           return std::make_pair(coord, s);
-    }
-    bool pointOnSegment(Eigen::Vector3f p, double threshold) {
-        // Check if on plane
-        double c = direction?p(2):p(0);
-        if (coord + threshold < c || coord - threshold > c) return false;
-        // Check if within bounds
-        c = direction?p(0):p(2);
-        if (c > threshold + end || c < start - threshold) return false;
-        return true;
-    }
-    double length() const { return end-start; }
-    bool pointOnSegment(Eigen::Vector3f p, Eigen::Vector3f n, double threshold) {
-        if (!pointOnSegment(p, threshold)) return false;
-        Eigen::Vector3f axis = direction?Eigen::Vector3f::UnitZ():Eigen::Vector3f::UnitX();
-        axis *= -norm;
-        return n.dot(axis) > cos(M_PI/4);
-    }
-
-    int direction;
-    double start;
-    double end;
-    int norm;
-    double coord;
-};
 /**
  */
 class WallFinder {
@@ -102,16 +48,16 @@ class WallFinder {
         double getResolution() const { return resolution; }
         Eigen::Vector3f getWallEndpoint(int i, bool lo, double height=0) const;
         Eigen::Vector3f getNormalizedWallEndpoint(int i, bool lo, double height=0) const;
-        Eigen::Matrix4f getNormalizationTransform() const { return normalization; }
-        void setNormalizationTransform(Eigen::Matrix4f t) { normalization = t; }
+        Eigen::Matrix4f getNormalizationTransform() const { return fph.normalization; }
+        void setNormalizationTransform(Eigen::Matrix4f t) { fph.normalization = t; }
 
         double floorplane;
         double ceilplane;
         std::vector<Segment> wallsegments;
         std::vector<bool> forwards;
     private:
+        FloorplanHelper fph;
         double resolution;
-        Eigen::Matrix4f normalization;
         double findExtremalHistogram(
             pcl::PointCloud<pcl::PointNormal>::ConstPtr cloud,
             Eigen::Vector3f dir,
