@@ -56,7 +56,7 @@ void GeometryGenerator::generate() {
 			wRect.material = &(rwo.material);
 			wRect.p[wall.axis] -= wall.normal*rwo.recessed;
 			windowRectangles[&(model->walls[i].windows[j])] = wRect;
-			
+
 			// Add trim geometry for windows
 			Rect trect = wRect;
 			trect.material = &(rwo.frameMaterial);
@@ -81,7 +81,7 @@ void GeometryGenerator::generate() {
 
 			if (rwo.recessed != 0) {
 				for (int k = 1; k <= 2; k ++)
-					coords[k][wall.axis] -= wall.normal*rwo.recessed;
+					coords[k][wall.axis] += wall.normal*rwo.recessed;
 				// Add recessed geometry for windows
 				for (int n1 = 0; n1 < 4; n1 += 3) {
 					for (int n2 = 1; n2 <= 2; n2++) {
@@ -90,7 +90,7 @@ void GeometryGenerator::generate() {
 						edgeRect.material = &(model->wallMaterial);
 						edgeRect.normal = 1;
 						if (n2 == 1) edgeRect.normal *= -1;
-						if ((n1 + n2) % 2 == 0) edgeRect.normal *= wall.axis?nn:-nn;
+						if ((n1 + n2) % 2 == 0) edgeRect.normal *= wall.axis?-nn:nn;
 						wallRectangles.push_back(edgeRect);
 					}
 				}
@@ -118,7 +118,7 @@ void GeometryGenerator::generate() {
 				Rect bbTop;
 				if (newRects[j].normal > 0) bbTop = Rect(newRects[j].p[0], newRects[j].p[1], model->baseboardHeight);
 				else                        bbTop = Rect(newRects[j].p[0] - newRects[j].w, newRects[j].p[1] - newRects[j].h, model->baseboardHeight);
-				
+
 				if (newRects[j].axis == 0) {
 					if (newRects[j].normal > 0) bbTop = Rect(newRects[j].p[0], newRects[j].p[1] - model->baseboardDepth, model->baseboardHeight);
 					else                        bbTop = Rect(newRects[j].p[0] - model->baseboardDepth, newRects[j].p[1] - model->baseboardDepth, model->baseboardHeight);
