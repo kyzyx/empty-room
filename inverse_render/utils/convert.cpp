@@ -31,6 +31,7 @@ int main(int argc, char** argv) {
     double intensityscale[3];
     float scale = 1;
     float gamma = 0;
+    bool linear = false;
     for (int i = 0; i < 3; i++) intensityscale[i] = 1;
     if (pcl::console::find_argument(argc, argv, "-intensityscale") >= 0) {
         double d;
@@ -49,6 +50,9 @@ int main(int argc, char** argv) {
     }
     if (pcl::console::find_argument(argc, argv, "-gamma") >= 0) {
         pcl::console::parse_argument(argc, argv, "-gamma", gamma);
+    }
+    if (pcl::console::find_switch(argc, argv, "-linear")) {
+        linear = true;
     }
     bool flip_y = false;
     bool flip_x = false;
@@ -72,7 +76,7 @@ int main(int argc, char** argv) {
         for (int j = 0; j < 3; j++) {
             if (gamma > 0) image[3*i+j] = pow(image[3*i+j], gamma);
             image[3*i+j] *= intensityscale[j];
-            if (gamma > 0) image[3*i+j] = pow(image[3*i+j], 1./gamma);
+            if (!linear && gamma > 0) image[3*i+j] = pow(image[3*i+j], 1./gamma);
         }
     }
     cv::Mat im(h, w, CV_32FC3, image);
