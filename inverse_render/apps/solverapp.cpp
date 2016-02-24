@@ -10,7 +10,7 @@ using namespace std;
 
 class SolverApp : public InvrenderApp {
     public:
-        SolverApp() : hemicuberesolution(150), discardthreshold(0.25), matlabfilename(""), label(WallFinder::LABEL_WALL), cameranum(0), scale(0) {}
+        SolverApp() : hemicuberesolution(150), discardthreshold(0.25), matlabfilename(""), label(WallFinder::LABEL_WALL), cameranum(-1), scale(0) {}
         virtual int run() {
             mmgr->loadSamples();
             InverseRender ir(mmgr, hemicuberesolution, getProgressFunction(1,2));
@@ -36,10 +36,26 @@ class SolverApp : public InvrenderApp {
                 room->wallMaterial.diffuse.r = ir.wallMaterial.r;
                 room->wallMaterial.diffuse.g = ir.wallMaterial.g;
                 room->wallMaterial.diffuse.b = ir.wallMaterial.b;
+                room->floorMaterial.diffuse.r = ir.wallMaterial.r;
+                room->floorMaterial.diffuse.g = ir.wallMaterial.g;
+                room->floorMaterial.diffuse.b = ir.wallMaterial.b;
+                room->ceilingMaterial.diffuse.r = ir.wallMaterial.r;
+                room->ceilingMaterial.diffuse.g = ir.wallMaterial.g;
+                room->ceilingMaterial.diffuse.b = ir.wallMaterial.b;
                 if (imgr && room) {
-                    outputPbrtFile(
-                            pbrtfilename, room, *mmgr, ir.lights,
-                            imgr->getCamera(cameranum));
+                    if (cameranum < 0) {
+                        for (int i = 0; i < imgr->size(); i++) {
+                            char buf[100];
+                            snprintf(buf, 100, pbrtfilename.c_str(), i);
+                            outputPbrtFile(
+                                    buf, room, *mmgr, ir.lights, ir.coeftype,
+                                    imgr->getCamera(i));
+                        }
+                    } else {
+                        outputPbrtFile(
+                                pbrtfilename, room, *mmgr, ir.lights, ir.coeftype,
+                                imgr->getCamera(cameranum));
+                    }
                 } else {
                     cout << "Error - need to supply imagemanager and roommodel to output pbrt file" << endl;
                 }
@@ -71,6 +87,9 @@ class SolverApp : public InvrenderApp {
             }
             if (pcl::console::find_argument(argc, argv, "-outputpbrtfile") >= 0) {
                 pcl::console::parse_argument(argc, argv, "-outputpbrtfile", pbrtfilename);
+            }
+            if (pcl::console::find_argument(argc, argv, "-cameraid") >= 0) {
+                pcl::console::parse_argument(argc, argv, "-cameraid", cameranum);
             }
             return true;
         }

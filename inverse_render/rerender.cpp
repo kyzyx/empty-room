@@ -323,11 +323,18 @@ void outputTriangles(ofstream& out, vector<double>& triangles, const R4Matrix& t
     out << "]" << endl;
 }
 
-void outputPbrtFile(std::string filename, roommodel::RoomModel* room, MeshManager& mmgr, vector<Material>& lights, const CameraParams* cam) {
+void outputPbrtFile(
+        std::string filename,
+        roommodel::RoomModel* room,
+        MeshManager& mmgr,
+        vector<Material>& lights,
+        vector<int>& lighttypes,
+        const CameraParams* cam) {
     ofstream out(filename);
 
     // Basic rendering info
     out << "# Main Scene File" << endl;
+    out << "Scale -1 1 1" << endl;
     out << "Renderer \"sampler\"" << endl << endl;
     out << "Sampler \"lowdiscrepancy\"" << endl;
     out << "\"integer pixelsamples\" [1024]" << endl << endl;
@@ -368,7 +375,7 @@ void outputPbrtFile(std::string filename, roommodel::RoomModel* room, MeshManage
     outputMaterial(out, room->wallMaterial, "WallMaterial");
     outputMaterial(out, room->floorMaterial, "FloorMaterial");
     outputMaterial(out, room->ceilingMaterial, "CeilingMaterial");
-    outputMaterial(out, room->ceilingMaterial, "BaseboardMaterial");
+    outputMaterial(out, room->baseboardMaterial, "BaseboardMaterial");
 
     vector<double> triangles;
     // Output wall geometry
@@ -424,8 +431,18 @@ void outputPbrtFile(std::string filename, roommodel::RoomModel* room, MeshManage
     }
 
     // Output light sources
-    for (int i = 0; i < lights.size(); ++i) {
+    for (int i = 0; i < lighttypes.size(); ++i) {
         if (lights[i].isEmpty()) continue;
+        if (lighttypes[i] == LIGHTTYPE_SH) {
+            // Extract all SH coefficients
+            // Write to exr file
+            out << "AttributeBegin" << endl;
+            out << "LightSource \"infinite\" \"string mapname\" [\"sh.exr\"]" << endl;
+            out << "AttributeEnd" << endl;
+            while (i < lighttypes.size() && lighttypes[i] == LIGHTTYPE_SH) i++;
+            i--;
+            continue;
+        }
         vector<R3Point> pts;
         vector<int> indices;
         estimateLightShape(mmgr, i+1, pts, indices);
