@@ -21,13 +21,13 @@ class SolverApp : public InvrenderApp {
                     wallindices.push_back(i);
             }
             ir.computeSamples(walldata, wallindices, numsamples, discardthreshold, false, getProgressFunction(0,2));
-            if (matlabfilename.length())
-                ir.writeVariablesMatlab(walldata, matlabfilename);
             if (scale > 0) {
                 ir.setLossFunction(LOSS_HUBER);
                 ir.setLossFunctionScale(scale);
             }
             ir.solve(walldata);
+            if (matlabfilename.length())
+                ir.writeVariablesMatlab(walldata, matlabfilename);
             cout << "data:WallMaterial " << ir.wallMaterial.r << " " << ir.wallMaterial.g << " " << ir.wallMaterial.b << endl;
             for (int i = 0; i < ir.lights.size(); i++) {
                 cout << "data:Light " << i << " " << ir.lights[i].r << " " << ir.lights[i].g << " " << ir.lights[i].b << endl;

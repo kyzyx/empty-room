@@ -86,6 +86,16 @@ void InverseRender::writeVariablesMatlab(vector<SampleData>& data, string filena
         }
         out << "];" << endl;
     }
+    if (lights.size()) {
+        for (int ch = 0; ch < 3; ch++) {
+            out << "L" << ch << " = [";
+            for (int i = 0; i < lights.size(); i++) {
+                out << lights[i](ch);
+                if (i != lights.size()-1) out << ";";
+            }
+            out << "];" << endl;
+        }
+    }
 }
 void InverseRender::writeVariablesBinary(vector<SampleData>& data, string filename) {
     ofstream out(filename, ofstream::binary);
