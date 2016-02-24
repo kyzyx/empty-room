@@ -1617,3 +1617,71 @@ void MainWindow::on_actionSelect_Mesh_Component_triggered()
 {
     ui->meshWidget->selectNextComponent();
 }
+
+#include "roommodel/floorplanhelper.h"
+#include <algorithm>
+
+void MainWindow::on_actionCreate_Window_triggered()
+{
+    double winbot = 1e10;
+    double wintop = -1e10;
+    double winleft = 1e10;
+    double winright = -1e10;
+    double winfront = 1e10;
+    double winback = -1e10;
+
+    FloorplanHelper fph;
+    fph.loadFromRoomModel(room);
+
+    std::vector<Eigen::Vector3f> pts;
+    std::vector<int> wallvote(fph.wallsegments.size(),0);
+    for (int i = 0; i < mmgr->size(); i++) {
+        int lightid = LIGHTID(mmgr->getLabel(i, MeshManager::LABEL_CHANNEL));
+        int lighttype = LIGHTTYPE(mmgr->getLabel(i, MeshManager::LABEL_CHANNEL));
+        if (lightid == 0) continue;
+        if ((lighttype & LIGHTTYPE_SH) || (lighttype & LIGHTTYPE_ENVMAP)) {
+            Eigen::Vector3f p = mmgr->VertexPositionE(i);
+            Eigen::Vector3f n = mmgr->VertexNormalE(i);
+            Eigen::Vector4f p4(p(0), p(1), p(2), 1);
+            Eigen::Vector4f n4(n(0), n(1), n(2), 0);
+            p = (fph.world2floorplan*p4).head<3>();
+            n = (fph.world2floorplan*n4).head<3>();
+            int wallidx = fph.closestWall(p, n);
+            if (wallidx >= 0) {
+                wallvote[wallidx]++;
+                pts.push_back(p);
+            }
+        }
+    }
+    int wall = std::distance(wallvote.begin(), std::max_element(wallvote.begin(), wallvote.end()));
+    for (int i = 0; i < pts.size(); i++) {
+        double x = pts[i][0];
+        double y = pts[i][1];
+        double z = pts[i][2];
+        winbot = std::min(winbot, y);
+        wintop = std::max(wintop, y);
+        if (fph.wallsegments[wall].direction) {
+            winleft = std::min(winleft, x);
+            winright = std::max(winright, x);
+            winfront = std::min(winfront, z);
+            winback = std::max(winback, z);
+        } else {
+            winleft = std::min(winleft, z);
+            winright = std::max(winright, z);
+            winfront = std::min(winfront, x);
+            winback = std::max(winback, x);
+        }
+    }
+    printf("%f %f %f %f %f %f\n", winbot, wintop, winleft, winright, winfront, winback);
+    std::cout << std::endl;
+    roommodel::RectangleWallObject rwo;
+    rwo.height = wintop - winbot;
+    rwo.width = winright - winleft;
+    rwo.recessed = fph.wallsegments[wall].direction>0?fph.wallsegments[wall].coord - winfront:winback - fph.wallsegments[wall].coord;
+    rwo.verticalposition = winbot;
+    rwo.horizontalposition = (fph.wallsegments[wall].norm<0)?winleft-fph.wallsegments[wall].start:fph.wallsegments[wall].end-winright;
+    rwo.trimDepth = 0;
+    rwo.trimWidth = 0;
+    std::cout << rwo.height << " " << rwo.width << " " << rwo.recessed << " " << rwo.verticalposition << " " << rwo.horizontalposition << std::endl;
+    room->walls[wall].windows.push_back(rwo);
+}

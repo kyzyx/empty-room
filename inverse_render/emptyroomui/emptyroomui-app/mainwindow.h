@@ -135,6 +135,8 @@ private slots:
 
     void on_actionLoad_Light_Locations_triggered();
 
+    void on_actionCreate_Window_triggered();
+
 private:
     Ui::MainWindow *ui;
     ImageManager* imgr;

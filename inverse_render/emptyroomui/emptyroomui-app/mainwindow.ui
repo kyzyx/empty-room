@@ -1175,9 +1175,16 @@
     <addaction name="actionCommit_Selected_Vertices_as_Light"/>
     <addaction name="actionCommit_Selected_Vertices_as_Line_Light"/>
    </widget>
+   <widget class="QMenu" name="menuOther">
+    <property name="title">
+     <string>Other</string>
+    </property>
+    <addaction name="actionCreate_Window"/>
+   </widget>
    <addaction name="menuEmpty_Room_Editor"/>
    <addaction name="menuIntermediates"/>
    <addaction name="menuSelect"/>
+   <addaction name="menuOther"/>
    <addaction name="menuHelp"/>
   </widget>
   <widget class="QToolBar" name="mainToolBar">
@@ -1580,6 +1587,11 @@
    </property>
    <property name="text">
     <string>Custom Selector...</string>
+   </property>
+  </action>
+  <action name="actionCreate_Window">
+   <property name="text">
+    <string>Create Window</string>
    </property>
   </action>
  </widget>
