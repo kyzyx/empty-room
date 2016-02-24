@@ -128,10 +128,11 @@ bool HemicubeRenderer::processHemicubeCell(
             lightareas[lightid][0] += weight;
         } else if (lighttype == LIGHTTYPE_SH) {
             R3Vector x = towards%up;
-            R3Vector y = -up;
+            R3Vector y = up;
             double cellsize = 2./res;
-            R3Vector v = (i-res/2 + 0.5)*x*cellsize + (j-res/2 + 0.5)*y*cellsize + towards;
+            R3Vector v = (i-res/2 + 0.5)*y*cellsize + (j-res/2 + 0.5)*x*cellsize + towards;
             v.Normalize();
+            v = -v;
             int idx = 0;
             for (int band = 0; band < NUM_SH_BANDS; band++) {
                 for (int m = -band; m <= band; m++) {

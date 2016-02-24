@@ -52,7 +52,11 @@ int main(int argc, char** argv) {
     }
 
     vector<double> coef[3];
-    while (!in.eof()) {
+    int lines;
+    in >> lines;
+    string tmp;
+    getline(in, tmp);
+    for (int z = 0; z < lines; z++) {
         for (int i = 0; i < 3; i++) {
             double d;
             in >> d;
@@ -65,9 +69,9 @@ int main(int argc, char** argv) {
     for (int i = 0; i < res; i++) {
         for (int j = 0; j < res*2; j++) {
             for (int ch = 0; ch < 3; ch++) {
-                double theta = M_PI*(j-res)/res;
-                double phi = M_PI*i/res;
-                double v = sample(theta, phi, coef[ch]);
+                double phi = M_PI*(j-res)/res;
+                double theta = M_PI*i/res;
+                double v = sample(theta, -phi, coef[ch]);
                 if (!negative) v = max(v, 0.);
                 image[3*(i*res*2+j) + ch] = v;
             }
