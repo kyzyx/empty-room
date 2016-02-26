@@ -621,9 +621,10 @@ void RenderManager::selectVertices(int x, int y, int w, int h, int r, int op) {
 }
 
 void RenderManager::clearSelectedVertices() {
+    memset(selectbuf, 0, sizeof(GLuint)*mmgr->NVertices());
     for (int i = 0; i < 2; i++) {
         glBindBuffer(GL_ARRAY_BUFFER, selectvbo[i]);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(GLuint)*mmgr->NVertices(), 0);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(GLuint)*mmgr->NVertices(), selectbuf);
     }
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
