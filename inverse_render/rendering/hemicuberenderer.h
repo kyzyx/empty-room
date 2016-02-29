@@ -25,7 +25,7 @@ const int LIGHT_TYPESHIFT = 6;
 const int LIGHT_IDMASK = (1 << LIGHT_TYPESHIFT)-1;
 inline int LIGHTID(int lightinfo) { return lightinfo & LIGHT_IDMASK; }
 inline int LIGHTTYPE(int lightinfo) { return lightinfo >> LIGHT_TYPESHIFT; }
-const int NUM_SH_BANDS = 3;
+const int NUM_SH_BANDS = 5;
 const int ENVMAP_RES = 4;
 const int LightTypeNumCoefficients[] =
 {

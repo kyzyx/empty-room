@@ -10,7 +10,7 @@ using namespace std;
 
 class SolverApp : public InvrenderApp {
     public:
-        SolverApp() : hemicuberesolution(150), discardthreshold(0.25), matlabfilename(""), label(WallFinder::LABEL_WALL), cameranum(-1), scale(0) {}
+        SolverApp() : hemicuberesolution(150), discardthreshold(0.25), matlabfilename(""), label(WallFinder::LABEL_WALL), cameranum(-1), scale(0), reglambda(0) {}
         virtual int run() {
             mmgr->loadSamples();
             InverseRender ir(mmgr, hemicuberesolution, getProgressFunction(1,2));
@@ -25,7 +25,7 @@ class SolverApp : public InvrenderApp {
                 ir.setLossFunction(LOSS_HUBER);
                 ir.setLossFunctionScale(scale);
             }
-            ir.solve(walldata);
+            ir.solve(walldata, reglambda);
             if (matlabfilename.length())
                 ir.writeVariablesMatlab(walldata, matlabfilename);
             cout << "data:WallMaterial " << ir.wallMaterial.r << " " << ir.wallMaterial.g << " " << ir.wallMaterial.b << endl;
@@ -91,6 +91,9 @@ class SolverApp : public InvrenderApp {
             if (pcl::console::find_argument(argc, argv, "-cameraid") >= 0) {
                 pcl::console::parse_argument(argc, argv, "-cameraid", cameranum);
             }
+            if (pcl::console::find_argument(argc, argv, "-lambda") >= 0) {
+                pcl::console::parse_argument(argc, argv, "-lambda", reglambda);
+            }
             return true;
         }
         int numsamples;
@@ -101,6 +104,7 @@ class SolverApp : public InvrenderApp {
         string pbrtfilename;
         int cameranum;
         int label;
+        double reglambda;
 };
 
 int main(int argc, char** argv) {

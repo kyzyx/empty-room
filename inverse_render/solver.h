@@ -30,7 +30,7 @@ class InverseRender {
             if (hr) delete hr;
             if (rm) delete rm;
         }
-        void solve(std::vector<SampleData>& data);
+        void solve(std::vector<SampleData>& data, double reglambda=0);
         void solveTexture(
                 std::vector<SampleData>& data,
                 ImageManager* imagemanager,

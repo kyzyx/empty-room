@@ -74,6 +74,81 @@ struct DynLightFunctor {
     int nlights;
     int ch;
 };
+struct SHRegularizerFunctor {
+    SHRegularizerFunctor(int index, double lambda)
+        : idx(index), l(std::sqrt(lambda)) { }
+
+    template <typename T>
+    bool operator() (
+            const T* const lights,
+            T* residual) const
+    {
+        residual[0] = lights[idx]*T(l);
+        return true;
+    }
+
+    int idx;
+    double l;
+};
+
+struct DynSHRegularizerFunctor {
+    DynSHRegularizerFunctor(int index, double lambda)
+        : idx(index), l(std::sqrt(lambda)) { }
+
+    template <typename T>
+    bool operator() (
+            T const* const* params,
+            T* residual) const
+    {
+        residual[0] = params[0][idx]*T(l);
+        return true;
+    }
+
+    int idx;
+    double l;
+};
+
+CostFunction* CreateSHRegularizer(int numlights, int i, double lambda) {
+    switch (numlights) {
+        case 0:
+            return NULL;
+        case 1:
+            return (new ceres::AutoDiffCostFunction<SHRegularizerFunctor, 1, 1>(
+                    new SHRegularizerFunctor(i, lambda)));
+        case 2:
+            return (new ceres::AutoDiffCostFunction<SHRegularizerFunctor, 1, 2>(
+                    new SHRegularizerFunctor(i, lambda)));
+        case 3:
+            return (new ceres::AutoDiffCostFunction<SHRegularizerFunctor, 1, 3>(
+                    new SHRegularizerFunctor(i, lambda)));
+        case 4:
+            return (new ceres::AutoDiffCostFunction<SHRegularizerFunctor, 1, 4>(
+                    new SHRegularizerFunctor(i, lambda)));
+        case 5:
+            return (new ceres::AutoDiffCostFunction<SHRegularizerFunctor, 1, 5>(
+                    new SHRegularizerFunctor(i, lambda)));
+        case 6:
+            return (new ceres::AutoDiffCostFunction<SHRegularizerFunctor, 1, 6>(
+                    new SHRegularizerFunctor(i, lambda)));
+        case 7:
+            return (new ceres::AutoDiffCostFunction<SHRegularizerFunctor, 1, 7>(
+                    new SHRegularizerFunctor(i, lambda)));
+        case 8:
+            return (new ceres::AutoDiffCostFunction<SHRegularizerFunctor, 1, 8>(
+                    new SHRegularizerFunctor(i, lambda)));
+        case 9:
+            return (new ceres::AutoDiffCostFunction<SHRegularizerFunctor, 1, 9>(
+                    new SHRegularizerFunctor(i, lambda)));
+        default:
+            if (numlights < 0) return NULL;
+            ceres::DynamicAutoDiffCostFunction<DynSHRegularizerFunctor>* ret =
+                new ceres::DynamicAutoDiffCostFunction<DynSHRegularizerFunctor>(
+                        new DynSHRegularizerFunctor(i, lambda));
+            ret->AddParameterBlock(numlights);
+            ret->SetNumResiduals(1);
+            return ret;
+    }
+}
 
 CostFunction* Create(SampleData& sd, int numlights, int ch) {
     switch (numlights) {
@@ -119,7 +194,9 @@ CostFunction* Create(SampleData& sd, int numlights, int ch) {
     }
 }
 
-void InverseRender::solve(vector<SampleData>& data) {
+
+void InverseRender::solve(vector<SampleData>& data, double reglambda) {
+    if (reglambda > 0) reglambda /= NUM_SH_BANDS*NUM_SH_BANDS - 1;
     google::InitGoogleLogging("solveExposure()");
     double mat = 0.6;
     double* ls = new double[lights.size()];
@@ -144,6 +221,8 @@ void InverseRender::solve(vector<SampleData>& data) {
         for (int i = 0; i < lights.size(); i++) {
             if (coeftype[i] != LIGHTTYPE_SH)
                 problem.SetParameterLowerBound(ls, i, 0);
+            else if (i > 0 && reglambda > 0)
+                problem.AddResidualBlock(CreateSHRegularizer(lights.size(), i, reglambda), NULL, ls);
         }
         ceres::Solver::Options options;
         options.minimizer_progress_to_stdout = true;
