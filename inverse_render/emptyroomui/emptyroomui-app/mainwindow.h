@@ -121,6 +121,8 @@ private slots:
     void on_actionDecrease_Selection_Brush_Size_triggered();
     void on_actionSave_Selected_Vertices_triggered();
 
+    void on_actionCommit_Selected_Vertices_as_Light_triggered();
+
 private:
     Ui::MainWindow *ui;
     ImageManager* imgr;

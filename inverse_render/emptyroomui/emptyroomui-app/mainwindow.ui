@@ -987,8 +987,7 @@
              </property>
              <property name="icon">
               <iconset theme="go-previous">
-               <normaloff/>
-              </iconset>
+               <normaloff>.</normaloff>.</iconset>
              </property>
             </widget>
            </item>
@@ -1055,8 +1054,7 @@
              </property>
              <property name="icon">
               <iconset theme="go-next">
-               <normaloff/>
-              </iconset>
+               <normaloff>.</normaloff>.</iconset>
              </property>
             </widget>
            </item>
@@ -1167,6 +1165,7 @@
     <addaction name="actionRemove_From_Selection"/>
     <addaction name="separator"/>
     <addaction name="actionSave_Selected_Vertices"/>
+    <addaction name="actionCommit_Selected_Vertices_as_Light"/>
    </widget>
    <addaction name="menuEmpty_Room_Editor"/>
    <addaction name="menuIntermediates"/>
@@ -1507,6 +1506,14 @@
   <action name="actionHelp">
    <property name="text">
     <string>Help...</string>
+   </property>
+  </action>
+  <action name="actionCommit_Selected_Vertices_as_Light">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Commit Selected Vertices as Light</string>
    </property>
   </action>
  </widget>

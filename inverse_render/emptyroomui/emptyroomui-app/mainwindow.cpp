@@ -466,6 +466,7 @@ void MainWindow::meshLoaded() {
     ui->actionIncrease_Selection_Brush_Size->setEnabled(true);
     ui->actionDecrease_Selection_Brush_Size->setEnabled(true);
     ui->actionSave_Selected_Vertices->setEnabled(true);
+    ui->actionCommit_Selected_Vertices_as_Light->setEnabled(true);
 
     mmgr = new MeshManager(meshfilename.toStdString());
     ui->meshWidget->setMeshManager(mmgr);
@@ -1300,6 +1301,29 @@ void MainWindow::on_actionSave_Selected_Vertices_triggered()
         }
         for (int i = 0; i < selected.size(); i++) {
             mmgr->setLabel(selected[i], lbl, MeshManager::TYPE_CHANNEL);
+        }
+
+        ui->meshWidget->renderManager()->updateMeshAuxiliaryData();
+        if (lbl == LABEL_WALL) {
+            wallindices = selected;
+        }
+    }
+}
+
+void MainWindow::on_actionCommit_Selected_Vertices_as_Light_triggered()
+{
+    bool ok;
+    int lbl = QInputDialog::getInt(this, "Commit selected vertices to light...", "Label: ", 1, 0, 1024, 1, &ok);
+    if (ok) {
+        std::vector<int> selected;
+        ui->meshWidget->renderManager()->getSelectedVertices(selected);
+        for (int i = 0; i < mmgr->size(); i++) {
+            if (mmgr->getLabel(i, MeshManager::LABEL_CHANNEL) == lbl) {
+                mmgr->setLabel(i, 0, MeshManager::LABEL_CHANNEL);
+            }
+        }
+        for (int i = 0; i < selected.size(); i++) {
+            mmgr->setLabel(selected[i], lbl, MeshManager::LABEL_CHANNEL);
         }
 
         ui->meshWidget->renderManager()->updateMeshAuxiliaryData();
