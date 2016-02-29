@@ -36,7 +36,8 @@ int InverseRender::countLightParameters(MeshManager* m) {
     int ret = 0;
     set<int> lightids;
     for (int i = 0; i < m->size(); i++) {
-        lightids.insert(m->getLabel(i,0));
+        char l = m->getLabel(i,0);
+        if (l) lightids.insert(l);
     }
     for (auto lightinfo : lightids) {
         ret += LightTypeNumCoefficients[LIGHTTYPE(lightinfo)];

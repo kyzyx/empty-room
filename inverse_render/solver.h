@@ -24,6 +24,7 @@ class InverseRender {
             rm->setupMeshColors();
             rm->precalculateAverageSamples();
             hr = new HemicubeRenderer(rm, hemicubeResolution);
+            lights.clear();
             lights.resize(countLightParameters(m));
         }
         ~InverseRender() {
