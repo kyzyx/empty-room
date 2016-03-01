@@ -52,10 +52,52 @@ int InverseRender::setupLightParameters(MeshManager* m) {
     lights.resize(ret);
     return ret;
 }
+void InverseRender::readVariablesMatlab(vector<SampleData>& data, string filename) {
+    ifstream in(filename);
+    string s;
+    getline(in, s); // A = [
+    while (getline(in, s)) {
+        for (int i = 0; i < s.size(); i++) if (s[i] == ',') s[i] = ' ';
+        data.push_back(SampleData());
+        stringstream sin(s);
+        while (sin.peek() != ';' && sin.peek() != ']') {
+            float f;
+            sin >> f;
+            data.back().lightamount.push_back(f);
+        }
+        if (s[s.length()-2] == ']') break;
+    }
+    getline(in, s); // weights = [
+    getline(in, s);
+    for (int i = 0; i < s.size(); i++) if (s[i] == ';') s[i] = ' ';
+    stringstream sin(s);
+    for (int i = 0; i < data.size(); i++) {
+        sin >> data[i].fractionUnknown;
+    }
+    for (int ch = 0; ch < 3; ++ch) {
+        getline(in, s); // % Channel ch
+        getline(in, s); // Bch = [
+        getline(in, s);
+        for (int i = 0; i < s.size(); i++) if (s[i] == ';') s[i] = ' ';
+        sin.clear();
+        sin.str(s);
+        for (int i = 0; i < data.size(); ++i) {
+            sin >> data[i].radiosity(ch);
+        }
+        getline(in, s); // Cch = [
+        getline(in, s);
+        for (int i = 0; i < s.size(); i++) if (s[i] == ';') s[i] = ' ';
+        sin.clear();
+        sin.str(s);
+        for (int i = 0; i < data.size(); ++i) {
+            sin >> data[i].netIncoming(ch);
+        }
+    }
+}
 
 void InverseRender::writeVariablesMatlab(vector<SampleData>& data, string filename) {
     ofstream out(filename);
-    out << "A = [";
+    out << "A = [" << endl;
     for (int i = 0; i < data.size(); ++i) {
         for (int j = 0; j < lights.size(); ++j) {
             if (j < data[i].lightamount.size()) out << data[i].lightamount[j];
@@ -65,7 +107,7 @@ void InverseRender::writeVariablesMatlab(vector<SampleData>& data, string filena
         if (i != data.size()-1) out << ";" << endl;
     }
     out << "];" << endl;
-    out << "weights = [";
+    out << "weights = [" << endl;
     for (int i = 0; i < data.size(); ++i) {
         out << data[i].fractionUnknown;
         if (i != data.size()-1) out << ";";
@@ -73,13 +115,13 @@ void InverseRender::writeVariablesMatlab(vector<SampleData>& data, string filena
     out << "];" << endl;
     for (int ch = 0; ch < 3; ++ch) {
         out << "% Channel " << ch << endl;
-        out << "B" << ch << " = [";
+        out << "B" << ch << " = [" << endl;
         for (int i = 0; i < data.size(); ++i) {
             out << data[i].radiosity(ch);
             if (i != data.size()-1) out << ";";
         }
         out << "];" << endl;
-        out << "C" << ch << " = [";
+        out << "C" << ch << " = [" << endl;
         for (int i = 0; i < data.size(); ++i) {
             out << data[i].netIncoming(ch);
             if (i != data.size()-1) out << ";";
@@ -88,7 +130,7 @@ void InverseRender::writeVariablesMatlab(vector<SampleData>& data, string filena
     }
     if (lights.size()) {
         for (int ch = 0; ch < 3; ch++) {
-            out << "L" << ch << " = [";
+            out << "L" << ch << " = [" << endl;
             for (int i = 0; i < lights.size(); i++) {
                 out << lights[i](ch);
                 if (i != lights.size()-1) out << ";";

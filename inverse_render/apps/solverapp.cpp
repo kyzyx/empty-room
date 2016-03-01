@@ -20,7 +20,13 @@ class SolverApp : public InvrenderApp {
                 if (mmgr->getLabel(i, 1) == label)
                     wallindices.push_back(i);
             }
-            ir.computeSamples(walldata, wallindices, numsamples, discardthreshold, false, getProgressFunction(0,2));
+
+            if (inputmatlabfilename.length()) {
+                ir.readVariablesMatlab(walldata, inputmatlabfilename);
+            } else {
+                ir.computeSamples(walldata, wallindices, numsamples, discardthreshold, false, getProgressFunction(0,2));
+            }
+
             if (scale > 0) {
                 ir.setLossFunction(LOSS_HUBER);
                 ir.setLossFunctionScale(scale);
@@ -85,6 +91,9 @@ class SolverApp : public InvrenderApp {
             if (pcl::console::find_argument(argc, argv, "-outputsamplesfile") >= 0) {
                 pcl::console::parse_argument(argc, argv, "-outputsamplesfile", matlabfilename);
             }
+            if (pcl::console::find_argument(argc, argv, "-inputsamplesfile") >= 0) {
+                pcl::console::parse_argument(argc, argv, "-inputsamplesfile", inputmatlabfilename);
+            }
             if (pcl::console::find_argument(argc, argv, "-outputpbrtfile") >= 0) {
                 pcl::console::parse_argument(argc, argv, "-outputpbrtfile", pbrtfilename);
             }
@@ -101,6 +110,7 @@ class SolverApp : public InvrenderApp {
         float scale;
         int hemicuberesolution;
         string matlabfilename;
+        string inputmatlabfilename;
         string pbrtfilename;
         int cameranum;
         int label;
