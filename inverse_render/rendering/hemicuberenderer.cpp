@@ -194,26 +194,15 @@ void HemicubeRenderer::computeSamples(
         radimage = new float[3*res*res];
     }
 
-    default_random_engine generator;
-    uniform_int_distribution<int> dist(0, indices.size());
-    for (int i = 0; i < numsamples; ++i) {
-        if (cb) cb(100*i/numsamples);
-        int n;
-        do {
-            n = dist(generator);
-        } while (rendermanager->getMeshManager()->getLabel(indices[n]) > 0 || rendermanager->getMeshManager()->getVertexSampleCount(indices[n]) == 0);
-
+    for (int i = 0; i < indices.size(); i++) {
+        if (cb) cb(100*i/indices.size());
         if (images) {
             radimage = new float[3*res*res];
             lightimage = new float[3*res*res];
             images->push_back(radimage);
             images->push_back(lightimage);
         }
-        SampleData sd = computeSample(indices[n], radimage, lightimage);
-        if (sd.fractionUnknown > discardthreshold) {
-            --i;
-            continue;
-        }
+        SampleData sd = computeSample(indices[i], radimage, lightimage);
         data.push_back(sd);
     }
 }

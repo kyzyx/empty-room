@@ -197,3 +197,14 @@ void InverseRender::loadVariablesBinary(vector<SampleData>& data, string filenam
         }
     }
 }
+
+void InverseRender::writeLightsToTextFile(string filename) {
+    ofstream out(filename);
+    out << lights.size() << endl;
+    for (int i = 0; i < lights.size(); i++) {
+        for (int ch = 0; ch < 3; ch++) {
+            out << lights[i](ch) << " ";
+        }
+        out << endl;
+    }
+}

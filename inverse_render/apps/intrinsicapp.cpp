@@ -4,6 +4,7 @@
 #include "solver.h"
 #include "rerender.h"
 #include <iostream>
+#include <fstream>
 #include <pcl/console/parse.h>
 
 using namespace std;
@@ -33,6 +34,18 @@ class SolverApp : public InvrenderApp {
             }
             int interval = nt/100;
 
+            vector<Material> lights;
+            if (useLights) {
+                ifstream in;
+                int nlights;
+                in >> nlights;
+                for (int i = 0; i < nlights; i++) {
+                    double r, g, b;
+                    in >> r >> g >> b;
+                    lights.push_back(Material(r,g,b));
+                }
+            }
+
             for (int i = 0; i < mmgr->NVertices(); i++) {
                 if (label >= 0 && mmgr->getLabel(i,1) != label) {
                     colors.push_back(Material(0,0,0));
@@ -42,7 +55,10 @@ class SolverApp : public InvrenderApp {
                 it++;
                 cout << it << "/" << nt << endl;
                 SampleData s = hr.computeSample(i, i1, i2);
-                s.netIncoming /= 1-s.fractionUnknown;
+                for (int j = 0; j < s.lightamount.size(); j++) {
+                    s.radiosity += lights[j]*s.lightamount[j];
+                }
+                s.netIncoming *= (1-s.fractionDirect)/(1-s.fractionDirect-s.fractionUnknown);
                 float r = s.radiosity.r/s.netIncoming.r;
                 float g = s.radiosity.g/s.netIncoming.g;
                 float b = s.radiosity.b/s.netIncoming.b;
@@ -70,12 +86,18 @@ class SolverApp : public InvrenderApp {
             if (pcl::console::find_argument(argc, argv, "-label") >= 0) {
                 pcl::console::parse_argument(argc, argv, "-label", label);
             }
+            if (pcl::console::find_argument(argc, argv, "-lightfile") >= 0) {
+                pcl::console::parse_argument(argc, argv, "-lightfile", lightfilename);
+                useLights = true;
+            }
             return true;
         }
         int hemicuberesolution;
         double scale;
         int label;
         string plyfilename;
+        string lightfilename;
+        bool useLights;
 };
 
 int main(int argc, char** argv) {
