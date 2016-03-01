@@ -27,7 +27,7 @@ float dot(float* a, float* b) {
 void writePlyFile(string filename, vector<float>& points, vector<float>& normals, vector<float>& scales) {
     FILE* out = fopen(filename.c_str(), "w");
     fprintf(out, "ply\nformat binary_little_endian 1.0\n");
-    fprintf(out, "element vertex %d\n", scales.size());
+    fprintf(out, "element vertex %lu\n", scales.size());
     fprintf(out, "property float x\n");
     fprintf(out, "property float y\n");
     fprintf(out, "property float z\n");
@@ -61,22 +61,23 @@ int main(int argc, char** argv) {
     int m;
     int framecount = 0;
     double ts;
+    int bytesread;
     while (true) {
-        fread(&ts, sizeof(double), 1, in);
+        bytesread = fread(&ts, sizeof(double), 1, in);
         if (ts < 0) break;
-        fread(&m, sizeof(int), 1, in);
+        bytesread = fread(&m, sizeof(int), 1, in);
         m /= 3;
-        fread(&w, sizeof(int), 1, in);
-        fread(&h, sizeof(int), 1, in);
+        bytesread = fread(&w, sizeof(int), 1, in);
+        bytesread = fread(&h, sizeof(int), 1, in);
 
-        fread(tmp, sizeof(float), 3*m, in);
-        fread(indices, sizeof(int), w*h, in);
+        bytesread = fread(tmp, sizeof(float), 3*m, in);
+        bytesread = fread(indices, sizeof(int), w*h, in);
         n += m;
         framecount++;
     }
     for (int i = 0; i < framecount; i++) {
         PoseMatrix mat;
-        fread(mat.m, sizeof(float), 12, in);
+        bytesread = fread(mat.m, sizeof(float), 12, in);
         poses.push_back(mat);
     }
     rewind(in);
@@ -85,14 +86,14 @@ int main(int argc, char** argv) {
     vector<float> points;
     vector<float> normals;
     for (int z = 0; z < poses.size(); z++) {
-        fread(&ts, sizeof(double), 1, in);
+        bytesread = fread(&ts, sizeof(double), 1, in);
         if (ts < 0) break;
-        fread(&m, sizeof(int), 1, in);
+        bytesread = fread(&m, sizeof(int), 1, in);
         m /= 3;
-        fread(&w, sizeof(int), 1, in);
-        fread(&h, sizeof(int), 1, in);
-        fread(tmp, sizeof(float), 3*m, in);
-        fread(indices, sizeof(int), w*h, in);
+        bytesread = fread(&w, sizeof(int), 1, in);
+        bytesread = fread(&h, sizeof(int), 1, in);
+        bytesread = fread(tmp, sizeof(float), 3*m, in);
+        bytesread = fread(indices, sizeof(int), w*h, in);
 
         // -------------------------------------------------------
         PointCloud<PointXYZ>::Ptr cloud(new PointCloud<PointXYZ>);
@@ -148,7 +149,7 @@ int main(int argc, char** argv) {
             sprintf(filename, argv[2], z);
             writePlyFile(filename, points, normals, scales);
         }
-        printf("Done %d/%d\n", z, poses.size());
+        printf("Done %d/%lu\n", z, poses.size());
         // -------------------------------------------------------
     }
     if (singlefile) {
