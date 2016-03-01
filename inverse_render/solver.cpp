@@ -74,6 +74,14 @@ void InverseRender::readVariablesMatlab(vector<SampleData>& data, string filenam
     for (int i = 0; i < data.size(); i++) {
         sin >> data[i].fractionUnknown;
     }
+    getline(in, s); // direct = [
+    getline(in, s);
+    for (int i = 0; i < s.size(); i++) if (s[i] == ';') s[i] = ' ';
+    sin.clear();
+    sin.str(s);
+    for (int i = 0; i < data.size(); i++) {
+        sin >> data[i].fractionDirect;
+    }
     for (int ch = 0; ch < 3; ++ch) {
         getline(in, s); // % Channel ch
         getline(in, s); // Bch = [
@@ -110,6 +118,12 @@ void InverseRender::writeVariablesMatlab(vector<SampleData>& data, string filena
     out << "weights = [" << endl;
     for (int i = 0; i < data.size(); ++i) {
         out << data[i].fractionUnknown;
+        if (i != data.size()-1) out << ";";
+    }
+    out << "];" << endl;
+    out << "direct = [" << endl;
+    for (int i = 0; i < data.size(); ++i) {
+        out << data[i].fractionDirect;
         if (i != data.size()-1) out << ";";
     }
     out << "];" << endl;

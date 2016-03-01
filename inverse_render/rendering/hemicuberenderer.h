@@ -10,6 +10,7 @@ class SampleData {
         Material radiosity;
         Material netIncoming;
         float fractionUnknown;
+        float fractionDirect;
         std::vector<float> lightamount;
         int vertexid;
 };
@@ -34,6 +35,12 @@ const int LightTypeNumCoefficients[] =
     6*ENVMAP_RES*ENVMAP_RES,      // LIGHTTYPE_ENVMAP
 };
 
+enum {
+    CELLTYPE_NONE,
+    CELLTYPE_UNOBSERVED,
+    CELLTYPE_LIGHT,
+};
+
 class HemicubeRenderer {
     public:
         HemicubeRenderer(RenderManager* rm, int hemicubeResolution=150);
@@ -46,7 +53,8 @@ class HemicubeRenderer {
                 boost::function<void(int)> cb=NULL
                 );
         void renderHemicube(const R3Point& p, const R3Vector& n,
-                Material& m, std::vector<std::vector<float> >& lightareas, float& fractionUnknown,
+                Material& m, std::vector<std::vector<float> >& lightareas,
+                float& fractionUnknown, float& fractionDirect,
                 float* color, float* light);
         int getHemicubeResolution() const { return res; }
         SampleData computeSample(int n, float* radimage, float* lightimage);
@@ -58,7 +66,7 @@ class HemicubeRenderer {
         void renderFace(const R3Point& p,
                 const R3Vector& towards, const R3Vector& up,
                 float* image, int mode);
-        bool processHemicubeCell(
+        int processHemicubeCell(
                 const R3Point& p, const R3Vector& n, const R3Vector& up,
                 float weight, float* image, float* light,
                 Material& m, std::vector<std::vector<float> >& lightareas,

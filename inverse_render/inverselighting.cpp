@@ -30,7 +30,8 @@ struct IncidentFunctor {
     {
         T computed = materials[0]*T(d.netIncoming[ch]/(1-d.fractionUnknown));
         residual[0] = computed - T(d.radiosity[ch]);
-        residual[0] *= T(1-d.fractionUnknown)/T(d.radiosity[ch] + MINRELATIVEERROR);
+        //residual[0] *= T(1-d.fractionUnknown)/T(d.radiosity[ch] + MINRELATIVEERROR);
+        //residual[0] /= T(d.radiosity[ch] + MINRELATIVEERROR);
         return true;
     }
 
@@ -49,15 +50,14 @@ struct LightFunctor {
             T* residual) const
     {
         T computed = T(0);
-        double fractionLight = 0;
         for (int j = 0; j < nlights; j++) {
             computed += lights[j]*T(d.lightamount[j]);
-            fractionLight += d.lightamount[j];
         }
-        computed += T(d.netIncoming[ch])*T((1-fractionLight)/(1-d.fractionUnknown-fractionLight));
+        computed += T(d.netIncoming[ch])*T((1-d.fractionDirect)/(1-d.fractionUnknown-d.fractionDirect));
         computed *= materials[0];
         residual[0] = computed - T(d.radiosity[ch]);
-        residual[0] *= T(1-d.fractionUnknown)/T(d.radiosity[ch] + MINRELATIVEERROR);
+        //residual[0] *= T(1-d.fractionUnknown)/T(d.radiosity[ch] + MINRELATIVEERROR);
+        //residual[0] /= T(d.radiosity[ch] + MINRELATIVEERROR);
         return true;
     }
 
@@ -76,15 +76,14 @@ struct DynLightFunctor {
             T* residual) const
     {
         T computed = T(0);
-        double fractionLight = 0;
         for (int j = 0; j < nlights; j++) {
             computed += params[1][j]*T(d.lightamount[j]);
-            fractionLight += d.lightamount[j];
         }
-        computed += T(d.netIncoming[ch])*T((1-fractionLight)/(1-d.fractionUnknown-fractionLight));
+        computed += T(d.netIncoming[ch])*T((1-d.fractionDirect)/(1-d.fractionUnknown-d.fractionDirect));
         computed *= params[0][0];
         residual[0] = computed - T(d.radiosity[ch]);
-        residual[0] *= T(1-d.fractionUnknown)/T(d.radiosity[ch] + MINRELATIVEERROR);
+        //residual[0] *= T(1-d.fractionUnknown)/T(d.radiosity[ch] + MINRELATIVEERROR);
+        //residual[0] /= T(d.radiosity[ch] + MINRELATIVEERROR);
         return true;
     }
 

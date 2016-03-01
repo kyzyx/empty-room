@@ -71,7 +71,7 @@ void HemicubeRenderer::renderHemicube(
         const R3Vector& n,
         Material& m,
         vector<vector<float> >& lightareas,
-        float& fractionUnknown,
+        float& fractionUnknown, float& fractionDirect,
         float* image, float* light)
 {
     fractionUnknown = 0;
@@ -88,11 +88,14 @@ void HemicubeRenderer::renderHemicube(
         renderFace(pp, orientations[o], n, light, VIEW_LABELS);
         for (int i = res/2; i < res; ++i) {
             for (int j = 0; j < res; ++j) {
-                bool occupied = processHemicubeCell(
+                int occupied = processHemicubeCell(
                         p, orientations[o], n,
                         sideHemicubeFF[i][j], image + 3*(i*res+j), light + 3*(i*res+j),
                         m, lightareas, i, j);
-                if (!occupied) fractionUnknown += sideHemicubeFF[i][j];
+                if (occupied == CELLTYPE_UNOBSERVED)
+                    fractionUnknown += sideHemicubeFF[i][j];
+                else if (occupied == CELLTYPE_LIGHT)
+                    fractionDirect += sideHemicubeFF[i][j];
             }
         }
     }
@@ -100,15 +103,18 @@ void HemicubeRenderer::renderHemicube(
     renderFace(pp, n, y, light, VIEW_LABELS);
     for (int i = 0; i < res; ++i) {
         for (int j = 0; j < res; ++j) {
-                bool occupied = processHemicubeCell(
+                int occupied = processHemicubeCell(
                         p, n, y,
                         topHemicubeFF[i][j], image + 3*(i*res+j), light + 3*(i*res+j),
                         m, lightareas, i, j);
-                if (!occupied) fractionUnknown += topHemicubeFF[i][j];
+                if (occupied == CELLTYPE_UNOBSERVED)
+                    fractionUnknown += topHemicubeFF[i][j];
+                else if (occupied == CELLTYPE_LIGHT)
+                    fractionDirect += topHemicubeFF[i][j];
         }
     }
 }
-bool HemicubeRenderer::processHemicubeCell(
+int HemicubeRenderer::processHemicubeCell(
         const R3Point& p, const R3Vector& towards, const R3Vector& up,
         float weight, float* image, float* light,
         Material& m, vector<vector<float> >& lightareas,
@@ -143,14 +149,15 @@ bool HemicubeRenderer::processHemicubeCell(
         } else if (lighttype == LIGHTTYPE_ENVMAP) {
             // FIXME: Implement me! (Nearest or gaussian)
         }
+        return CELLTYPE_LIGHT;
     } else if (visibility <= 0) {
-        return false;
+        return CELLTYPE_UNOBSERVED;
     } else {
         m.r += weight*image[0];
         m.g += weight*image[1];
         m.b += weight*image[2];
+        return CELLTYPE_NONE;
     }
-    return true;
 }
 
 void HemicubeRenderer::renderFace(const R3Point& p,
@@ -215,12 +222,15 @@ SampleData HemicubeRenderer::computeSample(int n, float* radimage, float* lighti
     SampleData sd;
     sd.vertexid = n;
     sd.radiosity = rendermanager->getMeshManager()->getVertexColor(n);
+    sd.netIncoming = Material();
+    sd.fractionUnknown = 0;
+    sd.fractionDirect = 0;
     vector<vector<float> > lightareas;
     sd.lightamount.resize(0);
     renderHemicube(
             rendermanager->getMeshManager()->VertexPosition(n),
             rendermanager->getMeshManager()->VertexNormal(n),
-            sd.netIncoming, lightareas, sd.fractionUnknown,
+            sd.netIncoming, lightareas, sd.fractionUnknown, sd.fractionDirect,
             radimage, lightimage
             );
     int k = 0;
