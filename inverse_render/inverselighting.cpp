@@ -7,6 +7,18 @@ using namespace ceres;
 
 const double MINRELATIVEERROR = 0.01;
 
+// Note: Error function as follows:
+// Incident light L has three components: Direct (D), Indirect (I), Unknown (U)
+// 1. Scale incident indirect light to fill up I and U components:
+//      L_I' = L_I*(I+U)/I = L_I*(1-D)/(1-D-U)
+// 2. Sum incident direct and indirect light for total incident light
+//      L = L_I' + L_D
+// 3. Absolute error for diffuse reflectance
+//      err = L*p - B
+// 4. Scale error by our confidence in the sample, which for now is 1-U
+//      err *= (1-U)
+// 5. Use relative error (with some tolerance to prevent exploding errors)
+//      err /= (B + MINRELATIVEERROR)
 struct IncidentFunctor {
     IncidentFunctor(SampleData& data, int channel)
         : d(data), ch(channel) { }
@@ -16,9 +28,9 @@ struct IncidentFunctor {
             const T* const materials,
             T* residual) const
     {
-        T computed = materials[0]*T(d.netIncoming[ch]*(1-d.fractionUnknown));
+        T computed = materials[0]*T(d.netIncoming[ch]/(1-d.fractionUnknown));
         residual[0] = computed - T(d.radiosity[ch]);
-        residual[0] /= T(d.radiosity[ch] + MINRELATIVEERROR);
+        residual[0] *= T(1-d.fractionUnknown)/T(d.radiosity[ch] + MINRELATIVEERROR);
         return true;
     }
 
@@ -36,13 +48,16 @@ struct LightFunctor {
             const T* const lights,
             T* residual) const
     {
-        T computed = T(d.netIncoming[ch]);
+        T computed = T(0);
+        double fractionLight = 0;
         for (int j = 0; j < nlights; j++) {
             computed += lights[j]*T(d.lightamount[j]);
+            fractionLight += d.lightamount[j];
         }
-        computed *= materials[0]*T(1-d.fractionUnknown);
+        computed += T(d.netIncoming[ch])*T((1-fractionLight)/(1-d.fractionUnknown-fractionLight));
+        computed *= materials[0];
         residual[0] = computed - T(d.radiosity[ch]);
-        residual[0] /= T(d.radiosity[ch] + MINRELATIVEERROR);
+        residual[0] *= T(1-d.fractionUnknown)/T(d.radiosity[ch] + MINRELATIVEERROR);
         return true;
     }
 
@@ -60,13 +75,16 @@ struct DynLightFunctor {
             T const* const* params,
             T* residual) const
     {
-        T computed = T(d.netIncoming[ch]);
+        T computed = T(0);
+        double fractionLight = 0;
         for (int j = 0; j < nlights; j++) {
             computed += params[1][j]*T(d.lightamount[j]);
+            fractionLight += d.lightamount[j];
         }
-        computed *= params[0][0]*T(1-d.fractionUnknown);
+        computed += T(d.netIncoming[ch])*T((1-fractionLight)/(1-d.fractionUnknown-fractionLight));
+        computed *= params[0][0];
         residual[0] = computed - T(d.radiosity[ch]);
-        residual[0] /= T(d.radiosity[ch] + MINRELATIVEERROR);
+        residual[0] *= T(1-d.fractionUnknown)/T(d.radiosity[ch] + MINRELATIVEERROR);
         return true;
     }
 
