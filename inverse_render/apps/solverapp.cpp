@@ -35,6 +35,9 @@ class SolverApp : public InvrenderApp {
             } else {
                 ir.computeSamples(walldata, wallindices, numsamples, discardthreshold, false, getProgressFunction(0,2));
             }
+            if (lightfilename.length()) {
+                ir.readLightsFromTextFile(lightfilename);
+            }
 
             // Optimization
             if (scale > 0) {
@@ -143,6 +146,9 @@ class SolverApp : public InvrenderApp {
             }
             if (pcl::console::find_argument(argc, argv, "-inputsamplesfile") >= 0) {
                 pcl::console::parse_argument(argc, argv, "-inputsamplesfile", inputmatlabfilename);
+            }
+            if (pcl::console::find_argument(argc, argv, "-inputlightfile") >= 0) {
+                pcl::console::parse_argument(argc, argv, "-inputlightfile", lightfilename);
             }
             if (pcl::console::find_argument(argc, argv, "-outputpbrtfile") >= 0) {
                 pcl::console::parse_argument(argc, argv, "-outputpbrtfile", pbrtfilename);

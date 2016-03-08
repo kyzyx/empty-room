@@ -45,6 +45,7 @@ class InverseRender {
                 boost::function<void(int)> callback=NULL);
 
         void writeLightsToTextFile(std::string filename);
+        void readLightsFromTextFile(std::string filename);
         void readVariablesMatlab(std::vector<SampleData>& data, std::string filename);
         void writeVariablesMatlab(std::vector<SampleData>& data, std::string filename);
         void writeVariablesBinary(std::vector<SampleData>& data, std::string filename);

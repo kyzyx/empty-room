@@ -200,11 +200,22 @@ void InverseRender::loadVariablesBinary(vector<SampleData>& data, string filenam
 
 void InverseRender::writeLightsToTextFile(string filename) {
     ofstream out(filename);
-    out << lights.size() << endl;
+    out << lights.size() <<  " " << wallMaterial.r << " " << wallMaterial.g << " " << wallMaterial.b << endl;
     for (int i = 0; i < lights.size(); i++) {
         for (int ch = 0; ch < 3; ch++) {
             out << lights[i](ch) << " ";
         }
         out << endl;
     }
+}
+void InverseRender::readLightsFromTextFile(string filename) {
+        ifstream in(filename);
+        int nlights;
+        in >> nlights >> wallMaterial.r >> wallMaterial.g >> wallMaterial.b;
+        lights.clear();
+        for (int i = 0; i < nlights; i++) {
+            double r, g, b;
+            in >> r >> g >> b;
+            lights.push_back(Material(r,g,b));
+        }
 }

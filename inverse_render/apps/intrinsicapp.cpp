@@ -36,9 +36,11 @@ class SolverApp : public InvrenderApp {
 
             vector<Material> lights;
             if (useLights) {
-                ifstream in;
+                ifstream in(lightfilename);
                 int nlights;
                 in >> nlights;
+                string tmp;
+                getline(in, tmp);
                 for (int i = 0; i < nlights; i++) {
                     double r, g, b;
                     in >> r >> g >> b;
