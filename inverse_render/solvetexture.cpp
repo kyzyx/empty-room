@@ -64,15 +64,16 @@ Material InverseRender::computeAverageMaterial(vector<SampleData>& data, vector<
         // Compute incident direct lighting
         Material directlighting;   // Total incoming radiance from direct light
         Material indirectlighting; // Total incoming indirect radiance
-        double totallight = 0;     // Proportion of hemisphere containing direct light
         for (int j = 0; j < data[i].lightamount.size(); ++j) {
             directlighting += lightintensities[j]*data[i].lightamount[j];
-            totallight += data[i].lightamount[j];
         }
+        if (directlighting.r < 0) directlighting.r = 0;
+        if (directlighting.g < 0) directlighting.g = 0;
+        if (directlighting.b < 0) directlighting.b = 0;
         indirectlighting = data[i].netIncoming;
         // Assume unsampled regions of hemicube are equal to average
         // indirect illumination
-        indirectlighting *= (1-totallight)/(1-totallight-data[i].fractionUnknown);
+        indirectlighting *= (1-data[i].fractionDirect)/(1-data[i].fractionDirect-data[i].fractionUnknown);
         avg += data[i].radiosity/(directlighting + indirectlighting);
     }
     return avg/data.size();
@@ -94,7 +95,8 @@ void InverseRender::solveTexture(
         vector<SampleData>& data,
         ImageManager* imagemanager,
         const R3Plane& surface,
-        Texture& tex)
+        Texture& tex,
+        int label)
 {
     tex.size = 0;
     // Compute average reflectance

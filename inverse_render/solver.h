@@ -35,7 +35,8 @@ class InverseRender {
                 std::vector<SampleData>& data,
                 ImageManager* imagemanager,
                 const R3Plane& surface,
-                Texture& tex);
+                Texture& tex,
+                int label);
         void computeSamples(
                 std::vector<SampleData>& data,
                 std::vector<int> indices,
