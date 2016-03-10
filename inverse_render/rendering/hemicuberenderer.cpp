@@ -1,5 +1,6 @@
 #include "hemicuberenderer.h"
 #include "sh.h"
+#include "envmap.h"
 #include <iostream>
 
 #define MAX_LIGHTS 127
@@ -147,7 +148,14 @@ int HemicubeRenderer::processHemicubeCell(
                 }
             }
         } else if (lighttype == LIGHTTYPE_ENVMAP) {
-            // FIXME: Implement me! (Nearest or gaussian)
+            R3Vector x = towards%up;
+            R3Vector y = up;
+            double cellsize = 2./res;
+            R3Vector v = (i-res/2 + 0.5)*y*cellsize + (j-res/2 + 0.5)*x*cellsize + towards;
+            v.Normalize();
+            v = -v;
+            int envmapidx = getEnvmapCell(v[0], v[1], v[2], ENVMAP_RES);
+            lightareas[lightid][envmapidx] += weight;
         }
         return CELLTYPE_LIGHT;
     } else if (visibility <= 0) {

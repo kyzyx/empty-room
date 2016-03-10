@@ -1,5 +1,6 @@
 #include "solver.h"
 #include "ceres/ceres.h"
+#include "rendering/envmap.h"
 
 using namespace std;
 using namespace ceres;
@@ -236,10 +237,18 @@ void InverseRender::solve(vector<SampleData>& data, double reglambda) {
         problem.SetParameterLowerBound(&mat, 0, 0);
         problem.SetParameterUpperBound(&mat, 0, 1);
         for (int i = 0; i < lights.size(); i++) {
-            if (coeftype[i] != LIGHTTYPE_SH)
+            if (coeftype[i] == LIGHTTYPE_ENVMAP) {
+                for (int k = 0; k < LightTypeNumCoefficients[LIGHTTYPE_ENVMAP]; k++, i++) {
+                    problem.SetParameterLowerBound(ls, i, 0);
+                }
+                --i;
+            } else if (coeftype[i] == LIGHTTYPE_SH) {
+                if (i > 0 && reglambda > 0) {
+                    problem.AddResidualBlock(CreateSHRegularizer(lights.size(), i, reglambda), NULL, ls);
+                }
+            } else {
                 problem.SetParameterLowerBound(ls, i, 0);
-            else if (i > 0 && reglambda > 0)
-                problem.AddResidualBlock(CreateSHRegularizer(lights.size(), i, reglambda), NULL, ls);
+            }
         }
         ceres::Solver::Options options;
         options.minimizer_progress_to_stdout = true;

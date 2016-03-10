@@ -62,7 +62,8 @@ add_library(rendering
     rendering/loadshader.h rendering/loadshader.cpp
     rendering/rendermanager.h rendering/rendermanager.cpp
     rendering/hemicuberenderer.h rendering/hemicuberenderer.cpp
-    rendering/sh.h rendering/sh.cpp)
+    rendering/sh.h rendering/sh.cpp
+    rendering/envmap.h rendering/envmap.cpp)
 target_link_libraries(rendering datamanager roommodel
     ${GAPS_LIBRARIES} ${GLLIBS})
 add_library(wallfinder
