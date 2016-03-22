@@ -130,6 +130,8 @@ int HemicubeRenderer::processHemicubeCell(
         if (lightid >= lightareas.size()) {
             lightareas.resize(lightid+1);
             lightareas[lightid].resize(LightTypeNumCoefficients[lighttype],0);
+        } else if (lightareas[lightid].size() == 0) {
+            lightareas[lightid].resize(LightTypeNumCoefficients[lighttype],0);
         }
         if (lighttype == LIGHTTYPE_AREA) {
             lightareas[lightid][0] += weight;
