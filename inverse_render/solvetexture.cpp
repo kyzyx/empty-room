@@ -101,6 +101,7 @@ void InverseRender::solveTexture(
     tex.size = 0;
     // Compute average reflectance
     Material avg = computeAverageMaterial(data, lights);
+    cout << "Average reflectance: " << avg.r << " " << avg.g << " " << avg.b << endl;
 
     // Find best image containing enough textured pixels and from a reasonably
     // direct camera pose
@@ -119,7 +120,7 @@ void InverseRender::solveTexture(
             for (int j = 0; j < isfloor.size(); ++j) {
                 if (isfloor[j]) p += conf[j];
             }
-            if (p > 0) cout << i << ": Floor proportion " << p << endl;
+            //if (p > 0) cout << i << ": " << p << endl;
             if (p > bestproportion) {
                 bestproportion = p;
                 bestimage = i;
@@ -160,9 +161,9 @@ void InverseRender::solveTexture(
     for (int i = miny; i <= maxy; ++i) {
         for (int j = minx; j <= maxx; ++j) {
             cropped.at<Vec4f>(i-miny, j-minx) = Vec4f(
-                    uncropped[3*((h-i-1)*w+j)],
-                    uncropped[3*((h-i-1)*w+j)+1],
-                    uncropped[3*((h-i-1)*w+j)+2],
+                    uncropped[3*(i*w+j)],
+                    uncropped[3*(i*w+j)+1],
+                    uncropped[3*(i*w+j)+2],
                     isfloor[i*w+j]
             );
         }
@@ -173,7 +174,7 @@ void InverseRender::solveTexture(
     points.push_back(Vector3d(minx, miny, 0));
     points.push_back(Vector3d(minx, maxy, 0));
     points.push_back(Vector3d(maxx, maxy, 0));
-    points.push_back(Vector3d(maxx, miny, 0));
+    //points.push_back(Vector3d(maxx, miny, 0));
     for (int i = 0; i < points.size(); ++i) {
         from.push_back(Point2f(points[i](0) - minx, points[i](1) - miny));
         R3Point p = cam->pos + cam->focal_length*cam->towards;
@@ -201,18 +202,19 @@ void InverseRender::solveTexture(
     }
 
     // Rectify
-    int xx[] = {0,w,w,0};
-    int yy[] = {0,0,h,h};
+    Mat rectification = getAffineTransform(from, to);
+
     int neww = 0;
     int newh = 0;
-    Mat rectification = getAffineTransform(from, to);
-    Mat invrectification;
-    invertAffineTransform(rectification, invrectification);
+    vector<Point2f> vv;
+    vv.push_back(Point2f(0,0));
+    vv.push_back(Point2f(w,0));
+    vv.push_back(Point2f(w,h));
+    vv.push_back(Point2f(0,h));
+    transform(vv, vv, rectification);
     for (int i = 0; i < 4; ++i) {
-        Point2f corner(xx[i], yy[i]);
-        Mat src = invrectification*Mat(corner, false);
-        if (src.at<double>(0) > neww) neww = src.at<double>(0);
-        if (src.at<double>(1) > newh) newh = src.at<double>(1);
+        if (vv[i].x > neww) neww = vv[i].x;
+        if (vv[i].y > newh) newh = vv[i].y;
     }
     warpAffine(cropped, cropped, rectification, Size(neww, newh));
 
