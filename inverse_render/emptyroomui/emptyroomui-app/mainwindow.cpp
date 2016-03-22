@@ -52,7 +52,6 @@ class MeshDialog : public QFileDialog
             QHBoxLayout *hbl = new QHBoxLayout();
             ccw = new QCheckBox(QString("Flip Normals"), this);
             hbl->addWidget(ccw);
-            ccw->setChecked(true);
             QGridLayout* mainLayout = dynamic_cast<QGridLayout*>(layout());
             if (mainLayout) {
                 int numRows = mainLayout->rowCount();
@@ -83,6 +82,7 @@ class ImageDialog : public QFileDialog
             hbl->addWidget(flipx);
             hbl->addWidget(flipy);
             hbl->addWidget(lazyload);
+            lazyload->setChecked(true);
             QGridLayout* mainLayout = dynamic_cast<QGridLayout*>(layout());
             if (mainLayout) {
                 int numRows = mainLayout->rowCount();
@@ -933,7 +933,7 @@ void MainWindow::on_computeLabelImagesButton_clicked()
     for (int i = 0; i < imgr->size(); ++i) {
         progressbar->setValue(100*i/imgr->size());
         ui->meshWidget->renderManager()->createLabelImage(imgr->getCamera(i), imgr->getImageWriteable("labels",i));
-        ImageIO::flip((char*)imgr->getImageWriteable("labels", i), imgr->width(), imgr->height(), imgr->getImageType("labels").getSize());
+        //ImageIO::flip((char*)imgr->getImageWriteable("labels", i), imgr->width(), imgr->height(), imgr->getImageType("labels").getSize());
         int f = imgr->getFlags("labels", i);
         imgr->setFlags("labels", i, f|ImageManager::DF_INITIALIZED);
         if (lazyloadimages) {
@@ -988,6 +988,7 @@ void MainWindow::on_hemicubeButton_clicked()
         ui->imageTypeComboBox->insertItem(3, QString("Environment cubemap Visibility & Labels"));
         ui->imageTypeComboBox->insertItem(4, QString("Hemicube-weighted Environment cubemap"));
         ui->imageTypeComboBox->insertItem(5, QString("Hemicube weights"));
+        ui->meshWidget->renderManager()->precalculateAverageSamples();
     } else {
         ui->meshWidget->setupCameras(imgr);
         ui->showTrajectoryCheckbox->setEnabled(true);

@@ -88,6 +88,8 @@ void ERUIGLWidget::setInteractionMode(int mode) {
 
 void ERUIGLWidget::setupCameras(ImageManager* imgr) {
     cameras.clear();
+    camcolors.clear();
+    camids.clear();
     for (int i = 0; i < imgr->size(); i++) {
         cameras.push_back(*imgr->getCamera(i));
         camcolors.push_back(RNRgb(0,1,0));
@@ -104,6 +106,8 @@ void ERUIGLWidget::setupCameras(ImageManager* imgr) {
 
 void ERUIGLWidget::setupCameras(std::vector<CameraParams>& cams) {
     cameras.clear();
+    camcolors.clear();
+    camids.clear();
     for (int i = 0; i < cams.size(); i++) {
         cameras.push_back(cams[i]);
         camcolors.push_back(RNRgb(0,1,0));
