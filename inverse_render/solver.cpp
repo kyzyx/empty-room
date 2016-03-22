@@ -174,6 +174,14 @@ void InverseRender::writeVariablesBinary(vector<SampleData>& data, string filena
             else out.write((char*)&zero, sizeof(float));
         }
     }
+    for (int i = 0; i < lights.size(); i++) {
+        for (int j = 0; j < 3; j++) {
+            out.write((char*)&(lights[i](j)), sizeof(float));
+        }
+    }
+    for (int j = 0; j < 3; j++) {
+        out.write((char*)&(wallMaterial(j)), sizeof(float));
+    }
 }
 
 void InverseRender::loadVariablesBinary(vector<SampleData>& data, string filename) {
@@ -195,6 +203,15 @@ void InverseRender::loadVariablesBinary(vector<SampleData>& data, string filenam
         for (int j = 0; j < data[i].lightamount.size(); ++j) {
             in.read((char*)&(data[i].lightamount[j]), sizeof(float));
         }
+    }
+    lights.resize(sz);
+    for (int i = 0; i < lights.size(); i++) {
+        for (int j = 0; j < 3; j++) {
+            in.read((char*)&(lights[i](j)), sizeof(float));
+        }
+    }
+    for (int j = 0; j < 3; j++) {
+        in.read((char*)&(wallMaterial(j)), sizeof(float));
     }
 }
 

@@ -16,7 +16,7 @@ class SolverApp : public InvrenderApp {
               matlabfilename(""), pbrtfilename(""), rerenderedplyfilename(""), errorplyfilename(""),
               meshcolorscale(1), gamma(1),
               label(WallFinder::LABEL_WALL),
-              cameranum(-1), solveTexture(false),
+              cameranum(-1), solveTexture(false), solveLights(true),
               scale(0), reglambda(0) {}
         virtual int run() {
             // Setup
@@ -33,18 +33,21 @@ class SolverApp : public InvrenderApp {
 
             if (inputmatlabfilename.length()) {
                 ir.readVariablesMatlab(data, inputmatlabfilename);
+            } else if (inputbinaryfilename.length()) {
+                ir.loadVariablesBinary(data, inputbinaryfilename);
             } else {
                 ir.computeSamples(data, indices, numsamples, discardthreshold, false, getProgressFunction(0,2));
             }
-            if (lightfilename.length()) {
-                ir.readLightsFromTextFile(lightfilename);
+            if (inlightfilename.length()) {
+                ir.readLightsFromTextFile(inlightfilename);
+            } else {
+                for (int i = 0; i < ir.lights.size(); i++) {
+                    ir.lights[i] = Material(10,10,10);
+                }
             }
 
             // Optimization
             if (solveTexture) {
-                if (matlabfilename.length()) {
-                    ir.writeVariablesMatlab(data, matlabfilename);
-                }
                 Texture tex;
                 R3Vector v(0,0,0);
                 R3Point p(0,0,0);
@@ -58,7 +61,7 @@ class SolverApp : public InvrenderApp {
                 R3Plane plane(p, v);
                 ir.solveTexture(data, imgr, plane, tex, label);
                 if (tex.texture) ImageIO::writeExrImage(texturefilename, tex.texture, tex.size, tex.size);
-            } else {
+            } else if (solveLights) {
                 if (scale > 0) {
                     ir.setLossFunction(LOSS_HUBER);
                     ir.setLossFunctionScale(scale);
@@ -70,9 +73,12 @@ class SolverApp : public InvrenderApp {
             if (matlabfilename.length()) {
                 ir.writeVariablesMatlab(data, matlabfilename);
             }
+            if (outputbinaryfilename.length()) {
+                ir.writeVariablesBinary(data, outputbinaryfilename);
+            }
             if (solveTexture) return 0;
-            if (lightfilename.length()) {
-                ir.writeLightsToTextFile(lightfilename);
+            if (outlightfilename.length()) {
+                ir.writeLightsToTextFile(outlightfilename);
             }
             cout << "data:WallMaterial " << ir.wallMaterial.r << " " << ir.wallMaterial.g << " " << ir.wallMaterial.b << endl;
             for (int i = 0; i < ir.lights.size(); i++) {
@@ -156,6 +162,9 @@ class SolverApp : public InvrenderApp {
         }
         virtual int _parseargs(int argc, char** argv) {
             if (!mmgr) return 0;
+            if (pcl::console::find_switch(argc, argv, "-nosolve")) {
+                solveLights = false;
+            }
             if (pcl::console::find_argument(argc, argv, "-hemicuberesolution") >= 0) {
                 pcl::console::parse_argument(argc, argv, "-hemicuberesolution", hemicuberesolution);
             }
@@ -177,8 +186,17 @@ class SolverApp : public InvrenderApp {
             if (pcl::console::find_argument(argc, argv, "-inputsamplesfile") >= 0) {
                 pcl::console::parse_argument(argc, argv, "-inputsamplesfile", inputmatlabfilename);
             }
+            if (pcl::console::find_argument(argc, argv, "-outputbinaryfile") >= 0) {
+                pcl::console::parse_argument(argc, argv, "-outputbinaryfile", outputbinaryfilename);
+            }
+            if (pcl::console::find_argument(argc, argv, "-inputbinaryfile") >= 0) {
+                pcl::console::parse_argument(argc, argv, "-inputbinaryfile", inputbinaryfilename);
+            }
             if (pcl::console::find_argument(argc, argv, "-inputlightfile") >= 0) {
-                pcl::console::parse_argument(argc, argv, "-inputlightfile", lightfilename);
+                pcl::console::parse_argument(argc, argv, "-inputlightfile", inlightfilename);
+            }
+            if (pcl::console::find_argument(argc, argv, "-outputlightfile") >= 0) {
+                pcl::console::parse_argument(argc, argv, "-outputlightfile", outlightfilename);
             }
             if (pcl::console::find_argument(argc, argv, "-outputpbrtfile") >= 0) {
                 pcl::console::parse_argument(argc, argv, "-outputpbrtfile", pbrtfilename);
@@ -213,16 +231,20 @@ class SolverApp : public InvrenderApp {
         int hemicuberesolution;
         string matlabfilename;
         string inputmatlabfilename;
+        string outputbinaryfilename;
+        string inputbinaryfilename;
         string pbrtfilename;
         string rerenderedplyfilename;
         string errorplyfilename;
-        string lightfilename;
+        string outlightfilename;
+        string inlightfilename;
         int cameranum;
         int label;
         double reglambda;
         float meshcolorscale;
         float gamma;
         bool solveTexture;
+        bool solveLights;
         string texturefilename;
 };
 
