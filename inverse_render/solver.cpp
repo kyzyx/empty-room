@@ -5,19 +5,6 @@
 
 using namespace std;
 
-double error(vector<SampleData>& data, vector<int>& indices, vector<Material>& lights, double r, int ch) {
-    double err = 0;
-    for (int i = 0; i < indices.size(); ++i) {
-        double d = data[indices[i]].radiosity(ch) - r*data[indices[i]].netIncoming(ch);
-        for (int j = 0; j < data[indices[i]].lightamount.size(); ++j) {
-            d -= r*data[indices[i]].lightamount[j]*lights[j](ch);
-        }
-        d *= 1-data[indices[i]].fractionUnknown;
-        err += d*d;
-    }
-    return err;
-}
-
 void InverseRender::computeSamples(
         vector<SampleData>& data,
         vector<int> indices,
@@ -26,15 +13,11 @@ void InverseRender::computeSamples(
         bool saveImages,
         boost::function<void(int)> callback)
 {
-    hr->computeSamples(data, indices, numsamples, discardthreshold, saveImages?&images:NULL, callback);
-    for (int i = 0; i < data.size(); ++i) {
-        data[i].lightamount.resize(lights.size(), 0);
-    }
+    hr->computeSamples(data, indices, numsamples, discardthreshold, lights, saveImages?&images:NULL, callback);
 }
 
-int InverseRender::setupLightParameters(MeshManager* m) {
+void InverseRender::setupLightParameters(MeshManager* m) {
     lights.clear();
-    coeftype.clear();
 
     int ret = 0;
     set<int> lightids;
@@ -43,14 +26,9 @@ int InverseRender::setupLightParameters(MeshManager* m) {
         if (l) lightids.insert(l);
     }
     for (auto lightinfo : lightids) {
-        int n = LightTypeNumCoefficients[LIGHTTYPE(lightinfo)];
-        for (int i = 0; i < n; i++) {
-            coeftype.push_back(LIGHTTYPE(lightinfo));
-        }
-        ret += n;
+        int t = LIGHTTYPE(lightinfo);
+        lights.push_back(NewLightFromLightType(t));
     }
-    lights.resize(ret);
-    return ret;
 }
 void InverseRender::readVariablesMatlab(vector<SampleData>& data, string filename) {
     ifstream in(filename);
@@ -106,6 +84,7 @@ void InverseRender::readVariablesMatlab(vector<SampleData>& data, string filenam
 void InverseRender::writeVariablesMatlab(vector<SampleData>& data, string filename) {
     ofstream out(filename);
     out << "A = [" << endl;
+    // FIXME
     for (int i = 0; i < data.size(); ++i) {
         for (int j = 0; j < lights.size(); ++j) {
             if (j < data[i].lightamount.size()) out << data[i].lightamount[j];
@@ -142,6 +121,7 @@ void InverseRender::writeVariablesMatlab(vector<SampleData>& data, string filena
         }
         out << "];" << endl;
     }
+    // FIXME
     if (lights.size()) {
         for (int ch = 0; ch < 3; ch++) {
             out << "L" << ch << " = [" << endl;
@@ -200,18 +180,10 @@ void InverseRender::loadVariablesBinary(vector<SampleData>& data, string filenam
         in.read((char*)&(data[i].netIncoming(0)), sizeof(float));
         in.read((char*)&(data[i].netIncoming(1)), sizeof(float));
         in.read((char*)&(data[i].netIncoming(2)), sizeof(float));
+        // FIXME
         for (int j = 0; j < data[i].lightamount.size(); ++j) {
             in.read((char*)&(data[i].lightamount[j]), sizeof(float));
         }
-    }
-    lights.resize(sz);
-    for (int i = 0; i < lights.size(); i++) {
-        for (int j = 0; j < 3; j++) {
-            in.read((char*)&(lights[i](j)), sizeof(float));
-        }
-    }
-    for (int j = 0; j < 3; j++) {
-        in.read((char*)&(wallMaterial(j)), sizeof(float));
     }
 }
 
@@ -219,9 +191,8 @@ void InverseRender::writeLightsToTextFile(string filename) {
     ofstream out(filename);
     out << lights.size() <<  " " << wallMaterial.r << " " << wallMaterial.g << " " << wallMaterial.b << endl;
     for (int i = 0; i < lights.size(); i++) {
-        for (int ch = 0; ch < 3; ch++) {
-            out << lights[i](ch) << " ";
-        }
+        out << lights[i]->typeId() << " ";
+        lights[i]->writeToStream(out);
         out << endl;
     }
 }
@@ -231,8 +202,10 @@ void InverseRender::readLightsFromTextFile(string filename) {
         in >> nlights >> wallMaterial.r >> wallMaterial.g >> wallMaterial.b;
         lights.clear();
         for (int i = 0; i < nlights; i++) {
-            double r, g, b;
-            in >> r >> g >> b;
-            lights.push_back(Material(r,g,b));
+            int lighttype;
+            in >> lighttype;
+            Light* l = NewLightFromLightType(lighttype);
+            l->readFromStream(in);
+            lights.push_back(l);
         }
 }

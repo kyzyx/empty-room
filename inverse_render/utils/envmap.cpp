@@ -1,5 +1,5 @@
-#include "rendering/sh.h"
-#include "rendering/envmap.h"
+#include "lighting/sh.h"
+#include "lighting/cubemap.h"
 #include "datamanager/imageio.h"
 #include <cmath>
 #include <cstring>

@@ -1,4 +1,5 @@
-#include "envmap.h"
+#include "cubemap.h"
+#include "sh.h"
 #include <cmath>
 
 using namespace std;

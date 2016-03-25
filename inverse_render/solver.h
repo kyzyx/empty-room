@@ -29,6 +29,7 @@ class InverseRender {
         ~InverseRender() {
             if (hr) delete hr;
             if (rm) delete rm;
+            for (auto it : lights) delete *it;
         }
         void solve(std::vector<SampleData>& data, double reglambda=0);
         void solveTexture(
@@ -62,7 +63,7 @@ class InverseRender {
                 std::vector<SampleData>& data,
                 std::vector<Material>& lightintensies);
         double generateBinaryMask(const CameraParams* cam, const char* labelimage, std::vector<bool>& mask, int label);
-        int setupLightParameters(MeshManager* m);
+        void setupLightParameters(MeshManager* m);
 
         HemicubeRenderer* hr;
         RenderManager* rm;
@@ -74,8 +75,7 @@ class InverseRender {
     public:
         std::vector<float*> images;
         MeshManager* mesh;
-        std::vector<Material> lights;
-        std::vector<int> coeftype;
+        std::vector<Light*> lights;
         Material wallMaterial;
 };
 

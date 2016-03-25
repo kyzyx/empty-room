@@ -57,14 +57,17 @@ add_library(roommodel
     roommodel/rectanglerenderer.h roommodel/rectanglerenderer.cpp)
 target_link_libraries(roommodel datamanager
     ${GAPS_LIBRARIES} ${GLLIBS})
+add_library(lighting
+    lighting/light.h lighting/light.cpp
+    lighting/sh.h lighting/sh.cpp
+    lighting/cubemap.h lighting/cubemap.cpp)
+target_link_libraries(lighting ${GAPS_LIBRARIES})
 add_library(rendering
     rendering/opengl_compat.h rendering/opengl_compat.cpp
     rendering/loadshader.h rendering/loadshader.cpp
     rendering/rendermanager.h rendering/rendermanager.cpp
-    rendering/hemicuberenderer.h rendering/hemicuberenderer.cpp
-    rendering/sh.h rendering/sh.cpp
-    rendering/envmap.h rendering/envmap.cpp)
-target_link_libraries(rendering datamanager roommodel
+    rendering/hemicuberenderer.h rendering/hemicuberenderer.cpp)
+target_link_libraries(rendering datamanager roommodel lighting
     ${GAPS_LIBRARIES} ${GLLIBS})
 add_library(wallfinder
     wallfinder/orientation_finder.h wallfinder/orientation_finder.cpp

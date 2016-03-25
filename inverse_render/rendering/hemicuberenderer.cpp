@@ -1,6 +1,4 @@
 #include "hemicuberenderer.h"
-#include "sh.h"
-#include "envmap.h"
 #include <iostream>
 
 #define MAX_LIGHTS 127
@@ -71,7 +69,7 @@ void HemicubeRenderer::renderHemicube(
         const R3Point& p,
         const R3Vector& n,
         Material& m,
-        vector<vector<float> >& lightareas,
+        vector<Light*>& lights,
         float& fractionUnknown, float& fractionDirect,
         float* image, float* light)
 {
@@ -92,7 +90,7 @@ void HemicubeRenderer::renderHemicube(
                 int occupied = processHemicubeCell(
                         p, orientations[o], n,
                         sideHemicubeFF[i][j], image + 3*(i*res+j), light + 3*(i*res+j),
-                        m, lightareas, i, j);
+                        m, lights, i, j);
                 if (occupied == CELLTYPE_UNOBSERVED)
                     fractionUnknown += sideHemicubeFF[i][j];
                 else if (occupied == CELLTYPE_LIGHT)
@@ -107,7 +105,7 @@ void HemicubeRenderer::renderHemicube(
                 int occupied = processHemicubeCell(
                         p, n, y,
                         topHemicubeFF[i][j], image + 3*(i*res+j), light + 3*(i*res+j),
-                        m, lightareas, i, j);
+                        m, lights, i, j);
                 if (occupied == CELLTYPE_UNOBSERVED)
                     fractionUnknown += topHemicubeFF[i][j];
                 else if (occupied == CELLTYPE_LIGHT)
@@ -118,7 +116,7 @@ void HemicubeRenderer::renderHemicube(
 int HemicubeRenderer::processHemicubeCell(
         const R3Point& p, const R3Vector& towards, const R3Vector& up,
         float weight, float* image, float* light,
-        Material& m, vector<vector<float> >& lightareas,
+        Material& m, std::vector<Light*>& lights,
         int i, int j)
 {
     int visibility = ftoi(light[0]);
@@ -126,39 +124,15 @@ int HemicubeRenderer::processHemicubeCell(
     int lightid = LIGHTID(lightinfo);
     int lighttype = LIGHTTYPE(lightinfo);
     if (lightid > 0) {
-        lightid--;
-        if (lightid >= lightareas.size()) {
-            lightareas.resize(lightid+1);
-            lightareas[lightid].resize(LightTypeNumCoefficients[lighttype],0);
-        } else if (lightareas[lightid].size() == 0) {
-            lightareas[lightid].resize(LightTypeNumCoefficients[lighttype],0);
-        }
-        if (lighttype == LIGHTTYPE_AREA) {
-            lightareas[lightid][0] += weight;
-        } else if (lighttype == LIGHTTYPE_SH) {
-            R3Vector x = towards%up;
-            R3Vector y = up;
-            double cellsize = 2./res;
-            R3Vector v = (i-res/2 + 0.5)*y*cellsize + (j-res/2 + 0.5)*x*cellsize + towards;
-            v.Normalize();
-            v = -v;
-            int idx = 0;
-            for (int band = 0; band < NUM_SH_BANDS; band++) {
-                for (int m = -band; m <= band; m++) {
-                    lightareas[lightid][idx++] +=
-                        weight*SH(band, m, v[0], v[1], v[2]);
-                }
-            }
-        } else if (lighttype == LIGHTTYPE_ENVMAP) {
-            R3Vector x = towards%up;
-            R3Vector y = up;
-            double cellsize = 2./res;
-            R3Vector v = (i-res/2 + 0.5)*y*cellsize + (j-res/2 + 0.5)*x*cellsize + towards;
-            v.Normalize();
-            v = -v;
-            int envmapidx = getEnvmapCell(v[0], v[1], v[2], ENVMAP_RES);
-            lightareas[lightid][envmapidx] += weight;
-        }
+        R3Vector x = towards%up;
+        R3Vector y = up;
+        double cellsize = 2./res;
+        R3Vector v = (i-res/2 + 0.5)*y*cellsize + (j-res/2 + 0.5)*x*cellsize + towards;
+        v.Normalize();
+        v = -v;
+
+        lights[lightid-1]->addLightFF(p[0], p[1], p[2], v[0], v[1], v[2], weight);
+
         return CELLTYPE_LIGHT;
     } else if (visibility <= 0) {
         return CELLTYPE_UNOBSERVED;
@@ -194,6 +168,7 @@ void HemicubeRenderer::computeSamples(
         vector<int> indices,
         int numsamples,
         double discardthreshold,
+        vector<Light*> lights,
         vector<float*>* images,
         boost::function<void(int)> cb)
 {
@@ -212,32 +187,26 @@ void HemicubeRenderer::computeSamples(
             images->push_back(radimage);
             images->push_back(lightimage);
         }
-        SampleData sd = computeSample(indices[i], radimage, lightimage);
+        SampleData sd = computeSample(indices[i], lights, radimage, lightimage);
         data.push_back(sd);
     }
 }
 
-SampleData HemicubeRenderer::computeSample(int n, float* radimage, float* lightimage) {
+SampleData HemicubeRenderer::computeSample(int n, vector<Light*> lights, float* radimage, float* lightimage) {
     SampleData sd;
     sd.vertexid = n;
     sd.radiosity = rendermanager->getMeshManager()->getVertexColor(n);
     sd.netIncoming = Material();
     sd.fractionUnknown = 0;
     sd.fractionDirect = 0;
-    vector<vector<float> > lightareas;
-    sd.lightamount.resize(0);
+    for (int i = 0; i < lights.size(); i++) {
+        sd.lights.push_back(NewLightFromLightType(lights[i].typeId()));
+    }
     renderHemicube(
             rendermanager->getMeshManager()->VertexPosition(n),
             rendermanager->getMeshManager()->VertexNormal(n),
-            sd.netIncoming, lightareas, sd.fractionUnknown, sd.fractionDirect,
+            sd.netIncoming, sd.lights, sd.fractionUnknown, sd.fractionDirect,
             radimage, lightimage
             );
-    int k = 0;
-    for (int i = 0; i < lightareas.size(); i++) {
-        sd.lightamount.resize(sd.lightamount.size() + lightareas[i].size());
-        for (int j = 0; j < lightareas[i].size(); j++) {
-            sd.lightamount[k++] = lightareas[i][j];
-        }
-    }
     return sd;
 }
