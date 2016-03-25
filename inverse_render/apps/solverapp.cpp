@@ -142,12 +142,12 @@ class SolverApp : public InvrenderApp {
                             char buf[100];
                             snprintf(buf, 100, pbrtfilename.c_str(), i);
                             outputPbrtFile(
-                                    buf, room, *mmgr, ir.lights, ir.coeftype,
+                                    buf, room, *mmgr, ir.lights,
                                     imgr->getCamera(i));
                         }
                     } else {
                         outputPbrtFile(
-                                pbrtfilename, room, *mmgr, ir.lights, ir.coeftype,
+                                pbrtfilename, room, *mmgr, ir.lights,
                                 imgr->getCamera(cameranum));
                     }
                 } else {

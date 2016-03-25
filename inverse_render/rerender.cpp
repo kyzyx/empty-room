@@ -164,9 +164,12 @@ void outputRadianceFile(string filename, WallFinder& wf, MeshManager& m, Inverse
     // RADIANCE light parameters are in radiance; for diffuse surfaces the radiance L
     // is related to the radiosity J by
     // J = pi*L
-    for (int i = 0; i < ir.lights.size(); ++i) {
+    for (int i = 0; i < ir.lights[0].size(); ++i) {
+        if (ir.lights[0][i]->typeId() != LIGHTTYPE_AREA) continue;
         out << "void light l" << (i+1) << endl << 0 << endl << 0 << endl << 3 << " ";
-        out << ir.lights[i](0)/M_PI << " " << ir.lights[i](1)/M_PI << " " << ir.lights[i](2)/M_PI << endl << endl;
+        out << ir.lights[0][i]->coef(0)/M_PI << " "
+            << ir.lights[1][i]->coef(0)/M_PI << " "
+            << ir.lights[2][i]->coef(0)/M_PI << endl << endl;
         vector<int> indices;
         vector<R3Point> points;
         int id = i+1;
@@ -327,8 +330,7 @@ void outputPbrtFile(
         std::string filename,
         roommodel::RoomModel* room,
         MeshManager& mmgr,
-        vector<Material>& lights,
-        vector<int>& lighttypes,
+        vector<vector<Light*> >& lights,
         const CameraParams* cam) {
     ofstream out(filename);
 
@@ -431,86 +433,91 @@ void outputPbrtFile(
     }
 
     // Output light sources
-    for (int i = 0; i < lighttypes.size(); ++i) {
-        if (lights[i].isEmpty()) continue;
-        if (lighttypes[i] == LIGHTTYPE_SH) {
+    for (int i = 0; i < lights[0].size(); ++i) {
+        if (lights[0][i]->typeId() == LIGHTTYPE_SH) {
             // Extract all SH coefficients
             // Write to exr file
             out << "AttributeBegin" << endl;
             out << "LightSource \"infinite\" \"string mapname\" [\"sh.exr\"]" << endl;
             out << "AttributeEnd" << endl;
-            while (i < lighttypes.size() && lighttypes[i] == LIGHTTYPE_SH) i++;
-            i--;
             continue;
-        }
-        vector<R3Point> pts;
-        vector<int> indices;
-        estimateLightShape(mmgr, i+1, pts, indices);
-        out << "AttributeBegin" << endl;
-        if (pts.size() == 4 && indices.size() == 0) {
-            if (pts.size() == 4) {
-                // Disk area light
-                out << "AreaLightSource \"diffuse\" \"rgb L\" [";
-                for (int j = 0; j < 3; ++j) out << lights[i](j)/M_PI << " ";
-                out << "]" << endl;
-                Matrix3d rot;
-                Vector3d axes[3];
-                axes[0] = Vector3d(pts[3][0], pts[3][1], pts[3][2]);
-                axes[2] = Vector3d(pts[2][0], pts[2][1], pts[2][2]);
-                axes[1] = axes[2].cross(axes[0]);
-                for (int j = 0; j < 3; ++j) rot.col(j) = axes[j];
-                rot = rot.inverse();
-                out << "Transform [";
-                for (int j = 0; j < 3; ++j) {
-                    for (int k = 0; k < 3; ++k) out << rot(j,k) << " ";
-                    out << pts[0][j] << " ";
+        } else if (lights[0][i]->typeId() == LIGHTTYPE_ENVMAP) {
+            // Extract all cubemap coefficients
+            // Write to exr file
+            out << "AttributeBegin" << endl;
+            out << "LightSource \"infinite\" \"string mapname\" [\"cubemap.exr\"]" << endl;
+            out << "AttributeEnd" << endl;
+            continue;
+        } else if (lights[0][i]->typeId() == LIGHTTYPE_AREA) {
+            vector<R3Point> pts;
+            vector<int> indices;
+            estimateLightShape(mmgr, i+1, pts, indices);
+            out << "AttributeBegin" << endl;
+            if (pts.size() == 4 && indices.size() == 0) {
+                if (pts.size() == 4) {
+                    // Disk area light
+                    out << "AreaLightSource \"diffuse\" \"rgb L\" [";
+                    for (int j = 0; j < 3; ++j) out << lights[j][i]->coef(0)/M_PI << " ";
+                    out << "]" << endl;
+                    Matrix3d rot;
+                    Vector3d axes[3];
+                    axes[0] = Vector3d(pts[3][0], pts[3][1], pts[3][2]);
+                    axes[2] = Vector3d(pts[2][0], pts[2][1], pts[2][2]);
+                    axes[1] = axes[2].cross(axes[0]);
+                    for (int j = 0; j < 3; ++j) rot.col(j) = axes[j];
+                    rot = rot.inverse();
+                    out << "Transform [";
+                    for (int j = 0; j < 3; ++j) {
+                        for (int k = 0; k < 3; ++k) out << rot(j,k) << " ";
+                        out << pts[0][j] << " ";
+                    }
+                    out << "0 0 0 1]" << endl;
+                    out << "Shape \"disk\" \"float radius\" [" << pts[1][0] << "]" << endl;
+                } else if (pts.size() == 1) {
+                    // Point light
+                    double radius = 0.02;
+                    out << "AreaLightSource \"diffuse\" \"rgb L\" [";
+                    for (int j = 0; j < 3; ++j) out << lights[j][i]->coef(0)/(M_PI*radius*radius) << " ";
+                    out << "]" << endl;
+                    out << "Transform [1 0 0 " << pts[0][0] <<
+                        " 0 1 0 " << pts[0][1] <<
+                        " 0 0 1 " << pts[0][2] <<
+                        " 0 0 0 1]" << endl;
+                    out << "Shape \"sphere\" \"float radius\" [" << radius << "]" << endl;
                 }
-                out << "0 0 0 1]" << endl;
-                out << "Shape \"disk\" \"float radius\" [" << pts[1][0] << "]" << endl;
-            } else if (pts.size() == 1) {
-                // Point light
-                double radius = 0.02;
+            } else {
                 out << "AreaLightSource \"diffuse\" \"rgb L\" [";
-                for (int j = 0; j < 3; ++j) out << lights[i](j)/(M_PI*radius*radius) << " ";
+                for (int j = 0; j < 3; ++j) out << lights[j][i]->coef(0)/M_PI << " ";
                 out << "]" << endl;
-                out << "Transform [1 0 0 " << pts[0][0] <<
-                                 " 0 1 0 " << pts[0][1] <<
-                                 " 0 0 1 " << pts[0][2] <<
-                                 " 0 0 0 1]" << endl;
-                out << "Shape \"sphere\" \"float radius\" [" << radius << "]" << endl;
+                out << "Transform [1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1]" << endl;
+                for (int j = 0; j < pts.size(); ++j) {
+                    Vector4f q(pts[j][0],pts[j][1],pts[j][2],1);
+                    /*
+                       q = wf.getNormalizationTransform()*q;
+                       q /= q(3);
+                       R3Point tmp = b.ClosestPoint(R3Point(q(0),q(1),q(2)));
+                       q = wf.getNormalizationTransform().inverse()*Vector4f(tmp[0], tmp[1], tmp[2], 1);
+                       q /= q(3);*/
+                    pts[j] = R3Point(q(0),q(1),q(2));
+                }
+                out << "Shape \"trianglemesh\"" << endl;
+                out << "\"point P\" [" << endl;
+                for (int j = 0; j < pts.size(); ++j) {
+                    out << '\t';
+                    for (int k = 0; k < 3; ++k) out << pts[j][k] << " ";
+                    out << endl;
+                }
+                out << "]" << endl;
+                out << "\"integer indices\" [" << endl;
+                for (int j = 0; j < indices.size(); j+=3) {
+                    out << '\t';
+                    for (int k = 0; k < 3; ++k) out << indices[j+k] << " ";
+                    out << endl;
+                }
+                out << "]" << endl;
             }
-        } else {
-            out << "AreaLightSource \"diffuse\" \"rgb L\" [";
-            for (int j = 0; j < 3; ++j) out << lights[i](j)/M_PI << " ";
-            out << "]" << endl;
-            out << "Transform [1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1]" << endl;
-            for (int j = 0; j < pts.size(); ++j) {
-                Vector4f q(pts[j][0],pts[j][1],pts[j][2],1);
-                /*
-                q = wf.getNormalizationTransform()*q;
-                q /= q(3);
-                R3Point tmp = b.ClosestPoint(R3Point(q(0),q(1),q(2)));
-                q = wf.getNormalizationTransform().inverse()*Vector4f(tmp[0], tmp[1], tmp[2], 1);
-                q /= q(3);*/
-                pts[j] = R3Point(q(0),q(1),q(2));
-            }
-            out << "Shape \"trianglemesh\"" << endl;
-            out << "\"point P\" [" << endl;
-            for (int j = 0; j < pts.size(); ++j) {
-                out << '\t';
-                for (int k = 0; k < 3; ++k) out << pts[j][k] << " ";
-                out << endl;
-            }
-            out << "]" << endl;
-            out << "\"integer indices\" [" << endl;
-            for (int j = 0; j < indices.size(); j+=3) {
-                out << '\t';
-                for (int k = 0; k < 3; ++k) out << indices[j+k] << " ";
-                out << endl;
-            }
-            out << "]" << endl;
+            out << "AttributeEnd" << endl;
         }
-        out << "AttributeEnd" << endl;
     }
     out << "WorldEnd" << endl;
 }
