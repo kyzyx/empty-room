@@ -2,6 +2,8 @@
 #include "sh.h"
 #include "cubemap.h"
 
+using namespace std;
+
 double Light::lightContribution(double* it) const {
     double ret = 0;
     for (auto vit = v.begin(); vit != v.end(); ++vit, ++it) {
@@ -10,7 +12,7 @@ double Light::lightContribution(double* it) const {
     return ret;
 }
 
-double Light::lightContribution(std::vector<double>::iterator it) const {
+double Light::lightContribution(vector<double>::const_iterator it) const {
     double ret = 0;
     for (auto vit = v.begin(); vit != v.end(); ++vit, ++it) {
         ret += *vit * *it;
@@ -18,6 +20,9 @@ double Light::lightContribution(std::vector<double>::iterator it) const {
     return ret;
 }
 
+double Light::lightContribution(Light* l) const {
+    return l->lightContribution(v.begin());
+}
 
 void SHEnvironmentLight::addLightFF(
         double px, double py, double pz,

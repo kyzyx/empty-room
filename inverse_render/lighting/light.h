@@ -24,15 +24,16 @@ class Light {
         virtual double& coef(int n) { return v[n]; }
 
         virtual double lightContribution(double* it) const;
-        virtual double lightContribution(std::vector<double>::iterator it) const;
+        virtual double lightContribution(std::vector<double>::const_iterator it) const;
+        virtual double lightContribution(Light* l) const;
         virtual void addLightFF(
                 double px, double py, double pz,
                 double dx, double dy, double dz,
                 double weight=1) {;}
 
         virtual void addCeres(ceres::Problem* problem) {;}
-        virtual void writeToStream(std::ostream& out) {;}
-        virtual void readFromStream(std::istream& in) {;}
+        virtual void writeToStream(std::ostream& out, bool binary=false) {;}
+        virtual void readFromStream(std::istream& in, bool binary=false) {;}
 
     protected:
         std::vector<double> v;

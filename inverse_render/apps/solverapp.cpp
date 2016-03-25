@@ -31,19 +31,13 @@ class SolverApp : public InvrenderApp {
                     indices.push_back(i);
             }
 
-            if (inputmatlabfilename.length()) {
-                ir.readVariablesMatlab(data, inputmatlabfilename);
-            } else if (inputbinaryfilename.length()) {
+            if (inputbinaryfilename.length()) {
                 ir.loadVariablesBinary(data, inputbinaryfilename);
             } else {
                 ir.computeSamples(data, indices, numsamples, discardthreshold, false, getProgressFunction(0,2));
             }
             if (inlightfilename.length()) {
                 ir.readLightsFromTextFile(inlightfilename);
-            } else {
-                for (int i = 0; i < ir.lights.size(); i++) {
-                    ir.lights[i] = Material(10,10,10);
-                }
             }
 
             // Optimization
@@ -81,8 +75,12 @@ class SolverApp : public InvrenderApp {
                 ir.writeLightsToTextFile(outlightfilename);
             }
             cout << "data:WallMaterial " << ir.wallMaterial.r << " " << ir.wallMaterial.g << " " << ir.wallMaterial.b << endl;
-            for (int i = 0; i < ir.lights.size(); i++) {
-                cout << "data:Light " << i << " " << ir.lights[i].r << " " << ir.lights[i].g << " " << ir.lights[i].b << endl;
+            for (int ch = 0; ch < 3; ch++) {
+                for (int i = 0; i < ir.lights[ch].size(); i++) {
+                    cout << "data:Light " << i << " " << ch << " ";
+                    ir.lights[ch][i]->writeToStream(cout);
+                    cout << endl;
+                }
             }
 
             // Output debugging results of optimization
@@ -97,8 +95,10 @@ class SolverApp : public InvrenderApp {
                 for (int i = 0; i < mmgr->size(); i++) {
                     if (indices[wk] == i) {
                         Material res(0,0,0);
-                        for (int j = 0; j < data[wk].lightamount.size(); j++) {
-                            res += ir.lights[j]*data[wk].lightamount[j];
+                        for (int ch = 0; ch < 3; ch++) {
+                            for (int j = 0; j < ir.lights[ch].size(); j++) {
+                                res(ch) += ir.lights[ch][j]->lightContribution(data[wk].lightamount[j]);
+                            }
                         }
                         double frac = (1-data[wk].fractionDirect)/(1-data[wk].fractionDirect-data[wk].fractionUnknown);
                         res += data[wk].netIncoming*frac;

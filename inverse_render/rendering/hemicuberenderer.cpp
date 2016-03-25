@@ -167,8 +167,8 @@ void HemicubeRenderer::computeSamples(
         vector<SampleData>& data,
         vector<int> indices,
         int numsamples,
-        double discardthreshold,
         vector<Light*> lights,
+        double discardthreshold,
         vector<float*>* images,
         boost::function<void(int)> cb)
 {
@@ -200,12 +200,12 @@ SampleData HemicubeRenderer::computeSample(int n, vector<Light*> lights, float* 
     sd.fractionUnknown = 0;
     sd.fractionDirect = 0;
     for (int i = 0; i < lights.size(); i++) {
-        sd.lights.push_back(NewLightFromLightType(lights[i].typeId()));
+        sd.lightamount.push_back(NewLightFromLightType(lights[i]->typeId()));
     }
     renderHemicube(
             rendermanager->getMeshManager()->VertexPosition(n),
             rendermanager->getMeshManager()->VertexNormal(n),
-            sd.netIncoming, sd.lights, sd.fractionUnknown, sd.fractionDirect,
+            sd.netIncoming, sd.lightamount, sd.fractionUnknown, sd.fractionDirect,
             radimage, lightimage
             );
     return sd;

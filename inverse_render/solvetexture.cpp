@@ -58,14 +58,18 @@ int reduceToLargestCluster(vector<bool>& v, int w) {
     return szs[largestcluster];
 }
 
-Material InverseRender::computeAverageMaterial(vector<SampleData>& data, vector<Material>& lightintensities) {
+Material InverseRender::computeAverageMaterial(
+        vector<SampleData>& data,
+        vector<vector<Light*> >& lightintensities) {
     Material avg;
     for (int i = 0; i < data.size(); ++i) {
         // Compute incident direct lighting
         Material directlighting;   // Total incoming radiance from direct light
         Material indirectlighting; // Total incoming indirect radiance
-        for (int j = 0; j < data[i].lightamount.size(); ++j) {
-            directlighting += lightintensities[j]*data[i].lightamount[j];
+        for (int ch = 0; ch < 3; ch++) {
+            for (int j = 0; j < lightintensities[ch].size(); j++) {
+                directlighting(ch) += lightintensities[ch][j]->lightContribution(data[i].lightamount[j]);
+            }
         }
         if (directlighting.r < 0) directlighting.r = 0;
         if (directlighting.g < 0) directlighting.g = 0;

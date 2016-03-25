@@ -4,6 +4,7 @@
 #include "datamanager/imagemanager.h"
 #include "datamanager/material.h"
 #include "rendermanager.h"
+#include "lighting/light.h"
 
 class SampleData {
     public:
@@ -34,8 +35,8 @@ class HemicubeRenderer {
                 std::vector<SampleData>& data,
                 std::vector<int> indices,
                 int numsamples,
-                double discardthreshold=1,
                 std::vector<Light*> lights,
+                double discardthreshold=1,
                 std::vector<float*>* images=NULL,
                 boost::function<void(int)> cb=NULL
                 );

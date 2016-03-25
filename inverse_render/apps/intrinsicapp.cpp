@@ -14,10 +14,7 @@ class SolverApp : public InvrenderApp {
         SolverApp() : hemicuberesolution(150), scale(1), label(-1) {}
         virtual int run() {
             mmgr->loadSamples();
-            RenderManager rm(mmgr);
-            rm.setupMeshColors();
-            rm.precalculateAverageSamples();
-            HemicubeRenderer hr(&rm, hemicuberesolution);
+            InverseRender ir(mmgr, hemicuberesolution);
 
             vector<Material> colors;
             float* i1 = new float[3*hemicuberesolution*hemicuberesolution];
@@ -34,18 +31,8 @@ class SolverApp : public InvrenderApp {
             }
             int interval = nt/100;
 
-            vector<Material> lights;
             if (useLights) {
-                ifstream in(lightfilename);
-                int nlights;
-                in >> nlights;
-                string tmp;
-                getline(in, tmp);
-                for (int i = 0; i < nlights; i++) {
-                    double r, g, b;
-                    in >> r >> g >> b;
-                    lights.push_back(Material(r,g,b));
-                }
+                ir.readLightsFromTextFile(lightfilename);
             }
 
             for (int i = 0; i < mmgr->NVertices(); i++) {
@@ -56,9 +43,11 @@ class SolverApp : public InvrenderApp {
                 if (i%interval == 0) progressfn(100, it, nt);
                 it++;
                 cout << it << "/" << nt << endl;
-                SampleData s = hr.computeSample(i, i1, i2);
-                for (int j = 0; j < s.lightamount.size(); j++) {
-                    s.radiosity += lights[j]*s.lightamount[j];
+                SampleData s = ir.computeSample(i, i1, i2);
+                for (int ch = 0; ch < 3; ch++) {
+                    for (int j = 0; j < ir.lights[ch].size(); j++) {
+                        s.netIncoming(ch) += ir.lights[ch][j]->lightContribution(s.lightamount[j]);
+                    }
                 }
                 s.netIncoming *= (1-s.fractionDirect)/(1-s.fractionDirect-s.fractionUnknown);
                 float r = s.radiosity.r/s.netIncoming.r;
