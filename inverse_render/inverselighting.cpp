@@ -1,12 +1,28 @@
 #include "solver.h"
 #include "ceres/ceres.h"
-#include "rendering/envmap.h"
 
 using namespace std;
 using namespace ceres;
 
 
 const double MINRELATIVEERROR = 0.01;
+
+void linearArrayFromLights(double* a, vector<Light*>& d) {
+    int idx = 0;
+    for (int i = 0; i < d.size(); i++) {
+        for (int j = 0; j < d[i]->numParameters(); j++) {
+            a[idx++] = d[i]->coef(j);
+        }
+    }
+}
+void lightsFromLinearArray(vector<Light*>& d, double* a) {
+    int idx = 0;
+    for (int i = 0; i < d.size(); i++) {
+        for (int j = 0; j < d[i]->numParameters(); j++) {
+            d[i]->coef(j) = a[idx++];
+        }
+    }
+}
 
 // Note: Error function as follows:
 // Incident light L has three components: Direct (D), Indirect (I), Unknown (U)
@@ -42,7 +58,11 @@ struct IncidentFunctor {
 
 struct LightFunctor {
     LightFunctor(SampleData& data, int numlights, int channel)
-        : d(data), nlights(numlights), ch(channel) { }
+        : d(data), nlights(numlights), ch(channel)
+    {
+        lightamount = new double[nlights];
+        linearArrayFromLights(lightamount, d.lightamount);
+    }
 
     template <typename T>
     bool operator() (
@@ -52,7 +72,7 @@ struct LightFunctor {
     {
         T computed = T(0);
         for (int j = 0; j < nlights; j++) {
-            computed += lights[j]*T(d.lightamount[j]);
+            computed += lights[j]*T(lightamount[j]);
         }
         computed += T(d.netIncoming[ch])*T((1-d.fractionDirect)/(1-d.fractionUnknown-d.fractionDirect));
         computed *= materials[0];
@@ -63,13 +83,18 @@ struct LightFunctor {
     }
 
     SampleData d;
+    double* lightamount;
     int nlights;
     int ch;
 };
 
 struct DynLightFunctor {
     DynLightFunctor(SampleData& data, int numlights, int channel)
-        : d(data), nlights(numlights), ch(channel) { }
+        : d(data), nlights(numlights), ch(channel)
+    {
+        lightamount = new double[nlights];
+        linearArrayFromLights(lightamount, d.lightamount);
+    }
 
     template <typename T>
     bool operator() (
@@ -78,7 +103,7 @@ struct DynLightFunctor {
     {
         T computed = T(0);
         for (int j = 0; j < nlights; j++) {
-            computed += params[1][j]*T(d.lightamount[j]);
+            computed += params[1][j]*T(lightamount[j]);
         }
         computed += T(d.netIncoming[ch])*T((1-d.fractionDirect)/(1-d.fractionUnknown-d.fractionDirect));
         computed *= params[0][0];
@@ -91,156 +116,8 @@ struct DynLightFunctor {
     SampleData d;
     int nlights;
     int ch;
+    double* lightamount;
 };
-struct SmoothnessFunctor {
-    SmoothnessFunctor(int a, int b, double lambda)
-        : i1(a), i2(b), l(std::sqrt(lambda)) { }
-
-    template <typename T>
-    bool operator() (
-            const T* const lights,
-            T* residual) const
-    {
-        residual[0] = T(l)*(lights[i1] - lights[i2]);
-        return true;
-    }
-
-    int i1, i2;
-    double l;
-};
-
-struct DynSmoothnessFunctor {
-    DynSmoothnessFunctor(int a, int b, double lambda)
-        : i1(a), i2(b), l(std::sqrt(lambda)) { }
-
-    template <typename T>
-    bool operator() (
-            T const* const* params,
-            T* residual) const
-    {
-        residual[0] = (params[0][i1] - params[0][i2])*T(l);
-        return true;
-    }
-
-    int i1, i2;
-    double l;
-};
-struct SHRegularizerFunctor {
-    SHRegularizerFunctor(int index, double lambda)
-        : idx(index), l(std::sqrt(lambda)) { }
-
-    template <typename T>
-    bool operator() (
-            const T* const lights,
-            T* residual) const
-    {
-        residual[0] = lights[idx]*T(l);
-        return true;
-    }
-
-    int idx;
-    double l;
-};
-
-struct DynSHRegularizerFunctor {
-    DynSHRegularizerFunctor(int index, double lambda)
-        : idx(index), l(std::sqrt(lambda)) { }
-
-    template <typename T>
-    bool operator() (
-            T const* const* params,
-            T* residual) const
-    {
-        residual[0] = params[0][idx]*T(l);
-        return true;
-    }
-
-    int idx;
-    double l;
-};
-
-CostFunction* CreateSmoothnessTerm(int numlights, int a, int b, double lambda) {
-    switch (numlights) {
-        case 0:
-            return NULL;
-        case 1:
-            return (new ceres::AutoDiffCostFunction<SmoothnessFunctor, 1, 1>(
-                    new SmoothnessFunctor(a, b, lambda)));
-        case 2:
-            return (new ceres::AutoDiffCostFunction<SmoothnessFunctor, 1, 2>(
-                    new SmoothnessFunctor(a, b, lambda)));
-        case 3:
-            return (new ceres::AutoDiffCostFunction<SmoothnessFunctor, 1, 3>(
-                    new SmoothnessFunctor(a, b, lambda)));
-        case 4:
-            return (new ceres::AutoDiffCostFunction<SmoothnessFunctor, 1, 4>(
-                    new SmoothnessFunctor(a, b, lambda)));
-        case 5:
-            return (new ceres::AutoDiffCostFunction<SmoothnessFunctor, 1, 5>(
-                    new SmoothnessFunctor(a, b, lambda)));
-        case 6:
-            return (new ceres::AutoDiffCostFunction<SmoothnessFunctor, 1, 6>(
-                    new SmoothnessFunctor(a, b, lambda)));
-        case 7:
-            return (new ceres::AutoDiffCostFunction<SmoothnessFunctor, 1, 7>(
-                    new SmoothnessFunctor(a, b, lambda)));
-        case 8:
-            return (new ceres::AutoDiffCostFunction<SmoothnessFunctor, 1, 8>(
-                    new SmoothnessFunctor(a, b, lambda)));
-        case 9:
-            return (new ceres::AutoDiffCostFunction<SmoothnessFunctor, 1, 9>(
-                    new SmoothnessFunctor(a, b, lambda)));
-        default:
-            if (numlights < 0) return NULL;
-            ceres::DynamicAutoDiffCostFunction<DynSmoothnessFunctor>* ret =
-                new ceres::DynamicAutoDiffCostFunction<DynSmoothnessFunctor>(
-                        new DynSmoothnessFunctor(a, b, lambda));
-            ret->AddParameterBlock(numlights);
-            ret->SetNumResiduals(1);
-            return ret;
-    }
-}
-CostFunction* CreateSHRegularizer(int numlights, int i, double lambda) {
-    switch (numlights) {
-        case 0:
-            return NULL;
-        case 1:
-            return (new ceres::AutoDiffCostFunction<SHRegularizerFunctor, 1, 1>(
-                    new SHRegularizerFunctor(i, lambda)));
-        case 2:
-            return (new ceres::AutoDiffCostFunction<SHRegularizerFunctor, 1, 2>(
-                    new SHRegularizerFunctor(i, lambda)));
-        case 3:
-            return (new ceres::AutoDiffCostFunction<SHRegularizerFunctor, 1, 3>(
-                    new SHRegularizerFunctor(i, lambda)));
-        case 4:
-            return (new ceres::AutoDiffCostFunction<SHRegularizerFunctor, 1, 4>(
-                    new SHRegularizerFunctor(i, lambda)));
-        case 5:
-            return (new ceres::AutoDiffCostFunction<SHRegularizerFunctor, 1, 5>(
-                    new SHRegularizerFunctor(i, lambda)));
-        case 6:
-            return (new ceres::AutoDiffCostFunction<SHRegularizerFunctor, 1, 6>(
-                    new SHRegularizerFunctor(i, lambda)));
-        case 7:
-            return (new ceres::AutoDiffCostFunction<SHRegularizerFunctor, 1, 7>(
-                    new SHRegularizerFunctor(i, lambda)));
-        case 8:
-            return (new ceres::AutoDiffCostFunction<SHRegularizerFunctor, 1, 8>(
-                    new SHRegularizerFunctor(i, lambda)));
-        case 9:
-            return (new ceres::AutoDiffCostFunction<SHRegularizerFunctor, 1, 9>(
-                    new SHRegularizerFunctor(i, lambda)));
-        default:
-            if (numlights < 0) return NULL;
-            ceres::DynamicAutoDiffCostFunction<DynSHRegularizerFunctor>* ret =
-                new ceres::DynamicAutoDiffCostFunction<DynSHRegularizerFunctor>(
-                        new DynSHRegularizerFunctor(i, lambda));
-            ret->AddParameterBlock(numlights);
-            ret->SetNumResiduals(1);
-            return ret;
-    }
-}
 
 CostFunction* Create(SampleData& sd, int numlights, int ch) {
     switch (numlights) {
@@ -290,47 +167,34 @@ CostFunction* Create(SampleData& sd, int numlights, int ch) {
 void InverseRender::solve(vector<SampleData>& data, double reglambda) {
     google::InitGoogleLogging("solveExposure()");
     double mat = 0.6;
-    double* ls = new double[lights.size()];
-    for (int i = 0; i < lights.size(); i++) ls[i] = lights[i](0);
+    int numlights = 0;
+    for (int i = 0; i < lights[0].size(); i++) {
+        numlights += lights[0][i]->numParameters();
+    }
+    double* ls = new double[numlights];
+    linearArrayFromLights(ls, lights[0]);
     for (int z = 0; z < 3; z++) {
         ceres::Problem problem;
         for (int i = 0; i < data.size(); i++) {
+            //if (data[i].netIncoming[z] > data[i].radiosity[z]) continue;
             ceres::LossFunction* fn = NULL;
             if (lossfn == LOSS_CAUCHY) {
                 fn = new ceres::CauchyLoss(scale);
             } else if (lossfn == LOSS_HUBER) {
                 fn = new ceres::HuberLoss(scale);
             }
-            if (lights.size()) {
-                problem.AddResidualBlock(Create(data[i], lights.size(), z), fn, &mat, ls);
+            if (numlights) {
+                problem.AddResidualBlock(Create(data[i], numlights, z), fn, &mat, ls);
             } else {
-                problem.AddResidualBlock(Create(data[i], lights.size(), z), fn, &mat);
+                problem.AddResidualBlock(Create(data[i], numlights, z), fn, &mat);
             }
         }
         problem.SetParameterLowerBound(&mat, 0, 0);
         problem.SetParameterUpperBound(&mat, 0, 1);
-        for (int i = 0; i < lights.size(); i++) {
-            if (coeftype[i] == LIGHTTYPE_ENVMAP) {
-                vector<pair<int, int> > envmapAdjacencies;
-                computeEnvmapAdjacencies(envmapAdjacencies, ENVMAP_RES);
-                //double lightscale = 10;
-                for (int j = 0; j < envmapAdjacencies.size(); j++) {
-                    int a = envmapAdjacencies[j].first + i;
-                    int b = envmapAdjacencies[j].second + i;
-                    problem.AddResidualBlock(CreateSmoothnessTerm(lights.size(), a, b, reglambda/LightTypeNumCoefficients[LIGHTTYPE_ENVMAP]), NULL, ls);
-                    //problem.AddResidualBlock(CreateSmoothnessTerm(lights.size(), a, b, reglambda/LightTypeNumCoefficients[LIGHTTYPE_ENVMAP]), new ceres::HuberLoss(lightscale), ls);
-                }
-                for (int k = 0; k < LightTypeNumCoefficients[LIGHTTYPE_ENVMAP]; k++, i++) {
-                    problem.SetParameterLowerBound(ls, i, 0);
-                }
-                --i;
-            } else if (coeftype[i] == LIGHTTYPE_SH) {
-                if (i > 0 && reglambda > 0) {
-                    problem.AddResidualBlock(CreateSHRegularizer(lights.size(), i, reglambda/(NUM_SH_BANDS*NUM_SH_BANDS-1)), NULL, ls);
-                }
-            } else {
-                problem.SetParameterLowerBound(ls, i, 0);
-            }
+        int curridx = 0;
+        for (int i = 0; i < lights[z].size(); i++) {
+            lights[z][i]->addCeres(&problem, ls, numlights, curridx);
+            curridx += lights[z][i]->numParameters();
         }
         ceres::Solver::Options options;
         options.minimizer_progress_to_stdout = true;
@@ -338,6 +202,6 @@ void InverseRender::solve(vector<SampleData>& data, double reglambda) {
         ceres::Solve(options, &problem, &summary);
         std::cout << summary.FullReport() << "\n";
         wallMaterial(z) = mat;
-        for (int i = 0; i < lights.size(); i++) lights[i](z) = ls[i];
+        lightsFromLinearArray(lights[z], ls);
     }
 }

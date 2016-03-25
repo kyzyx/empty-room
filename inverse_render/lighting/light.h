@@ -19,9 +19,11 @@ enum LightType {
 
 class Light {
     public:
+        Light() : reglambda(0) {;}
         virtual int numParameters() const { return 0; }
         virtual int typeId() const = 0;
         virtual double& coef(int n) { return v[n]; }
+        virtual void setRegularization(double d) { reglambda = d; }
 
         virtual double lightContribution(double* it) const;
         virtual double lightContribution(std::vector<double>::const_iterator it) const;
@@ -31,12 +33,13 @@ class Light {
                 double dx, double dy, double dz,
                 double weight=1) {;}
 
-        virtual void addCeres(ceres::Problem* problem) {;}
+        virtual void addCeres(ceres::Problem* problem, double* lightarr, int n, int idx=0) {;}
         virtual void writeToStream(std::ostream& out, bool binary=false) {;}
         virtual void readFromStream(std::istream& in, bool binary=false) {;}
 
     protected:
         std::vector<double> v;
+        double reglambda;
 };
 
 class AreaLight : public Light {
@@ -52,7 +55,7 @@ class AreaLight : public Light {
             v[0] += weight;
         }
 
-        //virtual void addCeres(ceres::Problem* problem);
+        virtual void addCeres(ceres::Problem* problem, double* lightarr, int n, int idx=0);
         //virtual void writeToStream(std::ostream& out);
         //virtual void readFromStream(std::istream& in);
     protected:
@@ -68,7 +71,7 @@ class SHEnvironmentLight : public Light {
                 double dx, double dy, double dz,
                 double weight=1);
 
-        //virtual void addCeres(ceres::Problem* problem) {;}
+        virtual void addCeres(ceres::Problem* problem, double* lightarr, int n, int idx=0);
         //virtual void writeToStream(std::ostream& out);
         //virtual void readFromStream(std::istream& in);
     protected:
@@ -85,7 +88,7 @@ class CubemapEnvironmentLight : public Light {
                 double dx, double dy, double dz,
                 double weight=1);
 
-        //virtual void addCeres(ceres::Problem* problem) {;}
+        virtual void addCeres(ceres::Problem* problem, double* lightarr, int n, int idx=0);
         //virtual void writeToStream(std::ostream& out);
         //virtual void readFromStream(std::istream& in);
     protected:
