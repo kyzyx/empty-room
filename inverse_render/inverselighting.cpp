@@ -1,5 +1,6 @@
 #include "solver.h"
 #include "ceres/ceres.h"
+#include "lighting/lighting_ceres.h"
 
 using namespace std;
 using namespace ceres;
@@ -193,7 +194,7 @@ void InverseRender::solve(vector<SampleData>& data, double reglambda) {
         problem.SetParameterUpperBound(&mat, 0, 1);
         int curridx = 0;
         for (int i = 0; i < lights[z].size(); i++) {
-            lights[z][i]->addCeres(&problem, ls, numlights, curridx);
+            addCeres(lights[z][i], &problem, ls, numlights, curridx);
             curridx += lights[z][i]->numParameters();
         }
         ceres::Solver::Options options;

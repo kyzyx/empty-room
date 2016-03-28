@@ -114,7 +114,8 @@ target_link_libraries(wallfindapp ${PCL_LIBRARIES} datamanager roommodel
 add_executable(solverapp apps/solverapp.cpp
     apps/invrenderapp.cpp apps/invrenderapp.h
     rerender.h rerender.cpp
-    solver.cpp solver.h inverselighting.cpp solvetexture.cpp)
+    solver.cpp solver.h inverselighting.cpp solvetexture.cpp
+    lighting/lighting_ceres.cpp)
 target_link_libraries(solverapp ${PCL_LIBRARIES} ${OpenCV_LIBS} ${GLUT_LIBRARY}
     ${CERES_LIBRARIES} datamanager roommodel
     wallfinder rendering)
@@ -122,7 +123,8 @@ target_link_libraries(solverapp ${PCL_LIBRARIES} ${OpenCV_LIBS} ${GLUT_LIBRARY}
 add_executable(intrinsicapp apps/intrinsicapp.cpp
     apps/invrenderapp.cpp apps/invrenderapp.h
     rerender.h rerender.cpp
-    solver.cpp solver.h inverselighting.cpp solvetexture.cpp)
+    solver.cpp solver.h inverselighting.cpp solvetexture.cpp
+    lighting/lighting_ceres.cpp)
 target_link_libraries(intrinsicapp ${PCL_LIBRARIES} ${OpenCV_LIBS}
     ${GLUT_LIBRARY} ${CERES_LIBRARIES} datamanager roommodel
     wallfinder rendering)

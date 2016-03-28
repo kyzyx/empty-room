@@ -5,14 +5,10 @@
 #include <iostream>
 #include <vector>
 
-namespace ceres {
-    class Problem;
-}
-
 enum LightType {
     LIGHTTYPE_NULL=0,
-    LIGHTTYPE_SH=1,
-    LIGHTTYPE_ENVMAP=2,
+    LIGHTTYPE_SH=2,
+    LIGHTTYPE_ENVMAP=1,
     LIGHTTYPE_AREA=3,
     NUMLIGHTTYPES,
 };
@@ -24,6 +20,7 @@ class Light {
         virtual int typeId() const = 0;
         virtual double& coef(int n) { return v[n]; }
         virtual void setRegularization(double d) { reglambda = d; }
+        virtual double getRegularization() const { return reglambda; }
 
         virtual double lightContribution(double* it) const;
         virtual double lightContribution(std::vector<double>::const_iterator it) const;
@@ -33,7 +30,6 @@ class Light {
                 double dx, double dy, double dz,
                 double weight=1) {;}
 
-        virtual void addCeres(ceres::Problem* problem, double* lightarr, int n, int idx=0) {;}
         virtual void writeToStream(std::ostream& out, bool binary=false) {;}
         virtual void readFromStream(std::istream& in, bool binary=false) {;}
 
@@ -44,6 +40,7 @@ class Light {
 
 class AreaLight : public Light {
     public:
+        AreaLight() { v.resize(numParameters(), 0); }
         virtual int numParameters() const { return 1; }
         virtual int typeId() const { return LIGHTTYPE_AREA; }
 
@@ -55,7 +52,6 @@ class AreaLight : public Light {
             v[0] += weight;
         }
 
-        virtual void addCeres(ceres::Problem* problem, double* lightarr, int n, int idx=0);
         //virtual void writeToStream(std::ostream& out);
         //virtual void readFromStream(std::istream& in);
     protected:
@@ -63,6 +59,7 @@ class AreaLight : public Light {
 
 class SHEnvironmentLight : public Light {
     public:
+        SHEnvironmentLight() : numbands(5) { v.resize(numParameters(), 0); }
         virtual int numParameters() const { return numbands*numbands; }
         virtual int typeId() const { return LIGHTTYPE_SH; }
 
@@ -71,7 +68,6 @@ class SHEnvironmentLight : public Light {
                 double dx, double dy, double dz,
                 double weight=1);
 
-        virtual void addCeres(ceres::Problem* problem, double* lightarr, int n, int idx=0);
         //virtual void writeToStream(std::ostream& out);
         //virtual void readFromStream(std::istream& in);
     protected:
@@ -80,15 +76,17 @@ class SHEnvironmentLight : public Light {
 
 class CubemapEnvironmentLight : public Light {
     public:
+        CubemapEnvironmentLight() : res(5) { v.resize(numParameters(), 0); }
         virtual int numParameters() const { return res*res*6; }
         virtual int typeId() const { return LIGHTTYPE_ENVMAP; }
+
+        int getCubemapResolution() const { return res; }
 
         virtual void addLightFF(
                 double px, double py, double pz,
                 double dx, double dy, double dz,
                 double weight=1);
 
-        virtual void addCeres(ceres::Problem* problem, double* lightarr, int n, int idx=0);
         //virtual void writeToStream(std::ostream& out);
         //virtual void readFromStream(std::istream& in);
     protected:

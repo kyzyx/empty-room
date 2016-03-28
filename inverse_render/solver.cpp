@@ -42,7 +42,7 @@ void InverseRender::writeVariablesMatlab(vector<SampleData>& data, string filena
         for (int j = 0; j < data[i].lightamount.size(); ++j) {
             for (int k = 0; k < data[i].lightamount[j]->numParameters(); k++) {
                 if (j+k) out << ",";
-                out << data[i].lightamount[j];
+                out << data[i].lightamount[j]->coef(k);
             }
         }
         if (i != data.size()-1) out << ";" << endl;

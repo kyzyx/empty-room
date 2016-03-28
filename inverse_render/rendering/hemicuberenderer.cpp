@@ -123,7 +123,7 @@ int HemicubeRenderer::processHemicubeCell(
     int lightinfo = ftoi(light[1]);
     int lightid = LIGHTID(lightinfo);
     int lighttype = LIGHTTYPE(lightinfo);
-    if (lightid > 0) {
+    if (lightid > 0 && lights.size() >= lightid) {
         R3Vector x = towards%up;
         R3Vector y = up;
         double cellsize = 2./res;

@@ -236,7 +236,8 @@ void MainWindow::updateImage(int idx, int type)
         if (hr) {
             int camidx = hemicubeindices[imageindex];
             bool envmap = !(typeindex&1);
-            SampleData s = hr->computeSample(camidx, envmap?face:NULL, envmap?NULL:face);
+            std::vector<Light*> lights;
+            SampleData s = hr->computeSample(camidx, lights, envmap?face:NULL, envmap?NULL:face);
             s.netIncoming /= (1-s.fractionUnknown);
             RNRgb rgb;
             rgb[0] = s.radiosity.r/s.netIncoming.r;

@@ -44,7 +44,7 @@ unix: {
     LIBS += -L$$INVRENDER_DIR \
         -L$$GAPS_DIR/R3Graphics/ -L$$GAPS_DIR/R3Shapes/ -L$$GAPS_DIR/RNBasics/ -L$$GAPS_DIR/R2Shapes/ \
         -L$$OUT_PWD/../QGLViewer \
-        -lrendering -lroommodel -ldatamanager -lHalf -lIlmImf \
+        -lrendering -lroommodel -ldatamanager -llighting -lHalf -lIlmImf \
         -lR3Graphics -lR3Shapes -lR2Shapes -lRNBasics -ljpeg -lpng \
         -lrt -lboost_system -lboost_filesystem \
         -lGLU -lQGLViewer -lpcl_common -lpcl_io -lpcl_io_ply
