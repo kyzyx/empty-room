@@ -30,8 +30,8 @@ class Light {
                 double dx, double dy, double dz,
                 double weight=1) {;}
 
-        virtual void writeToStream(std::ostream& out, bool binary=false) {;}
-        virtual void readFromStream(std::istream& in, bool binary=false) {;}
+        virtual void writeToStream(std::ostream& out, bool binary=false);
+        virtual void readFromStream(std::istream& in, bool binary=false);
 
     protected:
         std::vector<double> v;
@@ -52,8 +52,6 @@ class AreaLight : public Light {
             v[0] += weight;
         }
 
-        //virtual void writeToStream(std::ostream& out);
-        //virtual void readFromStream(std::istream& in);
     protected:
 };
 
@@ -68,8 +66,6 @@ class SHEnvironmentLight : public Light {
                 double dx, double dy, double dz,
                 double weight=1);
 
-        //virtual void writeToStream(std::ostream& out);
-        //virtual void readFromStream(std::istream& in);
     protected:
         int numbands;
 };
@@ -87,8 +83,6 @@ class CubemapEnvironmentLight : public Light {
                 double dx, double dy, double dz,
                 double weight=1);
 
-        //virtual void writeToStream(std::ostream& out);
-        //virtual void readFromStream(std::istream& in);
     protected:
         int res;
 };

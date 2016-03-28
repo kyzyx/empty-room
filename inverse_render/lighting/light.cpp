@@ -4,6 +4,30 @@
 
 using namespace std;
 
+void Light::writeToStream(std::ostream& out, bool binary) {
+    if (binary) {
+        for (int i = 0; i < numParameters(); i++) {
+            out.write((char*) &v[i], sizeof(double));
+        }
+    } else {
+        for (int i = 0; i < numParameters(); i++) {
+            out << v[i] << " ";
+        }
+        out << endl;
+    }
+}
+void Light::readFromStream(std::istream& in, bool binary) {
+    v.resize(numParameters(), 0);
+    if (binary) {
+        for (int i = 0; i < numParameters(); i++) {
+            in.read((char*) &v[i], sizeof(double));
+        }
+    } else {
+        for (int i = 0; i < numParameters(); i++) {
+            in >> v[i];
+        }
+    }
+}
 
 double Light::lightContribution(double* it) const {
     double ret = 0;
