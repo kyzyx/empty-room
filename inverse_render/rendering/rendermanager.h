@@ -114,6 +114,7 @@ public:
     void selectVertices(int x, int y, int w, int h, int r, int op=SELECT_UNION);
     void clearSelectedVertices();
     void selectVertices(std::vector<int>& vertices);
+    void selectComponent(int x, int y, int w, int h);
 
     MeshManager* getMeshManager() { return mmgr; }
 

@@ -123,6 +123,8 @@ private slots:
 
     void on_actionCommit_Selected_Vertices_as_Light_triggered();
 
+    void on_actionSelect_Mesh_Component_triggered();
+
 private:
     Ui::MainWindow *ui;
     ImageManager* imgr;

@@ -468,6 +468,7 @@ void MainWindow::meshLoaded() {
     ui->actionDecrease_Selection_Brush_Size->setEnabled(true);
     ui->actionSave_Selected_Vertices->setEnabled(true);
     ui->actionCommit_Selected_Vertices_as_Light->setEnabled(true);
+    ui->actionSelect_Mesh_Component->setEnabled(true);
 
     mmgr = new MeshManager(meshfilename.toStdString());
     ui->meshWidget->setMeshManager(mmgr);
@@ -1333,4 +1334,9 @@ void MainWindow::on_actionCommit_Selected_Vertices_as_Light_triggered()
             wallindices = selected;
         }
     }
+}
+
+void MainWindow::on_actionSelect_Mesh_Component_triggered()
+{
+    ui->meshWidget->selectNextComponent();
 }

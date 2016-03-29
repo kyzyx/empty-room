@@ -1157,6 +1157,7 @@
     <addaction name="actionSelect_Wall_Vertices"/>
     <addaction name="actionSelect_Floor_Vertices"/>
     <addaction name="actionSelect_Ceiling_Vertices"/>
+    <addaction name="actionSelect_Mesh_Component"/>
     <addaction name="actionSelect_None"/>
     <addaction name="separator"/>
     <addaction name="actionIncrease_Selection_Brush_Size"/>
@@ -1514,6 +1515,14 @@
    </property>
    <property name="text">
     <string>Commit Selected Vertices as Light</string>
+   </property>
+  </action>
+  <action name="actionSelect_Mesh_Component">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Select Mesh Component</string>
    </property>
   </action>
  </widget>

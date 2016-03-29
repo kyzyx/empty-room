@@ -196,6 +196,7 @@ public:
     void computeWallFindingHistogram(double resolution);
 
     int interactionmode;
+    bool selectcomponent;
     enum {
         INTERACTIONMODE_TRACKBALL,
         INTERACTIONMODE_SELECT,
@@ -293,6 +294,9 @@ public:
     }
     void setInteractionMode(int mode) {
         v->setInteractionMode(mode);
+    }
+    void selectNextComponent() {
+        v->selectcomponent = true;
     }
 
 signals:

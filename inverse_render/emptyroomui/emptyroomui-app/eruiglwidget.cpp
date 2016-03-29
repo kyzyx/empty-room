@@ -13,7 +13,8 @@ ERUIGLWidget::ERUIGLWidget(QWidget *parent) :
     selectedCamera(0),
     vertexselectmode(SELECT_UNION),
     vertexbrushsize(10),
-    grid(NULL), cursor(NULL), defaultcursor(NULL)
+    grid(NULL), cursor(NULL), defaultcursor(NULL),
+    selectcomponent(false)
 {
     renderoptions.setRenderManager(&rendermanager);
 
@@ -169,7 +170,12 @@ void ERUIGLWidget::mousePressEvent(QMouseEvent* e) {
     {
             makeCurrent();
             if (interactionmode != INTERACTIONMODE_SELECT) renderoptions.showSelected();
-            rendermanager.selectVertices(e->x(), e->y(), width(), height(), vertexbrushsize, vertexselectmode);
+            if (selectcomponent) {
+                rendermanager.selectComponent(e->x(), e->y(), width(), height());
+                selectcomponent = false;
+            } else {
+                rendermanager.selectVertices(e->x(), e->y(), width(), height(), vertexbrushsize, vertexselectmode);
+            }
             update();
     } else {
       HDRQGlViewerWidget::mousePressEvent(e);

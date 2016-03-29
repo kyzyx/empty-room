@@ -4,6 +4,7 @@
 #include "loadshader.h"
 #include "R3Graphics/R3Graphics.h"
 #include <glm/glm.hpp>
+#include <queue>
 
 const GLchar* uniformnames[NUM_UNIFORMS] = {
     "colors",
@@ -638,6 +639,61 @@ void RenderManager::selectVertices(std::vector<int>& vertices) {
         glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(GLuint)*mmgr->NVertices(), selectbuf);
     }
     glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
+void getComponentVertices(std::vector<int>& vertices, R3MeshVertex* v, R3Mesh* m) {
+    std::queue<R3MeshVertex*> q;
+    q.push(v);
+    std::vector<bool> visited(m->NVertices(), false);
+    visited[m->VertexID(v)] = true;
+    while (!q.empty()) {
+        R3MeshVertex* cur = q.front();
+        q.pop();
+        vertices.push_back(m->VertexID(cur));
+        for (int i = 0; i < m->VertexValence(cur); i++) {
+            R3MeshVertex* nv = m->VertexOnVertex(cur, i);
+            int id = m->VertexID(nv);
+            if (!visited[id]) {
+                visited[id] = true;
+                q.push(nv);
+            }
+        }
+    }
+}
+
+R4Matrix glmat2gaps(float m[16]) {
+    R4Matrix mat(m[0], m[1], m[2], m[3],
+                 m[4], m[5], m[6], m[7],
+                 m[8], m[9], m[10], m[11],
+                 m[12], m[13], m[14], m[15]);
+    return mat.Transpose();
+}
+
+void RenderManager::selectComponent(int x, int y, int w, int h) {
+    float devx = (2.0f * x) / w- 1.0f;
+    float devy = 1.0f - (2.0f * y) / h;
+    R4Matrix iproj = glmat2gaps(selprojection).Inverse();
+    R4Matrix imv = glmat2gaps(selmodelview).Inverse();
+    R3Point pp = iproj*R3Point(devx, devy, -1.f);
+    R3Vector p(pp[0], pp[1], pp[2]);
+    p[2] = -1.f;
+    p = imv*p;
+    R3Point eye = imv*R3Point(0,0,0);
+    R3Ray ray(eye, p);
+    R3MeshIntersection isect;
+    mmgr->getSearchTree()->FindIntersection(ray, isect);
+    R3MeshVertex* v;
+    if (isect.type == R3_MESH_VERTEX_TYPE) {
+        v = isect.vertex;
+    } else if (isect.type == R3_MESH_FACE_TYPE) {
+        v = mmgr->getMesh()->VertexOnFace(isect.face);
+    }
+    else if (isect.type == R3_MESH_NULL_TYPE) {
+        return;
+    }
+    std::vector<int> componentidx;
+    getComponentVertices(componentidx, v, mmgr->getMesh());
+    selectVertices(componentidx);
 }
 
 void RenderManager::createLabelImage(const CameraParams* cam, void* image) {
