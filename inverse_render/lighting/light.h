@@ -181,4 +181,6 @@ class LineLight : public Light {
 };
 
 Light* NewLightFromLightType(int type);
+void writeLightsToFile(std::string filename, std::vector<std::vector<Light*> >& lights, bool binary=false);
+void readLightsFromFile(std::string filename, std::vector<std::vector<Light*> >& lights, bool binary=false);
 #endif

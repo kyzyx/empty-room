@@ -37,7 +37,7 @@ class SolverApp : public InvrenderApp {
                 ir.computeSamples(data, indices, numsamples, discardthreshold, false, getProgressFunction(0,2));
             }
             if (inlightfilename.length()) {
-                ir.readLightsFromTextFile(inlightfilename);
+                readLightsFromFile(inlightfilename, ir.lights);
             }
 
             // Optimization
@@ -72,7 +72,7 @@ class SolverApp : public InvrenderApp {
             }
             if (solveTexture) return 0;
             if (outlightfilename.length()) {
-                ir.writeLightsToTextFile(outlightfilename);
+                writeLightsToFile(outlightfilename, ir.lights);
             }
             cout << "data:WallMaterial " << ir.wallMaterial.r << " " << ir.wallMaterial.g << " " << ir.wallMaterial.b << endl;
             for (int ch = 0; ch < 3; ch++) {

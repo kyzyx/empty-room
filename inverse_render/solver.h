@@ -51,8 +51,6 @@ class InverseRender {
             return hr->computeSample(idx, lights[0], color, aux);
         }
 
-        void writeLightsToTextFile(std::string filename);
-        void readLightsFromTextFile(std::string filename);
         void writeVariablesMatlab(std::vector<SampleData>& data, std::string filename);
         void writeVariablesBinary(std::vector<SampleData>& data, std::string filename);
         void loadVariablesBinary(std::vector<SampleData>& data, std::string filename);

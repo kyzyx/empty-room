@@ -148,31 +148,3 @@ void InverseRender::loadVariablesBinary(vector<SampleData>& data, string filenam
         }
     }
 }
-
-void InverseRender::writeLightsToTextFile(string filename) {
-    ofstream out(filename);
-    out << lights[0].size() <<  " " << wallMaterial.r << " " << wallMaterial.g << " " << wallMaterial.b << endl;
-    for (int i = 0; i < numchannels; i++) {
-        for (int j = 0; j < lights[i].size(); j++) {
-            out << lights[i][j]->typeId() << " ";
-            lights[i][j]->writeToStream(out);
-            out << endl;
-        }
-    }
-}
-void InverseRender::readLightsFromTextFile(string filename) {
-    ifstream in(filename);
-    int nlights;
-    in >> nlights >> wallMaterial.r >> wallMaterial.g >> wallMaterial.b;
-    lights.clear();
-    lights.resize(numchannels);
-    for (int i = 0; i < numchannels; i++) {
-        for (int j = 0; j > nlights; j++) {
-            int lighttype;
-            in >> lighttype;
-            Light* l = NewLightFromLightType(lighttype);
-            l->readFromStream(in);
-            lights[i].push_back(l);
-        }
-    }
-}

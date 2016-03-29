@@ -1,6 +1,7 @@
 #include "light.h"
 #include "sh.h"
 #include "cubemap.h"
+#include <fstream>
 
 using namespace std;
 
@@ -215,5 +216,40 @@ Light* NewLightFromLightType(int type) {
         case (LIGHTTYPE_SH | LIGHTTYPE_LINE): return new LineLight(new SHLight);
         case (LIGHTTYPE_ENVMAP | LIGHTTYPE_LINE): return new LineLight(new CubemapLight);
         default: return NULL;
+    }
+}
+
+inline void writeint(ofstream& out, int v, bool binary) {
+    if (binary) out.write((char*)&v, sizeof(int));
+    else out << v << " ";
+}
+void writeLightsToFile(string filename, vector<vector<Light*> >& lights, bool binary) {
+    ofstream out(filename, binary?(ofstream::binary):(ofstream::out));
+    writeint(out, lights[0].size(), binary);
+    if (!binary) out << endl;
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < lights[i].size(); j++) {
+            writeint(out, lights[i][j]->typeId(), binary);
+            lights[i][j]->writeToStream(out, binary);
+            if (!binary) out << endl;
+        }
+    }
+}
+void readLightsFromFile(string filename, vector<vector<Light*> >& lights, bool binary) {
+    ifstream in(filename, binary?(ifstream::binary):(ifstream::out));
+    int nlights;
+    if (binary) in.read((char*)&nlights, sizeof(int));
+    else in >> nlights;
+    lights.clear();
+    lights.resize(3);
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j > nlights; j++) {
+            int lighttype;
+            if (binary) in >> lighttype;
+            else in.read((char*)&lighttype, sizeof(int));
+            Light* l = NewLightFromLightType(lighttype);
+            l->readFromStream(in, binary);
+            lights[i].push_back(l);
+        }
     }
 }
