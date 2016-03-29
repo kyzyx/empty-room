@@ -182,6 +182,29 @@ void LineLight::addIncident(
     light->addLightFF(px, py, pz, d[0], d[1], d[2], weight);
 }
 
+void LineLight::computeFromPoints(vector<Vector3d> pts) {
+    cout << pts.size() << endl;
+    Vector3d mean(0,0,0);
+    for (int i = 0; i < pts.size(); i++) {
+        mean += pts[i];
+    }
+    mean /= pts.size();
+    MatrixXd A(pts.size(), 3);
+    for (int i = 0; i < pts.size(); ++i) {
+        for (int j = 0; j < 3; ++j) A(i,j) = pts[i][j] - mean[j];
+    }
+    JacobiSVD<MatrixXd> svd(A, ComputeThinU | ComputeThinV);
+    MatrixXd Y(pts.size(), 3);
+    Y = A*svd.matrixV();
+    Vector3d maxcoefs = Y.colwise().maxCoeff();
+    Vector3d mincoefs = Y.colwise().minCoeff();
+    Vector3d xax = svd.matrixV().col(0);
+    Vector3d yax = svd.matrixV().col(1);
+    Vector3d yadj = yax*0.5*(maxcoefs[1] + mincoefs[1]);
+    setPosition(0, mean+xax*maxcoefs[0]+yadj);
+    setPosition(1, mean+xax*mincoefs[0]+yadj);
+}
+
 Light* NewLightFromLightType(int type) {
     switch (type) {
         case LIGHTTYPE_SH: return new SHLight;

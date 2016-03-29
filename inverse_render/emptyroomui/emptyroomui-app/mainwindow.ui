@@ -1167,6 +1167,7 @@
     <addaction name="separator"/>
     <addaction name="actionSave_Selected_Vertices"/>
     <addaction name="actionCommit_Selected_Vertices_as_Light"/>
+    <addaction name="actionCommit_Selected_Vertices_as_Line_Light"/>
    </widget>
    <addaction name="menuEmpty_Room_Editor"/>
    <addaction name="menuIntermediates"/>
@@ -1523,6 +1524,14 @@
    </property>
    <property name="text">
     <string>Select Mesh Component</string>
+   </property>
+  </action>
+  <action name="actionCommit_Selected_Vertices_as_Line_Light">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Commit Selected Vertices as Line Light</string>
    </property>
   </action>
  </widget>

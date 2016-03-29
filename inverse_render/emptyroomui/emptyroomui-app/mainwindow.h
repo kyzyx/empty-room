@@ -117,13 +117,14 @@ private slots:
     void on_actionSelect_Wall_Vertices_triggered();
     void on_actionSelect_Floor_Vertices_triggered();
     void on_actionSelect_Ceiling_Vertices_triggered();
+    void on_actionSelect_Mesh_Component_triggered();
     void on_actionIncrease_Selection_Brush_Size_triggered();
     void on_actionDecrease_Selection_Brush_Size_triggered();
     void on_actionSave_Selected_Vertices_triggered();
 
     void on_actionCommit_Selected_Vertices_as_Light_triggered();
+    void on_actionCommit_Selected_Vertices_as_Line_Light_triggered();
 
-    void on_actionSelect_Mesh_Component_triggered();
 
 private:
     Ui::MainWindow *ui;

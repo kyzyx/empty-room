@@ -468,6 +468,7 @@ void MainWindow::meshLoaded() {
     ui->actionDecrease_Selection_Brush_Size->setEnabled(true);
     ui->actionSave_Selected_Vertices->setEnabled(true);
     ui->actionCommit_Selected_Vertices_as_Light->setEnabled(true);
+    ui->actionCommit_Selected_Vertices_as_Line_Light->setEnabled(true);
     ui->actionSelect_Mesh_Component->setEnabled(true);
 
     mmgr = new MeshManager(meshfilename.toStdString());
@@ -1330,9 +1331,34 @@ void MainWindow::on_actionCommit_Selected_Vertices_as_Light_triggered()
         }
 
         ui->meshWidget->renderManager()->updateMeshAuxiliaryData();
-        if (lbl == LABEL_WALL) {
-            wallindices = selected;
+    }
+}
+
+void MainWindow::on_actionCommit_Selected_Vertices_as_Line_Light_triggered()
+{
+    bool ok;
+    int lbl = QInputDialog::getInt(this, "Commit selected vertices to line light...", "Label: ", 1, 0, 1024, 1, &ok);
+    lbl |= LIGHTTYPE_LINE;
+    if (ok) {
+        std::vector<int> selected;
+        ui->meshWidget->renderManager()->getSelectedVertices(selected);
+        for (int i = 0; i < mmgr->size(); i++) {
+            if (mmgr->getLabel(i, MeshManager::LABEL_CHANNEL) == lbl) {
+                mmgr->setLabel(i, 0, MeshManager::LABEL_CHANNEL);
+            }
         }
+        std::vector<Eigen::Vector3d> selectedcoords;
+        for (int i = 0; i < selected.size(); i++) {
+            mmgr->setLabel(selected[i], lbl, MeshManager::LABEL_CHANNEL);
+            R3Point p = mmgr->VertexPosition(selected[i]);
+            selectedcoords.push_back(Eigen::Vector3d(p[0], p[1], p[2]));
+        }
+
+        LineLight* l = new LineLight(new SHLight);
+        l->computeFromPoints(selectedcoords);
+        ui->meshWidget->addLine(l->getPosition(0), l->getPosition(1));
+
+        ui->meshWidget->renderManager()->updateMeshAuxiliaryData();
     }
 }
 

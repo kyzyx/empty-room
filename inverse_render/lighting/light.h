@@ -150,11 +150,15 @@ class LineLight : public Light {
             setPosition(n, Eigen::Vector3d(x,y,z));
         }
         void setPosition(int n, Eigen::Vector3d pos);
+        void computeFromPoints(std::vector<Eigen::Vector3d> pts);
         double getPosition(int n, int c) const {
             return p[n][c];
         }
         double getVector(int n) const {
             return v[n];
+        }
+        Eigen::Vector3d getVector() const {
+            return v;
         }
         double getLength() const { return length; }
         Eigen::Vector3d getPosition(int n) const {
