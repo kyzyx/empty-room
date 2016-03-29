@@ -57,6 +57,7 @@ class MeshManager {
         void setLabel(int n, char c, int ch=0);
 
         R3Mesh* getMesh();
+        R3MeshSearchTree* getSearchTree();
 
         void writePlyMesh(const std::string& filename, double scalefactor=1, double gamma=1, bool hdr=false);
         void writePlyMesh(const std::string& filename, std::vector<Material> customcolors, double scalefactor=1, double gamma=1, bool hdr=false);
@@ -109,6 +110,7 @@ class MeshManager {
         bool initializeR3Mesh();
         bool r3meshinitialized;
         R3Mesh* m;
+        R3MeshSearchTree* searchtree;
 
         // Geometry data
         int nvertices, nfaces;

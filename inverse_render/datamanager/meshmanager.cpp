@@ -97,6 +97,7 @@ bool MeshManager::initializeR3Mesh() {
                       m->Vertex(VertexOnFace(i,1)),
                       m->Vertex(VertexOnFace(i,2)));
     }
+    searchtree = new R3MeshSearchTree(m);
     r3meshinitialized = true;
     return true;
 }
@@ -214,6 +215,12 @@ R3Mesh* MeshManager::getMesh() {
         if (!initializeR3Mesh()) return NULL;
     }
     return m;
+}
+R3MeshSearchTree* MeshManager::getSearchTree() {
+    if (!r3meshinitialized) {
+        if (!initializeR3Mesh()) return NULL;
+    }
+    return searchtree;
 }
 
 // --------------------------------------------------------------

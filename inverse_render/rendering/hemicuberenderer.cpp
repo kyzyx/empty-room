@@ -163,13 +163,13 @@ void HemicubeRenderer::render(const CameraParams* cam, float* image, int mode)
     rendermanager->readFromRender(cam, image, mode, true);
 }
 
-bool occluded(R3Point a, R3Point b, R3MeshSearchTree& st) {
+bool occluded(R3Point a, R3Point b, R3MeshSearchTree* st) {
     R3Vector v = b - a;
     double d = v.Length();
     R3Vector vhat = v/d;
     R3Ray ray(a, vhat, true);
     R3MeshIntersection isect;
-    st.FindIntersection(ray, isect, 0, d-0.000001);
+    st->FindIntersection(ray, isect, 0, d-0.000001);
     if (isect.t < d && isect.type != R3_MESH_NULL_TYPE) return true;
     return false;
 }
@@ -190,8 +190,6 @@ void HemicubeRenderer::computeSamples(
         radimage = new float[3*res*res];
     }
 
-    R3MeshSearchTree st(rendermanager->getMeshManager()->getMesh());
-
     for (int i = 0; i < indices.size(); i++) {
         if (cb) cb(100*i/indices.size());
         if (images) {
@@ -208,7 +206,7 @@ void HemicubeRenderer::computeSamples(
                 R3Point lp(pointlight->getPosition(0),
                            pointlight->getPosition(1),
                            pointlight->getPosition(2));
-                if (!occluded(lp, p, st)) {
+                if (!occluded(lp, p, rendermanager->getMeshManager()->getSearchTree())) {
                     R3Vector v = p - lp;
                     pointlight->addLightFF(p[0], p[1], p[2], 0, 0, 0, 1/(v.Dot(v)));
                 }
@@ -226,7 +224,7 @@ void HemicubeRenderer::computeSamples(
                            linelight->getPosition(0,2));
                 lp += dv/2;
                 for (int k = 0; k < numsubdivs; k++) {
-                    if (!occluded(lp, p, st)) {
+                    if (!occluded(lp, p, rendermanager->getMeshManager()->getSearchTree())) {
                         R3Vector v = p - lp;
                         weight += dx/v.Dot(v);
                     }

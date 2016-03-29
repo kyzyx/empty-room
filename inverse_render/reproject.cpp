@@ -37,13 +37,8 @@ void reproject(
         double threshold,
         vector<int>& vids,
         vector<Sample>& samples,
-        int16_t id,
-        R3MeshSearchTree* searchtree)
+        int16_t id)
 {
-    if (!searchtree) {
-        R3MeshSearchTree st(mesh.getMesh());
-        searchtree = &st;
-    }
     double maxx = cam->width/(2*cam->focal_length);
     double maxy = cam->height/(2*cam->focal_length);
     R3Plane imageplane(cam->pos + cam->towards, cam->towards);
@@ -62,7 +57,7 @@ void reproject(
         if (vx > maxx || vx < -maxx || vy > maxy || vy < -maxy) continue;
         // Check if vertex intersects mesh
         R3MeshIntersection isect;
-        searchtree->FindIntersection(ray, isect, 0, d-0.000001);
+        mesh.getSearchTree()->FindIntersection(ray, isect, 0, d-0.000001);
         if (isect.t < d && isect.type != R3_MESH_NULL_TYPE) continue;
 
         int xx = vx*cam->focal_length + cam->width/2;
@@ -108,25 +103,23 @@ void reproject(
         const CameraParams* cam,
         MeshManager& mesh,
         double threshold,
-        int16_t id,
-        R3MeshSearchTree* searchtree)
+        int16_t id)
 {
     vector<int> vids;
     vector<Sample> samples;
-    reproject(hdrimage, confidencemap, depthmap, cam, mesh, threshold, vids, samples, id, searchtree);
+    reproject(hdrimage, confidencemap, depthmap, cam, mesh, threshold, vids, samples, id);
     for (int i = 0; i < vids.size(); ++i) {
         mesh.addSample(vids[i],samples[i]);
     }
 }
 
 void reproject(ImageManager& hdr, MeshManager& mesh, double threshold, boost::function<void(int)> cb) {
-    R3MeshSearchTree searchtree(mesh.getMesh());
     for (int i = 0; i < hdr.size(); ++i) {
         reproject(
                 (const float*) hdr.getImage(i),
                 (const float*) hdr.getImage("confidence", i),
                 (const float*) hdr.getImage("depth", i),
-                hdr.getCamera(i), mesh, threshold, i, &searchtree);
+                hdr.getCamera(i), mesh, threshold, i);
         cout << "Done reprojecting " << (i+1) << "/" << hdr.size() << endl;
         if (cb) cb(((i+1)*100)/hdr.size());
     }
