@@ -27,7 +27,7 @@ class SolverApp : public InvrenderApp {
             vector<SampleData> data;
             vector<int> indices;
             for (int i = 0; i < mmgr->size(); i++) {
-                if (mmgr->getLabel(i, 1) == label)
+                if (label < 0 || mmgr->getLabel(i, 1) == label)
                     indices.push_back(i);
             }
 
@@ -86,6 +86,7 @@ class SolverApp : public InvrenderApp {
             // Output debugging results of optimization
             bool dorerender = rerenderedplyfilename.length()>0;
             bool doerror = errorplyfilename.length()>0;
+            bool dointrinsic = intrinsicplyfilename.length()>0;
             double meanerr = 0;
             double maxerr = 0;
             if (dorerender || doerror) {
@@ -123,6 +124,27 @@ class SolverApp : public InvrenderApp {
                 if (dorerender) mmgr->writePlyMesh(rerenderedplyfilename, colors, meshcolorscale, gamma);
                 if (doerror) mmgr->writePlyMesh(errorplyfilename, errors, .5);
                 cout << "Mean error: " << meanerr/(3*data.size()) << "; " << "max error: " << maxerr << endl;
+            }
+            if (dointrinsic) {
+                vector<Material> colors;
+                int wk = 0;
+                for (int i = 0; i < mmgr->NVertices(); i++) {
+                    if (indices[wk] == i) {
+                        for (int ch = 0; ch < 3; ch++) {
+                            for (int j = 0; j < ir.lights[ch].size(); j++) {
+                                data[i].netIncoming(ch) += ir.lights[ch][j]->lightContribution(data[i].lightamount[j]);
+                            }
+                        }
+                        data[i].netIncoming *= (1-data[i].fractionDirect)/(1-data[i].fractionDirect-data[i].fractionUnknown);
+                        float r = data[i].radiosity.r/data[i].netIncoming.r;
+                        float g = data[i].radiosity.g/data[i].netIncoming.g;
+                        float b = data[i].radiosity.b/data[i].netIncoming.b;
+                        colors.push_back(Material(r,g,b));
+                    } else {
+                        colors.push_back(Material(0,0,0));
+                    }
+                }
+                mmgr->writePlyMesh(intrinsicplyfilename, colors, meshcolorscale);
             }
 
             // Output scene file for rerendering
@@ -223,6 +245,9 @@ class SolverApp : public InvrenderApp {
             if (pcl::console::find_argument(argc, argv, "-outputrerendermesh") >= 0) {
                 pcl::console::parse_argument(argc, argv, "-outputrerendermesh", rerenderedplyfilename);
             }
+            if (pcl::console::find_argument(argc, argv, "-outputintrinsicmesh") >= 0) {
+                pcl::console::parse_argument(argc, argv, "-outputintrinsicmesh", intrinsicplyfilename);
+            }
             return true;
         }
         int numsamples;
@@ -236,6 +261,7 @@ class SolverApp : public InvrenderApp {
         string pbrtfilename;
         string rerenderedplyfilename;
         string errorplyfilename;
+        string intrinsicplyfilename;
         string outlightfilename;
         string inlightfilename;
         int cameranum;
