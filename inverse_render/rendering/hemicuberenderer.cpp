@@ -163,6 +163,17 @@ void HemicubeRenderer::render(const CameraParams* cam, float* image, int mode)
     rendermanager->readFromRender(cam, image, mode, true);
 }
 
+bool occluded(R3Point a, R3Point b, R3MeshSearchTree& st) {
+    R3Vector v = b - a;
+    double d = v.Length();
+    R3Vector vhat = v/d;
+    R3Ray ray(a, vhat, true);
+    R3MeshIntersection isect;
+    st.FindIntersection(ray, isect, 0, d-0.000001);
+    if (isect.t < d && isect.type != R3_MESH_NULL_TYPE) return true;
+    return false;
+}
+
 void HemicubeRenderer::computeSamples(
         vector<SampleData>& data,
         vector<int> indices,
@@ -179,6 +190,8 @@ void HemicubeRenderer::computeSamples(
         radimage = new float[3*res*res];
     }
 
+    R3MeshSearchTree st(rendermanager->getMeshManager()->getMesh());
+
     for (int i = 0; i < indices.size(); i++) {
         if (cb) cb(100*i/indices.size());
         if (images) {
@@ -188,6 +201,40 @@ void HemicubeRenderer::computeSamples(
             images->push_back(lightimage);
         }
         SampleData sd = computeSample(indices[i], lights, radimage, lightimage);
+        R3Point p = rendermanager->getMeshManager()->VertexPosition(indices[i]);
+        for (int j = 0; j < lights.size(); j++) {
+            if (lights[j]->typeId() & LIGHTTYPE_POINT) {
+                PointLight* pointlight = (PointLight*) sd.lightamount[j];
+                R3Point lp(pointlight->getPosition(0),
+                           pointlight->getPosition(1),
+                           pointlight->getPosition(2));
+                if (!occluded(lp, p, st)) {
+                    R3Vector v = p - lp;
+                    pointlight->addLightFF(p[0], p[1], p[2], 0, 0, 0, 1/(v.Dot(v)));
+                }
+            } else if (lights[j]->typeId() & LIGHTTYPE_LINE) {
+                LineLight* linelight = (LineLight*) sd.lightamount[j];
+                double weight = 0;
+                int numsubdivs = 10;
+                double dx = linelight->getLength()/numsubdivs;
+                R3Vector dv(linelight->getVector(0),
+                            linelight->getVector(1),
+                            linelight->getVector(2));
+                dv *= dx;
+                R3Point lp(linelight->getPosition(0,0),
+                           linelight->getPosition(0,1),
+                           linelight->getPosition(0,2));
+                lp += dv/2;
+                for (int k = 0; k < numsubdivs; k++) {
+                    if (!occluded(lp, p, st)) {
+                        R3Vector v = p - lp;
+                        weight += dx/v.Dot(v);
+                    }
+                    lp += dv;
+                }
+                linelight->addLightFF(p[0], p[1], p[2], 0, 0, 0, weight);
+            }
+        }
         data.push_back(sd);
     }
 }

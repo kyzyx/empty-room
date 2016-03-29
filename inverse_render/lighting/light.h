@@ -153,6 +153,10 @@ class LineLight : public Light {
         double getPosition(int n, int c) const {
             return p[n][c];
         }
+        double getVector(int n) const {
+            return v[n];
+        }
+        double getLength() const { return length; }
         Eigen::Vector3d getPosition(int n) const {
             return p[n];
         }
