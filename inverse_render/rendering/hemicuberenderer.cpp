@@ -208,7 +208,7 @@ void HemicubeRenderer::computeSamples(
                            pointlight->getPosition(2));
                 if (!occluded(lp, p, rendermanager->getMeshManager()->getSearchTree())) {
                     R3Vector v = p - lp;
-                    pointlight->addLightFF(p[0], p[1], p[2], 0, 0, 0, 1/(v.Dot(v)));
+                    pointlight->addIncident(p[0], p[1], p[2], 0, 0, 0, 1/(v.Dot(v)));
                 }
             } else if (lights[j]->typeId() & LIGHTTYPE_LINE) {
                 LineLight* linelight = (LineLight*) sd.lightamount[j];
@@ -230,7 +230,7 @@ void HemicubeRenderer::computeSamples(
                     }
                     lp += dv;
                 }
-                linelight->addLightFF(p[0], p[1], p[2], 0, 0, 0, weight);
+                linelight->addIncident(p[0], p[1], p[2], 0, 0, 0, weight);
             }
         }
         data.push_back(sd);

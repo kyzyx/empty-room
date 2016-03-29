@@ -112,7 +112,7 @@ class PointLight : public Light {
         }
         virtual int typeId() const { return LIGHTTYPE_POINT | light->typeId(); }
 
-        virtual void addLightFF(
+        virtual void addIncident(
                 double px, double py, double pz,
                 double dx, double dy, double dz,
                 double weight=1);
@@ -161,7 +161,7 @@ class LineLight : public Light {
             return p[n];
         }
 
-        virtual void addLightFF(
+        virtual void addIncident(
                 double px, double py, double pz,
                 double dx, double dy, double dz,
                 double weight=1);

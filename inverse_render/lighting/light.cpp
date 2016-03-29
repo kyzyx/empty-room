@@ -97,7 +97,7 @@ void PointLight::readFromStream(std::istream& in, bool binary) {
     light->readFromStream(in, binary);
 }
 
-void PointLight::addLightFF(
+void PointLight::addIncident(
         double px, double py, double pz,
         double dx, double dy, double dz,
         double weight)
@@ -159,7 +159,7 @@ void LineLight::readFromStream(std::istream& in, bool binary) {
     light->readFromStream(in, binary);
 }
 
-void LineLight::addLightFF(
+void LineLight::addIncident(
         double px, double py, double pz,
         double dx, double dy, double dz,
         double weight)
