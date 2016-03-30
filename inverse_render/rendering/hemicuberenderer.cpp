@@ -163,15 +163,34 @@ void HemicubeRenderer::render(const CameraParams* cam, float* image, int mode)
     rendermanager->readFromRender(cam, image, mode, true);
 }
 
-bool occluded(R3Point a, R3Point b, R3MeshSearchTree* st) {
-    R3Vector v = b - a;
-    double d = v.Length();
-    R3Vector vhat = v/d;
-    R3Ray ray(a, vhat, true);
-    R3MeshIntersection isect;
-    st->FindIntersection(ray, isect, 0, d-0.000001);
-    if (isect.t < d && isect.type != R3_MESH_NULL_TYPE) return true;
-    return false;
+int occluded(R3Point a, R3Point b, int lid, MeshManager* mmgr) {
+    R3MeshSearchTree* st = mmgr->getSearchTree();
+    int n = 1;
+    do {
+        R3Vector v = b - a;
+        double d = v.Length();
+        R3Vector vhat = v/d;
+        R3Ray ray(a, vhat, true);
+        R3MeshIntersection isect;
+        st->FindIntersection(ray, isect, 0, d-0.000001);
+        if (isect.t < d && isect.type != R3_MESH_NULL_TYPE) {
+            R3MeshVertex* v;
+            if (isect.type == R3_MESH_FACE_TYPE) {
+                v = st->mesh->VertexOnFace(isect.face);
+            } else if (isect.type == R3_MESH_VERTEX_TYPE) {
+                v = isect.vertex;
+            } else if (isect.type == R3_MESH_EDGE_TYPE) {
+                v = st->mesh->VertexOnEdge(isect.edge);
+            }
+            int vid = st->mesh->VertexID(v);
+            int vlid = LIGHTID(mmgr->getLabel(vid, MeshManager::LABEL_CHANNEL));
+            if (vlid != lid) return n;
+            a = isect.point;
+            n++;
+        } else {
+            return -n;
+        }
+    } while(true);
 }
 
 void HemicubeRenderer::computeSamples(
@@ -206,7 +225,7 @@ void HemicubeRenderer::computeSamples(
                 R3Point lp(pointlight->getPosition(0),
                            pointlight->getPosition(1),
                            pointlight->getPosition(2));
-                if (!occluded(lp, p, rendermanager->getMeshManager()->getSearchTree())) {
+                if (occluded(lp, p, j, rendermanager->getMeshManager()) < 0) {
                     R3Vector v = p - lp;
                     pointlight->addIncident(p[0], p[1], p[2], 0, 0, 0, 1/(v.Dot(v)));
                 }
@@ -224,7 +243,7 @@ void HemicubeRenderer::computeSamples(
                            linelight->getPosition(0,2));
                 lp += dv/2;
                 for (int k = 0; k < numsubdivs; k++) {
-                    if (!occluded(lp, p, rendermanager->getMeshManager()->getSearchTree())) {
+                    if (!occluded(lp, p, j, rendermanager->getMeshManager())) {
                         R3Vector v = p - lp;
                         weight += dx/v.Dot(v);
                     }
