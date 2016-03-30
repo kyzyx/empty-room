@@ -10,6 +10,8 @@
 #include <QThread>
 #include <QToolTip>
 
+#include <set>
+
 
 /*
  * Action Flowchart
@@ -1198,6 +1200,40 @@ void MainWindow::on_actionExport_Mesh_with_Colors_triggered()
     }
 }
 
+
+void MainWindow::on_actionSave_Light_Locations_triggered()
+{
+    QString lwd = settings->value("lastworkingdirectory", "").toString();
+    QString filename = QFileDialog::getSaveFileName(this, "Save Lights", lwd, "Text files (*.txt)");
+    if (!filename.isEmpty()) {
+        std::set<int> lightids;
+        std::vector<std::vector<Light*> > ll;
+        int maxidx = 0;
+        for (int i = 0; i < mmgr->size(); i++) {
+            unsigned char l = (unsigned char) mmgr->getLabel(i,MeshManager::LABEL_CHANNEL);
+            if (l) {
+                lightids.insert(l);
+                maxidx = std::max(maxidx, LIGHTID(l));
+            }
+        }
+        ll.resize(3);
+        for (int i = 0; i < 3; i++) ll[i].resize(maxidx);
+        for (auto lightinfo : lightids) {
+            int t = LIGHTTYPE(lightinfo);
+            int n = LIGHTID(lightinfo)-1;
+            for (int i = 0; i < 3; i++) {
+                if (lights[n]) {
+                    ll[i][n] = lights[n];
+                } else {
+                    ll[i][n] = NewLightFromLightType(t);
+                }
+            }
+        }
+
+        writeLightsToFile(filename.toStdString(), ll);
+    }
+}
+
 // -----------------
 // Interaction Modes
 // -----------------
@@ -1337,8 +1373,9 @@ void MainWindow::on_actionCommit_Selected_Vertices_as_Light_triggered()
 void MainWindow::on_actionCommit_Selected_Vertices_as_Line_Light_triggered()
 {
     bool ok;
-    int lbl = QInputDialog::getInt(this, "Commit selected vertices to line light...", "Label: ", 1, 0, 1024, 1, &ok);
-    lbl |= LIGHTTYPE_LINE;
+    int lid = QInputDialog::getInt(this, "Commit selected vertices to line light...", "Label: ", 1, 1, 1024, 1, &ok);
+    int linelighttypeid = 5; // magic number - LIGHTTYPE_ENVMAP | LIGHTTYPE_LINE
+    int lbl = lid | (linelighttypeid << LIGHT_TYPESHIFT);
     if (ok) {
         std::vector<int> selected;
         ui->meshWidget->renderManager()->getSelectedVertices(selected);
@@ -1353,8 +1390,9 @@ void MainWindow::on_actionCommit_Selected_Vertices_as_Line_Light_triggered()
             R3Point p = mmgr->VertexPosition(selected[i]);
             selectedcoords.push_back(Eigen::Vector3d(p[0], p[1], p[2]));
         }
-
+        if (lights.size() <= lid) lights.resize(lid, NULL);
         LineLight* l = new LineLight(new SHLight);
+        lights[lid-1] = l;
         l->computeFromPoints(selectedcoords);
         ui->meshWidget->addLine(l->getPosition(0), l->getPosition(1));
 

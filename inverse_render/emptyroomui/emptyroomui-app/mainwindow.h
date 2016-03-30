@@ -83,6 +83,7 @@ private slots:
     void on_actionLoad_Per_Vertex_Labels_triggered();
     void on_actionExport_Room_Model_triggered();
     void on_actionExport_Mesh_with_Colors_triggered();
+    void on_actionSave_Light_Locations_triggered();
 
     void on_actionReload_Per_Vertex_Samples_triggered();
 
@@ -125,7 +126,6 @@ private slots:
     void on_actionCommit_Selected_Vertices_as_Light_triggered();
     void on_actionCommit_Selected_Vertices_as_Line_Light_triggered();
 
-
 private:
     Ui::MainWindow *ui;
     ImageManager* imgr;
@@ -162,6 +162,8 @@ private:
     std::vector<int> wallindices;
     std::vector<int> floorindices;
     std::vector<int> ceilingindices;
+
+    std::vector<Light*> lights;
 };
 
 #endif // MAINWINDOW_H

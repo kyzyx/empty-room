@@ -1145,6 +1145,7 @@
     <addaction name="actionLoad_Per_Vertex_Labels"/>
     <addaction name="separator"/>
     <addaction name="menuSave_Generated_Images"/>
+    <addaction name="actionSave_Light_Locations"/>
    </widget>
    <widget class="QMenu" name="menuSelect">
     <property name="title">
@@ -1532,6 +1533,11 @@
    </property>
    <property name="text">
     <string>Commit Selected Vertices as Line Light</string>
+   </property>
+  </action>
+  <action name="actionSave_Light_Locations">
+   <property name="text">
+    <string>Save Light Locations</string>
    </property>
   </action>
  </widget>
