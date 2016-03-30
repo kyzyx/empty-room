@@ -31,13 +31,13 @@ class SolverApp : public InvrenderApp {
                     indices.push_back(i);
             }
 
+            if (inlightfilename.length()) {
+                readLightsFromFile(inlightfilename, ir.lights);
+            }
             if (inputbinaryfilename.length()) {
                 ir.loadVariablesBinary(data, inputbinaryfilename);
             } else {
                 ir.computeSamples(data, indices, numsamples, discardthreshold, false, getProgressFunction(0,2));
-            }
-            if (inlightfilename.length()) {
-                readLightsFromFile(inlightfilename, ir.lights);
             }
 
             // Optimization

@@ -247,10 +247,10 @@ void readLightsFromFile(string filename, vector<vector<Light*> >& lights, bool b
     lights.clear();
     lights.resize(3);
     for (int i = 0; i < 3; i++) {
-        for (int j = 0; j > nlights; j++) {
+        for (int j = 0; j < nlights; j++) {
             int lighttype;
-            if (binary) in >> lighttype;
-            else in.read((char*)&lighttype, sizeof(int));
+            if (binary) in.read((char*)&lighttype, sizeof(int));
+            else in >> lighttype;
             Light* l = NewLightFromLightType(lighttype);
             if (l) l->readFromStream(in, binary);
             lights[i].push_back(l);
