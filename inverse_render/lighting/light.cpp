@@ -229,9 +229,13 @@ void writeLightsToFile(string filename, vector<vector<Light*> >& lights, bool bi
     if (!binary) out << endl;
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < lights[i].size(); j++) {
-            writeint(out, lights[i][j]->typeId(), binary);
-            lights[i][j]->writeToStream(out, binary);
-            if (!binary) out << endl;
+            if (lights[i][j]) {
+                writeint(out, lights[i][j]->typeId(), binary);
+                lights[i][j]->writeToStream(out, binary);
+                if (!binary) out << endl;
+            } else {
+                writeint(out, -1, binary);
+            }
         }
     }
 }
@@ -248,7 +252,7 @@ void readLightsFromFile(string filename, vector<vector<Light*> >& lights, bool b
             if (binary) in >> lighttype;
             else in.read((char*)&lighttype, sizeof(int));
             Light* l = NewLightFromLightType(lighttype);
-            l->readFromStream(in, binary);
+            if (l) l->readFromStream(in, binary);
             lights[i].push_back(l);
         }
     }

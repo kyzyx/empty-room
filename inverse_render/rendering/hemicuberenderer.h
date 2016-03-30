@@ -17,10 +17,23 @@ class SampleData {
 };
 
 
-const int LIGHT_TYPESHIFT = 6;
+const int LIGHT_TYPESHIFT = 5;
 const int LIGHT_IDMASK = (1 << LIGHT_TYPESHIFT)-1;
 inline int LIGHTID(int lightinfo) { return lightinfo & LIGHT_IDMASK; }
-inline int LIGHTTYPE(int lightinfo) { return lightinfo >> LIGHT_TYPESHIFT; }
+inline int LIGHTTYPE(int lightinfo) {
+    static int COMPRESSEDLIGHTTYPES[] =
+    {
+        LIGHTTYPE_NULL,
+        LIGHTTYPE_ENVMAP,
+        LIGHTTYPE_SH,
+        LIGHTTYPE_AREA,
+        LIGHTTYPE_ENVMAP | LIGHTTYPE_POINT,
+        LIGHTTYPE_ENVMAP | LIGHTTYPE_LINE,
+        LIGHTTYPE_SH | LIGHTTYPE_POINT,
+        LIGHTTYPE_SH | LIGHTTYPE_LINE,
+    };
+    return COMPRESSEDLIGHTTYPES[lightinfo >> LIGHT_TYPESHIFT];
+}
 
 enum {
     CELLTYPE_NONE,
