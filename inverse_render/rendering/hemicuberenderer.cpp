@@ -167,12 +167,13 @@ int occluded(R3Point a, R3Point b, int lid, MeshManager* mmgr) {
     R3MeshSearchTree* st = mmgr->getSearchTree();
     int n = 1;
     do {
+        const double EPSILON = 1e-6;
         R3Vector v = b - a;
         double d = v.Length();
         R3Vector vhat = v/d;
-        R3Ray ray(a, vhat, true);
+        R3Ray ray(a+vhat*EPSILON, vhat, true);
         R3MeshIntersection isect;
-        st->FindIntersection(ray, isect, 0, d-0.000001);
+        st->FindIntersection(ray, isect, 0, d-2*EPSILON);
         if (isect.t < d && isect.type != R3_MESH_NULL_TYPE) {
             R3MeshVertex* v;
             if (isect.type == R3_MESH_FACE_TYPE) {
@@ -184,7 +185,9 @@ int occluded(R3Point a, R3Point b, int lid, MeshManager* mmgr) {
             }
             int vid = st->mesh->VertexID(v);
             int vlid = LIGHTID(mmgr->getLabel(vid, MeshManager::LABEL_CHANNEL));
-            if (vlid != lid) return n;
+            if (vlid != lid) {
+                return n;
+            }
             a = isect.point;
             n++;
         } else {
@@ -219,14 +222,17 @@ void HemicubeRenderer::computeSamples(
         }
         SampleData sd = computeSample(indices[i], lights, radimage, lightimage);
         R3Point p = rendermanager->getMeshManager()->VertexPosition(indices[i]);
+        R3Vector n = rendermanager->getMeshManager()->VertexNormal(indices[i]);
         for (int j = 0; j < lights.size(); j++) {
             if (lights[j]->typeId() & LIGHTTYPE_POINT) {
                 PointLight* pointlight = (PointLight*) sd.lightamount[j];
                 R3Point lp(pointlight->getPosition(0),
                            pointlight->getPosition(1),
                            pointlight->getPosition(2));
-                if (occluded(lp, p, j, rendermanager->getMeshManager()) < 0) {
-                    R3Vector v = p - lp;
+                R3Vector v = lp - p;
+                R3Vector vn = v;
+                vn.Normalize();
+                if (n.Dot(vn) > 0 && occluded(lp, p, j+1, rendermanager->getMeshManager()) < 0) {
                     pointlight->addIncident(p[0], p[1], p[2], 0, 0, 0, 1/(v.Dot(v)));
                 }
             } else if (lights[j]->typeId() & LIGHTTYPE_LINE) {
@@ -237,17 +243,24 @@ void HemicubeRenderer::computeSamples(
                 R3Vector dv(linelight->getVector(0),
                             linelight->getVector(1),
                             linelight->getVector(2));
-                dv *= dx;
                 R3Point lp(linelight->getPosition(0,0),
                            linelight->getPosition(0,1),
                            linelight->getPosition(0,2));
-                lp += dv/2;
+                lp += dx*dv/2;
                 for (int k = 0; k < numsubdivs; k++) {
-                    if (!occluded(lp, p, j, rendermanager->getMeshManager())) {
-                        R3Vector v = p - lp;
-                        weight += dx/v.Dot(v);
+                    R3Vector v = lp - p;
+                    R3Vector vn = v;
+                    vn.Normalize();
+                    if (n.Dot(vn) > 0 && occluded(lp, p, j+1, rendermanager->getMeshManager()) < 0) {
+                        /*
+                        // Equivalently
+                        R3Vector pv = v - dv*v.Dot(dv);
+                        pv.Normalize();
+                        weight += dx*vn.Dot(n)*(pv.dot(vn))/v.Dot(v);*/
+                        double r2 = v.Dot(v);
+                        weight += dx*v.Dot(n)*(dv%v).Length()/(r2*r2);
                     }
-                    lp += dv;
+                    lp += dx*dv;
                 }
                 linelight->addIncident(p[0], p[1], p[2], 0, 0, 0, weight);
             }
@@ -264,7 +277,18 @@ SampleData HemicubeRenderer::computeSample(int n, vector<Light*> lights, float* 
     sd.fractionUnknown = 0;
     sd.fractionDirect = 0;
     for (int i = 0; i < lights.size(); i++) {
-        sd.lightamount.push_back(NewLightFromLightType(lights[i]->typeId()));
+        Light* l = NewLightFromLightType(lights[i]->typeId());
+        if (l->typeId() & LIGHTTYPE_POINT) {
+            PointLight* pl = (PointLight*) l;
+            PointLight* ol = (PointLight*) lights[i];
+            pl->setPosition(ol->getPosition(0), ol->getPosition(1), ol->getPosition(2));
+        } else if (l->typeId() & LIGHTTYPE_LINE) {
+            LineLight* ll = (LineLight*) l;
+            LineLight* ol = (LineLight*) lights[i];
+            ll->setPosition(0, ol->getPosition(0));
+            ll->setPosition(1, ol->getPosition(1));
+        }
+        sd.lightamount.push_back(l);
     }
     renderHemicube(
             rendermanager->getMeshManager()->VertexPosition(n),

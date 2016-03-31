@@ -40,9 +40,11 @@ void InverseRender::writeVariablesMatlab(vector<SampleData>& data, string filena
     // FIXME
     for (int i = 0; i < data.size(); ++i) {
         for (int j = 0; j < data[i].lightamount.size(); ++j) {
-            for (int k = 0; k < data[i].lightamount[j]->numParameters(); k++) {
-                if (j+k) out << ",";
-                out << data[i].lightamount[j]->coef(k);
+            if (data[i].lightamount[j]) {
+                for (int k = 0; k < data[i].lightamount[j]->numParameters(); k++) {
+                    if (j+k) out << ",";
+                    out << data[i].lightamount[j]->coef(k);
+                }
             }
         }
         if (i != data.size()-1) out << ";" << endl;
@@ -78,9 +80,11 @@ void InverseRender::writeVariablesMatlab(vector<SampleData>& data, string filena
     for (int ch = 0; ch < 3; ch++) {
         out << "L" << ch << " = [" << endl;
         for (int i = 0; i < lights[ch].size(); i++) {
-            for (int j = 0; j < lights[ch][i]->numParameters(); j++) {
-                if (i+j) out << ";";
-                out << lights[ch][i]->coef(j);
+            if (lights[ch][i]) {
+                for (int j = 0; j < lights[ch][i]->numParameters(); j++) {
+                    if (i+j) out << ";";
+                    out << lights[ch][i]->coef(j);
+                }
             }
         }
         out << "];" << endl;

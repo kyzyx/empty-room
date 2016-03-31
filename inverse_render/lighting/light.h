@@ -110,7 +110,9 @@ class PointLight : public Light {
         double getPosition(int n) {
             return p[n];
         }
+        virtual int numParameters() const { return light->numParameters(); }
         virtual int typeId() const { return LIGHTTYPE_POINT | light->typeId(); }
+        virtual double& coef(int n) { return light->coef(n); }
 
         virtual void addIncident(
                 double px, double py, double pz,
@@ -145,7 +147,9 @@ class LineLight : public Light {
             setPosition(0,p1);
             setPosition(1,p2);
         }
+        virtual int numParameters() const { return light->numParameters(); }
         virtual int typeId() const { return LIGHTTYPE_LINE | light->typeId(); }
+        virtual double& coef(int n) { return light->coef(n); }
         void setPosition(int n, double x, double y, double z) {
             setPosition(n, Eigen::Vector3d(x,y,z));
         }
