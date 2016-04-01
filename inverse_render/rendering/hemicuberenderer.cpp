@@ -131,9 +131,9 @@ int HemicubeRenderer::processHemicubeCell(
         v.Normalize();
         v = -v;
 
-        lights[lightid-1]->addLightFF(p[0], p[1], p[2], v[0], v[1], v[2], weight);
-
-        return CELLTYPE_LIGHT;
+        bool isarea = lights[lightid-1]->addLightFF(p[0], p[1], p[2], v[0], v[1], v[2], weight);
+        if (isarea) return CELLTYPE_LIGHT;
+        else return CELLTYPE_UNOBSERVED;
     } else if (visibility <= 0) {
         return CELLTYPE_UNOBSERVED;
     } else {

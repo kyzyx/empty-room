@@ -50,7 +50,7 @@ double Light::lightContribution(Light* l) const {
     return l->lightContribution(v.begin());
 }
 
-void SHLight::addLightFF(
+bool SHLight::addLightFF(
         double px, double py, double pz,
         double dx, double dy, double dz,
         double weight)
@@ -61,15 +61,17 @@ void SHLight::addLightFF(
             v[idx++] += weight*SH(band, m, dx, dy, dz);
         }
     }
+    return true;
 }
 
-void CubemapLight::addLightFF(
+bool CubemapLight::addLightFF(
         double px, double py, double pz,
         double dx, double dy, double dz,
         double weight)
 {
     int envmapidx = getEnvmapCell(dx, dy, dz, res);
     v[envmapidx] += weight;
+    return true;
 }
 
 void PointLight::writeToStream(std::ostream& out, bool binary) {

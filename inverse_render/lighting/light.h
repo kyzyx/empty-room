@@ -28,10 +28,10 @@ class Light {
         virtual double lightContribution(double* it) const;
         virtual double lightContribution(std::vector<double>::const_iterator it) const;
         virtual double lightContribution(Light* l) const;
-        virtual void addLightFF(
+        virtual bool addLightFF(
                 double px, double py, double pz,
                 double dx, double dy, double dz,
-                double weight=1) {;}
+                double weight=1) { return false; }
 
         virtual void writeToStream(std::ostream& out, bool binary=false);
         virtual void readFromStream(std::istream& in, bool binary=false);
@@ -53,6 +53,7 @@ class AreaLight : public Light {
                 double weight=1)
         {
             v[0] += weight;
+            return true;
         }
 
     protected:
