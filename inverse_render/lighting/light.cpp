@@ -217,7 +217,7 @@ Light* NewLightFromLightType(int type) {
         case (LIGHTTYPE_ENVMAP | LIGHTTYPE_POINT): return new PointLight(new CubemapLight);
         case (LIGHTTYPE_SH | LIGHTTYPE_LINE): return new LineLight(new SHLight);
         case (LIGHTTYPE_ENVMAP | LIGHTTYPE_LINE): return new LineLight(new CubemapLight);
-        default: return NULL;
+        default: return new Light();
     }
 }
 

@@ -20,7 +20,7 @@ class Light {
     public:
         Light() : reglambda(0) {;}
         virtual int numParameters() const { return 0; }
-        virtual int typeId() const = 0;
+        virtual int typeId() const { return LIGHTTYPE_NULL; }
         virtual double& coef(int n) { return v[n]; }
         virtual void setRegularization(double d) { reglambda = d; }
         virtual double getRegularization() const { return reglambda; }
@@ -47,7 +47,7 @@ class AreaLight : public Light {
         virtual int numParameters() const { return 1; }
         virtual int typeId() const { return LIGHTTYPE_AREA; }
 
-        virtual void addLightFF(
+        virtual bool addLightFF(
                 double px, double py, double pz,
                 double dx, double dy, double dz,
                 double weight=1)
@@ -65,7 +65,7 @@ class SHLight : public Light {
         virtual int numParameters() const { return numbands*numbands; }
         virtual int typeId() const { return LIGHTTYPE_SH; }
 
-        virtual void addLightFF(
+        virtual bool addLightFF(
                 double px, double py, double pz,
                 double dx, double dy, double dz,
                 double weight=1);
@@ -82,7 +82,7 @@ class CubemapLight : public Light {
 
         int getCubemapResolution() const { return res; }
 
-        virtual void addLightFF(
+        virtual bool addLightFF(
                 double px, double py, double pz,
                 double dx, double dy, double dz,
                 double weight=1);

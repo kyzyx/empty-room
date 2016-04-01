@@ -31,12 +31,19 @@ class SolverApp : public InvrenderApp {
                     indices.push_back(i);
             }
 
-            if (inlightfilename.length()) {
-                readLightsFromFile(inlightfilename, ir.lights);
-            }
             if (inputbinaryfilename.length()) {
                 ir.loadVariablesBinary(data, inputbinaryfilename);
+                if (inlightfilename.length()) {
+                    ir.lights.clear();
+                    ir.lights.resize(3);
+                    readLightsFromFile(inlightfilename, ir.lights);
+                }
             } else {
+                if (inlightfilename.length()) {
+                    ir.lights.clear();
+                    ir.lights.resize(3);
+                    readLightsFromFile(inlightfilename, ir.lights);
+                }
                 ir.computeSamples(data, indices, numsamples, discardthreshold, false, getProgressFunction(0,2));
             }
 

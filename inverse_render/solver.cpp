@@ -40,11 +40,9 @@ void InverseRender::writeVariablesMatlab(vector<SampleData>& data, string filena
     // FIXME
     for (int i = 0; i < data.size(); ++i) {
         for (int j = 0; j < data[i].lightamount.size(); ++j) {
-            if (data[i].lightamount[j]) {
-                for (int k = 0; k < data[i].lightamount[j]->numParameters(); k++) {
-                    if (j+k) out << ",";
-                    out << data[i].lightamount[j]->coef(k);
-                }
+            for (int k = 0; k < data[i].lightamount[j]->numParameters(); k++) {
+                if (j+k) out << ",";
+                out << data[i].lightamount[j]->coef(k);
             }
         }
         if (i != data.size()-1) out << ";" << endl;
@@ -127,12 +125,13 @@ void InverseRender::loadVariablesBinary(vector<SampleData>& data, string filenam
     in.read((char*) &sz, 4);
     data.resize(sz);
     in.read((char*) &sz, 4);
+    lights.resize(3);
     for (int ch = 0; ch < 3; ch++) {
         for (int i = 0; i < sz; i++) {
             int t;
             in.read((char*) &t, sizeof(int));
             lights[ch].push_back(NewLightFromLightType(t));
-            lights[ch][i]->readFromStream(in, true);
+            if (lights[ch][i]) lights[ch][i]->readFromStream(in, true);
         }
     }
     for (int i = 0; i < data.size(); ++i) {
