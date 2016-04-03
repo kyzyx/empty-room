@@ -19,8 +19,8 @@ class SampleData {
 
 const int LIGHT_TYPESHIFT = 5;
 const int LIGHT_IDMASK = (1 << LIGHT_TYPESHIFT)-1;
-inline int LIGHTID(int lightinfo) { return lightinfo & LIGHT_IDMASK; }
-inline int LIGHTTYPE(int lightinfo) {
+inline unsigned int LIGHTID(unsigned int lightinfo) { return lightinfo & LIGHT_IDMASK; }
+inline unsigned int LIGHTTYPE(unsigned int lightinfo) {
     static int COMPRESSEDLIGHTTYPES[] =
     {
         LIGHTTYPE_NULL,

@@ -184,7 +184,7 @@ int occluded(R3Point a, R3Point b, int lid, MeshManager* mmgr) {
                 v = st->mesh->VertexOnEdge(isect.edge);
             }
             int vid = st->mesh->VertexID(v);
-            int vlid = LIGHTID(mmgr->getLabel(vid, MeshManager::LABEL_CHANNEL));
+            int vlid = LIGHTID((unsigned char) mmgr->getLabel(vid, MeshManager::LABEL_CHANNEL));
             if (vlid != lid) {
                 return n;
             }

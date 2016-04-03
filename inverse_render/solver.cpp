@@ -21,9 +21,9 @@ void InverseRender::setupLightParameters(MeshManager* m) {
     lights.resize(numchannels);
 
     int ret = 0;
-    set<int> lightids;
+    set<unsigned char> lightids;
     for (int i = 0; i < m->size(); i++) {
-        char l = m->getLabel(i,0);
+        unsigned char l = m->getLabel(i,MeshManager::LABEL_CHANNEL);
         if (l) lightids.insert(l);
     }
     for (auto lightinfo : lightids) {

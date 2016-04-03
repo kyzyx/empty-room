@@ -316,7 +316,7 @@ void RenderManager::updateMeshAuxiliaryData() {
     for (int i = 0; i < mmgr->NVertices(); ++i) {
         vertices[v++] = mmgr->getVertexSampleCount(i);
         for (int j = 1; j < nch; ++j) {
-            vertices[v++] = mmgr->getLabel(i, j-1);
+            vertices[v++] = (unsigned char) mmgr->getLabel(i, j-1);
         }
     }
     glBufferData(GL_ARRAY_BUFFER,

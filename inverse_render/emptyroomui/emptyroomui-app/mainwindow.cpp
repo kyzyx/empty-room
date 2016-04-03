@@ -963,7 +963,7 @@ void MainWindow::on_hemicubeButton_clicked()
             int n;
             do {
                 n = dist(generator);
-            } while (mmgr->getLabel(wallindices[n]) > 0 || mmgr->getVertexSampleCount(wallindices[n]) == 0);
+            } while (mmgr->getLabel(wallindices[n], MeshManager::LABEL_CHANNEL) > 0 || mmgr->getVertexSampleCount(wallindices[n]) == 0);
 
             CameraParams cam;
             cam.fov = 90;
@@ -1208,7 +1208,7 @@ void MainWindow::on_actionSave_Light_Locations_triggered()
     if (!filename.isEmpty()) {
         std::set<int> lightids;
         std::vector<std::vector<Light*> > ll;
-        int maxidx = 0;
+        unsigned int maxidx = 0;
         for (int i = 0; i < mmgr->size(); i++) {
             unsigned char l = (unsigned char) mmgr->getLabel(i,MeshManager::LABEL_CHANNEL);
             if (l) {
@@ -1374,8 +1374,8 @@ void MainWindow::on_actionCommit_Selected_Vertices_as_Line_Light_triggered()
 {
     bool ok;
     int lid = QInputDialog::getInt(this, "Commit selected vertices to line light...", "Label: ", 1, 1, 1024, 1, &ok);
-    int linelighttypeid = 5; // magic number - LIGHTTYPE_ENVMAP | LIGHTTYPE_LINE
-    int lbl = lid | (linelighttypeid << LIGHT_TYPESHIFT);
+    unsigned char linelighttypeid = 5; // magic number - LIGHTTYPE_ENVMAP | LIGHTTYPE_LINE
+    unsigned char lbl = ((unsigned char) lid) | (linelighttypeid << LIGHT_TYPESHIFT);
     if (ok) {
         std::vector<int> selected;
         ui->meshWidget->renderManager()->getSelectedVertices(selected);

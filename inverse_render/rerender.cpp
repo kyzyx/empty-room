@@ -16,8 +16,8 @@ int getFaceLightID(MeshManager& m, int f) {
     int lightid = -1;
     for (int j = 0; j < 3; ++j) {
         int n = m.VertexOnFace(f,j);
-        char l = m.getLabel(n);
-        if (l <= 0) {
+        unsigned char l = m.getLabel(n); // FIXME! Negative light id
+        if (l == 0) {
             lightid = -1;
             break;
         } else {
@@ -86,8 +86,8 @@ void estimateLightShape(MeshManager& m, int id, vector<R3Point>& points, vector<
         for (int i = 0; i < 3; ++i) if (s[i] == 0) s[i] = 1;
         MatrixXd variance = MatrixXd::Ones(points.size(),1)*s.transpose();
         MatrixXd Y = A.cwiseQuotient(variance)*svd.matrixV();
-        Vector3d maxcoefs = Y.colwise().maxCoeff();
-        Vector3d mincoefs = Y.colwise().minCoeff();
+        Vector3d maxcoefs = Y.cwiseAbs().colwise().maxCoeff();
+        Vector3d mincoefs = Y.cwiseAbs().colwise().minCoeff();
 
         // Check if approximately circular
         bool circle = true;
