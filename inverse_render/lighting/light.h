@@ -129,28 +129,30 @@ class PointLight : public Light {
 
 class LineLight : public Light {
     public:
-        LineLight(Light* l)
-            : light(l)
+        LineLight()
+            : numcells(16)
         {
             setPosition(0,0,0,0);
             setPosition(1,0,0,0);
+            v.resize(numParameters());
         }
         LineLight(double x1, double y1, double z1,
-                  double x2, double y2, double z2, Light* l)
-            : light(l)
+                  double x2, double y2, double z2)
+            : numcells(16)
         {
             setPosition(0,x1,y1,z1);
             setPosition(1,x2,y2,z2);
+            v.resize(numParameters());
         }
-        LineLight(Eigen::Vector3d p1, Eigen::Vector3d p2, Light* l)
-            : light(l)
+        LineLight(Eigen::Vector3d p1, Eigen::Vector3d p2)
+            : numcells(16)
         {
             setPosition(0,p1);
             setPosition(1,p2);
+            v.resize(numParameters());
         }
-        virtual int numParameters() const { return light->numParameters(); }
-        virtual int typeId() const { return LIGHTTYPE_LINE | light->typeId(); }
-        virtual double& coef(int n) { return light->coef(n); }
+        virtual int numParameters() const { return numcells; }
+        virtual int typeId() const { return LIGHTTYPE_LINE | LIGHTTYPE_ENVMAP; }
         void setPosition(int n, double x, double y, double z) {
             setPosition(n, Eigen::Vector3d(x,y,z));
         }
@@ -160,10 +162,10 @@ class LineLight : public Light {
             return p[n][c];
         }
         double getVector(int n) const {
-            return v[n];
+            return vec[n];
         }
         Eigen::Vector3d getVector() const {
-            return v;
+            return vec;
         }
         double getLength() const { return length; }
         Eigen::Vector3d getPosition(int n) const {
@@ -179,10 +181,10 @@ class LineLight : public Light {
         virtual void readFromStream(std::istream& in, bool binary=false);
     protected:
         Eigen::Vector3d p[2];
-        Eigen::Vector3d v;
+        Eigen::Vector3d vec;
         Eigen::Vector3d perp;
         double length;
-        Light* light;
+        int numcells;
 };
 
 Light* NewLightFromLightType(int type);

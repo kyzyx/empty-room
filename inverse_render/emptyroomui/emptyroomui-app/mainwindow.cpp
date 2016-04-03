@@ -1391,7 +1391,7 @@ void MainWindow::on_actionCommit_Selected_Vertices_as_Line_Light_triggered()
             selectedcoords.push_back(Eigen::Vector3d(p[0], p[1], p[2]));
         }
         if (lights.size() <= lid) lights.resize(lid, NULL);
-        LineLight* l = new LineLight(new SHLight);
+        LineLight* l = new LineLight();
         lights[lid-1] = l;
         l->computeFromPoints(selectedcoords);
         ui->meshWidget->addLine(l->getPosition(0), l->getPosition(1));

@@ -12,13 +12,16 @@ void addCeres(Light* light, ceres::Problem* problem, double* lightarr, int n, in
     switch (light->typeId()) {
         case LIGHTTYPE_SH:
         case LIGHTTYPE_SH | LIGHTTYPE_POINT:
-        case LIGHTTYPE_SH | LIGHTTYPE_LINE:
             addCeresSH((SHLight*) light, problem, lightarr, n, idx);
             break;
         case LIGHTTYPE_ENVMAP:
         case LIGHTTYPE_ENVMAP | LIGHTTYPE_POINT:
-        case LIGHTTYPE_ENVMAP | LIGHTTYPE_LINE:
             addCeresCubemap((CubemapLight*) light, problem, lightarr, n, idx);
+            break;
+        case LIGHTTYPE_ENVMAP | LIGHTTYPE_LINE:
+        //case LIGHTTYPE_ENVMAP | LIGHTTYPE_LINE:
+        case LIGHTTYPE_LINE:
+            addCeresLine((LineLight*) light, problem, lightarr, n, idx);
             break;
         case LIGHTTYPE_AREA:
             addCeresArea((AreaLight*) light, problem, lightarr, n, idx);
@@ -38,6 +41,19 @@ void addCeresSH(SHLight* light, ceres::Problem* problem, double* lightarr, int n
         for (int i = 1; i < light->numParameters(); i++) {
             problem->AddResidualBlock(CreateSHRegularizer(n, i+idx, r), NULL, lightarr);
         }
+    }
+}
+
+void addCeresLine(LineLight* light, ceres::Problem* problem, double* lightarr, int n, int idx)
+{
+    double r = light->getRegularization();
+    if (r > 0) {
+        for (int i = 0; i < light->numParameters(); i++) {
+            problem->AddResidualBlock(CreateSmoothnessTerm(n, i, (i+1)%light->numParameters(), r), NULL /*new ceres::HuberLoss(lightscale)*/, lightarr);
+        }
+    }
+    for (int k = 0; k < light->numParameters(); k++, idx++) {
+        problem->SetParameterLowerBound(lightarr, idx, 0);
     }
 }
 

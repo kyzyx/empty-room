@@ -118,11 +118,11 @@ using namespace Eigen;
 
 void LineLight::setPosition(int n, Vector3d pos) {
     p[n] = pos;
-    v = p[1] - p[0];
-    length = v.norm();
-    v /= length;
+    vec = p[1] - p[0];
+    length = vec.norm();
+    vec /= length;
 
-    perp = abs(v[0])>abs(v[1])?Vector3d(0,1,0).cross(v):Vector3d(1,0,0).cross(v);
+    perp = abs(vec[0])>abs(vec[1])?Vector3d(0,1,0).cross(vec):Vector3d(1,0,0).cross(vec);
 }
 
 void LineLight::writeToStream(std::ostream& out, bool binary) {
@@ -141,7 +141,7 @@ void LineLight::writeToStream(std::ostream& out, bool binary) {
         }
         out << endl;
     }
-    light->writeToStream(out, binary);
+    Light::writeToStream(out, binary);
 }
 void LineLight::readFromStream(std::istream& in, bool binary) {
     if (binary) {
@@ -159,7 +159,7 @@ void LineLight::readFromStream(std::istream& in, bool binary) {
             setPosition(i, x, y, z);
         }
     }
-    light->readFromStream(in, binary);
+    Light::readFromStream(in, binary);
 }
 
 void LineLight::addIncident(
@@ -169,20 +169,25 @@ void LineLight::addIncident(
 {
     Vector3d P(px, py, pz);
     Vector3d d = P - p[0];
-    double t = d.dot(v);
+    double t = d.dot(vec);
     if (t < 0) {
     } else if (t > length) {
-        d = P - p[1];
+        //d = P - p[1];
     } else {
-        d -= t*v;
         /*
         d /= d.norm();
         double theta = atan2(d.dot(perp), d.dot(perp.cross(v)));
         light->addLightFF(px, py, pz, cos(theta), sin(theta), 0, weight);
         */
     }
+    d -= t*vec;
+    d /= d.norm();
+    double theta = acos(d.dot(perp));
+    if ((d.cross(perp)).dot(vec) < 0) theta = 2*M_PI - theta;
+    int idx = numcells*theta/(2*M_PI);
+    v[idx] += weight;
     // NOTE: Must factor occlusion and mean squared distance into weight
-    light->addLightFF(px, py, pz, d[0], d[1], d[2], weight);
+    //light->addLightFF(px, py, pz, d[0], d[1], d[2], weight);
 }
 
 void LineLight::computeFromPoints(vector<Vector3d> pts) {
@@ -215,8 +220,10 @@ Light* NewLightFromLightType(int type) {
         case LIGHTTYPE_AREA: return new AreaLight;
         case (LIGHTTYPE_SH | LIGHTTYPE_POINT): return new PointLight(new SHLight);
         case (LIGHTTYPE_ENVMAP | LIGHTTYPE_POINT): return new PointLight(new CubemapLight);
-        case (LIGHTTYPE_SH | LIGHTTYPE_LINE): return new LineLight(new SHLight);
-        case (LIGHTTYPE_ENVMAP | LIGHTTYPE_LINE): return new LineLight(new CubemapLight);
+        case LIGHTTYPE_LINE:
+        case (LIGHTTYPE_SH | LIGHTTYPE_LINE):
+        case (LIGHTTYPE_ENVMAP | LIGHTTYPE_LINE):
+               return new LineLight();
         default: return new Light();
     }
 }
