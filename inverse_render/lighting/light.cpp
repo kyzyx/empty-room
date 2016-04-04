@@ -125,8 +125,14 @@ void LineLight::setPosition(int n, Vector3d pos) {
     perp = abs(vec[0])>abs(vec[1])?Vector3d(0,1,0).cross(vec):Vector3d(1,0,0).cross(vec);
 }
 
+void LineLight::setPerpendicularVector(Vector3d perpendicular) {
+    perp = vec.cross(perpendicular.cross(vec));
+}
+
 void LineLight::writeToStream(std::ostream& out, bool binary) {
     if (binary) {
+        char sym = symmetric?0:1;
+        out.write(&sym, sizeof(char));
         for (int j = 0; j < 2; j++) {
             for (int i = 0; i < 3; i++) {
                 double d = p[j][i];
@@ -134,6 +140,7 @@ void LineLight::writeToStream(std::ostream& out, bool binary) {
             }
         }
     } else {
+        out << (symmetric?0:1) << " ";
         for (int j = 0; j < 2; j++) {
             for (int i = 0; i < 3; i++) {
                 out << p[j][i] << " ";
@@ -145,6 +152,9 @@ void LineLight::writeToStream(std::ostream& out, bool binary) {
 }
 void LineLight::readFromStream(std::istream& in, bool binary) {
     if (binary) {
+        char sym;
+        in.read(&sym, sizeof(char));
+        if (sym) setSymmetric();
         for (int i = 0; i < 2; i++) {
             double x,y,z;
             in.read((char*) &x, sizeof(double));
@@ -153,6 +163,9 @@ void LineLight::readFromStream(std::istream& in, bool binary) {
             setPosition(i, x, y, z);
         }
     } else {
+        int sym;
+        in >> sym;
+        if (sym) setSymmetric();
         for (int i = 0; i < 2; i++) {
             double x,y,z;
             in >> x >> y >> z;
@@ -183,7 +196,7 @@ void LineLight::addIncident(
     d -= t*vec;
     d /= d.norm();
     double theta = acos(d.dot(perp));
-    if ((d.cross(perp)).dot(vec) < 0) theta = 2*M_PI - theta;
+    if (!symmetric && (d.cross(perp)).dot(vec) < 0) theta = 2*M_PI - theta;
     int idx = numcells*theta/(2*M_PI);
     v[idx] += weight;
     // NOTE: Must factor occlusion and mean squared distance into weight

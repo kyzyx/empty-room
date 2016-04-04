@@ -287,6 +287,7 @@ SampleData HemicubeRenderer::computeSample(int n, vector<Light*> lights, float* 
             LineLight* ol = (LineLight*) lights[i];
             ll->setPosition(0, ol->getPosition(0));
             ll->setPosition(1, ol->getPosition(1));
+            ll->setSymmetric(ol->isSymmetric());
         }
         sd.lightamount.push_back(l);
     }

@@ -48,7 +48,9 @@ void addCeresLine(LineLight* light, ceres::Problem* problem, double* lightarr, i
 {
     double r = light->getRegularization();
     if (r > 0) {
-        for (int i = 0; i < light->numParameters(); i++) {
+        int lim = light->numParameters();
+        if (light->isSymmetric()) lim /= 2;
+        for (int i = 0; i < lim; i++) {
             problem->AddResidualBlock(CreateSmoothnessTerm(n, i, (i+1)%light->numParameters(), r), NULL /*new ceres::HuberLoss(lightscale)*/, lightarr);
         }
     }

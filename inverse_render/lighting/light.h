@@ -130,7 +130,7 @@ class PointLight : public Light {
 class LineLight : public Light {
     public:
         LineLight()
-            : numcells(16)
+            : numcells(16), symmetric(false)
         {
             setPosition(0,0,0,0);
             setPosition(1,0,0,0);
@@ -138,14 +138,14 @@ class LineLight : public Light {
         }
         LineLight(double x1, double y1, double z1,
                   double x2, double y2, double z2)
-            : numcells(16)
+            : numcells(16), symmetric(false)
         {
             setPosition(0,x1,y1,z1);
             setPosition(1,x2,y2,z2);
             v.resize(numParameters());
         }
         LineLight(Eigen::Vector3d p1, Eigen::Vector3d p2)
-            : numcells(16)
+            : numcells(16), symmetric(false)
         {
             setPosition(0,p1);
             setPosition(1,p2);
@@ -157,6 +157,9 @@ class LineLight : public Light {
             setPosition(n, Eigen::Vector3d(x,y,z));
         }
         void setPosition(int n, Eigen::Vector3d pos);
+        void setSymmetric(bool sym=true) { symmetric = sym; }
+        bool isSymmetric() const { return symmetric; }
+        void setPerpendicularVector(Eigen::Vector3d perpendicular);
         void computeFromPoints(std::vector<Eigen::Vector3d> pts);
         double getPosition(int n, int c) const {
             return p[n][c];
@@ -183,6 +186,7 @@ class LineLight : public Light {
         Eigen::Vector3d p[2];
         Eigen::Vector3d vec;
         Eigen::Vector3d perp;
+        bool symmetric;
         double length;
         int numcells;
 };
