@@ -79,6 +79,7 @@ class InverseRender {
         MeshManager* mesh;
         std::vector<std::vector<Light*> > lights;
         Material wallMaterial;
+        std::vector<Material> materials;
         const int numchannels = 3;
 };
 

@@ -24,15 +24,16 @@ class SolverApp : public InvrenderApp {
             InverseRender ir(mmgr, hemicuberesolution, getProgressFunction(1,2));
 
             // Populate wall data
-            vector<SampleData> data;
-            vector<int> indices;
+            vector<SampleData> data, alldata;
+            vector<int> indices, all;
             for (int i = 0; i < mmgr->size(); i++) {
-                if (label < 0 || mmgr->getLabel(i, 1) == label)
+                all.push_back(i);
+                if (label < 0 || mmgr->getLabel(i, MeshManager::TYPE_CHANNEL) == label)
                     indices.push_back(i);
             }
 
             if (inputbinaryfilename.length()) {
-                ir.loadVariablesBinary(data, inputbinaryfilename);
+                ir.loadVariablesBinary(alldata, inputbinaryfilename);
                 if (inlightfilename.length()) {
                     ir.lights.clear();
                     ir.lights.resize(3);
@@ -44,7 +45,10 @@ class SolverApp : public InvrenderApp {
                     ir.lights.resize(3);
                     readLightsFromFile(inlightfilename, ir.lights);
                 }
-                ir.computeSamples(data, indices, numsamples, discardthreshold, false, getProgressFunction(0,2));
+                ir.computeSamples(alldata, all, numsamples, discardthreshold, false, getProgressFunction(0,2));
+            }
+            for (int i = 0; i < indices.size(); i++) {
+                data.push_back(alldata[indices[i]]);
             }
 
             // Optimization
@@ -67,7 +71,12 @@ class SolverApp : public InvrenderApp {
                     ir.setLossFunction(LOSS_HUBER);
                     ir.setLossFunctionScale(scale);
                 }
-                ir.solve(data, reglambda);
+                vector<SampleData> labelleddata;
+                for (int i = 0; i < mmgr->size(); i++) {
+                    if (label < 0 || mmgr->getLabel(i, MeshManager::TYPE_CHANNEL) > 0)
+                        labelleddata.push_back(alldata[i]);
+                }
+                ir.solve(labelleddata, reglambda);
             }
 
             // Output optimization data and results
@@ -75,13 +84,16 @@ class SolverApp : public InvrenderApp {
                 ir.writeVariablesMatlab(data, matlabfilename);
             }
             if (outputbinaryfilename.length()) {
-                ir.writeVariablesBinary(data, outputbinaryfilename);
+                ir.writeVariablesBinary(alldata, outputbinaryfilename);
             }
             if (solveTexture) return 0;
             if (outlightfilename.length()) {
                 writeLightsToFile(outlightfilename, ir.lights);
             }
-            cout << "data:WallMaterial " << ir.wallMaterial.r << " " << ir.wallMaterial.g << " " << ir.wallMaterial.b << endl;
+            for (int i = 0; i < ir.materials.size(); i++) {
+                cout << "data:Material " << i << " ";
+                cout << ir.materials[i].r << " " << ir.materials[i].g << " " << ir.materials[i].b << endl;
+            }
             for (int ch = 0; ch < 3; ch++) {
                 for (int i = 0; i < ir.lights[ch].size(); i++) {
                     cout << "data:Light " << i << " " << ch << " ";
@@ -105,14 +117,14 @@ class SolverApp : public InvrenderApp {
                         Material res(0,0,0);
                         for (int ch = 0; ch < 3; ch++) {
                             for (int j = 0; j < ir.lights[ch].size(); j++) {
-                                res(ch) += ir.lights[ch][j]->lightContribution(data[wk].lightamount[j]);
+                                res(ch) += ir.lights[ch][j]->lightContribution(alldata[i].lightamount[j]);
                             }
                         }
-                        double frac = (1-data[wk].fractionDirect)/(1-data[wk].fractionDirect-data[wk].fractionUnknown);
-                        res += data[wk].netIncoming*frac;
+                        double frac = (1-alldata[i].fractionDirect)/(1-alldata[i].fractionDirect-alldata[i].fractionUnknown);
+                        res += alldata[i].netIncoming*frac;
                         res = res*ir.wallMaterial;
                         colors.push_back(res);
-                        Material errmat = res-data[wk].radiosity;
+                        Material errmat = res-alldata[i].radiosity;
                         errmat.r = abs(errmat.r);
                         errmat.g = abs(errmat.g);
                         errmat.b = abs(errmat.b);
@@ -130,7 +142,7 @@ class SolverApp : public InvrenderApp {
                 }
                 if (dorerender) mmgr->writePlyMesh(rerenderedplyfilename, colors, meshcolorscale, gamma);
                 if (doerror) mmgr->writePlyMesh(errorplyfilename, errors, .5);
-                cout << "Mean error: " << meanerr/(3*data.size()) << "; " << "max error: " << maxerr << endl;
+                cout << "Mean error: " << meanerr/(3*indices.size()) << "; " << "max error: " << maxerr << endl;
             }
             if (dointrinsic) {
                 vector<Material> colors;
@@ -139,13 +151,13 @@ class SolverApp : public InvrenderApp {
                     if (indices[wk] == i) {
                         for (int ch = 0; ch < 3; ch++) {
                             for (int j = 0; j < ir.lights[ch].size(); j++) {
-                                data[i].netIncoming(ch) += ir.lights[ch][j]->lightContribution(data[i].lightamount[j]);
+                                alldata[i].netIncoming(ch) += ir.lights[ch][j]->lightContribution(alldata[i].lightamount[j]);
                             }
                         }
-                        data[i].netIncoming *= (1-data[i].fractionDirect)/(1-data[i].fractionDirect-data[i].fractionUnknown);
-                        float r = data[i].radiosity.r/data[i].netIncoming.r;
-                        float g = data[i].radiosity.g/data[i].netIncoming.g;
-                        float b = data[i].radiosity.b/data[i].netIncoming.b;
+                        alldata[i].netIncoming *= (1-alldata[i].fractionDirect)/(1-alldata[i].fractionDirect-alldata[i].fractionUnknown);
+                        float r = alldata[i].radiosity.r/alldata[i].netIncoming.r;
+                        float g = alldata[i].radiosity.g/alldata[i].netIncoming.g;
+                        float b = alldata[i].radiosity.b/alldata[i].netIncoming.b;
                         colors.push_back(Material(r,g,b));
                     } else {
                         colors.push_back(Material(0,0,0));
