@@ -195,6 +195,8 @@ public:
 
     void computeWallFindingHistogram(double resolution);
 
+    void addLine(Eigen::Vector3d p1, Eigen::Vector3d p2) { lines.push_back(p1); lines.push_back(p2); }
+
     int interactionmode;
     bool selectcomponent;
     enum {
@@ -223,6 +225,8 @@ protected:
     int selectedCamera;
 
     int vertexselectmode, vertexbrushsize;
+
+    std::vector<Eigen::Vector3d> lines;
 
     int* grid;
     int gw, gh, gmax;
@@ -295,6 +299,10 @@ public:
     void setInteractionMode(int mode) {
         v->setInteractionMode(mode);
     }
+    void addLine(Eigen::Vector3d p1, Eigen::Vector3d p2) {
+        v->addLine(p1, p2);
+    }
+
     void selectNextComponent() {
         v->selectcomponent = true;
     }

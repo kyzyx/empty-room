@@ -1146,6 +1146,7 @@
     <addaction name="separator"/>
     <addaction name="menuSave_Generated_Images"/>
     <addaction name="actionSave_Light_Locations"/>
+    <addaction name="actionLoad_Light_Locations"/>
    </widget>
    <widget class="QMenu" name="menuSelect">
     <property name="title">
@@ -1538,6 +1539,11 @@
   <action name="actionSave_Light_Locations">
    <property name="text">
     <string>Save Light Locations</string>
+   </property>
+  </action>
+  <action name="actionLoad_Light_Locations">
+   <property name="text">
+    <string>Load Light Locations</string>
    </property>
   </action>
  </widget>

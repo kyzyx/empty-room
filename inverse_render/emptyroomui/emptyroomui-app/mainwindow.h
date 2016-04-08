@@ -126,6 +126,8 @@ private slots:
     void on_actionCommit_Selected_Vertices_as_Light_triggered();
     void on_actionCommit_Selected_Vertices_as_Line_Light_triggered();
 
+    void on_actionLoad_Light_Locations_triggered();
+
 private:
     Ui::MainWindow *ui;
     ImageManager* imgr;

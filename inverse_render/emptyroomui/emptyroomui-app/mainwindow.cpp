@@ -1234,6 +1234,25 @@ void MainWindow::on_actionSave_Light_Locations_triggered()
     }
 }
 
+
+void MainWindow::on_actionLoad_Light_Locations_triggered()
+{
+    QString lwd = settings->value("lastworkingdirectory", "").toString();
+    QString filename = QFileDialog::getOpenFileName(this, "Save Lights", lwd, "Text files (*.txt)");
+    if (!filename.isEmpty()) {
+        std::vector<std::vector<Light*> > ll;
+        readLightsFromFile(filename.toStdString(), ll);
+        lights.resize(ll[0].size());
+        for (int i = 0; i < ll[0].size(); i++) {
+            if (ll[0][i] && ll[0][i]->typeId() == (LIGHTTYPE_LINE | LIGHTTYPE_ENVMAP)) {
+                LineLight* l = (LineLight*) ll[0][i];
+                lights[i] = l;
+                ui->meshWidget->addLine(l->getPosition(0), l->getPosition(1));
+            }
+        }
+    }
+}
+
 // -----------------
 // Interaction Modes
 // -----------------
@@ -1346,6 +1365,10 @@ void MainWindow::on_actionSave_Selected_Vertices_triggered()
         ui->meshWidget->renderManager()->updateMeshAuxiliaryData();
         if (lbl == LABEL_WALL) {
             wallindices = selected;
+        } else if (lbl == LABEL_CEILING) {
+            ceilingindices = selected;
+        } else if (lbl == LABEL_FLOOR) {
+            floorindices = selected;
         }
     }
 }

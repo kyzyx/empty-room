@@ -334,6 +334,15 @@ void ERUIGLWidget::draw()
         renderHistogram();
         glDisable(GL_LIGHTING);
     }
+    if (true/*renderoptions.shouldRenderLights()*/) {
+        glDisable(GL_LIGHTING);
+        glBegin(GL_LINES);
+        glColor4f(1,1,0,0.5);
+        for (size_t i = 0; i < lines.size(); ++i) {
+            glVertex3f(GLEXPAND(lines[i]));
+        }
+        glEnd();
+    }
     rendermanager.saveMatricesForSelection();
 }
 
