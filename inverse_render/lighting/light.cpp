@@ -110,7 +110,7 @@ void LineLight::setPerpendicularVector(Vector3d perpendicular) {
 
 void LineLight::writeToStream(std::ostream& out, bool binary) {
     if (binary) {
-        char sym = symmetric?0:1;
+        char sym = symmetric?1:0;
         out.write(&sym, sizeof(char));
         for (int j = 0; j < 2; j++) {
             for (int i = 0; i < 3; i++) {
@@ -119,7 +119,7 @@ void LineLight::writeToStream(std::ostream& out, bool binary) {
             }
         }
     } else {
-        out << (symmetric?0:1) << " ";
+        out << (symmetric?1:0) << " ";
         for (int j = 0; j < 2; j++) {
             for (int i = 0; i < 3; i++) {
                 out << p[j][i] << " ";
@@ -127,7 +127,15 @@ void LineLight::writeToStream(std::ostream& out, bool binary) {
         }
         out << endl;
     }
-    Light::writeToStream(out, binary);
+    if (symmetric) {
+        for (int i = 0; i < v.size(); i++) {
+            int idx = i>=v.size()/2?(v.size()-1-i):i;
+            if (binary) out.write((char*) &v[idx], sizeof(double));
+            else out << v[idx] << " ";
+        }
+    } else {
+        Light::writeToStream(out, binary);
+    }
 }
 void LineLight::readFromStream(std::istream& in, bool binary) {
     if (binary) {
