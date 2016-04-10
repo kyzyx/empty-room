@@ -15,10 +15,13 @@ void addCeres(const Light* light, ceres::Problem* problem, double* lightarr, int
         for (int i = 0; i < 3; i++) {
             addCeres(rgbl->getLight(i), problem, lightarr, n, idx + i*np);
         }
-    } else if (light->typeId() & LIGHTTYPE_YIQ) {
-        YIQLight* yiql = (YIQLight*) light;
-        addCeres(yiql->getLight(), problem, lightarr, n, idx+2);
-        problem->AddResidualBlock(CreateYIQRGB(n, yiql->getLight()->numParameters(), idx, 1e10), NULL, lightarr);
+    } else if (light->typeId() & LIGHTTYPE_IRGB) {
+        IRGBLight* irgbl = (IRGBLight*) light;
+        for (int i = 0; i < 3; i++) {
+            problem->SetParameterLowerBound(lightarr, idx+i, 0);
+        }
+        problem->AddResidualBlock(CreateIRGBTerm(idx, n, 1e8), NULL, lightarr);
+        addCeres(irgbl->getLight(), problem, lightarr, n, idx+3);
     } else {
         switch (light->typeId()) {
             case LIGHTTYPE_SH:

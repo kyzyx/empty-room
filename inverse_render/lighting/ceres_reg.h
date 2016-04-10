@@ -155,33 +155,31 @@ ceres::CostFunction* CreateSHRegularizer(int numlights, int i, double lambda) {
 }
 
 // ----------------------------------------------------------------------------
-struct YIQRGBFunctor {
-    YIQRGBFunctor(int numlights, int startidx, double lambda)
-        : n(numlights), s(startidx), l(lambda) {}
+
+struct IRGBFunctor {
+    IRGBFunctor(int startidx, double lambda)
+        : idx(startidx), l(std::sqrt(lambda)) { }
+
     template <typename T>
     bool operator() (
             T const* const* params,
             T* residual) const
     {
-        for (int i = 0; i < 3; i++) residual[i] = T(0);
-        for (int i = 0; i < n; i++) {
-            T a = params[0][s+i+2] + T(0.956)*params[0][s] + T(0.621)*params[0][s+1];
-            if (a < T(0)) residual[0] += a*T(l);
-            T b = params[0][s+i+2] + T(-0.272)*params[0][s] + T(-0.647)*params[0][s+1];
-            if (b < T(0)) residual[1] += a*T(l);
-            T c = params[0][s+i+2] + T(-1.107)*params[0][s] + T(1.705)*params[0][s+1];
-            if (c < T(0)) residual[2] += a*T(l);
-        }
+        residual[0] = T(0);
+        for (int i = 0; i < 3; i++) residual[0] += params[0][idx+i]*params[0][idx+i];
+        residual[0] = T(l)*(sqrt(residual[0]) - T(1));
         return true;
     }
-    int n, s;
+
+    int idx;
     double l;
 };
-ceres::CostFunction* CreateYIQRGB(int numlights, int numparams, int i, double lambda) {
-    ceres::DynamicAutoDiffCostFunction<YIQRGBFunctor>* ret =
-        new ceres::DynamicAutoDiffCostFunction<YIQRGBFunctor>(
-                new YIQRGBFunctor(numparams, i, lambda));
+
+ceres::CostFunction* CreateIRGBTerm(int i, int numlights, double lambda) {
+    ceres::DynamicAutoDiffCostFunction<IRGBFunctor>* ret =
+        new ceres::DynamicAutoDiffCostFunction<IRGBFunctor>(
+                new IRGBFunctor(i, lambda));
     ret->AddParameterBlock(numlights);
-    ret->SetNumResiduals(3);
+    ret->SetNumResiduals(1);
     return ret;
 }

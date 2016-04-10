@@ -80,8 +80,8 @@ class SolverApp : public InvrenderApp {
             for (int i = 0; i < ir.lightintensities.size(); i++) {
                 if (ir.lightintensities[i]->typeId() & LIGHTTYPE_RGB) {
                     rgbl.push_back(ir.lightintensities[i]);
-                } else if (ir.lightintensities[i]->typeId() & LIGHTTYPE_YIQ) {
-                    rgbl.push_back(((YIQLight*) ir.lightintensities[i])->toRGBLight());
+                } else if (ir.lightintensities[i]->typeId() & LIGHTTYPE_IRGB) {
+                    rgbl.push_back(((IRGBLight*) ir.lightintensities[i])->toRGBLight());
                 }
             }
 

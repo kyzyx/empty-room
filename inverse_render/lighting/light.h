@@ -14,7 +14,7 @@ enum LightType {
     LIGHTTYPE_POINT=16,
     LIGHTTYPE_LINE=32,
     LIGHTTYPE_RGB=64,
-    LIGHTTYPE_YIQ=128,
+    LIGHTTYPE_IRGB=128,
 };
 
 class Light {
@@ -63,20 +63,20 @@ class RGBLight : public Light {
         Light* l[3];
 };
 
-class YIQLight : public Light {
+class IRGBLight : public Light {
     public:
-        YIQLight(Light* light) : l(light) {
-            v.resize(2,0);
+        IRGBLight(Light* light) : l(light) {
+            v.resize(3,0);
         }
-        virtual int numParameters() const { return l->numParameters()+2; }
-        virtual int typeId() const { return l->typeId() | LIGHTTYPE_YIQ; }
+        virtual int numParameters() const { return l->numParameters()+3; }
+        virtual int typeId() const { return l->typeId() | LIGHTTYPE_IRGB; }
         virtual double& coef(int n) {
-            if (n < 2) return v[n];
-            else return l->coef(n-2);
+            if (n < 3) return v[n];
+            else return l->coef(n-3);
         }
         virtual double getCoef(int n) const {
-            if (n < 2) return v[n];
-            else return l->coef(n-2);
+            if (n < 3) return v[n];
+            else return l->coef(n-3);
         }
 
         Light* getLight() { return l; }
@@ -262,34 +262,18 @@ void lightContribution(Light* l, T* ret, const Light* const arr, T const* v=NULL
         for (int ch = 0; ch < 3; ch++) {
             lightContribution(rgbl->getLight(ch), ret+ch, arr, v?v+np*ch:NULL);
         }
-    } else if (l->typeId() & LIGHTTYPE_YIQ) {
-        static const double yiq2rgb[9] = {
-            1,  0.956,  0.621,
-            1, -0.272, -0.647,
-            1, -1.107,  1.705
-        };
-        YIQLight* yiql = static_cast<YIQLight*>(l);
-        for (int i = 2; i < yiql->numParameters(); i++) {
-            T yiq[3];
-            T rgb[3];
-            yiq[0] = v?v[i-2]:T(yiql->getCoef(i));
-            yiq[1] = v?v[0]:T(yiql->getCoef(0));
-            yiq[2] = v?v[1]:T(yiql->getCoef(1));
-            for (int j = 0; j < 3; j++) {
-                rgb[j] = T(0);
-                for (int k = 0; k < 3; k++) {
-                    rgb[j] += T(yiq2rgb[3*j+k])*yiq[k];
-                }
-            }
+    } else if (l->typeId() & LIGHTTYPE_IRGB) {
+        for (int i = 3; i < l->numParameters(); i++) {
             for (int ch = 0; ch < 3; ch++) {
-                ret[ch] += rgb[ch]*arr->getCoef(i-2);
+                if (v) ret[ch] += v[i]*v[ch]*T(arr->getCoef(i-3));
+                else   ret[ch] += T(l->getCoef(ch)*l->getCoef(i)*arr->getCoef(i-3));
             }
         }
     } else {
         ret[0] = T(0);
         for (int i = 0; i < l->numParameters(); i++) {
-            if (v) ret[0] += v[i]*arr->getCoef(i);
-            else   ret[0] += T(l->getCoef(i))*arr->getCoef(i);
+            if (v) ret[0] += v[i]*T(arr->getCoef(i));
+            else   ret[0] += T(l->getCoef(i)*arr->getCoef(i));
         }
     }
 }

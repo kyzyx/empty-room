@@ -231,44 +231,37 @@ RGBLight::RGBLight(Light* light) {
         l[i] = nl;
     }
 }
-void YIQLight::writeToStream(std::ostream& out, bool binary) {
+void IRGBLight::writeToStream(std::ostream& out, bool binary) {
     if (binary) {
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < 3; i++) {
             out.write((char*) &v[i], sizeof(double));
         }
     } else {
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < 3; i++) {
             out << v[i] << " ";
         }
     }
     l->writeToStream(out, binary);
 }
-void YIQLight::readFromStream(std::istream& in, bool binary) {
-    v.resize(2, 0);
+void IRGBLight::readFromStream(std::istream& in, bool binary) {
+    v.resize(3, 0);
     if (binary) {
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < 3; i++) {
             in.read((char*) &v[i], sizeof(double));
         }
     } else {
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < 3; i++) {
             in >> v[i];
         }
     }
     l->readFromStream(in, binary);
 }
 
-RGBLight* YIQLight::toRGBLight() {
+RGBLight* IRGBLight::toRGBLight() {
     RGBLight* ret = new RGBLight(l);
-    Eigen::Matrix3d yiq2rgb;
-    yiq2rgb <<
-        1,  0.956,  0.621,
-        1, -0.272, -0.647,
-        1, -1.107,  1.705;
     for (int i = 0; i < l->numParameters(); i++) {
-        Eigen::Vector3d rgb(l->getCoef(i), getCoef(0), getCoef(1));
-        rgb = yiq2rgb*rgb;
         for (int j = 0; j < 3; j++) {
-            ret->getLight(j)->coef(i) = rgb[j];
+            ret->getLight(j)->coef(i) = v[j]*l->getCoef(i);
         }
     }
     return ret;
@@ -278,9 +271,9 @@ Light* NewLightFromLightType(int type) {
     if (type & LIGHTTYPE_RGB) {
         Light* l = NewLightFromLightType(type - LIGHTTYPE_RGB);
         return new RGBLight(l);
-    } else if (type & LIGHTTYPE_YIQ) {
-        Light* l = NewLightFromLightType(type - LIGHTTYPE_YIQ);
-        return new YIQLight(l);
+    } else if (type & LIGHTTYPE_IRGB) {
+        Light* l = NewLightFromLightType(type - LIGHTTYPE_IRGB);
+        return new IRGBLight(l);
     } else {
         switch (type) {
             case LIGHTTYPE_SH: return new SHLight;

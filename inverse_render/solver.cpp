@@ -20,8 +20,8 @@ void InverseRender::reloadLights() {
     for (int i = 0; i < lightintensities.size(); i++) {
         if (lightintensities[i]->typeId() & LIGHTTYPE_RGB) {
             lights[i] = ((RGBLight*)lightintensities[i])->getLight(0);
-        } else if (lightintensities[i]->typeId() & LIGHTTYPE_YIQ) {
-            lights[i] = ((YIQLight*)lightintensities[i])->getLight();
+        } else if (lightintensities[i]->typeId() & LIGHTTYPE_IRGB) {
+            lights[i] = ((IRGBLight*)lightintensities[i])->getLight();
         }
     }
 }
@@ -39,7 +39,7 @@ void InverseRender::setupLightParameters(MeshManager* m) {
         Light* l = NewLightFromLightType(t);
         lights.push_back(l);
         if ((l->typeId() & LIGHTTYPE_LINE) || (l->typeId() & LIGHTTYPE_POINT)) {
-            lightintensities.push_back(new YIQLight(l));
+            lightintensities.push_back(new IRGBLight(l));
         } else {
             lightintensities.push_back(new RGBLight(l));
         }
@@ -106,11 +106,6 @@ void InverseRender::writeVariablesBinary(vector<SampleData>& data, string filena
     out.write((char*) &sz, 4);
     sz = lightintensities.size();
     out.write((char*) &sz, 4);
-    for (int i = 0; i < lightintensities.size(); i++) {
-        int t = lightintensities[i]->typeId();
-        out.write((char*) &t, sizeof(int));
-        lightintensities[i]->writeToStream(out, true);
-    }
     for (int i = 0; i < data.size(); ++i) {
         out.write((char*)&(data[i].fractionUnknown), sizeof(float));
         out.write((char*)&(data[i].vertexid), sizeof(int));
@@ -124,6 +119,11 @@ void InverseRender::writeVariablesBinary(vector<SampleData>& data, string filena
             data[i].lightamount[j]->writeToStream(out, true);
         }
     }
+    for (int i = 0; i < lightintensities.size(); i++) {
+        int t = lightintensities[i]->typeId();
+        out.write((char*) &t, sizeof(int));
+        lightintensities[i]->writeToStream(out, true);
+    }
     for (int j = 0; j < 3; j++) {
         out.write((char*)&(wallMaterial(j)), sizeof(float));
     }
@@ -135,24 +135,6 @@ void InverseRender::loadVariablesBinary(vector<SampleData>& data, string filenam
     in.read((char*) &sz, 4);
     data.resize(sz);
     in.read((char*) &sz, 4);
-    for (int i = 0; i < sz; i++) {
-        int t;
-        in.read((char*) &t, sizeof(int));
-        Light* l;
-        if (t & LIGHTTYPE_RGB) {
-            t -= LIGHTTYPE_RGB;
-            l = NewLightFromLightType(t);
-            lights.push_back(l);
-            lightintensities.push_back(new RGBLight(l));
-            lightintensities[i]->readFromStream(in, true);
-        } else if (t & LIGHTTYPE_YIQ) {
-            t -= LIGHTTYPE_YIQ;
-            l = NewLightFromLightType(t);
-            lights.push_back(l);
-            lightintensities.push_back(new YIQLight(l));
-            lightintensities[i]->readFromStream(in, true);
-        }
-    }
     for (int i = 0; i < data.size(); ++i) {
         data[i].lightamount.resize(0);
         in.read((char*)&(data[i].fractionUnknown), sizeof(float));
@@ -167,6 +149,24 @@ void InverseRender::loadVariablesBinary(vector<SampleData>& data, string filenam
             int t = lights[j]->typeId();
             data[i].lightamount.push_back(NewLightFromLightType(t));
             data[i].lightamount[j]->readFromStream(in, true);
+        }
+    }
+    for (int i = 0; i < sz; i++) {
+        int t;
+        in.read((char*) &t, sizeof(int));
+        Light* l;
+        if (t & LIGHTTYPE_RGB) {
+            t -= LIGHTTYPE_RGB;
+            l = NewLightFromLightType(t);
+            lights.push_back(l);
+            lightintensities.push_back(new RGBLight(l));
+            lightintensities[i]->readFromStream(in, true);
+        } else if (t & LIGHTTYPE_IRGB) {
+            t -= LIGHTTYPE_IRGB;
+            l = NewLightFromLightType(t);
+            lights.push_back(l);
+            lightintensities.push_back(new IRGBLight(l));
+            lightintensities[i]->readFromStream(in, true);
         }
     }
 }
