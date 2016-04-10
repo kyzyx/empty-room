@@ -29,9 +29,8 @@ class InverseRender {
         ~InverseRender() {
             if (hr) delete hr;
             if (rm) delete rm;
-            for (int ch = 0; ch < numchannels; ch++) {
-                for (auto it : lights[ch]) delete it;
-            }
+            for (auto it : lights) delete it;
+            for (auto it : lightintensities) delete it;
         }
         void solve(std::vector<SampleData>& data, double reglambda=0);
         void solveTexture(
@@ -48,9 +47,10 @@ class InverseRender {
                 bool saveImages=true,
                 boost::function<void(int)> callback=NULL);
         SampleData computeSample(int idx, float* color=NULL, float* aux=NULL) {
-            return hr->computeSample(idx, lights[0], color, aux);
+            return hr->computeSample(idx, lights, color, aux);
         }
 
+        void reloadLights();
         void writeVariablesMatlab(std::vector<SampleData>& data, std::string filename);
         void writeVariablesBinary(std::vector<SampleData>& data, std::string filename);
         void loadVariablesBinary(std::vector<SampleData>& data, std::string filename);
@@ -62,8 +62,7 @@ class InverseRender {
     private:
         // Texture recovery helpers
         Material computeAverageMaterial(
-                std::vector<SampleData>& data,
-                std::vector<std::vector<Light*> >& lightintensies);
+                std::vector<SampleData>& data);
         double generateBinaryMask(const CameraParams* cam, const char* labelimage, std::vector<bool>& mask, int label);
         void setupLightParameters(MeshManager* m);
 
@@ -77,7 +76,8 @@ class InverseRender {
     public:
         std::vector<float*> images;
         MeshManager* mesh;
-        std::vector<std::vector<Light*> > lights;
+        std::vector<Light*> lights;
+        std::vector<Light*> lightintensities;
         Material wallMaterial;
         std::vector<Material> materials;
         const int numchannels = 3;

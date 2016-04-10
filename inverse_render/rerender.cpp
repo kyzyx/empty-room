@@ -164,12 +164,12 @@ void outputRadianceFile(string filename, WallFinder& wf, MeshManager& m, Inverse
     // RADIANCE light parameters are in radiance; for diffuse surfaces the radiance L
     // is related to the radiosity J by
     // J = pi*L
-    for (int i = 0; i < ir.lights[0].size(); ++i) {
-        if (ir.lights[0][i]->typeId() != LIGHTTYPE_AREA) continue;
+    for (int i = 0; i < ir.lightintensities.size(); ++i) {
+        if (!(ir.lightintensities[i]->typeId() & LIGHTTYPE_AREA)) continue;
         out << "void light l" << (i+1) << endl << 0 << endl << 0 << endl << 3 << " ";
-        out << ir.lights[0][i]->coef(0)/M_PI << " "
-            << ir.lights[1][i]->coef(0)/M_PI << " "
-            << ir.lights[2][i]->coef(0)/M_PI << endl << endl;
+        out << ir.lightintensities[i]->coef(0)/M_PI << " "
+            << ir.lightintensities[i]->coef(1)/M_PI << " "
+            << ir.lightintensities[i]->coef(2)/M_PI << endl << endl;
         vector<int> indices;
         vector<R3Point> points;
         int id = i+1;
@@ -330,7 +330,7 @@ void outputPbrtFile(
         std::string filename,
         roommodel::RoomModel* room,
         MeshManager& mmgr,
-        vector<vector<Light*> >& lights,
+        vector<Light*>& lights,
         const CameraParams* cam) {
     ofstream out(filename);
 
@@ -433,22 +433,23 @@ void outputPbrtFile(
     }
 
     // Output light sources
-    for (int i = 0; i < lights[0].size(); ++i) {
-        if (lights[0][i]->typeId() == LIGHTTYPE_SH) {
+    for (int i = 0; i < lights.size(); ++i) {
+        // FIXME: Point/line light
+        if (lights[i]->typeId() & LIGHTTYPE_SH) {
             // Extract all SH coefficients
             // Write to exr file
             out << "AttributeBegin" << endl;
             out << "LightSource \"infinite\" \"string mapname\" [\"sh.exr\"]" << endl;
             out << "AttributeEnd" << endl;
             continue;
-        } else if (lights[0][i]->typeId() == LIGHTTYPE_ENVMAP) {
+        } else if (lights[i]->typeId() & LIGHTTYPE_ENVMAP) {
             // Extract all cubemap coefficients
             // Write to exr file
             out << "AttributeBegin" << endl;
             out << "LightSource \"infinite\" \"string mapname\" [\"cubemap.exr\"]" << endl;
             out << "AttributeEnd" << endl;
             continue;
-        } else if (lights[0][i]->typeId() == LIGHTTYPE_AREA) {
+        } else if (lights[i]->typeId() & LIGHTTYPE_AREA) {
             vector<R3Point> pts;
             vector<int> indices;
             estimateLightShape(mmgr, i+1, pts, indices);
@@ -457,7 +458,7 @@ void outputPbrtFile(
                 if (pts.size() == 4) {
                     // Disk area light
                     out << "AreaLightSource \"diffuse\" \"rgb L\" [";
-                    for (int j = 0; j < 3; ++j) out << lights[j][i]->coef(0)/M_PI << " ";
+                    for (int j = 0; j < 3; ++j) out << lights[i]->coef(j)/M_PI << " ";
                     out << "]" << endl;
                     Matrix3d rot;
                     Vector3d axes[3];
@@ -477,7 +478,7 @@ void outputPbrtFile(
                     // Point light
                     double radius = 0.02;
                     out << "AreaLightSource \"diffuse\" \"rgb L\" [";
-                    for (int j = 0; j < 3; ++j) out << lights[j][i]->coef(0)/(M_PI*radius*radius) << " ";
+                    for (int j = 0; j < 3; ++j) out << lights[i]->coef(j)/(M_PI*radius*radius) << " ";
                     out << "]" << endl;
                     out << "Transform [1 0 0 " << pts[0][0] <<
                         " 0 1 0 " << pts[0][1] <<
@@ -487,7 +488,7 @@ void outputPbrtFile(
                 }
             } else {
                 out << "AreaLightSource \"diffuse\" \"rgb L\" [";
-                for (int j = 0; j < 3; ++j) out << lights[j][i]->coef(0)/M_PI << " ";
+                for (int j = 0; j < 3; ++j) out << lights[i]->coef(j)/M_PI << " ";
                 out << "]" << endl;
                 out << "Transform [1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1]" << endl;
                 for (int j = 0; j < pts.size(); ++j) {

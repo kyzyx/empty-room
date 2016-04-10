@@ -14,6 +14,6 @@ void outputPbrtFile(
         std::string filename,
         roommodel::RoomModel* room,
         MeshManager& m,
-        std::vector<std::vector<Light*> >& lights,
+        std::vector<Light*>& lights,
         const CameraParams* cam);
 #endif

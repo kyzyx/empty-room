@@ -7,14 +7,13 @@ using namespace std;
 
 void Light::writeToStream(std::ostream& out, bool binary) {
     if (binary) {
-        for (int i = 0; i < numParameters(); i++) {
+        for (int i = 0; i < v.size(); i++) {
             out.write((char*) &v[i], sizeof(double));
         }
     } else {
-        for (int i = 0; i < numParameters(); i++) {
+        for (int i = 0; i < v.size(); i++) {
             out << v[i] << " ";
         }
-        out << endl;
     }
 }
 void Light::readFromStream(std::istream& in, bool binary) {
@@ -28,26 +27,6 @@ void Light::readFromStream(std::istream& in, bool binary) {
             in >> v[i];
         }
     }
-}
-
-double Light::lightContribution(double* it) const {
-    double ret = 0;
-    for (auto vit = v.begin(); vit != v.end(); ++vit, ++it) {
-        ret += *vit * *it;
-    }
-    return ret;
-}
-
-double Light::lightContribution(vector<double>::const_iterator it) const {
-    double ret = 0;
-    for (auto vit = v.begin(); vit != v.end(); ++vit, ++it) {
-        ret += *vit * *it;
-    }
-    return ret;
-}
-
-double Light::lightContribution(Light* l) const {
-    return l->lightContribution(v.begin());
 }
 
 bool SHLight::addLightFF(
@@ -226,18 +205,87 @@ void LineLight::computeFromPoints(vector<Vector3d> pts) {
     setPosition(1, mean+xax*mincoefs[0]+yadj);
 }
 
+RGBLight::RGBLight(Light* light) {
+    l[0] = light;
+    for (int i = 1; i < 3; i++) {
+        Light* nl = NewLightFromLightType(light->typeId());
+        if (light->typeId() & LIGHTTYPE_POINT) {
+            PointLight* pl = (PointLight*) nl;
+            PointLight* ol = (PointLight*) light;
+            pl->setPosition(ol->getPosition(0), ol->getPosition(1), ol->getPosition(2));
+        } else if (light->typeId() & LIGHTTYPE_LINE) {
+            LineLight* ll = (LineLight*) nl;
+            LineLight* ol = (LineLight*) light;
+            ll->setPosition(0, ol->getPosition(0));
+            ll->setPosition(1, ol->getPosition(1));
+            ll->setSymmetric(ol->isSymmetric());
+        }
+        l[i] = nl;
+    }
+}
+void YIQLight::writeToStream(std::ostream& out, bool binary) {
+    if (binary) {
+        for (int i = 0; i < 2; i++) {
+            out.write((char*) &v[i], sizeof(double));
+        }
+    } else {
+        for (int i = 0; i < 2; i++) {
+            out << v[i] << " ";
+        }
+    }
+    l->writeToStream(out, binary);
+}
+void YIQLight::readFromStream(std::istream& in, bool binary) {
+    v.resize(2, 0);
+    if (binary) {
+        for (int i = 0; i < 2; i++) {
+            in.read((char*) &v[i], sizeof(double));
+        }
+    } else {
+        for (int i = 0; i < 2; i++) {
+            in >> v[i];
+        }
+    }
+    l->readFromStream(in, binary);
+}
+
+RGBLight* YIQLight::toRGBLight() {
+    RGBLight* ret = new RGBLight(l);
+    Eigen::Matrix3d yiq2rgb;
+    yiq2rgb <<
+        1,  0.956,  0.621,
+        1, -0.272, -0.647,
+        1, -1.107,  1.705;
+    for (int i = 0; i < l->numParameters(); i++) {
+        Eigen::Vector3d rgb(l->getCoef(i), getCoef(0), getCoef(1));
+        rgb = yiq2rgb*rgb;
+        for (int j = 0; j < 3; j++) {
+            ret->getLight(j)->coef(i) = rgb[j];
+        }
+    }
+    return ret;
+}
+
 Light* NewLightFromLightType(int type) {
-    switch (type) {
-        case LIGHTTYPE_SH: return new SHLight;
-        case LIGHTTYPE_ENVMAP: return new CubemapLight;
-        case LIGHTTYPE_AREA: return new AreaLight;
-        case (LIGHTTYPE_SH | LIGHTTYPE_POINT): return new PointLight(new SHLight);
-        case (LIGHTTYPE_ENVMAP | LIGHTTYPE_POINT): return new PointLight(new CubemapLight);
-        case LIGHTTYPE_LINE:
-        case (LIGHTTYPE_SH | LIGHTTYPE_LINE):
-        case (LIGHTTYPE_ENVMAP | LIGHTTYPE_LINE):
-               return new LineLight();
-        default: return new Light();
+    if (type & LIGHTTYPE_RGB) {
+        Light* l = NewLightFromLightType(type - LIGHTTYPE_RGB);
+        return new RGBLight(l);
+    } else if (type & LIGHTTYPE_YIQ) {
+        Light* l = NewLightFromLightType(type - LIGHTTYPE_YIQ);
+        return new YIQLight(l);
+    } else {
+        switch (type) {
+            case LIGHTTYPE_SH: return new SHLight;
+            case LIGHTTYPE_ENVMAP: return new CubemapLight;
+            case LIGHTTYPE_AREA: return new AreaLight;
+            case (LIGHTTYPE_SH | LIGHTTYPE_POINT): return new PointLight(new SHLight);
+            case (LIGHTTYPE_ENVMAP | LIGHTTYPE_POINT): return new PointLight(new CubemapLight);
+            case LIGHTTYPE_LINE:
+            case (LIGHTTYPE_SH | LIGHTTYPE_LINE):
+            case (LIGHTTYPE_ENVMAP | LIGHTTYPE_LINE):
+                                                       return new LineLight();
+            default: return new Light();
+        }
     }
 }
 
@@ -245,37 +293,32 @@ inline void writeint(ofstream& out, int v, bool binary) {
     if (binary) out.write((char*)&v, sizeof(int));
     else out << v << " ";
 }
-void writeLightsToFile(string filename, vector<vector<Light*> >& lights, bool binary) {
+void writeLightsToFile(string filename, vector<Light*>& lights, bool binary) {
     ofstream out(filename, binary?(ofstream::binary):(ofstream::out));
-    writeint(out, lights[0].size(), binary);
+    writeint(out, lights.size(), binary);
     if (!binary) out << endl;
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < lights[i].size(); j++) {
-            if (lights[i][j]) {
-                writeint(out, lights[i][j]->typeId(), binary);
-                lights[i][j]->writeToStream(out, binary);
-                if (!binary) out << endl;
-            } else {
-                writeint(out, -1, binary);
-            }
+    for (int i = 0; i < lights.size(); i++) {
+        if (lights[i]) {
+            writeint(out, lights[i]->typeId(), binary);
+            lights[i]->writeToStream(out, binary);
+            if (!binary) out << endl;
+        } else {
+            writeint(out, -1, binary);
         }
     }
 }
-void readLightsFromFile(string filename, vector<vector<Light*> >& lights, bool binary) {
+void readLightsFromFile(string filename, vector<Light*>& lights, bool binary) {
     ifstream in(filename, binary?(ifstream::binary):(ifstream::out));
     int nlights;
     if (binary) in.read((char*)&nlights, sizeof(int));
     else in >> nlights;
     lights.clear();
-    lights.resize(3);
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < nlights; j++) {
-            int lighttype;
-            if (binary) in.read((char*)&lighttype, sizeof(int));
-            else in >> lighttype;
-            Light* l = NewLightFromLightType(lighttype);
-            if (l) l->readFromStream(in, binary);
-            lights[i].push_back(l);
-        }
+    for (int i = 0; i < nlights; i++) {
+        int lighttype;
+        if (binary) in.read((char*)&lighttype, sizeof(int));
+        else in >> lighttype;
+        Light* l = NewLightFromLightType(lighttype);
+        if (l) l->readFromStream(in, binary);
+        lights.push_back(l);
     }
 }

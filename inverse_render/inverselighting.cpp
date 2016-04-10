@@ -37,66 +37,10 @@ void lightsFromLinearArray(vector<Light*>& d, double* a) {
 //      err *= (1-U)
 // 5. Use relative error (with some tolerance to prevent exploding errors)
 //      err /= (B + MINRELATIVEERROR)
-struct IncidentFunctor {
-    IncidentFunctor(SampleData& data, int mid, int channel)
-        : d(data), ch(channel), mat(mid) { }
-
-    template <typename T>
-    bool operator() (
-            const T* const materials,
-            T* residual) const
-    {
-        T computed = materials[mat]*T(d.netIncoming[ch]/(1-d.fractionUnknown));
-        residual[0] = computed - T(d.radiosity[ch]);
-        //residual[0] *= T(1-d.fractionUnknown)/T(d.radiosity[ch] + MINRELATIVEERROR);
-        //residual[0] /= T(d.radiosity[ch] + MINRELATIVEERROR);
-        return true;
-    }
-
-    int mat;
-    SampleData d;
-    int ch;
-};
-
-struct LightFunctor {
-    LightFunctor(SampleData& data, int mid, int numlights, int channel)
-        : d(data), nlights(numlights), ch(channel), mat(mid)
-    {
-        lightamount = new double[nlights];
-        linearArrayFromLights(lightamount, d.lightamount);
-    }
-
-    template <typename T>
-    bool operator() (
-            const T* const materials,
-            const T* const lights,
-            T* residual) const
-    {
-        T computed = T(0);
-        for (int j = 0; j < nlights; j++) {
-            computed += lights[j]*T(lightamount[j]);
-        }
-        computed += T(d.netIncoming[ch])*T((1-d.fractionDirect)/(1-d.fractionUnknown-d.fractionDirect));
-        computed *= materials[mat];
-        residual[0] = computed - T(d.radiosity[ch]);
-        //residual[0] *= T(1-d.fractionUnknown)/T(d.radiosity[ch] + MINRELATIVEERROR);
-        //residual[0] /= T(d.radiosity[ch] + MINRELATIVEERROR);
-        return true;
-    }
-
-    int mat;
-    SampleData d;
-    double* lightamount;
-    int nlights;
-    int ch;
-};
-
 struct DynLightFunctor {
-    DynLightFunctor(SampleData& data, int mid, int numlights, int channel)
-        : d(data), nlights(numlights), ch(channel), mat(mid)
+    DynLightFunctor(SampleData& data, vector<Light*>& lights, int mid)
+        : d(data), mat(mid), lightintensities(lights)
     {
-        lightamount = new double[nlights];
-        linearArrayFromLights(lightamount, d.lightamount);
     }
 
     template <typename T>
@@ -104,32 +48,33 @@ struct DynLightFunctor {
             T const* const* params,
             T* residual) const
     {
-        T computed = T(0);
-        for (int j = 0; j < nlights; j++) {
-            computed += params[1][j]*T(lightamount[j]);
+        for (int ch = 0; ch < 3; ch++) {
+            residual[ch] = T(d.netIncoming[ch])*T((1-d.fractionDirect)/(1-d.fractionUnknown-d.fractionDirect));
         }
-        computed += T(d.netIncoming[ch])*T((1-d.fractionDirect)/(1-d.fractionUnknown-d.fractionDirect));
-        computed *= params[0][mat];
-        residual[0] = computed - T(d.radiosity[ch]);
-        //residual[0] *= T(1-d.fractionUnknown)/T(d.radiosity[ch] + MINRELATIVEERROR);
-        //residual[0] /= T(d.radiosity[ch] + MINRELATIVEERROR);
+        for (int i = 0; i < d.lightamount.size(); i++) {
+            lightContribution(lightintensities[i], residual, d.lightamount[i], params[1]);
+        }
+        for (int ch = 0; ch < 3; ch++) {
+            residual[ch] *= params[0][mat*3+ch];
+            residual[ch] -= T(d.radiosity[ch]);
+            //residual[ch] *= T(1-d.fractionUnknown)/T(d.radiosity[ch] + MINRELATIVEERROR);
+            //residual[ch] /= T(d.radiosity[ch] + MINRELATIVEERROR);
+        }
         return true;
     }
 
     int mat;
-    SampleData d;
-    int nlights;
-    int ch;
-    double* lightamount;
+    const SampleData& d;
+    vector<Light*>& lightintensities;
 };
 
-CostFunction* Create(SampleData& sd, int mid, int nummats, int numlights, int ch) {
+CostFunction* Create(SampleData& sd, int mid, int nummats, int numlights, vector<Light*>& lightintensities) {
     ceres::DynamicAutoDiffCostFunction<DynLightFunctor>* ret =
         new ceres::DynamicAutoDiffCostFunction<DynLightFunctor>(
-                new DynLightFunctor(sd, mid, numlights, ch));
+                new DynLightFunctor(sd, lightintensities, mid));
     ret->AddParameterBlock(nummats);
     ret->AddParameterBlock(numlights);
-    ret->SetNumResiduals(1);
+    ret->SetNumResiduals(3);
     return ret;
 }
 
@@ -142,47 +87,48 @@ void InverseRender::solve(vector<SampleData>& data, double reglambda) {
         if (materialid > 0) nummats = std::max(nummats, materialid);
     }
     materials.resize(nummats);
+    nummats *= 3;
     int numlights = 0;
-    for (int i = 0; i < lights[0].size(); i++) {
-        numlights += lights[0][i]->numParameters();
+    for (int i = 0; i < lightintensities.size(); i++) {
+        numlights += lightintensities[i]->numParameters();
     }
     double* ls = new double[numlights];
-    linearArrayFromLights(ls, lights[0]);
+    linearArrayFromLights(ls, lightintensities);
     double* mat = new double[nummats];
     for (int i = 0; i < nummats; i++) mat[i] = 0.6;
-    for (int z = 0; z < 3; z++) {
-        ceres::Problem problem;
-        for (int i = 0; i < data.size(); i++) {
-            //if (data[i].netIncoming[z] > data[i].radiosity[z]) continue;
-            int materialid = mesh->getLabel(data[i].vertexid, MeshManager::TYPE_CHANNEL);
-            if (materialid > 0) materialid--;
-            else continue;
-            ceres::LossFunction* fn = NULL;
-            if (lossfn == LOSS_CAUCHY) {
-                fn = new ceres::CauchyLoss(scale);
-            } else if (lossfn == LOSS_HUBER) {
-                fn = new ceres::HuberLoss(scale);
-            }
-            problem.AddResidualBlock(Create(data[i], materialid, nummats, numlights, z), fn, mat, ls);
+    ceres::Problem problem;
+    for (int i = 0; i < data.size(); i++) {
+        //if (data[i].netIncoming[z] > data[i].radiosity[z]) continue;
+        int materialid = mesh->getLabel(data[i].vertexid, MeshManager::TYPE_CHANNEL);
+        if (materialid > 0) materialid--;
+        else continue;
+        ceres::LossFunction* fn = NULL;
+        if (lossfn == LOSS_CAUCHY) {
+            fn = new ceres::CauchyLoss(scale);
+        } else if (lossfn == LOSS_HUBER) {
+            fn = new ceres::HuberLoss(scale);
         }
-        for (int i = 0; i < nummats; i++) {
-            problem.SetParameterLowerBound(mat, i, 0);
-            problem.SetParameterUpperBound(mat, i, 1);
-        }
-        int curridx = 0;
-        for (int i = 0; i < lights[z].size(); i++) {
-            addCeres(lights[z][i], &problem, ls, numlights, curridx);
-            curridx += lights[z][i]->numParameters();
-        }
-        ceres::Solver::Options options;
-        options.minimizer_progress_to_stdout = true;
-        ceres::Solver::Summary summary;
-        ceres::Solve(options, &problem, &summary);
-        std::cout << summary.FullReport() << "\n";
-        wallMaterial(z) = mat[0];
-        for (int i = 0; i < nummats; i++) {
-            materials[i](z) = mat[i];
-        }
-        lightsFromLinearArray(lights[z], ls);
+        problem.AddResidualBlock(Create(data[i], materialid, nummats, numlights, lightintensities), fn, mat, ls);
     }
+    for (int i = 0; i < nummats; i++) {
+        problem.SetParameterLowerBound(mat, i, 0);
+        problem.SetParameterUpperBound(mat, i, 1);
+    }
+    int curridx = 0;
+    for (int i = 0; i < lightintensities.size(); i++) {
+        addCeres(lightintensities[i], &problem, ls, numlights, curridx);
+        curridx += lightintensities[i]->numParameters();
+    }
+    ceres::Solver::Options options;
+    options.minimizer_progress_to_stdout = true;
+    ceres::Solver::Summary summary;
+    ceres::Solve(options, &problem, &summary);
+    std::cout << summary.FullReport() << "\n";
+    for (int z = 0; z < 3; z++) {
+        wallMaterial(z) = mat[z];
+        for (int i = 0; i < nummats/3; i++) {
+            materials[i](z) = mat[i*3+z];
+        }
+    }
+    lightsFromLinearArray(lightintensities, ls);
 }

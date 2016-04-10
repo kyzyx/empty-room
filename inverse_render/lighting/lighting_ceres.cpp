@@ -7,34 +7,46 @@
 
 using namespace std;
 
-void addCeres(Light* light, ceres::Problem* problem, double* lightarr, int n, int idx)
+void addCeres(const Light* light, ceres::Problem* problem, double* lightarr, int n, int idx)
 {
-    switch (light->typeId()) {
-        case LIGHTTYPE_SH:
-        case LIGHTTYPE_SH | LIGHTTYPE_POINT:
-            addCeresSH((SHLight*) light, problem, lightarr, n, idx);
-            break;
-        case LIGHTTYPE_ENVMAP:
-        case LIGHTTYPE_ENVMAP | LIGHTTYPE_POINT:
-            addCeresCubemap((CubemapLight*) light, problem, lightarr, n, idx);
-            break;
-        case LIGHTTYPE_ENVMAP | LIGHTTYPE_LINE:
-        //case LIGHTTYPE_ENVMAP | LIGHTTYPE_LINE:
-        case LIGHTTYPE_LINE:
-            addCeresLine((LineLight*) light, problem, lightarr, n, idx);
-            break;
-        case LIGHTTYPE_AREA:
-            addCeresArea((AreaLight*) light, problem, lightarr, n, idx);
-            break;
+    if (light->typeId() & LIGHTTYPE_RGB) {
+        RGBLight* rgbl = (RGBLight*) light;
+        int np = rgbl->getLight(0)->numParameters();
+        for (int i = 0; i < 3; i++) {
+            addCeres(rgbl->getLight(i), problem, lightarr, n, idx + i*np);
+        }
+    } else if (light->typeId() & LIGHTTYPE_YIQ) {
+        YIQLight* yiql = (YIQLight*) light;
+        addCeres(yiql->getLight(), problem, lightarr, n, idx+2);
+        problem->AddResidualBlock(CreateYIQRGB(n, yiql->getLight()->numParameters(), idx, 1e10), NULL, lightarr);
+    } else {
+        switch (light->typeId()) {
+            case LIGHTTYPE_SH:
+            case LIGHTTYPE_SH | LIGHTTYPE_POINT:
+                addCeresSH((SHLight*) light, problem, lightarr, n, idx);
+                break;
+            case LIGHTTYPE_ENVMAP:
+            case LIGHTTYPE_ENVMAP | LIGHTTYPE_POINT:
+                addCeresCubemap((CubemapLight*) light, problem, lightarr, n, idx);
+                break;
+            case LIGHTTYPE_ENVMAP | LIGHTTYPE_LINE:
+                //case LIGHTTYPE_ENVMAP | LIGHTTYPE_LINE:
+            case LIGHTTYPE_LINE:
+                addCeresLine((LineLight*) light, problem, lightarr, n, idx);
+                break;
+            case LIGHTTYPE_AREA:
+                addCeresArea((AreaLight*) light, problem, lightarr, n, idx);
+                break;
+        }
     }
 }
 
-void addCeresArea(AreaLight* light, ceres::Problem* problem, double* lightarr, int n, int idx)
+void addCeresArea(const AreaLight* light, ceres::Problem* problem, double* lightarr, int n, int idx)
 {
     problem->SetParameterLowerBound(lightarr, idx, 0);
 }
 
-void addCeresSH(SHLight* light, ceres::Problem* problem, double* lightarr, int n, int idx)
+void addCeresSH(const SHLight* light, ceres::Problem* problem, double* lightarr, int n, int idx)
 {
     double r = light->getRegularization();
     if (r > 0) {
@@ -44,7 +56,7 @@ void addCeresSH(SHLight* light, ceres::Problem* problem, double* lightarr, int n
     }
 }
 
-void addCeresLine(LineLight* light, ceres::Problem* problem, double* lightarr, int n, int idx)
+void addCeresLine(const LineLight* light, ceres::Problem* problem, double* lightarr, int n, int idx)
 {
     double r = light->getRegularization();
     if (r > 0) {
@@ -59,7 +71,7 @@ void addCeresLine(LineLight* light, ceres::Problem* problem, double* lightarr, i
     }
 }
 
-void addCeresCubemap(CubemapLight* light, ceres::Problem* problem, double* lightarr, int n, int idx)
+void addCeresCubemap(const CubemapLight* light, ceres::Problem* problem, double* lightarr, int n, int idx)
 {
     double r = light->getRegularization();
     if (r > 0) {

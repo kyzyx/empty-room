@@ -59,18 +59,19 @@ int reduceToLargestCluster(vector<bool>& v, int w) {
 }
 
 Material InverseRender::computeAverageMaterial(
-        vector<SampleData>& data,
-        vector<vector<Light*> >& lightintensities) {
+        vector<SampleData>& data)
+{
     Material avg;
     for (int i = 0; i < data.size(); ++i) {
         // Compute incident direct lighting
         Material directlighting;   // Total incoming radiance from direct light
         Material indirectlighting; // Total incoming indirect radiance
-        for (int ch = 0; ch < 3; ch++) {
-            for (int j = 0; j < lightintensities[ch].size(); j++) {
-                directlighting(ch) += lightintensities[ch][j]->lightContribution(data[i].lightamount[j]);
-            }
+        double currlighting[3];
+        for (int j = 0; j < lightintensities.size(); j++) {
+            lightContribution(lightintensities[j], currlighting, data[i].lightamount[j]);
         }
+        for (int j = 0; j < 3; j++) directlighting(i) = currlighting[i];
+
         if (directlighting.r < 0) directlighting.r = 0;
         if (directlighting.g < 0) directlighting.g = 0;
         if (directlighting.b < 0) directlighting.b = 0;
@@ -104,7 +105,7 @@ void InverseRender::solveTexture(
 {
     tex.size = 0;
     // Compute average reflectance
-    Material avg = computeAverageMaterial(data, lights);
+    Material avg = computeAverageMaterial(data);
     cout << "Average reflectance: " << avg.r << " " << avg.g << " " << avg.b << endl;
 
     // Find best image containing enough textured pixels and from a reasonably

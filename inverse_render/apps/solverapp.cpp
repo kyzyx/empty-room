@@ -35,15 +35,13 @@ class SolverApp : public InvrenderApp {
             if (inputbinaryfilename.length()) {
                 ir.loadVariablesBinary(alldata, inputbinaryfilename);
                 if (inlightfilename.length()) {
-                    ir.lights.clear();
-                    ir.lights.resize(3);
-                    readLightsFromFile(inlightfilename, ir.lights);
+                    readLightsFromFile(inlightfilename, ir.lightintensities);
+                    ir.reloadLights();
                 }
             } else {
                 if (inlightfilename.length()) {
-                    ir.lights.clear();
-                    ir.lights.resize(3);
-                    readLightsFromFile(inlightfilename, ir.lights);
+                    readLightsFromFile(inlightfilename, ir.lightintensities);
+                    ir.reloadLights();
                 }
                 ir.computeSamples(alldata, all, numsamples, discardthreshold, false, getProgressFunction(0,2));
             }
@@ -78,6 +76,14 @@ class SolverApp : public InvrenderApp {
                 }
                 ir.solve(labelleddata, reglambda);
             }
+            vector<Light*> rgbl;
+            for (int i = 0; i < ir.lightintensities.size(); i++) {
+                if (ir.lightintensities[i]->typeId() & LIGHTTYPE_RGB) {
+                    rgbl.push_back(ir.lightintensities[i]);
+                } else if (ir.lightintensities[i]->typeId() & LIGHTTYPE_YIQ) {
+                    rgbl.push_back(((YIQLight*) ir.lightintensities[i])->toRGBLight());
+                }
+            }
 
             // Output optimization data and results
             if (matlabfilename.length()) {
@@ -88,18 +94,16 @@ class SolverApp : public InvrenderApp {
             }
             if (solveTexture) return 0;
             if (outlightfilename.length()) {
-                writeLightsToFile(outlightfilename, ir.lights);
+                writeLightsToFile(outlightfilename, ir.lightintensities);
             }
             for (int i = 0; i < ir.materials.size(); i++) {
                 cout << "data:Material " << i << " ";
                 cout << ir.materials[i].r << " " << ir.materials[i].g << " " << ir.materials[i].b << endl;
             }
-            for (int ch = 0; ch < 3; ch++) {
-                for (int i = 0; i < ir.lights[ch].size(); i++) {
-                    cout << "data:Light " << i << " " << ch << " ";
-                    ir.lights[ch][i]->writeToStream(cout);
-                    cout << endl;
-                }
+            for (int i = 0; i < rgbl.size(); i++) {
+                cout << "data:Light " << i << " ";
+                rgbl[i]->writeToStream(cout);
+                cout << endl;
             }
 
             // Output debugging results of optimization
@@ -115,11 +119,11 @@ class SolverApp : public InvrenderApp {
                 for (int i = 0; i < mmgr->size(); i++) {
                     if (indices[wk] == i) {
                         Material res(0,0,0);
-                        for (int ch = 0; ch < 3; ch++) {
-                            for (int j = 0; j < ir.lights[ch].size(); j++) {
-                                res(ch) += ir.lights[ch][j]->lightContribution(alldata[i].lightamount[j]);
-                            }
+                        double currlighting[3];
+                        for (int j = 0; j < rgbl.size(); j++) {
+                            lightContribution(rgbl[j], currlighting, alldata[i].lightamount[j]);
                         }
+                        for (int j = 0; j < 3; j++) res(j) = currlighting[j];
                         double frac = (1-alldata[i].fractionDirect)/(1-alldata[i].fractionDirect-alldata[i].fractionUnknown);
                         res += alldata[i].netIncoming*frac;
                         res = res*ir.wallMaterial;
@@ -149,11 +153,11 @@ class SolverApp : public InvrenderApp {
                 int wk = 0;
                 for (int i = 0; i < mmgr->NVertices(); i++) {
                     if (indices[wk] == i) {
-                        for (int ch = 0; ch < 3; ch++) {
-                            for (int j = 0; j < ir.lights[ch].size(); j++) {
-                                alldata[i].netIncoming(ch) += ir.lights[ch][j]->lightContribution(alldata[i].lightamount[j]);
-                            }
+                        double currlighting[3];
+                        for (int j = 0; j < rgbl.size(); j++) {
+                            lightContribution(rgbl[j], currlighting, alldata[i].lightamount[j]);
                         }
+                        for (int j = 0; j < 3; j++) alldata[i].netIncoming(j) += currlighting[j];
                         alldata[i].netIncoming *= (1-alldata[i].fractionDirect)/(1-alldata[i].fractionDirect-alldata[i].fractionUnknown);
                         float r = alldata[i].radiosity.r/alldata[i].netIncoming.r;
                         float g = alldata[i].radiosity.g/alldata[i].netIncoming.g;
@@ -183,12 +187,12 @@ class SolverApp : public InvrenderApp {
                             char buf[100];
                             snprintf(buf, 100, pbrtfilename.c_str(), i);
                             outputPbrtFile(
-                                    buf, room, *mmgr, ir.lights,
+                                    buf, room, *mmgr, rgbl,
                                     imgr->getCamera(i));
                         }
                     } else {
                         outputPbrtFile(
-                                pbrtfilename, room, *mmgr, ir.lights,
+                                pbrtfilename, room, *mmgr, rgbl,
                                 imgr->getCamera(cameranum));
                     }
                 } else {

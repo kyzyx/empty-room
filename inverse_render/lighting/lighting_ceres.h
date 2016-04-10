@@ -6,10 +6,10 @@ namespace ceres {
     class Problem;
 }
 
-void addCeres(Light* light, ceres::Problem* problem, double* lightarr, int n, int idx=0);
-void addCeresLine(LineLight* light, ceres::Problem* problem, double* lightarr, int n, int idx=0);
-void addCeresArea(AreaLight* light, ceres::Problem* problem, double* lightarr, int n, int idx=0);
-void addCeresSH(SHLight* light, ceres::Problem* problem, double* lightarr, int n, int idx=0);
-void addCeresCubemap(CubemapLight* light, ceres::Problem* problem, double* lightarr, int n, int idx=0);
+void addCeres(const Light* light, ceres::Problem* problem, double* lightarr, int n, int idx=0);
+void addCeresLine(const LineLight* light, ceres::Problem* problem, double* lightarr, int n, int idx=0);
+void addCeresArea(const AreaLight* light, ceres::Problem* problem, double* lightarr, int n, int idx=0);
+void addCeresSH(const SHLight* light, ceres::Problem* problem, double* lightarr, int n, int idx=0);
+void addCeresCubemap(const CubemapLight* light, ceres::Problem* problem, double* lightarr, int n, int idx=0);
 
 #endif

@@ -1207,7 +1207,6 @@ void MainWindow::on_actionSave_Light_Locations_triggered()
     QString filename = QFileDialog::getSaveFileName(this, "Save Lights", lwd, "Text files (*.txt)");
     if (!filename.isEmpty()) {
         std::set<int> lightids;
-        std::vector<std::vector<Light*> > ll;
         unsigned int maxidx = 0;
         for (int i = 0; i < mmgr->size(); i++) {
             unsigned char l = (unsigned char) mmgr->getLabel(i,MeshManager::LABEL_CHANNEL);
@@ -1216,21 +1215,8 @@ void MainWindow::on_actionSave_Light_Locations_triggered()
                 maxidx = std::max(maxidx, LIGHTID(l));
             }
         }
-        ll.resize(3);
-        for (int i = 0; i < 3; i++) ll[i].resize(maxidx);
-        for (auto lightinfo : lightids) {
-            int t = LIGHTTYPE(lightinfo);
-            int n = LIGHTID(lightinfo)-1;
-            for (int i = 0; i < 3; i++) {
-                if (lights[n]) {
-                    ll[i][n] = lights[n];
-                } else {
-                    ll[i][n] = NewLightFromLightType(t);
-                }
-            }
-        }
 
-        writeLightsToFile(filename.toStdString(), ll);
+        writeLightsToFile(filename.toStdString(), lights);
     }
 }
 
@@ -1240,13 +1226,10 @@ void MainWindow::on_actionLoad_Light_Locations_triggered()
     QString lwd = settings->value("lastworkingdirectory", "").toString();
     QString filename = QFileDialog::getOpenFileName(this, "Save Lights", lwd, "Text files (*.txt)");
     if (!filename.isEmpty()) {
-        std::vector<std::vector<Light*> > ll;
-        readLightsFromFile(filename.toStdString(), ll);
-        lights.resize(ll[0].size());
-        for (int i = 0; i < ll[0].size(); i++) {
-            if (ll[0][i] && ll[0][i]->typeId() == (LIGHTTYPE_LINE | LIGHTTYPE_ENVMAP)) {
-                LineLight* l = (LineLight*) ll[0][i];
-                lights[i] = l;
+        readLightsFromFile(filename.toStdString(), lights);
+        for (int i = 0; i < lights.size(); i++) {
+            if (lights[i] && lights[i]->typeId() == (LIGHTTYPE_LINE | LIGHTTYPE_ENVMAP)) {
+                LineLight* l = (LineLight*) lights[i];
                 ui->meshWidget->addLine(l->getPosition(0), l->getPosition(1));
             }
         }

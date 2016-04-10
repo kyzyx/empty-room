@@ -13,13 +13,21 @@ void InverseRender::computeSamples(
         bool saveImages,
         boost::function<void(int)> callback)
 {
-    hr->computeSamples(data, indices, numsamples, lights[0], discardthreshold, saveImages?&images:NULL, callback);
+    hr->computeSamples(data, indices, numsamples, lights, discardthreshold, saveImages?&images:NULL, callback);
+}
+
+void InverseRender::reloadLights() {
+    for (int i = 0; i < lightintensities.size(); i++) {
+        if (lightintensities[i]->typeId() & LIGHTTYPE_RGB) {
+            lights[i] = ((RGBLight*)lightintensities[i])->getLight(0);
+        } else if (lightintensities[i]->typeId() & LIGHTTYPE_YIQ) {
+            lights[i] = ((YIQLight*)lightintensities[i])->getLight();
+        }
+    }
 }
 
 void InverseRender::setupLightParameters(MeshManager* m) {
     lights.clear();
-    lights.resize(numchannels);
-
     int ret = 0;
     set<unsigned char> lightids;
     for (int i = 0; i < m->size(); i++) {
@@ -28,8 +36,12 @@ void InverseRender::setupLightParameters(MeshManager* m) {
     }
     for (auto lightinfo : lightids) {
         int t = LIGHTTYPE(lightinfo);
-        for (int i = 0; i < numchannels; i++) {
-            lights[i].push_back(NewLightFromLightType(t));
+        Light* l = NewLightFromLightType(t);
+        lights.push_back(l);
+        if ((l->typeId() & LIGHTTYPE_LINE) || (l->typeId() & LIGHTTYPE_POINT)) {
+            lightintensities.push_back(new YIQLight(l));
+        } else {
+            lightintensities.push_back(new RGBLight(l));
         }
     }
 }
@@ -92,14 +104,12 @@ void InverseRender::writeVariablesBinary(vector<SampleData>& data, string filena
     ofstream out(filename, ofstream::binary);
     uint32_t sz = data.size();
     out.write((char*) &sz, 4);
-    sz = lights[0].size();
+    sz = lightintensities.size();
     out.write((char*) &sz, 4);
-    for (int ch = 0; ch < 3; ch++) {
-        for (int i = 0; i < lights[ch].size(); i++) {
-            int t = lights[ch][i]->typeId();
-            out.write((char*) &t, sizeof(int));
-            lights[ch][i]->writeToStream(out, true);
-        }
+    for (int i = 0; i < lightintensities.size(); i++) {
+        int t = lightintensities[i]->typeId();
+        out.write((char*) &t, sizeof(int));
+        lightintensities[i]->writeToStream(out, true);
     }
     for (int i = 0; i < data.size(); ++i) {
         out.write((char*)&(data[i].fractionUnknown), sizeof(float));
@@ -125,13 +135,22 @@ void InverseRender::loadVariablesBinary(vector<SampleData>& data, string filenam
     in.read((char*) &sz, 4);
     data.resize(sz);
     in.read((char*) &sz, 4);
-    lights.resize(3);
-    for (int ch = 0; ch < 3; ch++) {
-        for (int i = 0; i < sz; i++) {
-            int t;
-            in.read((char*) &t, sizeof(int));
-            lights[ch].push_back(NewLightFromLightType(t));
-            if (lights[ch][i]) lights[ch][i]->readFromStream(in, true);
+    for (int i = 0; i < sz; i++) {
+        int t;
+        in.read((char*) &t, sizeof(int));
+        Light* l;
+        if (t & LIGHTTYPE_RGB) {
+            t -= LIGHTTYPE_RGB;
+            l = NewLightFromLightType(t);
+            lights.push_back(l);
+            lightintensities.push_back(new RGBLight(l));
+            lightintensities[i]->readFromStream(in, true);
+        } else if (t & LIGHTTYPE_YIQ) {
+            t -= LIGHTTYPE_YIQ;
+            l = NewLightFromLightType(t);
+            lights.push_back(l);
+            lightintensities.push_back(new YIQLight(l));
+            lightintensities[i]->readFromStream(in, true);
         }
     }
     for (int i = 0; i < data.size(); ++i) {
@@ -145,7 +164,7 @@ void InverseRender::loadVariablesBinary(vector<SampleData>& data, string filenam
         in.read((char*)&(data[i].netIncoming(1)), sizeof(float));
         in.read((char*)&(data[i].netIncoming(2)), sizeof(float));
         for (int j = 0; j < sz; j++) {
-            int t = lights[0][j]->typeId();
+            int t = lights[j]->typeId();
             data[i].lightamount.push_back(NewLightFromLightType(t));
             data[i].lightamount[j]->readFromStream(in, true);
         }
