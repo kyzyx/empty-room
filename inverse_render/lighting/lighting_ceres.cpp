@@ -41,9 +41,16 @@ void addCeres(const Light* light, ceres::Problem* problem, double* lightarr, int
     }
 }
 
+void setNonnegative(const Light* light, ceres::Problem* problem, double* lightarr, int n, int idx)
+{
+    for (int k = 0; k < light->numParameters(); k++, idx++) {
+        problem->SetParameterLowerBound(lightarr, idx, 0);
+    }
+}
+
 void addCeresArea(const AreaLight* light, ceres::Problem* problem, double* lightarr, int n, int idx)
 {
-    problem->SetParameterLowerBound(lightarr, idx, 0);
+    setNonnegative(light, problem, lightarr, n, idx);
 }
 
 void addCeresSH(const SHLight* light, ceres::Problem* problem, double* lightarr, int n, int idx)
@@ -66,9 +73,7 @@ void addCeresLine(const LineLight* light, ceres::Problem* problem, double* light
             problem->AddResidualBlock(CreateSmoothnessTerm(n, i, (i+1)%light->numParameters(), r), NULL /*new ceres::HuberLoss(lightscale)*/, lightarr);
         }
     }
-    for (int k = 0; k < light->numParameters(); k++, idx++) {
-        problem->SetParameterLowerBound(lightarr, idx, 0);
-    }
+    setNonnegative(light, problem, lightarr, n, idx);
 }
 
 void addCeresCubemap(const CubemapLight* light, ceres::Problem* problem, double* lightarr, int n, int idx)
@@ -84,7 +89,5 @@ void addCeresCubemap(const CubemapLight* light, ceres::Problem* problem, double*
             problem->AddResidualBlock(CreateSmoothnessTerm(n, a, b, r), NULL /*new ceres::HuberLoss(lightscale)*/, lightarr);
         }
     }
-    for (int k = 0; k < light->numParameters(); k++, idx++) {
-        problem->SetParameterLowerBound(lightarr, idx, 0);
-    }
+    setNonnegative(light, problem, lightarr, n, idx);
 }
