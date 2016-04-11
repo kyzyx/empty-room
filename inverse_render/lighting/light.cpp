@@ -102,10 +102,12 @@ void LineLight::setPosition(int n, Vector3d pos) {
     vec /= length;
 
     perp = abs(vec[0])>abs(vec[1])?Vector3d(0,1,0).cross(vec):Vector3d(1,0,0).cross(vec);
+    perp /= perp.norm();
 }
 
 void LineLight::setPerpendicularVector(Vector3d perpendicular) {
     perp = vec.cross(perpendicular.cross(vec));
+    perp /= perp.norm();
 }
 
 void LineLight::writeToStream(std::ostream& out, bool binary) {
