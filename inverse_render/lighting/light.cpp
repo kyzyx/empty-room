@@ -216,8 +216,7 @@ void LineLight::computeFromPoints(vector<Vector3d> pts) {
 }
 
 RGBLight::RGBLight(Light* light) {
-    l[0] = light;
-    for (int i = 1; i < 3; i++) {
+    for (int i = 0; i < 3; i++) {
         Light* nl = NewLightFromLightType(light->typeId());
         if (light->typeId() & LIGHTTYPE_POINT) {
             PointLight* pl = (PointLight*) nl;
