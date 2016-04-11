@@ -49,8 +49,10 @@ class RGBLight : public Light {
         virtual int typeId() const { return l[0]->typeId() | LIGHTTYPE_RGB; }
         virtual double& coef(int n) { return l[n/l[0]->numParameters()]->coef(n%l[0]->numParameters()); }
         virtual double getCoef(int n) const { return l[n/l[0]->numParameters()]->coef(n%l[0]->numParameters()); }
-        virtual void setRegularization(double d) { reglambda = d; }
-        virtual double getRegularization() const { return reglambda; }
+        virtual void setRegularization(double d) {
+            Light::setRegularization(d);
+            for (int i = 0; i < 3; i++) l[i]->setRegularization(d);
+        }
 
 
         virtual void writeToStream(std::ostream& out, bool binary=false) {
@@ -80,7 +82,10 @@ class IRGBLight : public Light {
         }
 
         Light* getLight() { return l; }
-        virtual void setRegularization(double d) { reglambda = d; }
+        virtual void setRegularization(double d) {
+            Light::setRegularization(d);
+            l->setRegularization(d);
+        }
         virtual double getRegularization() const { return reglambda; }
 
         RGBLight* toRGBLight();

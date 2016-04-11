@@ -74,6 +74,9 @@ class SolverApp : public InvrenderApp {
                     if (label < 0 || mmgr->getLabel(i, MeshManager::TYPE_CHANNEL) > 0)
                         labelleddata.push_back(alldata[i]);
                 }
+                for (int i = 0; i < ir.lightintensities.size(); i++) {
+                    ir.lightintensities[i]->setRegularization(reglambda);
+                }
                 ir.solve(labelleddata, reglambda);
             }
             vector<Light*> rgbl;
