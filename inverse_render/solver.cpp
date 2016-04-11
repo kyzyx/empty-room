@@ -28,7 +28,6 @@ void InverseRender::reloadLights() {
 
 void InverseRender::setupLightParameters(MeshManager* m) {
     lights.clear();
-    int ret = 0;
     set<unsigned char> lightids;
     for (int i = 0; i < m->size(); i++) {
         unsigned char l = m->getLabel(i,MeshManager::LABEL_CHANNEL);
@@ -87,7 +86,7 @@ void InverseRender::writeVariablesMatlab(vector<SampleData>& data, string filena
         }
         out << "];" << endl;
     }
-    for (int ch = 0; ch < 3; ch++) {
+    /*for (int ch = 0; ch < 3; ch++) {
         out << "L" << ch << " = [" << endl;
         for (int i = 0; i < lights[ch].size(); i++) {
             if (lights[ch][i]) {
@@ -98,7 +97,7 @@ void InverseRender::writeVariablesMatlab(vector<SampleData>& data, string filena
             }
         }
         out << "];" << endl;
-    }
+    }*/
 }
 void InverseRender::writeVariablesBinary(vector<SampleData>& data, string filename) {
     ofstream out(filename, ofstream::binary);

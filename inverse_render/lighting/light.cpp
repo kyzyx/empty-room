@@ -62,7 +62,7 @@ void PointLight::writeToStream(std::ostream& out, bool binary) {
         for (int i = 0; i < 3; i++) {
             out << p[i] << " ";
         }
-        out << endl;
+        out << " ";
     }
     light->writeToStream(out, binary);
 }
@@ -127,7 +127,7 @@ void LineLight::writeToStream(std::ostream& out, bool binary) {
                 out << p[j][i] << " ";
             }
         }
-        out << endl;
+        out << " ";
     }
     if (symmetric) {
         for (int i = 0; i < v.size(); i++) {
@@ -193,7 +193,6 @@ void LineLight::addIncident(
 }
 
 void LineLight::computeFromPoints(vector<Vector3d> pts) {
-    cout << pts.size() << endl;
     Vector3d mean(0,0,0);
     for (int i = 0; i < pts.size(); i++) {
         mean += pts[i];
