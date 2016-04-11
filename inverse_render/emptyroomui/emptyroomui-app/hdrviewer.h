@@ -52,7 +52,7 @@ protected:
     class Settings {
         public:
         Settings()
-            :lo(0), hi(0), idx(0), r(true), g(true), b(true) {;}
+            :lo(0), hi(HDRGlHelper::LOGTOLIN(1)), idx(0), r(true), g(true), b(true) {;}
         Settings(int l, int h, int i, bool rr, bool gg, bool bb)
             : lo(l), hi(h), idx(i),
               r(rr), g(gg), b(bb)
