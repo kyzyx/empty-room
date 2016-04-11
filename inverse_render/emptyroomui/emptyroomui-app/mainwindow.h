@@ -75,12 +75,14 @@ private slots:
     void on_actionSave_Reprojection_Results_triggered();
     void on_actionSave_Wallfinding_Floor_Plan_triggered();
     void on_actionSave_Per_Vertex_Labels_triggered();
+    void on_actionSave_Vertex_Incident_Lighting_triggered();
     void on_actionSave_Label_Images_2_triggered();
     void on_actionSave_Edge_Images_triggered();
     void saveAllImages(const char* type);
     void on_actionLoad_Reprojection_Results_triggered();
     void on_actionLoad_Wallfinding_Floor_Plan_triggered();
     void on_actionLoad_Per_Vertex_Labels_triggered();
+    void on_actionLoad_Vertex_Incident_Lighting_triggered();
     void on_actionExport_Room_Model_triggered();
     void on_actionExport_Mesh_with_Colors_triggered();
     void on_actionSave_Light_Locations_triggered();
@@ -96,7 +98,8 @@ private slots:
     void floorPlanLoaded();
     void edgeImagesLoaded();
     void edgesAndFloorPlanLoaded();
-    void solveCompleted(QString s);
+    void solveDataReceived(QString s);
+    void solveCompleted();
 
     void checkEnableHemicubes();
 
@@ -146,6 +149,9 @@ private:
     QSettings* settings;
     QString settingsfilename;
 
+    QTemporaryFile* templights;
+    QTemporaryFile* tempformfactors;
+    QString formfactorsfile;
     QTemporaryFile* temproommodel;
     QString roommodelfile;
 
@@ -166,6 +172,7 @@ private:
     std::vector<int> ceilingindices;
 
     std::vector<Light*> lights;
+    std::vector<Light*> lightintensities;
 };
 
 #endif // MAINWINDOW_H

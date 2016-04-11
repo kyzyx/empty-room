@@ -123,7 +123,7 @@ MainWindow::MainWindow(QWidget *parent) :
     typeindex(0), imageindex(0),
     room(NULL), orientationtransform(NULL),
     lazyloadimages(false), hr(NULL),
-    imagedisplaymode(1)
+    imagedisplaymode(1), tempformfactors(NULL)
 {
     ui->setupUi(this);
 
@@ -147,6 +147,14 @@ MainWindow::~MainWindow()
     if (mmgr) delete mmgr;
     if (imgr) delete imgr;
     if (room) delete room;
+    if (tempformfactors) {
+        tempformfactors->close();
+        delete tempformfactors;
+    }
+    if (temproommodel) {
+        temproommodel->close();
+        delete temproommodel;
+    }
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *e)
@@ -452,6 +460,7 @@ void MainWindow::meshLoaded() {
     ui->actionLoad_Last_Intermediates->setEnabled(true);
     ui->actionLoad_Reprojection_Results->setEnabled(true);
     ui->actionLoad_Per_Vertex_Labels->setEnabled(true);
+    ui->actionLoad_Vertex_Incident_Lighting->setEnabled(true);
     ui->wf_resolutionSlider->setEnabled(true);
     ui->wf_wallthresholdSlider->setEnabled(true);
     ui->showMeshCheckbox->setEnabled(true);
@@ -710,6 +719,27 @@ void MainWindow::labelDataLoaded() {
             if (label == LABEL_WALL) wallindices.push_back(i);
             else if (label == LABEL_FLOOR) floorindices.push_back(i);
             else if (label == LABEL_CEILING) ceilingindices.push_back(i);
+        }
+    }
+    // Initialize light arrays
+    {
+        lights.clear();
+        lightintensities.clear();
+        std::set<unsigned char> lightids;
+        for (int i = 0; i < mmgr->size(); i++) {
+            unsigned char l = mmgr->getLabel(i,MeshManager::LABEL_CHANNEL);
+            if (l) lightids.insert(l);
+        }
+        for (auto lightinfo : lightids) {
+            int t = LIGHTTYPE(lightinfo);
+            Light* l = NewLightFromLightType(t);
+            lights.push_back(l);
+            if ((l->typeId() & LIGHTTYPE_LINE) || (l->typeId() & LIGHTTYPE_POINT)) {
+                lightintensities.push_back(new IRGBLight(l));
+                for (int i = 0; i < 3; i++) lightintensities.back()->coef(i) = sqrt(1/3.);
+            } else {
+                lightintensities.push_back(new RGBLight(l));
+            }
         }
     }
     checkEnableHemicubes();
@@ -1024,7 +1054,24 @@ void MainWindow::on_solveButton_clicked()
     cmd = cmd.arg(meshfilename);
     QString extraflags = "";
     extraflags += " -hemicuberesolution " + ui->hemicubeResLineEdit->text();
-    extraflags += " -numsamples " + ui->numSamplesLineEdit->text();
+    if (tempformfactors) {
+        extraflags += " -inputbinaryfile " + tempformfactors->fileName();
+    } else if (formfactorsfile.length() > 0) {
+        extraflags += " -inputbinaryfile " + formfactorsfile;
+    } else {
+        tempformfactors = new QTemporaryFile();
+        tempformfactors->open();
+        tempformfactors->close();
+        extraflags += " -outputbinaryfile " + tempformfactors->fileName();
+    }
+    if (lightintensities.size()) {
+        templights = new QTemporaryFile();
+        templights->open();
+        templights->close();
+        writeLightsToFile(templights->fileName().toStdString(), lightintensities);
+        extraflags += " -inputlightfile " + templights->fileName();
+    }
+    // regularization
     cmd += extraflags;
     progressbar->setValue(0);
     SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
@@ -1032,15 +1079,51 @@ void MainWindow::on_solveButton_clicked()
     QThread* thread = new QThread;
     connect(thread, SIGNAL(started()), w, SLOT(run()));
     connect(w, SIGNAL(percentChanged(int)), progressbar, SLOT(setValue(int)));
-    connect(w, SIGNAL(data(QString)), this, SLOT(solveCompleted(QString)));
+    connect(w, SIGNAL(data(QString)), this, SLOT(solveDataReceived(QString)));
+    connect(w,SIGNAL(done()), this, SLOT(solveCompleted()));
     w->moveToThread(thread);
     thread->start();
 }
 
-void MainWindow::solveCompleted(QString s) {
+void MainWindow::solveCompleted() {
+    if (templights) {
+        templights->close();
+        delete templights;
+        templights = NULL;
+    }
+    ui->actionSave_Vertex_Incident_Lighting->setEnabled(true);
+}
+
+void MainWindow::solveDataReceived(QString s) {
     QStringList toks = s.split(" ");
-    if (room && toks[0] == QString("WallMaterial")) {
-        room->wallMaterial = roommodel::Material(toks[1].toFloat(), toks[2].toFloat(), toks[3].toFloat());
+    if (room && toks[0] == QString("Material")) {
+        roommodel::Material mat = roommodel::Material(toks[2].toFloat(), toks[3].toFloat(), toks[4].toFloat());
+        if (toks[1] == QString("0")) {
+            room->wallMaterial = mat;
+        } else if (toks[1] == QString("1")) {
+            room->ceilingMaterial = mat;
+        } else if (toks[1] == QString("2")) {
+            room->floorMaterial = mat;
+        }
+    }
+}
+
+void MainWindow::on_actionLoad_Vertex_Incident_Lighting_triggered()
+{
+    QString lwd = settings->value("lastworkingdirectory", "").toString();
+    //QString cfile = settings->value("lastincidentlightfile", lwd).toString();
+    QString datafilename = QFileDialog::getOpenFileName(this, "Load Per-Vertex Incident Lighting", lwd);
+    if (!datafilename.isEmpty()) {
+        QDir cwd = QDir(datafilename);
+        cwd.cdUp();
+        settings->setValue("lastworkingdirectory", cwd.canonicalPath());
+        settings->setValue("lastincidentlightfile", datafilename);
+        formfactorsfile = datafilename;
+        if (tempformfactors) {
+            tempformfactors->close();
+            delete tempformfactors;
+            tempformfactors = NULL;
+        }
     }
 }
 
@@ -1155,6 +1238,21 @@ void MainWindow::on_actionSave_Per_Vertex_Labels_triggered()
     }
 }
 
+
+void MainWindow::on_actionSave_Vertex_Incident_Lighting_triggered()
+{
+    QString lwd = settings->value("lastworkingdirectory", "").toString();
+    QString datafilename = QFileDialog::getSaveFileName(this, "Save Per-Vertex Incident Lighting", lwd);
+    if (!datafilename.isEmpty()) {
+        QDir cwd = QDir(datafilename);
+        cwd.cdUp();
+        settings->setValue("lastworkingdirectory", cwd.canonicalPath());
+        settings->setValue("lastincidentlightfile", datafilename);
+        tempformfactors->copy(datafilename);
+        formfactorsfile = datafilename;
+    }
+}
+
 void MainWindow::on_actionSave_Label_Images_2_triggered()
 {
     saveAllImages("labels");
@@ -1206,17 +1304,7 @@ void MainWindow::on_actionSave_Light_Locations_triggered()
     QString lwd = settings->value("lastworkingdirectory", "").toString();
     QString filename = QFileDialog::getSaveFileName(this, "Save Lights", lwd, "Text files (*.txt)");
     if (!filename.isEmpty()) {
-        std::set<int> lightids;
-        unsigned int maxidx = 0;
-        for (int i = 0; i < mmgr->size(); i++) {
-            unsigned char l = (unsigned char) mmgr->getLabel(i,MeshManager::LABEL_CHANNEL);
-            if (l) {
-                lightids.insert(l);
-                maxidx = std::max(maxidx, LIGHTID(l));
-            }
-        }
-
-        writeLightsToFile(filename.toStdString(), lights);
+        writeLightsToFile(filename.toStdString(), lightintensities);
     }
 }
 
@@ -1226,7 +1314,14 @@ void MainWindow::on_actionLoad_Light_Locations_triggered()
     QString lwd = settings->value("lastworkingdirectory", "").toString();
     QString filename = QFileDialog::getOpenFileName(this, "Save Lights", lwd, "Text files (*.txt)");
     if (!filename.isEmpty()) {
-        readLightsFromFile(filename.toStdString(), lights);
+        readLightsFromFile(filename.toStdString(), lightintensities);
+        for (int i = 0; i < lightintensities.size(); i++) {
+            if (lightintensities[i]->typeId() & LIGHTTYPE_RGB) {
+                lights[i] = ((RGBLight*)lightintensities[i])->getLight(0);
+            } else if (lightintensities[i]->typeId() & LIGHTTYPE_IRGB) {
+                lights[i] = ((IRGBLight*)lightintensities[i])->getLight();
+            }
+        }
         for (int i = 0; i < lights.size(); i++) {
             if (lights[i] && lights[i]->typeId() == (LIGHTTYPE_LINE | LIGHTTYPE_ENVMAP)) {
                 LineLight* l = (LineLight*) lights[i];
@@ -1372,6 +1467,22 @@ void MainWindow::on_actionCommit_Selected_Vertices_as_Light_triggered()
             mmgr->setLabel(selected[i], lbl, MeshManager::LABEL_CHANNEL);
         }
 
+        int t = LIGHTTYPE(lbl);
+        int idx = LIGHTID(lbl) - 1;
+        if (idx < lights.size() && lights[idx] && t != lights[idx]->typeId()) {
+            Light* l = NewLightFromLightType(t);
+            if (idx >= lights.size()) {
+                lights.resize(idx+1, NULL);
+                lightintensities.resize(idx+1, NULL);
+            }
+            lights[idx] = l;
+            if ((l->typeId() & LIGHTTYPE_LINE) || (l->typeId() & LIGHTTYPE_POINT)) {
+                lightintensities[idx] = (new IRGBLight(l));
+                for (int i = 0; i < 3; i++) lightintensities[idx]->coef(i) = sqrt(1/3.);
+            } else {
+                lightintensities[idx] = (new RGBLight(l));
+            }
+        }
         ui->meshWidget->renderManager()->updateMeshAuxiliaryData();
     }
 }
@@ -1396,11 +1507,19 @@ void MainWindow::on_actionCommit_Selected_Vertices_as_Line_Light_triggered()
             R3Point p = mmgr->VertexPosition(selected[i]);
             selectedcoords.push_back(Eigen::Vector3d(p[0], p[1], p[2]));
         }
-        if (lights.size() <= lid) lights.resize(lid, NULL);
+
+        int idx = lid - 1;
+        if (idx >= lights.size()) {
+            lights.resize(idx+1, NULL);
+            lightintensities.resize(idx+1, NULL);
+        }
         LineLight* l = new LineLight();
-        lights[lid-1] = l;
         l->computeFromPoints(selectedcoords);
+        l->setSymmetric();
         ui->meshWidget->addLine(l->getPosition(0), l->getPosition(1));
+        lights[idx] = l;
+        lightintensities[idx] = (new IRGBLight(l));
+        for (int i = 0; i < 3; i++) lightintensities[idx]->coef(i) = sqrt(1/3.);
 
         ui->meshWidget->renderManager()->updateMeshAuxiliaryData();
     }

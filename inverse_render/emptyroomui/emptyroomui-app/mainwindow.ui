@@ -1139,10 +1139,12 @@
     <addaction name="actionSave_Reprojection_Results"/>
     <addaction name="actionSave_Wallfinding_Floor_Plan"/>
     <addaction name="actionSave_Per_Vertex_Labels"/>
+    <addaction name="actionSave_Vertex_Incident_Lighting"/>
     <addaction name="separator"/>
     <addaction name="actionLoad_Reprojection_Results"/>
     <addaction name="actionLoad_Wallfinding_Floor_Plan"/>
     <addaction name="actionLoad_Per_Vertex_Labels"/>
+    <addaction name="actionLoad_Vertex_Incident_Lighting"/>
     <addaction name="separator"/>
     <addaction name="menuSave_Generated_Images"/>
     <addaction name="actionSave_Light_Locations"/>
@@ -1544,6 +1546,22 @@
   <action name="actionLoad_Light_Locations">
    <property name="text">
     <string>Load Light Locations</string>
+   </property>
+  </action>
+  <action name="actionSave_Vertex_Incident_Lighting">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Save Vertex Incident Lighting</string>
+   </property>
+  </action>
+  <action name="actionLoad_Vertex_Incident_Lighting">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Load Vertex Incident Lighting</string>
    </property>
   </action>
  </widget>
