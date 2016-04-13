@@ -166,6 +166,7 @@ class PointLight : public Light {
         double getPosition(int n) {
             return p[n];
         }
+        Light* getLight() { return light; }
         virtual int numParameters() const { return light->numParameters(); }
         virtual int typeId() const { return LIGHTTYPE_POINT | light->typeId(); }
         virtual double& coef(int n) { return light->coef(n); }
@@ -216,7 +217,7 @@ class LineLight : public Light {
             v.resize(numParameters());
         }
         virtual int numParameters() const { return numcells; }
-        virtual int typeId() const { return LIGHTTYPE_LINE | LIGHTTYPE_ENVMAP; }
+        virtual int typeId() const { return LIGHTTYPE_LINE; }
         void setPosition(int n, double x, double y, double z) {
             setPosition(n, Eigen::Vector3d(x,y,z));
         }
@@ -224,6 +225,7 @@ class LineLight : public Light {
         void setSymmetric(bool sym=true) { symmetric = sym; }
         bool isSymmetric() const { return symmetric; }
         void setPerpendicularVector(Eigen::Vector3d perpendicular);
+        Eigen::Vector3d getPerpendicularVector() const { return perp; }
         void computeFromPoints(std::vector<Eigen::Vector3d> pts);
         double getPosition(int n, int c) const {
             return p[n][c];

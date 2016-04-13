@@ -59,6 +59,7 @@ target_link_libraries(roommodel datamanager
     ${GAPS_LIBRARIES} ${GLLIBS})
 add_library(lighting
     lighting/light.h lighting/light.cpp
+    lighting/generateimage.h lighting/generateimage.cpp
     lighting/sh.h lighting/sh.cpp
     lighting/cubemap.h lighting/cubemap.cpp)
 target_link_libraries(lighting ${GAPS_LIBRARIES})
@@ -117,7 +118,7 @@ add_executable(solverapp apps/solverapp.cpp
     solver.cpp solver.h inverselighting.cpp solvetexture.cpp
     lighting/lighting_ceres.cpp)
 target_link_libraries(solverapp ${PCL_LIBRARIES} ${OpenCV_LIBS} ${GLUT_LIBRARY}
-    ${CERES_LIBRARIES} datamanager roommodel
+    ${CERES_LIBRARIES} lighting datamanager roommodel
     wallfinder rendering)
 # ----------------------------------------------------------------------------
 add_executable(create_camfile EXCLUDE_FROM_ALL utils/create_camfile.cpp)

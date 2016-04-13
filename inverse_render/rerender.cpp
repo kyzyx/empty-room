@@ -1,5 +1,6 @@
 #include "rerender.h"
 #include "roommodel/geometrygenerator.h"
+#include "lighting/generateimage.h"
 #include <fstream>
 #include <Eigen/Dense>
 #include <Eigen/SVD>
@@ -434,26 +435,62 @@ void outputPbrtFile(
 
     // Output light sources
     for (int i = 0; i < lights.size(); ++i) {
-        // FIXME: Point/line light
-        if (lights[i]->typeId() & LIGHTTYPE_SH) {
-            // Extract all SH coefficients
-            // Write to exr file
+        RGBLight* rgbl = static_cast<RGBLight*>(lights[i]);
+        stringstream lightfilenamestream;
+        lightfilenamestream << "light" << i << ".exr";
+        string lightfilename = lightfilenamestream.str();
+        // Generate lightfile
+        if (lights[i]->typeId() & LIGHTTYPE_LINE) {
+            generateImage(rgbl, lightfilename);
+            LineLight* ll = static_cast<LineLight*>(rgbl->getLight(0));
+            for (int j = 0; j < ll->getNumSubdivs(); j++) {
+                Vector3d p = ll->getSubpoint(j);
+                Vector3d v = ll->getVector();
+                Vector3d u = ll->getPerpendicularVector();
+                Vector3d t = u.cross(v);
+                out << "AttributeBegin" << endl;
+                out << "Translate ";
+                for (int k = 0; k < 3; k++) out << p[k] << " ";
+                out << endl;
+                out << "ConcatTransform [";
+                // PBRT goniometric: X is "up", Y is light vector
+                for (int x = 0; x < 3; x++)
+                    out << u[x] << " ";
+                out << " 0 ";
+                for (int x = 0; x < 3; x++)
+                    out << v[x] << " ";
+                out << " 0 ";
+                for (int x = 0; x < 3; x++)
+                    out << t[x] << " ";
+                out << " 0 ";
+                out << "0 0 0 1]" << endl;
+                out << "LightSource \"goniometric\" \"string mapname\" [\"" << lightfilename << "\"]" << endl;
+                out << "AttributeEnd" << endl;
+            }
+        } else if (lights[i]->typeId() & LIGHTTYPE_POINT) {
+            generateImage(rgbl, lightfilename);
+            PointLight* pl = static_cast<PointLight*>(rgbl->getLight(0));
             out << "AttributeBegin" << endl;
-            out << "LightSource \"infinite\" \"string mapname\" [\"sh.exr\"]" << endl;
+            out << "Translate ";
+            for (int j = 0; j < 3; j++) out << pl->getPosition(j) << " ";
+            out << endl;
+            out << "LightSource \"goniometric\" \"string mapname\" [\"" << lightfilename << "\"]" << endl;
             out << "AttributeEnd" << endl;
-            continue;
+        } else if (lights[i]->typeId() & LIGHTTYPE_SH) {
+            generateImage(rgbl, lightfilename);
+            out << "AttributeBegin" << endl;
+            out << "LightSource \"infinite\" \"string mapname\" [\"" << lightfilename << "\"]" << endl;
+            out << "AttributeEnd" << endl;
         } else if (lights[i]->typeId() & LIGHTTYPE_ENVMAP) {
-            // Extract all cubemap coefficients
-            // Write to exr file
+            generateImage(rgbl, lightfilename);
             out << "AttributeBegin" << endl;
-            out << "LightSource \"infinite\" \"string mapname\" [\"cubemap.exr\"]" << endl;
+            out << "LightSource \"infinite\" \"string mapname\" [\"" << lightfilename << "\"]" << endl;
             out << "AttributeEnd" << endl;
-            continue;
         } else if (lights[i]->typeId() & LIGHTTYPE_AREA) {
+            out << "AttributeBegin" << endl;
             vector<R3Point> pts;
             vector<int> indices;
             estimateLightShape(mmgr, i+1, pts, indices);
-            out << "AttributeBegin" << endl;
             if (pts.size() == 4 && indices.size() == 0) {
                 if (pts.size() == 4) {
                     // Disk area light
