@@ -186,14 +186,14 @@ class PointLight : public Light {
 class LineLight : public Light {
     public:
         LineLight()
-            : numcells(16), symmetric(false)
+            : numcells(16), symmetric(false), numsubdivs(10)
         {
             setPosition(0,0,0,0);
             setPosition(1,0,0,0);
             v.resize(numParameters());
         }
         LineLight(LineLight* ll)
-            : numcells(16), symmetric(false)
+            : numcells(16), symmetric(false), numsubdivs(10)
         {
             setPosition(0, ll->getPosition(0));
             setPosition(1, ll->getPosition(1));
@@ -202,14 +202,14 @@ class LineLight : public Light {
         }
         LineLight(double x1, double y1, double z1,
                   double x2, double y2, double z2)
-            : numcells(16), symmetric(false)
+            : numcells(16), symmetric(false), numsubdivs(10)
         {
             setPosition(0,x1,y1,z1);
             setPosition(1,x2,y2,z2);
             v.resize(numParameters());
         }
         LineLight(Eigen::Vector3d p1, Eigen::Vector3d p2)
-            : numcells(16), symmetric(false)
+            : numcells(16), symmetric(false), numsubdivs(10)
         {
             setPosition(0,p1);
             setPosition(1,p2);
@@ -238,6 +238,11 @@ class LineLight : public Light {
         Eigen::Vector3d getPosition(int n) const {
             return p[n];
         }
+        int getNumSubdivs() const { return numsubdivs; }
+        Eigen::Vector3d getSubpoint(int n) const {
+            double dx = length/numsubdivs;
+            return p[0] + vec*dx*(n + 0.5);
+        }
 
         virtual void addIncident(
                 double px, double py, double pz,
@@ -252,6 +257,7 @@ class LineLight : public Light {
         Eigen::Vector3d perp;
         bool symmetric;
         double length;
+        int numsubdivs;
         int numcells;
 };
 

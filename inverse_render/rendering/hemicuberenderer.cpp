@@ -238,16 +238,13 @@ void HemicubeRenderer::computeSamples(
             } else if (lights[j]->typeId() & LIGHTTYPE_LINE) {
                 LineLight* linelight = (LineLight*) sd.lightamount[j];
                 double weight = 0;
-                int numsubdivs = 10;
-                double dx = linelight->getLength()/numsubdivs;
+                double dx = linelight->getLength()/linelight->getNumSubdivs();
                 R3Vector dv(linelight->getVector(0),
                             linelight->getVector(1),
                             linelight->getVector(2));
-                R3Point lp(linelight->getPosition(0,0),
-                           linelight->getPosition(0,1),
-                           linelight->getPosition(0,2));
-                lp += dx*dv/2;
-                for (int k = 0; k < numsubdivs; k++) {
+                for (int k = 0; k < linelight->getNumSubdivs(); k++) {
+                    Eigen::Vector3d subpoint = linelight->getSubpoint(k);
+                    R3Point lp(subpoint[0], subpoint[1], subpoint[2]);
                     R3Vector v = lp - p;
                     R3Vector vn = v;
                     vn.Normalize();
@@ -260,7 +257,6 @@ void HemicubeRenderer::computeSamples(
                         double r2 = v.Dot(v);
                         weight += dx*v.Dot(n)*(dv%v).Length()/(r2*r2);
                     }
-                    lp += dx*dv;
                 }
                 linelight->addIncident(p[0], p[1], p[2], 0, 0, 0, weight);
             }
