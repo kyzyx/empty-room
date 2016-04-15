@@ -175,15 +175,15 @@ class SolverApp : public InvrenderApp {
 
             // Output scene file for rerendering
             if (pbrtfilename.length()) {
-                room->wallMaterial.diffuse.r = ir.wallMaterial.r;
-                room->wallMaterial.diffuse.g = ir.wallMaterial.g;
-                room->wallMaterial.diffuse.b = ir.wallMaterial.b;
-                room->floorMaterial.diffuse.r = ir.wallMaterial.r;
-                room->floorMaterial.diffuse.g = ir.wallMaterial.g;
-                room->floorMaterial.diffuse.b = ir.wallMaterial.b;
-                room->ceilingMaterial.diffuse.r = ir.wallMaterial.r;
-                room->ceilingMaterial.diffuse.g = ir.wallMaterial.g;
-                room->ceilingMaterial.diffuse.b = ir.wallMaterial.b;
+                room->wallMaterial.diffuse.r = ir.materials[0].r;
+                room->wallMaterial.diffuse.g = ir.materials[0].g;
+                room->wallMaterial.diffuse.b = ir.materials[0].b;
+                room->ceilingMaterial.diffuse.r = ir.materials[0].r;
+                room->ceilingMaterial.diffuse.g = ir.materials[0].g;
+                room->ceilingMaterial.diffuse.b = ir.materials[0].b;
+                room->floorMaterial.diffuse.r = ir.materials[2].r;
+                room->floorMaterial.diffuse.g = ir.materials[2].g;
+                room->floorMaterial.diffuse.b = ir.materials[2].b;
                 if (imgr && room) {
                     if (cameranum < 0) {
                         for (int i = 0; i < imgr->size(); i++) {
