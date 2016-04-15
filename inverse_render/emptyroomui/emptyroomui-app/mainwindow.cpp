@@ -1323,7 +1323,7 @@ void MainWindow::on_actionLoad_Light_Locations_triggered()
             }
         }
         for (int i = 0; i < lights.size(); i++) {
-            if (lights[i] && lights[i]->typeId() == (LIGHTTYPE_LINE | LIGHTTYPE_ENVMAP)) {
+            if (lights[i] && (lights[i]->typeId() & LIGHTTYPE_LINE)) {
                 LineLight* l = (LineLight*) lights[i];
                 ui->meshWidget->addLine(l->getPosition(0), l->getPosition(1));
             }
