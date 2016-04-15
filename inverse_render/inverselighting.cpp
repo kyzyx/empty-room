@@ -121,6 +121,7 @@ void InverseRender::solve(vector<SampleData>& data, double reglambda) {
     }
     ceres::Solver::Options options;
     options.minimizer_progress_to_stdout = true;
+    options.max_num_iterations = 100;
     ceres::Solver::Summary summary;
     ceres::Solve(options, &problem, &summary);
     std::cout << summary.FullReport() << "\n";
