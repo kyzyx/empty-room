@@ -233,7 +233,8 @@ void HemicubeRenderer::computeSamples(
                 R3Vector vn = v;
                 vn.Normalize();
                 if (n.Dot(vn) > 0 && occluded(lp, p, j+1, rendermanager->getMeshManager()) < 0) {
-                    pointlight->addIncident(p[0], p[1], p[2], 0, 0, 0, 1/(v.Dot(v)));
+                    double weight = 1./v.Dot(v);
+                    pointlight->addIncident(p[0], p[1], p[2], 0, 0, 0, weight/M_PI);
                 }
             } else if (lights[j]->typeId() & LIGHTTYPE_LINE) {
                 LineLight* linelight = (LineLight*) sd.lightamount[j];
@@ -258,7 +259,7 @@ void HemicubeRenderer::computeSamples(
                         weight += dx*v.Dot(n)*(dv%v).Length()/(r2*r2);
                     }
                 }
-                linelight->addIncident(p[0], p[1], p[2], 0, 0, 0, weight);
+                linelight->addIncident(p[0], p[1], p[2], 0, 0, 0, weight/M_PI);
             }
         }
         data.push_back(sd);
