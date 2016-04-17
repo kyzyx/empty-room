@@ -21,6 +21,7 @@ add_definitions(${PCL_DEFINITIONS})
 find_package(OpenCV REQUIRED)
 find_package(JPEG REQUIRED)
 find_package(PNG REQUIRED)
+find_package(JPEG REQUIRED)
 include_directories(. ../GAPS/)
 set(GAPS_LIBRARIES
     R3Graphics.a R3Shapes.a R2Shapes.a RNBasics.a -ljpeg)
@@ -45,7 +46,7 @@ add_library(datamanager
     datamanager/imageio.cpp datamanager/imageio.h)
 target_include_directories(datamanager PRIVATE ${PNG_INCLUDE_DIRS})
 target_link_libraries(datamanager ${PCL_LIBRARIES} ${Boost_LIBRARIES}
-    ${GAPS_LIBRARIES} ${GLLIBS} ${PNG_LIBRARIES} IlmImf Half rt)
+    ${GAPS_LIBRARIES} ${GLLIBS} ${PNG_LIBRARIES} ${JPEG_LIBRARIES} IlmImf Half rt)
 
 add_executable(dataserver datamanager/dataserver.cpp)
 target_link_libraries(dataserver ${PCL_LIBRARIES} datamanager)

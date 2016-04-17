@@ -11,6 +11,7 @@
 
 #include "rgbe.h"
 #include <png.h>
+#include <jpeglib.h>
 #include <sys/stat.h>
 #include <pcl/range_image/range_image_planar.h>
 #include <pcl/io/pcd_io.h>
@@ -110,6 +111,17 @@ bool readFloatImage(const string& filename, void* image, int& width, int& height
             }
             delete tmp;
         }
+    } else if (endswith(filename, ".jpg")) {
+        unsigned char* tmp;
+        if (!readJpgImage(filename, &tmp, width, height)) return false;
+        // Upgrade to float 0-1
+        float* p = (float*) image;
+        for (int i = 0; i < width*height; ++i) {
+            for (int j = 0; j < channels; ++j) {
+                *(p++) = tmp[i*3+j]/255.;
+            }
+        }
+        delete tmp;
     } else if (endswith(filename, ".png")) {
         unsigned char* tmp;
         if (!readPngImage(filename, &tmp, width, height)) return false;
@@ -145,8 +157,10 @@ bool readRGBImage(const string& filename, void* image, int& width, int& height, 
         if (endswith(filename, ".png")) {
             if (!readPngImage(filename, (unsigned char**) &image, width, height, true))
                 return false;
-        }
-        else if (endswith(filename, ".bin")) {
+        } else if (endswith(filename, ".jpg")) {
+            if (!readJpgImage(filename, (unsigned char**) &image, width, height, true))
+                return false;
+        } else if (endswith(filename, ".bin")) {
             if (!readBinaryImage(filename, (unsigned char**) &image, width, height, true))
                 return false;
         }
@@ -155,8 +169,10 @@ bool readRGBImage(const string& filename, void* image, int& width, int& height, 
         if (endswith(filename, ".png")) {
             if (!readPngImage(filename, &tmp, width, height))
                 return false;
-        }
-        else if (endswith(filename, ".bin")) {
+        } else if (endswith(filename, ".jpg")) {
+            if (!readJpgImage(filename, &tmp, width, height))
+                return false;
+        } else if (endswith(filename, ".bin")) {
             if (!readBinaryImage(filename, &tmp, width, height))
                 return false;
         } else {
@@ -348,6 +364,62 @@ bool readHdrImage(const string& filename,
     fclose(file);
     return true;
 }
+
+bool readJpgImage(const string& filename,
+        unsigned char** image,
+        int& width,
+        int& height,
+        bool preallocated)
+{
+    // Open file
+    FILE *fp = fopen(filename.c_str(), "rb");
+    if (!fp) {
+        fprintf(stderr, "Unable to open image file: %s", filename.c_str());
+        return false;
+    }
+
+    // Initialize decompression info
+    struct jpeg_decompress_struct cinfo;
+    struct jpeg_error_mgr jerr;
+    cinfo.err = jpeg_std_error(&jerr);
+    jpeg_create_decompress(&cinfo);
+    jpeg_stdio_src(&cinfo, fp);
+    jpeg_read_header(&cinfo, TRUE);
+    jpeg_start_decompress(&cinfo);
+
+    // Remember image attributes
+    width = cinfo.output_width;
+    height = cinfo.output_height;
+    int ncomponents = cinfo.output_components;
+    if (ncomponents != 3) {
+        fprintf(stderr, "Error reading %s: not RGB image", filename.c_str());
+        return false;
+    }
+    int rowsize = ncomponents * width;
+    //if ((rowsize % 4) != 0) rowsize = (rowsize / 4 + 1) * 4;
+
+    // Allocate image pixels
+    int nbytes = rowsize * height;
+    if (!preallocated) *image = new unsigned char[nbytes];
+
+    // Read scan lines
+    // First jpeg pixel is top-left, so read pixels in opposite scan-line order
+    while (cinfo.output_scanline < cinfo.output_height) {
+        int scanline = cinfo.output_height - cinfo.output_scanline - 1;
+        unsigned char *row_pointer = &(*image)[scanline * rowsize];
+        jpeg_read_scanlines(&cinfo, &row_pointer, 1);
+    }
+
+    // Free everything
+    jpeg_finish_decompress(&cinfo);
+    jpeg_destroy_decompress(&cinfo);
+
+    // Close file
+    fclose(fp);
+
+    return true;
+}
+
 
 bool readPngImage(const string& filename,
         unsigned char** image,

@@ -41,6 +41,11 @@ bool readHdrImage(const std::string& filename,
         int& width,
         int& height,
         bool preallocated=false);
+bool readJpgImage(const std::string& filename,
+        unsigned char** image,
+        int& width,
+        int& height,
+        bool preallocated=false);
 bool readPngImage(const std::string& filename,
         unsigned char** image,
         int& width,
