@@ -115,10 +115,19 @@ void reproject(
 
 void reproject(ImageManager& hdr, MeshManager& mesh, double threshold, boost::function<void(int)> cb) {
     for (int i = 0; i < hdr.size(); ++i) {
+        float* image = (float*) hdr.getImage(i);
+        float* depthmap = NULL;
+        float* confidencemap = NULL;
+        if (hdr.getFlags("depth", i) & ImageManager::DF_INITIALIZED) {
+            depthmap = (float*) hdr.getImage("depth", i);
+        }
+        if (hdr.getFlags("confidence", i) & ImageManager::DF_INITIALIZED) {
+            confidencemap = (float*) hdr.getImage("confidence", i);
+        }
         reproject(
-                (const float*) hdr.getImage(i),
-                (const float*) hdr.getImage("confidence", i),
-                (const float*) hdr.getImage("depth", i),
+                (const float*) image,
+                (const float*) confidencemap,
+                (const float*) depthmap,
                 hdr.getCamera(i), mesh, threshold, i);
         cout << "Done reprojecting " << (i+1) << "/" << hdr.size() << endl;
         if (cb) cb(((i+1)*100)/hdr.size());
