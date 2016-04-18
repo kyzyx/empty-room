@@ -52,7 +52,7 @@ class Segment {
     }
     bool isCompatiblePoint(Eigen::Vector3f p, Eigen::Vector3f n, double threshold) {
         Eigen::Vector3f axis = direction?Eigen::Vector3f::UnitZ():Eigen::Vector3f::UnitX();
-        axis *= -norm;
+        axis *= norm;
         if (n.dot(axis) < cos(M_PI/4)) return false;
         // Check if on plane
         double c = direction?p(2):p(0);
@@ -76,6 +76,7 @@ class FloorplanHelper {
         void getAsRoomModel(roommodel::RoomModel* rm);
         void loadFromRoomModel(roommodel::RoomModel* rm);
 
+        int closestWall(Eigen::Vector3f p, Eigen::Vector3f n);
         Eigen::Vector3f getWallEndpoint(int i, bool lo, double height=0) const;
         Eigen::Vector3f getNormalizedWallEndpoint(int i, bool lo, double height=0) const;
         Eigen::Matrix4f getNormalizationTransform() const { return normalization; }
@@ -86,5 +87,6 @@ class FloorplanHelper {
         double floorplane;
         double ceilplane;
         Eigen::Matrix4f normalization;
+        Eigen::Matrix4f world2floorplan;
 };
 #endif

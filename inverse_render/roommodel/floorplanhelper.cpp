@@ -2,6 +2,13 @@
 
 using namespace std;
 
+int FloorplanHelper::closestWall(Eigen::Vector3f p, Eigen::Vector3f n) {
+    for (int i = 0; i < wallsegments.size(); i++) {
+        if (wallsegments[i].isCompatiblePoint(p, n, 0.1)) return i;
+    }
+    return -1;
+}
+
 Eigen::Vector3f FloorplanHelper::getWallEndpoint(int i, bool lo, double height) const {
     if (i >= wallsegments.size()) i %= wallsegments.size();
     Eigen::Vector4f p;
@@ -70,6 +77,12 @@ void FloorplanHelper::loadFromRoomModel(roommodel::RoomModel* rm) {
                      m[1][0], m[1][1], m[1][2], m[1][3],
                      m[2][0], m[2][1], m[2][2], m[2][3],
                      m[3][0], m[3][1], m[3][2], m[3][3];
+    Eigen::Matrix4f reup = Eigen::Matrix4f::Identity();
+    reup(0,0) = 0;
+    reup(0,2) = 1;
+    reup(2,2) = 0;
+    reup(2,0) = 1;
+    world2floorplan = reup*normalization;
 
     double px = 0;
     double py = 0;

@@ -1,4 +1,5 @@
 #include "rendering/opengl_compat.h"
+#include "findbaseboard.h"
 #include "invrenderapp.h"
 #include "wallfinder/wall_finder.h"
 #include "solver.h"
@@ -16,7 +17,7 @@ class SolverApp : public InvrenderApp {
               matlabfilename(""), pbrtfilename(""), rerenderedplyfilename(""), errorplyfilename(""),
               meshcolorscale(1), gamma(1),
               label(WallFinder::LABEL_WALL),
-              cameranum(-1), solveTexture(false), solveLights(true),
+              cameranum(-1), solveTexture(false), solveLights(true), dobaseboard(false),
               scale(0), reglambda(0) {}
         virtual int run() {
             // Setup
@@ -172,6 +173,51 @@ class SolverApp : public InvrenderApp {
                 }
                 mmgr->writePlyMesh(intrinsicplyfilename, colors, meshcolorscale);
             }
+            if (dobaseboard) {
+                FloorplanHelper fph;
+                fph.loadFromRoomModel(room);
+                BaseboardFinder bf(imgr, room);
+                bf.compute();
+                double bh = bf.getBaseboardHeight();
+                vector<SampleData> bbdata;
+                vector<double> ddepth;
+                for (int i = 0; i < mmgr->size(); i++) {
+                    if (mmgr->getLabel(i, MeshManager::TYPE_CHANNEL) == WallFinder::LABEL_WALL) {
+                        Eigen::Vector3f p = mmgr->VertexPositionE(i);
+                        Eigen::Vector3f n = mmgr->VertexNormalE(i);
+                        Eigen::Vector4f p4(p(0), p(1), p(2), 1);
+                        Eigen::Vector4f n4(n(0), n(1), n(2), 0);
+                        p = (fph.world2floorplan*p4).head<3>();
+                        n = (fph.world2floorplan*n4).head<3>();
+                        if (p(1) > bh) continue;
+                        bbdata.push_back(alldata[i]);
+                        int wallidx = fph.closestWall(p, n);
+                        if (wallidx >= 0) {
+                            double d = 0;
+                            if (fph.wallsegments[wallidx].direction > 0) {
+                                d = fph.wallsegments[wallidx].coord - p(2);
+                            } else {
+                                d = p(0) - fph.wallsegments[wallidx].coord;
+                            }
+                            ddepth.push_back(d);
+                        }
+                    }
+                }
+                Material bbmat = ir.computeAverageMaterial(bbdata);
+                room->baseboardMaterial.diffuse.r = bbmat.r;
+                room->baseboardMaterial.diffuse.g = bbmat.g;
+                room->baseboardMaterial.diffuse.b = bbmat.b;
+                room->baseboardHeight = bf.getBaseboardHeight();
+                if (ddepth.size()) {
+                    room->baseboardDepth = accumulate(ddepth.begin(), ddepth.end(), 0.0) / ddepth.size();
+                    if (room->baseboardDepth < 0) room->baseboardDepth = 0;
+                } else {
+                    room->baseboardDepth = 0;
+                }
+            }
+            if (outroommodelname.length()) {
+                roommodel::save(*room, outroommodelname);
+            }
 
             // Output scene file for rerendering
             if (pbrtfilename.length()) {
@@ -212,6 +258,9 @@ class SolverApp : public InvrenderApp {
             if (!mmgr) return 0;
             if (pcl::console::find_switch(argc, argv, "-nosolve")) {
                 solveLights = false;
+            }
+            if (pcl::console::find_switch(argc, argv, "-baseboard")) {
+                dobaseboard = true;
             }
             if (pcl::console::find_argument(argc, argv, "-hemicuberesolution") >= 0) {
                 pcl::console::parse_argument(argc, argv, "-hemicuberesolution", hemicuberesolution);
@@ -274,6 +323,9 @@ class SolverApp : public InvrenderApp {
             if (pcl::console::find_argument(argc, argv, "-outputintrinsicmesh") >= 0) {
                 pcl::console::parse_argument(argc, argv, "-outputintrinsicmesh", intrinsicplyfilename);
             }
+            if (pcl::console::find_argument(argc, argv, "-outputroommodel") >= 0) {
+                pcl::console::parse_argument(argc, argv, "-outputroommodel", outroommodelname);
+            }
             return true;
         }
         int numsamples;
@@ -290,6 +342,8 @@ class SolverApp : public InvrenderApp {
         string intrinsicplyfilename;
         string outlightfilename;
         string inlightfilename;
+        string outroommodelname;
+        bool dobaseboard;
         int cameranum;
         int label;
         double reglambda;

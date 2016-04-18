@@ -5,6 +5,41 @@
 
 using namespace std;
 
+Material InverseRender::computeAverageMaterial(vector<SampleData>& data)
+{
+    Material avg;
+    for (int i = 0; i < data.size(); ++i) {
+        // Compute incident direct lighting
+        Material directlighting;   // Total incoming radiance from direct light
+        Material indirectlighting; // Total incoming indirect radiance
+        Material incident;
+        Material m(0,0,0);
+        double currlighting[3];
+        for (int j = 0; j < lightintensities.size(); j++) {
+            lightContribution(lightintensities[j], currlighting, data[i].lightamount[j]);
+        }
+        for (int j = 0; j < 3; j++) directlighting(i) = currlighting[i];
+
+        if (directlighting.r < 0) directlighting.r = 0;
+        if (directlighting.g < 0) directlighting.g = 0;
+        if (directlighting.b < 0) directlighting.b = 0;
+        indirectlighting = data[i].netIncoming;
+        // Assume unsampled regions of hemicube are equal to average
+        // indirect illumination
+        indirectlighting *= (1-data[i].fractionDirect)/(1-data[i].fractionDirect-data[i].fractionUnknown);
+        incident = indirectlighting + directlighting;
+        if (incident.r > 0) m.r = data[i].radiosity.r / incident.r;
+        if (incident.g > 0) m.g = data[i].radiosity.g / incident.g;
+        if (incident.b > 0) m.b = data[i].radiosity.b / incident.b;
+        avg += m;
+    }
+    if (data.size()) {
+        avg /= data.size();
+    }
+    return avg;
+}
+
+
 void InverseRender::computeSamples(
         vector<SampleData>& data,
         vector<int> indices,

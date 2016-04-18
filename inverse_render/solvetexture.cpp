@@ -58,32 +58,6 @@ int reduceToLargestCluster(vector<bool>& v, int w) {
     return szs[largestcluster];
 }
 
-Material InverseRender::computeAverageMaterial(
-        vector<SampleData>& data)
-{
-    Material avg;
-    for (int i = 0; i < data.size(); ++i) {
-        // Compute incident direct lighting
-        Material directlighting;   // Total incoming radiance from direct light
-        Material indirectlighting; // Total incoming indirect radiance
-        double currlighting[3];
-        for (int j = 0; j < lightintensities.size(); j++) {
-            lightContribution(lightintensities[j], currlighting, data[i].lightamount[j]);
-        }
-        for (int j = 0; j < 3; j++) directlighting(i) = currlighting[i];
-
-        if (directlighting.r < 0) directlighting.r = 0;
-        if (directlighting.g < 0) directlighting.g = 0;
-        if (directlighting.b < 0) directlighting.b = 0;
-        indirectlighting = data[i].netIncoming;
-        // Assume unsampled regions of hemicube are equal to average
-        // indirect illumination
-        indirectlighting *= (1-data[i].fractionDirect)/(1-data[i].fractionDirect-data[i].fractionUnknown);
-        avg += data[i].radiosity/(directlighting + indirectlighting);
-    }
-    return avg/data.size();
-}
-
 double InverseRender::generateBinaryMask(const CameraParams* cam, const char* labelimage, vector<bool>& mask, int label) {
     int w = cam->width;
     int h = cam->height;

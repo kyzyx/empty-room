@@ -57,7 +57,7 @@ void BaseboardFinder::compute(float resolution, float edgethreshold) {
         cout << "Done " << i << "/" << imgr->size() << endl;
     }
 
-    int h = hist.size();
+    /*int h = hist.size();
     for (int z = 0; z < 4; z++) {
         int w = hist[0][z].size();
         float* dbgimg = new float[w*h*3];
@@ -71,27 +71,34 @@ void BaseboardFinder::compute(float resolution, float edgethreshold) {
         }
         string filename = "dbg" + to_string(z) + ".exr";
         ImageIO::writeExrImage(filename, dbgimg, w, h);
-    }
+    }*/
 
     double best = 0;
+    vector<double> v;
     for (int i = 0; i < hist.size(); i++) {
-        double s = 0;
-        double n = 0;
+        double weightedge = 0;
+        double cellsedge = 0;
+        double weightobserved = 0;
+        double cellsobserved = 0;
         for (int j = 0; j < hist[i].size(); j++) {
             for (int k = 0; k < hist[i][j].size(); k++) {
-                s += hist[i][j][k];
-                n += count[i][j][k]?1:0;
+                weightedge += hist[i][j][k];
+                cellsedge += hist[i][j][k]?1:0;
+                weightobserved += count[i][j][k];
+                cellsobserved += count[i][j][k]?1:0;
             }
         }
-        if (n == 0) {
-            printf("%d (%.4f): 0\n", i, i*resolution);
+        if (cellsobserved == 0) {
+            //printf("%d (%.4f): 0 0 0\n", i, i*resolution);
         } else {
-            //s /= n;
-            printf("%d (%.4f): %f\n", i, i*resolution, s);
-            if (s > best) {
-                best = s;
-                bbh = i*resolution;
-            }
+            v.push_back(weightedge/(weightobserved*cellsobserved));
+            //printf("%d (%.4f): %.2f\n", i, i*resolution, v);
+        }
+    }
+    for (int i = 1; i < v.size()-1; i++) {
+        if (v[i] > v[i-1] && v[i] >= v[i+1]) {
+            bbh = i*resolution;
+            break;
         }
     }
     cout << "Best: " << best << " " << bbh << endl;

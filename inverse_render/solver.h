@@ -59,10 +59,9 @@ class InverseRender {
         void setLossFunctionScale(double s) { scale = s; }
 
         RenderManager* getRenderManager() { return rm; }
+        Material computeAverageMaterial(std::vector<SampleData>& data);
     private:
         // Texture recovery helpers
-        Material computeAverageMaterial(
-                std::vector<SampleData>& data);
         double generateBinaryMask(const CameraParams* cam, const char* labelimage, std::vector<bool>& mask, int label);
         void setupLightParameters(MeshManager* m);
 

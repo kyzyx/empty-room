@@ -77,7 +77,7 @@ class Material {
             return Material(r/m.r, g/m.g, b/m.b, !t.isEmpty()?t:m.t);
         }
         Material operator/(double f) {
-            return Material(f/r, f/g, f/b, t);
+            return Material(r/f, g/f, b/f, t);
         }
         Material& operator/=(double f) {
             r /= f;
