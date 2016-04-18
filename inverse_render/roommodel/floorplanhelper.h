@@ -77,7 +77,10 @@ class FloorplanHelper {
         void loadFromRoomModel(roommodel::RoomModel* rm);
 
         int closestWall(Eigen::Vector3f p, Eigen::Vector3f n);
-        Eigen::Vector3f getWallEndpoint(int i, bool lo, double height=0) const;
+        Eigen::Vector3f getWallEndpoint(int i, bool lo, double height=0) const {
+            return getWallPoint(i, lo==forwards[i]?wallsegments[i].start:wallsegments[i].end, height);
+        }
+        Eigen::Vector3f getWallPoint(int i, double coord, double height=0) const;
         Eigen::Vector3f getNormalizedWallEndpoint(int i, bool lo, double height=0) const;
         Eigen::Matrix4f getNormalizationTransform() const { return normalization; }
         void setNormalizationTransform(Eigen::Matrix4f t) { normalization = t; }

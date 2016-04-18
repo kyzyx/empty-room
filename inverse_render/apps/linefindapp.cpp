@@ -13,18 +13,18 @@ class LineFindApp : public InvrenderApp {
         LineFindApp() {;}
 
         virtual int run() {
-            WallFinder wf;
-            wf.loadFromRoomModel(room);
-            vector<vector<Vector3d> > votes(wf.wallsegments.size());
-            Matrix4f m4dn = wf.getNormalizationTransform();
+            FloorplanHelper fp;
+            fp.loadFromRoomModel(room);
+            vector<vector<Vector3d> > votes(fp.wallsegments.size());
+            Matrix4f m4dn = fp.getNormalizationTransform();
             R4Matrix norm(
                     m4dn(0,0), m4dn(0,1), m4dn(0,2), m4dn(0,3),
                     m4dn(1,0), m4dn(1,1), m4dn(1,2), m4dn(1,3),
                     m4dn(2,0), m4dn(2,1), m4dn(2,2), m4dn(2,3),
                     m4dn(3,0), m4dn(3,1), m4dn(3,2), m4dn(3,3)
                     );
-            for (int i = 0; i < imgr->size(); ++i) {
-                findWallLinesInImage(*imgr, i, wf, 0.03, norm, votes);
+            for (int i = 0; i < imgr->size(); i++) {
+                findWallLinesInImage(*imgr, i, fp, 0.03, norm, votes);
                 getProgressFunction(i,imgr->size())(100);
             }
             for (int i = 0; i < votes.size(); ++i) {

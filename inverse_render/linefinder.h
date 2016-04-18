@@ -1,7 +1,7 @@
 #ifndef _LINEFINDER_H
 #define _LINEFINDER_H
 #include "datamanager/imagemanager.h"
-#include "wallfinder/wall_finder.h"
+#include "roommodel/floorplanhelper.h"
 
 class WallLine {
     public:
@@ -17,12 +17,12 @@ class WallLine {
 void findWallLinesInImage(
         ImageManager& imgr,
         int idx,
-        WallFinder& wf,
+        FloorplanHelper& floorplan,
         double resolution,
         R4Matrix norm,
         std::vector<std::vector<Eigen::Vector3d> >& votes
 );
-void findWallLines(ImageManager& imgr, WallFinder& wf, std::vector<WallLine>& lines, double resolution=0.02, bool getvotes=false);
+void findWallLines(ImageManager& imgr, FloorplanHelper& floorplan, std::vector<WallLine>& lines, double resolution=0.02, bool getvotes=false);
 
 // Projects point x,y (from top left corner) of the image taken from cam
 // onto the wall defined by the remaining parameters.
@@ -47,5 +47,5 @@ Eigen::Vector3d projectOntoWall(
 Eigen::Vector3d projectOntoFloorplan(
         double x, double y,
         const CameraParams& cam,
-        WallFinder& wf);
+        FloorplanHelper& floorplan);
 #endif

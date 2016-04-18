@@ -1,5 +1,6 @@
 #include "linefinder.h"
 #include "orientededgefilter.h"
+#include "wallfinder/wall_finder.h"
 #include <limits>
 #include "RNBasics/RNBasics.h"
 #include "R3Shapes/R3Shapes.h"
@@ -128,6 +129,11 @@ class HoughAngleLookup : public HoughLookup {
 
     private:
         void calculateMinMax() {
+            if (vp[1] > -0.5 && vp[1] < h+0.5 && vp[0] > -0.5) {
+                maxa = 2*M_PI;
+                mina = 0;
+                return;
+            }
             vector<double> angles;
             angles.push_back(getAngle( -0.5,-0.5));
             angles.push_back(getAngle(w+0.5,-0.5));
@@ -159,8 +165,8 @@ void VPHough(const float* image, const char* labelimage, int w, int h, vector<Ve
     // Vote for angles
     double minw = 5;
     double minlength = 50;
-    for (int i = 0; i < h; ++i) {
-        for (int j = 0; j < w; ++j) {
+    for (int i = 6; i < h-1; ++i) { // NOTE: start at 6 to ignore scanline of metadata
+        for (int j = 1; j < w-1; ++j) {
             if (!labelimage || labelimage[i*w+j] == WallFinder::LABEL_WALL) {
                 //lookup->addVote(image[3*((h-i-1)*w+j)+v], j, i, minw);
                 lookup->addVote(image[3*(i*w+j)+v], j, i, minw);
@@ -179,8 +185,7 @@ void VPHough(const float* image, const char* labelimage, int w, int h, vector<Ve
         }
     }
     for (int i = 0; i < lookup->size(); ++i) {
-        //if (localmax[i]) {
-        if (lookup->getWeight(i) > 2*minw*minlength) {
+        if (localmax[i] && lookup->getWeight(i) > 2*minw*minlength) {
             lookup->traceLines(i, lines, minlength);
         }
     }
@@ -219,9 +224,9 @@ Vector3d projectOntoWall(
 Eigen::Vector3d projectOntoFloorplan(
         double x, double y,
         const CameraParams& cam,
-        WallFinder& wf)
+        FloorplanHelper& floorplan)
 {
-    Matrix4f m4dn = wf.getNormalizationTransform();
+    Matrix4f m4dn = floorplan.getNormalizationTransform();
     R4Matrix norm(
             m4dn(0,0), m4dn(0,1), m4dn(0,2), m4dn(0,3),
             m4dn(1,0), m4dn(1,1), m4dn(1,2), m4dn(1,3),
@@ -230,13 +235,13 @@ Eigen::Vector3d projectOntoFloorplan(
             );
     Vector3d best(1,1,numeric_limits<double>::infinity());
     int bestj = -1;
-    for (int j = 0; j < wf.wallsegments.size(); j++) {
+    for (int j = 0; j < floorplan.wallsegments.size(); j++) {
         Eigen::Vector3d p = projectOntoWall(
                 x, y, cam,
-                wf.ceilplane, wf.floorplane,
+                floorplan.ceilplane, floorplan.floorplane,
                 norm,
-                wf.wallsegments[j]);
-        if (p[0] < margin || p[0] > wf.wallsegments[j].length() - margin)
+                floorplan.wallsegments[j]);
+        if (p[0] < margin || p[0] > floorplan.wallsegments[j].length() - margin)
             continue;
         if (p[2] < best[2]) {
             best = p;
@@ -249,7 +254,7 @@ Eigen::Vector3d projectOntoFloorplan(
 void findWallLinesInImage(
         ImageManager& imgr,
         int idx,
-        WallFinder& wf,
+        FloorplanHelper& floorplan,
         double resolution,
         R4Matrix norm,
         vector<vector<Vector3d> >& votes)
@@ -268,22 +273,43 @@ void findWallLinesInImage(
         cerr << "Please precompute label images before linefinding" << endl;
         return;
     }
-    VPHough((const float*) imgr.getImage("edges", idx), (const char*) imgr.getImage("labels", idx), cam.width, cam.height, vps, 1, lines);
+    for (int z = 0; z < 3; z++) {
+        VPHough((const float*) imgr.getImage("edges", idx), (const char*) imgr.getImage("labels", idx), cam.width, cam.height, vps, z, lines);
 
-    for (int k = 0; k < lines.size(); ++k) {
-        cout << ">>data:" << idx << " " << lines[k][0] << " " <<  lines[k][1] << " " << lines[k][2] << " " << lines[k][3] << endl;
-        Vector3d bestpt[2];
-        Vector3d start = projectOntoFloorplan(
+        for (int k = 0; k < lines.size(); ++k) {
+            cout << ">>data:" << idx << " " << lines[k][0] << " " <<  lines[k][1] << " " << lines[k][2] << " " << lines[k][3];
+            Vector3d bestpt[2];
+            Vector3d start = projectOntoFloorplan(
                     lines[k][0], lines[k][1],
-                    cam, wf);
-        Vector3d end = projectOntoFloorplan(
+                    cam, floorplan);
+            Vector3d end = projectOntoFloorplan(
                     lines[k][2], lines[k][3],
-                    cam, wf);
-        if (start[0] == end[1] && start[0] >= 0) {
-            Vector3d seg((start[1]+end[1])/2,
-                         start[2],
-                         end[2]);
-            votes[start[0]].push_back(seg);
+                    cam, floorplan);
+            if (start[0] == end[0] && start[0] >= 0) {
+                if (z != 1 && floorplan.wallsegments[start[0]].direction != z/2) {
+                    cout << endl;
+                    continue;
+                }
+                Vector3d seg;
+                if (z == 1) {
+                    seg = Vector3d((start[1]+end[1])/2,
+                        start[2],
+                        end[2]);
+                    votes[start[0]].push_back(seg);
+                    Vector3f w1 = floorplan.getWallPoint(start[0], seg[0], seg[1]);
+                    Vector3f w2 = floorplan.getWallPoint(start[0], seg[0], seg[2]);
+                    cout << " " << w1[0] << " " << w1[1] << " " << w1[2];
+                    cout << " " << w2[0] << " " << w2[1] << " " << w2[2];
+                    cout << " " << z;
+                } else {
+                    Vector3f w1 = floorplan.getWallPoint(start[0], start[1], (start[2]+end[2])/2);
+                    Vector3f w2 = floorplan.getWallPoint(start[0], end[1], (start[2]+end[2])/2);
+                    cout << " " << w1[0] << " " << w1[1] << " " << w1[2];
+                    cout << " " << w2[0] << " " << w2[1] << " " << w2[2];
+                    cout << " " << z;
+                }
+            }
+            cout << endl;
         }
     }
 }
@@ -328,9 +354,9 @@ void findPeaks(vector<Vector3d>& votes, vector<Vector3d>& results, double resolu
     }
 }
 
-void findWallLines(ImageManager& imgr, WallFinder& wf, vector<WallLine>& lines, double resolution, bool getvotes) {
-    vector<vector<Vector3d> > votes(wf.wallsegments.size());
-    Matrix4f m4dn = wf.getNormalizationTransform();
+void findWallLines(ImageManager& imgr, FloorplanHelper& floorplan, vector<WallLine>& lines, double resolution, bool getvotes) {
+    vector<vector<Vector3d> > votes(floorplan.wallsegments.size());
+    Matrix4f m4dn = floorplan.world2floorplan;
     R4Matrix norm(
         m4dn(0,0), m4dn(0,1), m4dn(0,2), m4dn(0,3),
         m4dn(1,0), m4dn(1,1), m4dn(1,2), m4dn(1,3),
@@ -338,7 +364,7 @@ void findWallLines(ImageManager& imgr, WallFinder& wf, vector<WallLine>& lines, 
         m4dn(3,0), m4dn(3,1), m4dn(3,2), m4dn(3,3)
     );
     for (int i = 0; i < imgr.size(); ++i) {
-        findWallLinesInImage(imgr, i, wf, resolution, norm, votes);
+        findWallLinesInImage(imgr, i, floorplan, resolution, norm, votes);
         cout << "Done linefinding image " << i << endl;
     }
     for (int i = 0; i < votes.size(); ++i) {
