@@ -112,7 +112,7 @@ void orientedEdgeFilterVP(const char* image, float* edges, int w, int h, vector<
                         }
                     }
                 }
-                int idx = (h-i-1)*w+j;
+                int idx = i*w+j;
                 edges[3*idx+v] = maxresponse;
             }
         }
