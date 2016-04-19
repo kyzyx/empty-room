@@ -300,18 +300,18 @@ class SolverApp : public InvrenderApp {
                 room->floorMaterial.diffuse.g = ir.materials[2].g;
                 room->floorMaterial.diffuse.b = ir.materials[2].b;
                 if (imgr && room) {
+                    outputPbrtFile(
+                            pbrtfilename+".pbrt", room, *mmgr, rgbl,
+                            cameranum<0?NULL:imgr->getCamera(cameranum)
+                    );
                     if (cameranum < 0) {
                         for (int i = 0; i < imgr->size(); i++) {
                             char buf[100];
-                            snprintf(buf, 100, pbrtfilename.c_str(), i);
-                            outputPbrtFile(
-                                    buf, room, *mmgr, rgbl,
+                            snprintf(buf, 100, "%s%04d.pbrt", pbrtfilename.c_str(), i);
+                            outputPbrtCameraFile(
+                                    buf, pbrtfilename+".pbrt",
                                     imgr->getCamera(i));
                         }
-                    } else {
-                        outputPbrtFile(
-                                pbrtfilename, room, *mmgr, rgbl,
-                                imgr->getCamera(cameranum));
                     }
                 } else {
                     cout << "Error - need to supply imagemanager and roommodel to output pbrt file" << endl;

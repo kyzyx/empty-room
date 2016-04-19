@@ -10,6 +10,10 @@
 
 void outputRadianceFile(std::string filename, WallFinder& wf, MeshManager& m, InverseRender& ir);
 void outputPlyFile(std::string filename, WallFinder& f, MeshManager& m, InverseRender& ir);
+void outputPbrtCameraFile(
+        std::string filename,
+        std::string includefilename,
+        const CameraParams* cam);
 void outputPbrtFile(
         std::string filename,
         roommodel::RoomModel* room,

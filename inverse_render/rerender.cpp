@@ -4,6 +4,7 @@
 #include <fstream>
 #include <Eigen/Dense>
 #include <Eigen/SVD>
+#include <boost/filesystem.hpp>
 
 #include "Simplify.h"
 
@@ -327,6 +328,31 @@ void outputTriangles(ofstream& out, vector<double>& triangles, const R4Matrix& t
     out << "]" << endl;
 }
 
+void outputPbrtCameraFile(
+        std::string filename,
+        std::string includefilename,
+        const CameraParams* cam)
+{
+    ofstream out(filename);
+    if (cam) {
+        out << "Film \"image\"" << endl;
+        out << "\"integer xresolution\" [" << cam->width << "]" << endl;
+        out << "\"integer yresolution\" [" << cam->height << "]" << endl;
+        out << "LookAt ";
+        for (int i = 0; i < 3; ++i) out << cam->pos[i] << " ";
+        for (int i = 0; i < 3; ++i) out << cam->pos[i] + cam->towards[i] << " ";
+        for (int i = 0; i < 3; ++i) out << cam->up[i] << " ";
+        out << endl << endl;
+        out << "Camera \"perspective\"" << endl;
+        out << "\"float fov\" [" << cam->fov << "]" << endl;
+        out << "\"float shutteropen\" [0.000000000000000]" << endl;
+        out << "\"float shutterclose\" [0.041666666666667]" << endl << endl;
+    }
+    if (includefilename.length()) {
+        out << "Include \"" << boost::filesystem::path(includefilename).filename().string()<< "\"" << endl;
+    }
+}
+
 void outputPbrtFile(
         std::string filename,
         roommodel::RoomModel* room,
@@ -347,18 +373,21 @@ void outputPbrtFile(
     out << "\"float C\" [0.333333343267441]" << endl;
     out << "\"float xwidth\" [2.000000000000000]" << endl;
     out << "\"float ywidth\" [2.000000000000000]" << endl << endl;
-    out << "Film \"image\"" << endl;
-    out << "\"integer xresolution\" [" << cam->width << "]" << endl;
-    out << "\"integer yresolution\" [" << cam->height << "]" << endl;
-    out << "LookAt ";
-    for (int i = 0; i < 3; ++i) out << cam->pos[i] << " ";
-    for (int i = 0; i < 3; ++i) out << cam->pos[i] + cam->towards[i] << " ";
-    for (int i = 0; i < 3; ++i) out << cam->up[i] << " ";
-    out << endl << endl;
-    out << "Camera \"perspective\"" << endl;
-    out << "\"float fov\" [" << cam->fov << "]" << endl;
-    out << "\"float shutteropen\" [0.000000000000000]" << endl;
-    out << "\"float shutterclose\" [0.041666666666667]" << endl << endl;
+
+    if (cam) {
+        out << "Film \"image\"" << endl;
+        out << "\"integer xresolution\" [" << cam->width << "]" << endl;
+        out << "\"integer yresolution\" [" << cam->height << "]" << endl;
+        out << "LookAt ";
+        for (int i = 0; i < 3; ++i) out << cam->pos[i] << " ";
+        for (int i = 0; i < 3; ++i) out << cam->pos[i] + cam->towards[i] << " ";
+        for (int i = 0; i < 3; ++i) out << cam->up[i] << " ";
+        out << endl << endl;
+        out << "Camera \"perspective\"" << endl;
+        out << "\"float fov\" [" << cam->fov << "]" << endl;
+        out << "\"float shutteropen\" [0.000000000000000]" << endl;
+        out << "\"float shutterclose\" [0.041666666666667]" << endl << endl;
+    }
 
     // Generate geometry
     roommodel::GeometryGenerator gg(room);
@@ -462,10 +491,13 @@ void outputPbrtFile(
         RGBLight* rgbl = static_cast<RGBLight*>(lights[i]);
         stringstream lightfilenamestream;
         lightfilenamestream << "light" << i << ".exr";
+        boost::filesystem::path rootdir =
+            (boost::filesystem::path(filename)).parent_path();
         string lightfilename = lightfilenamestream.str();
+        rootdir /= lightfilename;
         // Generate lightfile
         if (lights[i]->typeId() & LIGHTTYPE_LINE) {
-            generateImage(rgbl, lightfilename);
+            generateImage(rgbl, rootdir.string());
             LineLight* ll = static_cast<LineLight*>(rgbl->getLight(0));
             for (int j = 0; j < ll->getNumSubdivs(); j++) {
                 Vector3d p = ll->getSubpoint(j);
@@ -492,7 +524,7 @@ void outputPbrtFile(
                 out << "AttributeEnd" << endl;
             }
         } else if (lights[i]->typeId() & LIGHTTYPE_POINT) {
-            generateImage(rgbl, lightfilename);
+            generateImage(rgbl, rootdir.string());
             PointLight* pl = static_cast<PointLight*>(rgbl->getLight(0));
             out << "AttributeBegin" << endl;
             out << "Translate ";
@@ -501,12 +533,12 @@ void outputPbrtFile(
             out << "LightSource \"goniometric\" \"string mapname\" [\"" << lightfilename << "\"]" << endl;
             out << "AttributeEnd" << endl;
         } else if (lights[i]->typeId() & LIGHTTYPE_SH) {
-            generateImage(rgbl, lightfilename);
+            generateImage(rgbl, rootdir.string());
             out << "AttributeBegin" << endl;
             out << "LightSource \"infinite\" \"string mapname\" [\"" << lightfilename << "\"]" << endl;
             out << "AttributeEnd" << endl;
         } else if (lights[i]->typeId() & LIGHTTYPE_ENVMAP) {
-            generateImage(rgbl, lightfilename);
+            generateImage(rgbl, rootdir.string());
             out << "AttributeBegin" << endl;
             out << "LightSource \"infinite\" \"string mapname\" [\"" << lightfilename << "\"]" << endl;
             out << "AttributeEnd" << endl;
