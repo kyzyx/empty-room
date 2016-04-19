@@ -24,7 +24,7 @@ class Light {
         virtual int typeId() const { return LIGHTTYPE_NULL; }
         double operator[](int n) const { return getCoef(n); }
         virtual double& coef(int n) { return v[n]; }
-        double getCoef(int n) const { return v[n]; }
+        virtual double getCoef(int n) const { return v[n]; }
         virtual void setRegularization(double d) { reglambda = d; }
         virtual double getRegularization() const { return reglambda; }
 

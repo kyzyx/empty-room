@@ -15,10 +15,11 @@ Material InverseRender::computeAverageMaterial(vector<SampleData>& data)
         Material incident;
         Material m(0,0,0);
         double currlighting[3];
+        for (int j = 0; j < 3; j++) currlighting[j] = 0;
         for (int j = 0; j < lightintensities.size(); j++) {
             lightContribution(lightintensities[j], currlighting, data[i].lightamount[j]);
         }
-        for (int j = 0; j < 3; j++) directlighting(i) = currlighting[i];
+        for (int j = 0; j < 3; j++) directlighting(j) = currlighting[j];
 
         if (directlighting.r < 0) directlighting.r = 0;
         if (directlighting.g < 0) directlighting.g = 0;
