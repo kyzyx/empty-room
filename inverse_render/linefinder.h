@@ -1,6 +1,7 @@
 #ifndef _LINEFINDER_H
 #define _LINEFINDER_H
 #include "datamanager/imagemanager.h"
+#include <boost/function.hpp>
 #include "roommodel/floorplanhelper.h"
 
 class WallLine {
@@ -19,10 +20,16 @@ void findWallLinesInImage(
         int idx,
         FloorplanHelper& floorplan,
         double resolution,
-        R4Matrix norm,
-        std::vector<std::vector<Eigen::Vector3d> >& votes
+        std::vector<std::vector<Eigen::Vector3d> >& verticalvotes,
+        std::vector<std::vector<Eigen::Vector3d> >& horizontalvotes
 );
-void findWallLines(ImageManager& imgr, FloorplanHelper& floorplan, std::vector<WallLine>& lines, double resolution=0.02, bool getvotes=false);
+void findWallLines(
+        ImageManager& imgr,
+        FloorplanHelper& floorplan,
+        std::vector<WallLine>& lines,
+        double resolution=0.02,
+        boost::function<void(int)> cb=NULL
+);
 
 // Projects point x,y (from top left corner) of the image taken from cam
 // onto the wall defined by the remaining parameters.

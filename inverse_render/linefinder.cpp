@@ -256,14 +256,21 @@ void findWallLinesInImage(
         int idx,
         FloorplanHelper& floorplan,
         double resolution,
-        R4Matrix norm,
-        vector<vector<Vector3d> >& votes)
+        vector<vector<Vector3d> >& verticalvotes,
+        vector<vector<Vector3d> >& horizontalvotes)
 {
     const CameraParams& cam = *(imgr.getCamera(idx));
     const char* image = (const char*) imgr.getImage(idx);
     vector<Vector4d> lines;
     vector<Vector3d> vps;
 
+    Matrix4f m4dn = floorplan.getNormalizationTransform();
+    R4Matrix norm(
+            m4dn(0,0), m4dn(0,1), m4dn(0,2), m4dn(0,3),
+            m4dn(1,0), m4dn(1,1), m4dn(1,2), m4dn(1,3),
+            m4dn(2,0), m4dn(2,1), m4dn(2,2), m4dn(2,3),
+            m4dn(3,0), m4dn(3,1), m4dn(3,2), m4dn(3,3)
+            );
     findVanishingPoints(cam, norm, vps);
     if (!(imgr.getFlags("edges", idx) & ImageManager::DF_INITIALIZED)) {
         cerr << "Please precompute edge images before linefinding" << endl;
@@ -277,7 +284,7 @@ void findWallLinesInImage(
         VPHough((const float*) imgr.getImage("edges", idx), (const char*) imgr.getImage("labels", idx), cam.width, cam.height, vps, z, lines);
 
         for (int k = 0; k < lines.size(); ++k) {
-            cout << ">>data:" << idx << " " << lines[k][0] << " " <<  lines[k][1] << " " << lines[k][2] << " " << lines[k][3];
+            //cout << ">>data:" << idx << " " << lines[k][0] << " " <<  lines[k][1] << " " << lines[k][2] << " " << lines[k][3];
             Vector3d bestpt[2];
             Vector3d start = projectOntoFloorplan(
                     lines[k][0], lines[k][1],
@@ -287,29 +294,37 @@ void findWallLinesInImage(
                     cam, floorplan);
             if (start[0] == end[0] && start[0] >= 0) {
                 if (z != 1 && floorplan.wallsegments[start[0]].direction != z/2) {
-                    cout << endl;
+                    //cout << endl;
                     continue;
                 }
                 Vector3d seg;
+                double minlength = 0.1;
                 if (z == 1) {
+                    if (abs(start[2] - end[2]) < minlength) continue;
+                    //cout << ">>data:" << lines[k][0] << " " <<  lines[k][1] << " " << lines[k][2] << " " << lines[k][3];
                     seg = Vector3d((start[1]+end[1])/2,
                         start[2],
                         end[2]);
-                    votes[start[0]].push_back(seg);
+                    verticalvotes[start[0]].push_back(seg);
                     Vector3f w1 = floorplan.getWallPoint(start[0], seg[0], seg[1]);
                     Vector3f w2 = floorplan.getWallPoint(start[0], seg[0], seg[2]);
-                    cout << " " << w1[0] << " " << w1[1] << " " << w1[2];
-                    cout << " " << w2[0] << " " << w2[1] << " " << w2[2];
-                    cout << " " << z;
+                    //cout << " " << w1[0] << " " << w1[1] << " " << w1[2];
+                    //cout << " " << w2[0] << " " << w2[1] << " " << w2[2];
+                    //cout << " " << z;
+                    //cout << endl;
                 } else {
-                    Vector3f w1 = floorplan.getWallPoint(start[0], start[1], (start[2]+end[2])/2);
-                    Vector3f w2 = floorplan.getWallPoint(start[0], end[1], (start[2]+end[2])/2);
-                    cout << " " << w1[0] << " " << w1[1] << " " << w1[2];
-                    cout << " " << w2[0] << " " << w2[1] << " " << w2[2];
-                    cout << " " << z;
+                    if (abs(start[1] - end[1]) < minlength) continue;
+                    seg = Vector3d((start[2]+end[2])/2,
+                        start[1],
+                        end[1]);
+                    horizontalvotes[start[0]].push_back(seg);
+                    Vector3f w1 = floorplan.getWallPoint(start[0], seg[1], seg[0]);
+                    Vector3f w2 = floorplan.getWallPoint(start[0], seg[2], seg[0]);
+                    //cout << " " << w1[0] << " " << w1[1] << " " << w1[2];
+                    //cout << " " << w2[0] << " " << w2[1] << " " << w2[2];
+                    //cout << " " << z;
                 }
             }
-            cout << endl;
         }
     }
 }
@@ -321,20 +336,70 @@ bool veccmp(Vector3d a, Vector3d b) {
 void findPeaks(vector<Vector3d>& votes, vector<Vector3d>& results, double resolution, double threshold) {
     sort(votes.begin(), votes.end(), veccmp);
     int len = 1 + (votes.back()[0] - votes[0][0])/resolution;
+    double floorplane = 1e10;
+    double ceilplane = 0;
+    for (int i = 0; i < votes.size(); i++) {
+        floorplane = min(min(floorplane, votes[i][1]), votes[i][2]);
+        ceilplane = max(max(ceilplane, votes[i][1]), votes[i][2]);
+    }
+
+    vector<vector<int> > grid(len);
+    vector<vector<double> > avggrid(len);
+    for (int i = 0; i < len; i++) {
+        grid[i].resize((ceilplane-floorplane)/resolution, 0);
+        avggrid[i].resize((ceilplane-floorplane)/resolution, 0);
+    }
+    for (int i = 0; i < votes.size(); i++) {
+        int idx = (votes[i][0]-votes[0][0])/resolution;
+        int startj = (min(votes[i][1], votes[i][2]) - floorplane)/resolution;
+        int endj = (max(votes[i][1], votes[i][2]) - floorplane)/resolution;
+        for (int j = startj; j < endj; j++) {
+            grid[idx][j]++;
+            avggrid[idx][j] += votes[i][0];
+        }
+    }
     vector<int> histogram(len,0);
     vector<double> avg(len,0);
     vector<double> top(len,-numeric_limits<double>::infinity());
     vector<double> bot(len,numeric_limits<double>::infinity());
-    for (int i = 0; i < votes.size(); ++i) {
-        int idx = (votes[i][0]-votes[0][0])/resolution;
-        histogram[idx]++;
-        avg[idx] += votes[i][0];
-        if (votes[i][1] > votes[i][2]) {
-            top[idx] = max(top[idx], votes[i][1]);
-            bot[idx] = min(bot[idx], votes[i][2]);
+    for (int i = 0; i < len; i++) {
+        int totc = 0;
+        double totw = 0;
+        int startj = -1;
+        int endj = -1;
+        bool tracing = false;
+        for (int j = 0; j < grid[i].size(); j++) {
+            if (grid[i][j]) {
+                if (!tracing) {
+                    startj = j;
+                    totc = 0;
+                    totw = 0;
+                }
+                tracing = true;
+                totc += grid[i][j];
+                totw += avggrid[i][j];
+                endj = j;
+            } else {
+                tracing = false;
+            }
+        }
+        histogram[i] = totc;
+        avg[i] = totw;
+        top[i] = endj*resolution + floorplane;
+        bot[i] = startj*resolution + floorplane;
+    }
+    for (int i = len-2; i >= 0; i--) {
+        if (bot[i] > top[i+1] || bot[i+1] > top[i]) {
         } else {
-            top[idx] = max(top[idx], votes[i][2]);
-            bot[idx] = min(bot[idx], votes[i][1]);
+            top[i+1] = max(top[i], top[i+1]);
+            bot[i+1] = min(bot[i], bot[i+1]);
+        }
+    }
+    for (int i = 1; i < len; i++) {
+        if (bot[i] > top[i-1] || bot[i-1] > top[i]) {
+        } else {
+            top[i-1] = max(top[i], top[i-1]);
+            bot[i-1] = min(bot[i], bot[i-1]);
         }
     }
 
@@ -354,37 +419,42 @@ void findPeaks(vector<Vector3d>& votes, vector<Vector3d>& results, double resolu
     }
 }
 
-void findWallLines(ImageManager& imgr, FloorplanHelper& floorplan, vector<WallLine>& lines, double resolution, bool getvotes) {
-    vector<vector<Vector3d> > votes(floorplan.wallsegments.size());
-    Matrix4f m4dn = floorplan.world2floorplan;
-    R4Matrix norm(
-        m4dn(0,0), m4dn(0,1), m4dn(0,2), m4dn(0,3),
-        m4dn(1,0), m4dn(1,1), m4dn(1,2), m4dn(1,3),
-        m4dn(2,0), m4dn(2,1), m4dn(2,2), m4dn(2,3),
-        m4dn(3,0), m4dn(3,1), m4dn(3,2), m4dn(3,3)
-    );
+void findWallLines(
+        ImageManager& imgr,
+        FloorplanHelper& floorplan,
+        vector<WallLine>& lines,
+        double resolution,
+        boost::function<void(int)> cb
+)
+{
+    vector<vector<Vector3d> > vvotes(floorplan.wallsegments.size());
+    vector<vector<Vector3d> > hvotes(floorplan.wallsegments.size());
     for (int i = 0; i < imgr.size(); ++i) {
-        findWallLinesInImage(imgr, i, floorplan, resolution, norm, votes);
-        cout << "Done linefinding image " << i << endl;
+        findWallLinesInImage(imgr, i, floorplan, resolution, vvotes, hvotes);
+        if (cb) cb((i+1)*100/imgr.size());
     }
-    for (int i = 0; i < votes.size(); ++i) {
-        if (votes[i].empty()) continue;
-        if (getvotes) {
-            for (int j = 0; j < votes[i].size(); ++j) {
-                WallLine wl(i, votes[i][j][0]);
-                wl.starty = votes[i][j][1];
-                wl.endy = votes[i][j][2];
-                lines.push_back(wl);
-            }
-        } else {
-            vector<Vector3d> results;
-            findPeaks(votes[i], results, resolution, 0.25);
-            for (int j = 0; j < results.size(); ++j) {
-                WallLine wl(i, results[j][0]);
-                wl.starty = results[j][1];
-                wl.endy = results[j][2];
-                lines.push_back(wl);
-            }
+    for (int i = 0; i < vvotes.size(); ++i) {
+        if (vvotes[i].empty()) continue;
+        vector<Vector3d> results;
+        findPeaks(vvotes[i], results, resolution, 0.25);
+        for (int j = 0; j < results.size(); ++j) {
+            WallLine wl(i, results[j][0]);
+            wl.starty = results[j][1];
+            wl.endy = results[j][2];
+            wl.vertical = true;
+            lines.push_back(wl);
+        }
+    }
+    for (int i = 0; i < hvotes.size(); ++i) {
+        if (hvotes[i].empty()) continue;
+        vector<Vector3d> results;
+        findPeaks(hvotes[i], results, resolution, 0.25);
+        for (int j = 0; j < results.size(); ++j) {
+            WallLine wl(i, results[j][0]);
+            wl.starty = results[j][1];
+            wl.endy = results[j][2];
+            wl.vertical = false;
+            lines.push_back(wl);
         }
     }
 }

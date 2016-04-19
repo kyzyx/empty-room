@@ -15,25 +15,19 @@ class LineFindApp : public InvrenderApp {
         virtual int run() {
             FloorplanHelper fp;
             fp.loadFromRoomModel(room);
-            vector<vector<Vector3d> > votes(fp.wallsegments.size());
-            Matrix4f m4dn = fp.getNormalizationTransform();
-            R4Matrix norm(
-                    m4dn(0,0), m4dn(0,1), m4dn(0,2), m4dn(0,3),
-                    m4dn(1,0), m4dn(1,1), m4dn(1,2), m4dn(1,3),
-                    m4dn(2,0), m4dn(2,1), m4dn(2,2), m4dn(2,3),
-                    m4dn(3,0), m4dn(3,1), m4dn(3,2), m4dn(3,3)
-                    );
-            for (int i = 0; i < imgr->size(); i++) {
-                findWallLinesInImage(*imgr, i, fp, 0.03, norm, votes);
-                getProgressFunction(i,imgr->size())(100);
-            }
-            for (int i = 0; i < votes.size(); ++i) {
-                for (int j = 0; j < votes[i].size(); ++j) {
-                    WallLine wl(i, votes[i][j][0]);
-                    wl.starty = votes[i][j][1];
-                    wl.endy = votes[i][j][2];
-                    printf(">>data:%d %f %f %f\n", wl.wallindex, wl.starty, wl.endy, wl.p);
+            vector<WallLine> lines;
+            findWallLines(*imgr, fp, lines, 0.03, getProgressFunction(0,1));
+            for (int i = 0; i < lines.size(); i++) {
+                Vector3f p1, p2;
+                if (lines[i].vertical) {
+                    p1 = fp.getWallPoint(lines[i].wallindex, lines[i].p, lines[i].starty);
+                    p2 = fp.getWallPoint(lines[i].wallindex, lines[i].p, lines[i].endy);
+                } else {
+                    p1 = fp.getWallPoint(lines[i].wallindex, lines[i].starty, lines[i].p);
+                    p2 = fp.getWallPoint(lines[i].wallindex, lines[i].endy, lines[i].p);
                 }
+
+                printf(">>data:%d %f %f %f %f %f %f %f %f %f\n", lines[i].wallindex, lines[i].starty, lines[i].endy, lines[i].p, p1[0], p1[1], p1[2], p2[0], p2[1], p2[2]);
             }
             emitDone();
             return 0;
