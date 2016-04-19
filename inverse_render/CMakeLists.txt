@@ -126,6 +126,7 @@ add_executable(solverapp apps/solverapp.cpp
     solver.cpp solver.h inverselighting.cpp solvetexture.cpp
     lighting/lighting_ceres.cpp
     findbaseboard.cpp findbaseboard.h linefinder.cpp linefinder.h
+    featurefinder.h featurefinder.cpp
     orientededgefilter.cpp orientededgefilter.h)
 target_link_libraries(solverapp ${PCL_LIBRARIES} ${OpenCV_LIBS} ${GLUT_LIBRARY}
     ${CERES_LIBRARIES} lighting datamanager roommodel

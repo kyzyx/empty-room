@@ -1,5 +1,7 @@
 #include "rendering/opengl_compat.h"
 #include "findbaseboard.h"
+#include "featurefinder.h"
+#include "linefinder.h"
 #include "invrenderapp.h"
 #include "wallfinder/wall_finder.h"
 #include "solver.h"
@@ -17,7 +19,7 @@ class SolverApp : public InvrenderApp {
               matlabfilename(""), pbrtfilename(""), rerenderedplyfilename(""), errorplyfilename(""),
               meshcolorscale(1), gamma(1),
               label(WallFinder::LABEL_WALL),
-              cameranum(-1), solveTexture(false), solveLights(true), dobaseboard(false),
+              cameranum(-1), solveTexture(false), solveLights(true), dobaseboard(false), dorwo(false),
               scale(0), reglambda(0) {}
         virtual int run() {
             // Setup
@@ -179,40 +181,103 @@ class SolverApp : public InvrenderApp {
                 BaseboardFinder bf(imgr, room);
                 bf.compute();
                 double bh = bf.getBaseboardHeight();
-                vector<SampleData> bbdata;
-                vector<double> ddepth;
-                for (int i = 0; i < mmgr->size(); i++) {
-                    if (mmgr->getLabel(i, MeshManager::TYPE_CHANNEL) == WallFinder::LABEL_WALL) {
-                        Eigen::Vector3f p = mmgr->VertexPositionE(i);
-                        Eigen::Vector3f n = mmgr->VertexNormalE(i);
-                        Eigen::Vector4f p4(p(0), p(1), p(2), 1);
-                        Eigen::Vector4f n4(n(0), n(1), n(2), 0);
-                        p = (fph.world2floorplan*p4).head<3>();
-                        n = (fph.world2floorplan*n4).head<3>();
-                        if (p(1) > bh) continue;
-                        bbdata.push_back(alldata[i]);
-                        int wallidx = fph.closestWall(p, n);
-                        if (wallidx >= 0) {
-                            double d = 0;
-                            if (fph.wallsegments[wallidx].direction > 0) {
-                                d = fph.wallsegments[wallidx].coord - p(2);
-                            } else {
-                                d = p(0) - fph.wallsegments[wallidx].coord;
-                            }
-                            ddepth.push_back(d);
-                        }
-                    }
-                }
-                Material bbmat = ir.computeAverageMaterial(bbdata);
+                FeatureFinder ff;
+                ff.condition.setLabel(WallFinder::LABEL_WALL);
+                ff.condition.setMax(1, bh);
+                ff.compute(fph, ir, alldata);
+                Material bbmat = ff.getMaterial();
                 room->baseboardMaterial.diffuse.r = bbmat.r;
                 room->baseboardMaterial.diffuse.g = bbmat.g;
                 room->baseboardMaterial.diffuse.b = bbmat.b;
-                room->baseboardHeight = bf.getBaseboardHeight();
-                if (ddepth.size()) {
-                    room->baseboardDepth = accumulate(ddepth.begin(), ddepth.end(), 0.0) / ddepth.size();
-                    if (room->baseboardDepth < 0) room->baseboardDepth = 0;
-                } else {
-                    room->baseboardDepth = 0;
+                room->baseboardHeight = bh;
+                room->baseboardDepth = ff.getDepth();
+            }
+            if (dorwo) {
+                FloorplanHelper fph;
+                fph.loadFromRoomModel(room);
+                vector<WallLine> lines;
+                findWallLines(*imgr, fph, lines, 0.02);
+                // Find all potential door vertical lines
+                double dh = 0.08;
+                double mindoorheight = 1.7;
+                vector<vector<WallLine> > perwalllines(fph.wallsegments.size());
+                vector<vector<WallLine> > perwallhoriz(fph.wallsegments.size());
+                for (int i = 0; i < lines.size(); i++) {
+                    if (lines[i].vertical) {
+                        if (
+                                lines[i].endy < dh
+                             && lines[i].starty > mindoorheight
+                        ) {
+                            perwalllines[lines[i].wallindex].push_back(lines[i]);
+                        }
+                    } else {
+                        perwallhoriz[lines[i].wallindex].push_back(lines[i]);
+                    }
+                }
+                for (int i = 0; i < perwalllines.size(); i++) {
+                    vector<bool> considered(perwalllines[i].size(),false);
+                    for (int j = 0; j < perwalllines[i].size(); j++) {
+                        double h = perwalllines[i][j].starty;
+                        double p = perwalllines[i][j].p;
+                        int bestk = -1;
+                        double maxw = 0;
+                        if (considered[j]) continue;
+                        considered[j] = true;
+                        for (int k = j+1; k < perwalllines[i].size(); k++) {
+                            double h2 = perwalllines[i][k].starty;
+                            double p2 = perwalllines[i][k].p;
+                            bool compatible = false;
+                            for (int x = 0; x < perwallhoriz[i].size(); x++) {
+                                double ph = perwallhoriz[i][x].p;
+                                double pl = perwallhoriz[i][x].endy;
+                                double pr = perwallhoriz[i][x].starty;
+                                if (abs(ph-h) < dh
+                                        && pl < p + dh && pr > p - dh
+                                        && pl < p2 + dh && pr > p2 - dh)
+                                {
+                                    compatible = true;
+                                }
+                            }
+                            if (abs(h-h2) < dh && compatible) {
+                                double currw = abs(p-p2);
+                                considered[k] = true;
+                                if (currw > maxw) {
+                                    maxw = currw;
+                                    bestk = k;
+                                }
+                            }
+                        }
+                        if (bestk >= 0) {
+                            double h2 = perwalllines[i][bestk].starty;
+                            double p2 = perwalllines[i][bestk].p;
+                            FeatureFinder ff;
+                            ff.condition.setLabel(WallFinder::LABEL_WALL);
+                            ff.condition.setWallIndex(i);
+                            ff.condition.setMax(1, (h+h2)/2);
+                            if (fph.wallsegments[i].direction) {
+                                ff.condition.setMin(0, min(p,p2) + fph.wallsegments[i].start);
+                                ff.condition.setMax(0, max(p,p2) + fph.wallsegments[i].start);
+                            } else {
+                                ff.condition.setMin(2, min(p,p2) + fph.wallsegments[i].start);
+                                ff.condition.setMax(2, max(p,p2) + fph.wallsegments[i].start);
+                            }
+                            ff.compute(fph, ir, alldata);
+                            Material bbmat = ff.getMaterial();
+                            roommodel::RectangleWallObject rwo;
+                            rwo.height = h;
+                            rwo.width = abs(p - p2);
+                            rwo.recessed = ff.getDepth();
+                            rwo.verticalposition = 0.0001; // Must be > 0 for geometry generator
+                            if (fph.forwards[i]) {
+                                rwo.horizontalposition = min(p,p2);
+                            } else {
+                                rwo.horizontalposition = fph.wallsegments[i].length() - max(p,p2);
+                            }
+                            rwo.trimDepth = 0;
+                            rwo.trimWidth = 0;
+                            room->walls[i].windows.push_back(rwo);
+                        }
+                    }
                 }
             }
             if (outroommodelname.length()) {
@@ -261,6 +326,9 @@ class SolverApp : public InvrenderApp {
             }
             if (pcl::console::find_switch(argc, argv, "-baseboard")) {
                 dobaseboard = true;
+            }
+            if (pcl::console::find_switch(argc, argv, "-doors")) {
+                dorwo = true;
             }
             if (pcl::console::find_argument(argc, argv, "-hemicuberesolution") >= 0) {
                 pcl::console::parse_argument(argc, argv, "-hemicuberesolution", hemicuberesolution);
@@ -344,6 +412,7 @@ class SolverApp : public InvrenderApp {
         string inlightfilename;
         string outroommodelname;
         bool dobaseboard;
+        bool dorwo;
         int cameranum;
         int label;
         double reglambda;
