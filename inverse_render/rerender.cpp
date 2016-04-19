@@ -433,6 +433,30 @@ void outputPbrtFile(
         out << "AttributeEnd" << endl;
     }
 
+    // Output RWOs
+    for (int i = 0; i < room->walls.size(); i++) {
+        for (int j = 0; j < room->walls[i].windows.size(); j++) {
+
+            stringstream matstream;
+            matstream << "rwo" << i << "_" << j;
+            string matname = matstream.str();
+            outputMaterial(out, room->walls[i].windows[j].material, matname);
+            vector<roommodel::Rect> windowrect;
+            windowrect.push_back(gg.getRectangleForWindow(&(room->walls[i].windows[j])));
+            rectanglesToTriangles(windowrect, triangles, false, false, true);
+            if (!triangles.empty()) {
+                out << "AttributeBegin" << endl;
+                out << "Transform [1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1]" << endl;
+                out << "NamedMaterial \"" << matname << "\"" << endl;
+                out << "Shape \"trianglemesh\"" << endl;
+                outputTriangles(out, triangles, m*reup);
+                triangles.clear();
+                out << "\"string name\" [\"Floor\"]" << endl;
+                out << "AttributeEnd" << endl;
+            }
+        }
+    }
+
     // Output light sources
     for (int i = 0; i < lights.size(); ++i) {
         RGBLight* rgbl = static_cast<RGBLight*>(lights[i]);
