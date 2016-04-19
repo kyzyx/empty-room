@@ -190,7 +190,8 @@ class SolverApp : public InvrenderApp {
                 room->baseboardMaterial.diffuse.g = bbmat.g;
                 room->baseboardMaterial.diffuse.b = bbmat.b;
                 room->baseboardHeight = bh;
-                room->baseboardDepth = ff.getDepth();
+                room->baseboardDepth = -ff.getDepth();
+                if (room->baseboardDepth > 0) room->baseboardDepth = -0.005;
             }
             if (dorwo) {
                 FloorplanHelper fph;
@@ -262,8 +263,11 @@ class SolverApp : public InvrenderApp {
                                 ff.condition.setMax(2, max(p,p2) + fph.wallsegments[i].start);
                             }
                             ff.compute(fph, ir, alldata);
-                            Material bbmat = ff.getMaterial();
+                            Material doormat = ff.getMaterial();
                             roommodel::RectangleWallObject rwo;
+                            rwo.material.diffuse.r = doormat.r;
+                            rwo.material.diffuse.g = doormat.g;
+                            rwo.material.diffuse.b = doormat.b;
                             rwo.height = h;
                             rwo.width = abs(p - p2);
                             rwo.recessed = ff.getDepth();

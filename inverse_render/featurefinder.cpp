@@ -30,15 +30,15 @@ void FeatureFinder::compute(
         n = (fph.world2floorplan*n4).head<3>();
         int wallidx = fph.closestWall(p, n);
         if (condition(p, n, wallidx, mmgr->getLabel(i, MeshManager::TYPE_CHANNEL))) {
-            cout << i << " " << p[0] << " " << p[1] << " " << p[2] << endl;
             data.push_back(alldata[i]);
             if (wallidx >= 0) {
                 double d = 0;
                 if (fph.wallsegments[wallidx].direction > 0) {
-                    d = fph.wallsegments[wallidx].coord - p(2);
+                    d = p(2) - fph.wallsegments[wallidx].coord;
                 } else {
                     d = p(0) - fph.wallsegments[wallidx].coord;
                 }
+                if (fph.wallsegments[wallidx].norm < 0) d = -d;
                 ddepth.push_back(d);
             }
         }
@@ -46,6 +46,5 @@ void FeatureFinder::compute(
     mat = ir.computeAverageMaterial(data);
     if (ddepth.size()) {
         depth = accumulate(ddepth.begin(), ddepth.end(), 0.0) / ddepth.size();
-        if (depth < 0) depth = 0;
     }
 }
