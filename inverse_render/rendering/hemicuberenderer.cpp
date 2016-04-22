@@ -233,7 +233,7 @@ void HemicubeRenderer::computeSamples(
                 R3Vector vn = v;
                 vn.Normalize();
                 if (n.Dot(vn) > 0 && occluded(lp, p, j+1, rendermanager->getMeshManager()) < 0) {
-                    double weight = 1./v.Dot(v);
+                    double weight = n.Dot(vn)/v.Dot(v);
                     pointlight->addIncident(p[0], p[1], p[2], 0, 0, 0, weight/M_PI);
                 }
             } else if (lights[j]->typeId() & LIGHTTYPE_LINE) {
