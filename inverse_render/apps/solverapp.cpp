@@ -102,6 +102,19 @@ class SolverApp : public InvrenderApp {
             if (outlightfilename.length()) {
                 writeLightsToFile(outlightfilename, ir.lightintensities);
             }
+            if (room) {
+                if (ir.materials.size() >= 1) {
+                    room->wallMaterial.diffuse.r = ir.materials[0].r;
+                    room->wallMaterial.diffuse.g = ir.materials[0].g;
+                    room->wallMaterial.diffuse.b = ir.materials[0].b;
+                    room->ceilingMaterial.diffuse.r = ir.materials[0].r;
+                    room->ceilingMaterial.diffuse.g = ir.materials[0].g;
+                    room->ceilingMaterial.diffuse.b = ir.materials[0].b;
+                    room->floorMaterial.diffuse.r = ir.materials[2].r;
+                    room->floorMaterial.diffuse.g = ir.materials[2].g;
+                    room->floorMaterial.diffuse.b = ir.materials[2].b;
+                }
+            }
             for (int i = 0; i < ir.materials.size(); i++) {
                 cout << "data:Material " << i << " ";
                 cout << ir.materials[i].r << " " << ir.materials[i].g << " " << ir.materials[i].b << endl;
@@ -290,15 +303,6 @@ class SolverApp : public InvrenderApp {
 
             // Output scene file for rerendering
             if (pbrtfilename.length()) {
-                room->wallMaterial.diffuse.r = ir.materials[0].r;
-                room->wallMaterial.diffuse.g = ir.materials[0].g;
-                room->wallMaterial.diffuse.b = ir.materials[0].b;
-                room->ceilingMaterial.diffuse.r = ir.materials[0].r;
-                room->ceilingMaterial.diffuse.g = ir.materials[0].g;
-                room->ceilingMaterial.diffuse.b = ir.materials[0].b;
-                room->floorMaterial.diffuse.r = ir.materials[2].r;
-                room->floorMaterial.diffuse.g = ir.materials[2].g;
-                room->floorMaterial.diffuse.b = ir.materials[2].b;
                 if (imgr && room) {
                     outputPbrtFile(
                             pbrtfilename+".pbrt", room, *mmgr, rgbl,
