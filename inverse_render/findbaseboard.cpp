@@ -82,7 +82,7 @@ void BaseboardFinder::compute(float resolution, float edgethreshold) {
         double cellsobserved = 0;
         for (int j = 0; j < hist[i].size(); j++) {
             for (int k = 0; k < hist[i][j].size(); k++) {
-                weightedge += hist[i][j][k];
+                weightedge += hist[i][j][k]/count[i][j][k];
                 cellsedge += hist[i][j][k]?1:0;
                 weightobserved += count[i][j][k];
                 cellsobserved += count[i][j][k]?1:0;
@@ -91,7 +91,7 @@ void BaseboardFinder::compute(float resolution, float edgethreshold) {
         if (cellsobserved == 0) {
             //printf("%d (%.4f): 0 0 0\n", i, i*resolution);
         } else {
-            v.push_back(weightedge/(weightobserved*cellsobserved));
+            v.push_back(weightedge/cellsobserved);
             //printf("%d (%.4f): %.2f\n", i, i*resolution, v);
         }
     }
