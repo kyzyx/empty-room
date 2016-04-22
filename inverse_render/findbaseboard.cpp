@@ -1,20 +1,21 @@
 #include "findbaseboard.h"
 #include "linefinder.h"
+#include "wallfinder/wall_finder.h"
 
 #include "datamanager/imageio.h"
 using namespace std;
 
 void BaseboardFinder::compute(float resolution, float edgethreshold) {
-    WallFinder wf;
-    wf.loadFromRoomModel(floorplan);
+    FloorplanHelper fp;
+    fp.loadFromRoomModel(floorplan);
     vector<vector<vector<float> > > hist(floorplan->height/resolution+4); // [height][wallidx][pos]
     vector<vector<vector<int> > > count(floorplan->height/resolution+4); // [height][wallidx][pos]
     for (int i = 0; i < hist.size(); i++) {
-        hist[i].resize(wf.wallsegments.size());
-        count[i].resize(wf.wallsegments.size());
-        for (int j = 0; j < wf.wallsegments.size(); j++) {
-            hist[i][j].resize(wf.wallsegments[j].length()/resolution+2,0);
-            count[i][j].resize(wf.wallsegments[j].length()/resolution+2,0);
+        hist[i].resize(fp.wallsegments.size());
+        count[i].resize(fp.wallsegments.size());
+        for (int j = 0; j < fp.wallsegments.size(); j++) {
+            hist[i][j].resize(fp.wallsegments[j].length()/resolution+2,0);
+            count[i][j].resize(fp.wallsegments[j].length()/resolution+2,0);
         }
     }
     for (int i = 0; i < imgr->size(); i++) {
@@ -25,9 +26,9 @@ void BaseboardFinder::compute(float resolution, float edgethreshold) {
             for (int x = 0; x < cam->width; x++) {
                 int idx = 3*(y*cam->width+x);
                 if (mask[y*cam->width+x] != WallFinder::LABEL_WALL) continue;
-                Eigen::Vector3d p = projectOntoFloorplan(x, y, *cam, wf);
+                Eigen::Vector3d p = projectOntoFloorplan(x, y, *cam, fp);
                 if (p[0] >= 0) {
-                    int h = (p[2] - wf.floorplane)/resolution;
+                    int h = (p[2] - fp.floorplane)/resolution;
                     if (h >= hist.size()) h = hist.size()-1;
                     if (h < 0) h = 0;
 
@@ -40,16 +41,14 @@ void BaseboardFinder::compute(float resolution, float edgethreshold) {
                         (!isinf(img[idx+2]) && img[idx+2] > edgethreshold))
                     {
                         float v = 0;
-                        if (wf.wallsegments[p[0]].direction == 0 && !isinf(img[idx]))
+                        if (fp.wallsegments[p[0]].direction == 0 && !isinf(img[idx]))
                             v = img[idx];
-                        if (wf.wallsegments[p[0]].direction == 1 && !isinf(img[idx+2]))
+                        if (fp.wallsegments[p[0]].direction == 1 && !isinf(img[idx+2]))
                             v = img[idx+2];
                         //hist[h][p[0]][xx] = max(hist[h][p[0]][xx], log(v+1));
                         //hist[h][p[0]][xx] += log(v+1);
                         hist[h][p[0]][xx] += 1;
                         //hist[h][p[0]][xx] = max(hist[h][p[0]][xx], 1.f);
-                        //cout << x << " " << y << ": " << p[2] << "(" << h << " " << (p[2] - wf.floorplane) << ") " << p[0] << " " << p[1] << "(" << xx  << ")" << endl;
-                        //cout << x << "," << y << "; " << endl;
                     }
                 }
             }
