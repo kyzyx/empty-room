@@ -335,6 +335,7 @@ void outputPbrtCameraFile(
 {
     ofstream out(filename);
     if (cam) {
+        out << "Scale -1 1 1" << endl;
         out << "Film \"image\"" << endl;
         out << "\"integer xresolution\" [" << cam->width << "]" << endl;
         out << "\"integer yresolution\" [" << cam->height << "]" << endl;
@@ -345,8 +346,6 @@ void outputPbrtCameraFile(
         out << endl << endl;
         out << "Camera \"perspective\"" << endl;
         out << "\"float fov\" [" << cam->fov << "]" << endl;
-        out << "\"float shutteropen\" [0.000000000000000]" << endl;
-        out << "\"float shutterclose\" [0.041666666666667]" << endl << endl;
     }
     if (includefilename.length()) {
         out << "Include \"" << boost::filesystem::path(includefilename).filename().string()<< "\"" << endl;
@@ -363,11 +362,16 @@ void outputPbrtFile(
 
     // Basic rendering info
     out << "# Main Scene File" << endl;
-    out << "Scale -1 1 1" << endl;
-    out << "Renderer \"sampler\"" << endl << endl;
+    // PBRT v2
     out << "Sampler \"lowdiscrepancy\"" << endl;
-    out << "\"integer pixelsamples\" [1024]" << endl << endl;
-    out << "SurfaceIntegrator \"path\"" << endl << endl;
+    out << "\"integer pixelsamples\" [2048]" << endl << endl;
+    out << "Renderer \"sampler\"" << endl << endl;
+    out << "SurfaceIntegrator \"path\" \"integer maxdepth\" [10]" << endl << endl;
+    // PBRT v3 (with bidirectional path tracing)
+    out << "#Sampler \"lowdiscrepancy\"" << endl;
+    out << "#\"integer pixelsamples\" [1024]" << endl << endl;
+    out << "#Integrator \"bdpt\" \"integer maxdepth\" [10]" << endl << endl;
+    // Smoothing
     out << "PixelFilter \"mitchell\"" << endl;
     out << "\"float B\" [0.333333343267441]" << endl;
     out << "\"float C\" [0.333333343267441]" << endl;
@@ -375,6 +379,7 @@ void outputPbrtFile(
     out << "\"float ywidth\" [2.000000000000000]" << endl << endl;
 
     if (cam) {
+        out << "Scale -1 1 1" << endl;
         out << "Film \"image\"" << endl;
         out << "\"integer xresolution\" [" << cam->width << "]" << endl;
         out << "\"integer yresolution\" [" << cam->height << "]" << endl;
@@ -385,8 +390,6 @@ void outputPbrtFile(
         out << endl << endl;
         out << "Camera \"perspective\"" << endl;
         out << "\"float fov\" [" << cam->fov << "]" << endl;
-        out << "\"float shutteropen\" [0.000000000000000]" << endl;
-        out << "\"float shutterclose\" [0.041666666666667]" << endl << endl;
     }
 
     // Generate geometry
