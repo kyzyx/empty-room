@@ -165,6 +165,8 @@ void InverseRender::writeVariablesBinary(vector<SampleData>& data, string filena
 }
 
 void InverseRender::loadVariablesBinary(vector<SampleData>& data, string filename) {
+    lightintensities.clear();
+    lights.clear();
     ifstream in(filename, ifstream::binary);
     uint32_t sz;
     in.read((char*) &sz, 4);
