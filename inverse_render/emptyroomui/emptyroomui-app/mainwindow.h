@@ -121,6 +121,7 @@ private slots:
     void on_actionSelect_Wall_Vertices_triggered();
     void on_actionSelect_Floor_Vertices_triggered();
     void on_actionSelect_Ceiling_Vertices_triggered();
+    void on_actionSelect_Light_Vertices_triggered();
     void on_actionSelect_Mesh_Component_triggered();
     void on_actionIncrease_Selection_Brush_Size_triggered();
     void on_actionDecrease_Selection_Brush_Size_triggered();

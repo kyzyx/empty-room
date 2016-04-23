@@ -472,6 +472,7 @@ void MainWindow::meshLoaded() {
     ui->actionSelect_Ceiling_Vertices->setEnabled(true);
     ui->actionSelect_Floor_Vertices->setEnabled(true);
     ui->actionSelect_Wall_Vertices->setEnabled(true);
+    ui->actionSelect_Light_Vertices->setEnabled(true);
     ui->actionSelect_None->setEnabled(true);
     ui->actionAdd_To_Selection->setEnabled(true);
     ui->actionRemove_From_Selection->setEnabled(true);
@@ -1403,6 +1404,23 @@ void MainWindow::on_actionSelect_Ceiling_Vertices_triggered()
     ui->meshWidget->renderManager()->selectVertices(ceilingindices);
     ui->meshWidget->renderOptions()->showSelected();
 }
+
+void MainWindow::on_actionSelect_Light_Vertices_triggered()
+{
+    bool ok;
+    int lbl = QInputDialog::getInt(this, "Select light vertices...", "Light ID: ", 1, 0, 1024, 1, &ok);
+    if (ok) {
+        std::vector<int> indices;
+        for (int i = 0; i < mmgr->size(); i++) {
+            if (mmgr->getLabel(i, MeshManager::LABEL_CHANNEL) == lbl) {
+                indices.push_back(i);
+            }
+        }
+        ui->meshWidget->renderManager()->selectVertices(indices);
+        ui->meshWidget->renderOptions()->showSelected();
+    }
+}
+
 
 void MainWindow::on_actionIncrease_Selection_Brush_Size_triggered()
 {

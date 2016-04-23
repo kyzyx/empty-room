@@ -1161,6 +1161,7 @@
     <addaction name="actionSelect_Wall_Vertices"/>
     <addaction name="actionSelect_Floor_Vertices"/>
     <addaction name="actionSelect_Ceiling_Vertices"/>
+    <addaction name="actionSelect_Light_Vertices"/>
     <addaction name="actionSelect_Mesh_Component"/>
     <addaction name="actionSelect_None"/>
     <addaction name="separator"/>
@@ -1562,6 +1563,14 @@
    </property>
    <property name="text">
     <string>Load Vertex Incident Lighting</string>
+   </property>
+  </action>
+  <action name="actionSelect_Light_Vertices">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Select Light Vertices</string>
    </property>
   </action>
  </widget>
