@@ -139,6 +139,7 @@ class SolverApp : public InvrenderApp {
                     if (indices[wk] == i) {
                         Material res(0,0,0);
                         double currlighting[3];
+                        for (int j = 0; j < 3; j++) currlighting[j] = 0;
                         for (int j = 0; j < rgbl.size(); j++) {
                             lightContribution(rgbl[j], currlighting, alldata[i].lightamount[j]);
                         }
@@ -173,6 +174,7 @@ class SolverApp : public InvrenderApp {
                 for (int i = 0; i < mmgr->NVertices(); i++) {
                     if (indices[wk] == i) {
                         double currlighting[3];
+                        for (int j = 0; j < 3; j++) currlighting[j] = 0;
                         for (int j = 0; j < rgbl.size(); j++) {
                             lightContribution(rgbl[j], currlighting, alldata[i].lightamount[j]);
                         }

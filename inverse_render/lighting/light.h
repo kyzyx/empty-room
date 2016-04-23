@@ -283,7 +283,6 @@ void lightContribution(Light* l, T* ret, const Light* const arr, T const* v=NULL
             }
         }
     } else {
-        ret[0] = T(0);
         for (int i = 0; i < l->numParameters(); i++) {
             if (v) ret[0] += v[i]*T(arr->getCoef(i));
             else   ret[0] += T(l->getCoef(i)*arr->getCoef(i));
