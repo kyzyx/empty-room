@@ -1165,12 +1165,22 @@ void MainWindow::edgesAndFloorPlanLoaded() {
 
 void MainWindow::addLine(QString l) {
     QStringList ls = l.split(" ");
-    for (int i = 0; i < 5; ++i) lines.push_back(ls[i].toInt());
-    updateImage(imageindex, typeindex);
+    if (ls[0].toInt() < 0) {
+        lines.push_back(-(ls[0].toInt()));
+        for (int i = 1; i < 5; i++) {
+            lines.push_back(ls[i].toInt());
+        }
+        updateImage(imageindex, typeindex);
+    } else {
+        Eigen::Vector3d p1(ls[4].toFloat(), ls[5].toFloat(), ls[6].toFloat());
+        Eigen::Vector3d p2(ls[7].toFloat(), ls[8].toFloat(), ls[9].toFloat());
+        ui->meshWidget->addLine(p1, p2);
+    }
 }
 
 void MainWindow::on_computeVerticalLinesButton_clicked()
 {
+    ui->meshWidget->clearLines();
     lines.clear();
     QString cmd = settings->value("compute_rwo_binary", "linefindapp -camfile %1 -roommodel %2 -p").toString();
     cmd = cmd.arg(camfilename, roommodelfile);

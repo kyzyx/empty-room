@@ -195,7 +195,12 @@ public:
 
     void computeWallFindingHistogram(double resolution);
 
-    void addLine(Eigen::Vector3d p1, Eigen::Vector3d p2) { lines.push_back(p1); lines.push_back(p2); }
+    void addLine(Eigen::Vector3d p1, Eigen::Vector3d p2) {
+        lines.push_back(p1); lines.push_back(p2);
+    }
+    void clearLines() {
+        lines.clear();
+    }
 
     int interactionmode;
     bool selectcomponent;
@@ -301,6 +306,9 @@ public:
     }
     void addLine(Eigen::Vector3d p1, Eigen::Vector3d p2) {
         v->addLine(p1, p2);
+    }
+    void clearLines() {
+        v->clearLines();
     }
 
     void selectNextComponent() {

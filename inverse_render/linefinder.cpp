@@ -284,7 +284,7 @@ void findWallLinesInImage(
         VPHough((const float*) imgr.getImage("edges", idx), (const char*) imgr.getImage("labels", idx), cam.width, cam.height, vps, z, lines);
 
         for (int k = 0; k < lines.size(); ++k) {
-            //cout << ">>data:" << idx << " " << lines[k][0] << " " <<  lines[k][1] << " " << lines[k][2] << " " << lines[k][3];
+            cout << ">>data:-" << idx << " " << lines[k][0] << " " <<  lines[k][1] << " " << lines[k][2] << " " << lines[k][3];
             Vector3d bestpt[2];
             Vector3d start = projectOntoFloorplan(
                     lines[k][0], lines[k][1],
@@ -294,24 +294,25 @@ void findWallLinesInImage(
                     cam, floorplan);
             if (start[0] == end[0] && start[0] >= 0) {
                 if (z != 1 && floorplan.wallsegments[start[0]].direction != z/2) {
-                    //cout << endl;
+                    cout << endl;
                     continue;
                 }
                 Vector3d seg;
                 double minlength = 0.1;
                 if (z == 1) {
-                    if (abs(start[2] - end[2]) < minlength) continue;
-                    //cout << ">>data:" << lines[k][0] << " " <<  lines[k][1] << " " << lines[k][2] << " " << lines[k][3];
+                    if (abs(start[2] - end[2]) < minlength) {
+                        cout << endl;
+                        continue;
+                    }
                     seg = Vector3d((start[1]+end[1])/2,
                         start[2],
                         end[2]);
                     verticalvotes[start[0]].push_back(seg);
                     Vector3f w1 = floorplan.getWallPoint(start[0], seg[0], seg[1]);
                     Vector3f w2 = floorplan.getWallPoint(start[0], seg[0], seg[2]);
-                    //cout << " " << w1[0] << " " << w1[1] << " " << w1[2];
-                    //cout << " " << w2[0] << " " << w2[1] << " " << w2[2];
-                    //cout << " " << z;
-                    //cout << endl;
+                    cout << " " << w1[0] << " " << w1[1] << " " << w1[2];
+                    cout << " " << w2[0] << " " << w2[1] << " " << w2[2];
+                    cout << " " << z;
                 } else {
                     if (abs(start[1] - end[1]) < minlength) continue;
                     seg = Vector3d((start[2]+end[2])/2,
@@ -320,11 +321,12 @@ void findWallLinesInImage(
                     horizontalvotes[start[0]].push_back(seg);
                     Vector3f w1 = floorplan.getWallPoint(start[0], seg[1], seg[0]);
                     Vector3f w2 = floorplan.getWallPoint(start[0], seg[2], seg[0]);
-                    //cout << " " << w1[0] << " " << w1[1] << " " << w1[2];
-                    //cout << " " << w2[0] << " " << w2[1] << " " << w2[2];
-                    //cout << " " << z;
+                    cout << " " << w1[0] << " " << w1[1] << " " << w1[2];
+                    cout << " " << w2[0] << " " << w2[1] << " " << w2[2];
+                    cout << " " << z;
                 }
             }
+            cout << endl;
         }
     }
 }
