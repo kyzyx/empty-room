@@ -1140,6 +1140,9 @@ void MainWindow::on_edgeFilterButton_clicked()
         extraflags += settings->value("lastimageflags", "").toString();
         extraflags += " -noshm";
     }
+    if (roommodelfile.length() > 0) {
+        extraflags += " -roommodel " + roommodelfile;
+    }
     cmd += extraflags;
     progressbar->setValue(0);
     SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
