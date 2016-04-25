@@ -11,6 +11,7 @@ void GeometryGenerator::generate() {
     double miny = 0;
     double maxy = 0;
     double h = model->height;
+    double delta = 0.02;
 
     for (int i = 0; i < model->walls.size(); ++i) {
         int nn = model->walls[i].normal;
@@ -23,7 +24,7 @@ void GeometryGenerator::generate() {
         if (cy < miny) miny = cy;
         if (cx > maxx) maxx = cx;
         if (cy > maxy) maxy = cy;
-        Rect wall(px, py, 0, cx, cy, h);
+        Rect wall(px, py, -delta, cx, cy, h+delta);
         wall.normal = nn;
         wall.material = &(model->wallMaterial);
         vector<Rect> windowRects;
@@ -105,7 +106,7 @@ void GeometryGenerator::generate() {
 		}
 		for (int j = 0; j < newRects.size(); ++j) {
 			// Add baseboard geometry for relevant wall segments
-			if (model->baseboardHeight > 0 && newRects[j].p[2] == 0 && newRects[j].h >= model->baseboardHeight) {
+			if (model->baseboardHeight > 0 && newRects[j].p[2] == -delta && newRects[j].h >= model->baseboardHeight) {
 				Rect bbFront = newRects[j];
 				bbFront.p[bbFront.axis ? 0 : 1] -= model->baseboardDepth;
 				bbFront.p[bbFront.axis] += newRects[j].normal*model->baseboardDepth;
@@ -142,7 +143,6 @@ void GeometryGenerator::generate() {
         px = cx;
         py = cy;
     }
-	double delta = 0.1;
     Rect floorRect(minx-delta, miny-delta, 0, maxx+delta, maxy+delta, 0);
     floorRect.material = &(model->floorMaterial);
     floorRect.normal = 1;

@@ -132,6 +132,7 @@ void rectanglesToTriangles(
         bool includenormals,
         bool includeuvs)
 {
+    double delta = 0.001;
     for (int i = 0; i < rectangles.size(); ++i) {
         Rect& r = rectangles[i];
         double coords[4][3];
@@ -143,10 +144,14 @@ void rectanglesToTriangles(
         pair<int,int> ax = rectangles[i].axisIndices();
         int x = ax.first;
         int y = ax.second;
-        coords[1][x] += rectangles[i].w;
-        coords[2][x] += rectangles[i].w;
-        coords[2][y] += rectangles[i].h;
-        coords[3][y] += rectangles[i].h;
+        coords[0][x] -= delta;
+        coords[0][y] -= delta;
+        coords[1][x] += rectangles[i].w+delta;
+        coords[1][y] -= delta;
+        coords[2][x] += rectangles[i].w+delta;
+        coords[2][y] += rectangles[i].h+delta;
+        coords[3][x] -= delta;
+        coords[3][y] += rectangles[i].h+delta;
         const int indices[] = {
             0,1,2,
             0,2,1,
