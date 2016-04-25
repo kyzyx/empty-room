@@ -54,7 +54,7 @@ void GeometryGenerator::generate() {
 			wRect.normal = wall.normal;
 			windowRects.push_back(wRect);
 			wRect.material = &(rwo.material);
-			wRect.p[wall.axis] -= wall.normal*rwo.recessed;
+			wRect.p[wall.axis] += wall.normal*rwo.recessed;
 			windowRectangles[&(model->walls[i].windows[j])] = wRect;
 
 			// Add trim geometry for windows
@@ -88,7 +88,7 @@ void GeometryGenerator::generate() {
 						Rect edgeRect(coords[n1][0], coords[n1][1], coords[n1][2],
 							coords[n2][0], coords[n2][1], coords[n2][2]);
 						edgeRect.material = &(model->wallMaterial);
-						edgeRect.normal = 1;
+						edgeRect.normal = rwo.recessed<0?-1:1;
 						if (n2 == 1) edgeRect.normal *= -1;
 						if ((n1 + n2) % 2 == 0) edgeRect.normal *= wall.axis?-nn:nn;
 						wallRectangles.push_back(edgeRect);

@@ -285,12 +285,13 @@ class SolverApp : public InvrenderApp {
                             rwo.material.diffuse.b = doormat.b;
                             rwo.height = h;
                             rwo.width = abs(p - p2);
-                            rwo.recessed = ff.getDepth();
+                            rwo.recessed = -ff.getDepth();
                             rwo.verticalposition = 0.0001; // Must be > 0 for geometry generator
-                            if (fph.forwards[i]) {
-                                rwo.horizontalposition = min(p,p2);
-                            } else {
+                            int nn = fph.wallsegments[i].norm>0?1:0;
+                            if (fph.forwards[i] != (fph.wallsegments[i].norm < 0)) {
                                 rwo.horizontalposition = fph.wallsegments[i].length() - max(p,p2);
+                            } else {
+                                rwo.horizontalposition = min(p,p2);
                             }
                             rwo.trimDepth = 0;
                             rwo.trimWidth = 0;
