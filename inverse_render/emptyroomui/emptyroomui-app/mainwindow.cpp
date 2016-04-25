@@ -473,6 +473,7 @@ void MainWindow::meshLoaded() {
     ui->actionSelect_Floor_Vertices->setEnabled(true);
     ui->actionSelect_Wall_Vertices->setEnabled(true);
     ui->actionSelect_Light_Vertices->setEnabled(true);
+    ui->actionCustom_Selector->setEnabled(true);
     ui->actionSelect_None->setEnabled(true);
     ui->actionAdd_To_Selection->setEnabled(true);
     ui->actionRemove_From_Selection->setEnabled(true);
@@ -1416,6 +1417,34 @@ void MainWindow::on_actionSelect_Ceiling_Vertices_triggered()
 {
     ui->meshWidget->renderManager()->selectVertices(ceilingindices);
     ui->meshWidget->renderOptions()->showSelected();
+}
+
+void MainWindow::addSelectIndex(QString l) {
+    selectedIndices.push_back(l.toInt());
+}
+void MainWindow::selectIndicesDone() {
+    ui->meshWidget->renderManager()->selectVertices(selectedIndices);
+    ui->meshWidget->renderOptions()->showSelected();
+}
+
+void MainWindow::on_actionCustom_Selector_triggered()
+{
+    bool ok;
+    QString s = QInputDialog::getText(this, "Vertex Selection Filter", "Options: -max[x,y,z], -min[x,y,z], -label, -wallidx", QLineEdit::Normal, "", &ok);
+    if (ok) {
+        selectedIndices.clear();
+        QString cmd = settings->value("vertex_filter_binary", "vertexfilterapp -meshfile %1 -roommodel %2").toString();
+        cmd = cmd.arg(meshfilename, roommodelfile);
+        cmd += " " + s;
+        SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
+        workers.push_back(w);
+        QThread* thread = new QThread;
+        connect(thread, SIGNAL(started()), w, SLOT(run()));
+        connect(w, SIGNAL(data(QString)), this, SLOT(addSelectIndex(QString)));
+        connect(w, SIGNAL(done()), this, SLOT(selectIndicesDone()));
+        w->moveToThread(thread);
+        thread->start();
+    }
 }
 
 void MainWindow::on_actionSelect_Light_Vertices_triggered()

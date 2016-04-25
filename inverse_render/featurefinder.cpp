@@ -8,18 +8,16 @@ using namespace Eigen;
 Condition::Condition()
     : m_idx(-1), m_lbl(-1)
 {
-    float m = numeric_limits<float>::min();
+    float m = numeric_limits<float>::lowest();
     minp = Vector3f(m,m,m);
     m = numeric_limits<float>::max();
     maxp = Vector3f(m,m,m);
 }
-void FeatureFinder::compute(
+void FeatureFinder::computeIndices(
         FloorplanHelper& fph,
-        InverseRender& ir,
-        vector<SampleData>& alldata)
+        MeshManager* mmgr,
+        vector<int>& indices)
 {
-    MeshManager* mmgr = ir.getRenderManager()->getMeshManager();
-    vector<SampleData> data;
     vector<double> ddepth;
     for (int i = 0; i < mmgr->size(); i++) {
         Eigen::Vector3f p = mmgr->VertexPositionE(i);
@@ -30,7 +28,7 @@ void FeatureFinder::compute(
         n = (fph.world2floorplan*n4).head<3>();
         int wallidx = fph.closestWall(p, n);
         if (condition(p, n, wallidx, mmgr->getLabel(i, MeshManager::TYPE_CHANNEL))) {
-            data.push_back(alldata[i]);
+            indices.push_back(i);
             if (wallidx >= 0) {
                 double d = 0;
                 if (fph.wallsegments[wallidx].direction > 0) {
@@ -43,8 +41,22 @@ void FeatureFinder::compute(
             }
         }
     }
-    mat = ir.computeAverageMaterial(data);
     if (ddepth.size()) {
         depth = accumulate(ddepth.begin(), ddepth.end(), 0.0) / ddepth.size();
     }
+}
+
+void FeatureFinder::compute(
+        FloorplanHelper& fph,
+        InverseRender& ir,
+        vector<SampleData>& alldata)
+{
+    MeshManager* mmgr = ir.getRenderManager()->getMeshManager();
+    vector<int> indices;
+    computeIndices(fph, mmgr, indices);
+    vector<SampleData> data;
+    for (int i = 0; i < indices.size(); i++) {
+        data.push_back(alldata[indices[i]]);
+    }
+    mat = ir.computeAverageMaterial(data);
 }

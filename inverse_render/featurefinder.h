@@ -8,12 +8,16 @@ class Condition {
     public:
         Condition();
         bool operator()(Eigen::Vector3f p, Eigen::Vector3f n, int idx, int lbl) {
-            for (int i = 0; i < 3; i++) {
-                if (p[i] < minp[i]) return false;
-                if (p[i] > maxp[i]) return false;
-            }
             if (m_idx >= 0 && idx != m_idx) return false;
             if (m_lbl >= 0 && lbl != m_lbl) return false;
+            for (int i = 0; i < 3; i++) {
+                if (p[i] < minp[i]) {
+                    return false;
+                }
+                if (p[i] > maxp[i]) {
+                    return false;
+                }
+            }
             return true;
         }
 
@@ -34,6 +38,10 @@ class FeatureFinder {
                 FloorplanHelper& fph,
                 InverseRender& ir,
                 std::vector<SampleData>& alldata);
+        void computeIndices(
+                FloorplanHelper& fph,
+                MeshManager* mmgr,
+                std::vector<int>& indices);
 
         Material getMaterial() const { return mat; }
         double getDepth() const { return depth; }

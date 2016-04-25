@@ -52,6 +52,7 @@ private slots:
 
     // Data communications
     void addLine(QString l);
+    void addSelectIndex(QString l);
 
     // Actions
     void on_actionQuit_triggered();
@@ -100,6 +101,7 @@ private slots:
     void edgesAndFloorPlanLoaded();
     void solveDataReceived(QString s);
     void solveCompleted();
+    void selectIndicesDone();
 
     void checkEnableHemicubes();
 
@@ -122,6 +124,7 @@ private slots:
     void on_actionSelect_Floor_Vertices_triggered();
     void on_actionSelect_Ceiling_Vertices_triggered();
     void on_actionSelect_Light_Vertices_triggered();
+    void on_actionCustom_Selector_triggered();
     void on_actionSelect_Mesh_Component_triggered();
     void on_actionIncrease_Selection_Brush_Size_triggered();
     void on_actionDecrease_Selection_Brush_Size_triggered();
@@ -156,6 +159,7 @@ private:
     QTemporaryFile* temproommodel;
     QString roommodelfile;
 
+    std::vector<int> selectedIndices;
     std::vector<int> lines;
     int imageindex;
     int typeindex;

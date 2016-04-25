@@ -120,6 +120,13 @@ add_executable(wallfindapp apps/wallfindapp.cpp
 target_link_libraries(wallfindapp ${PCL_LIBRARIES} datamanager roommodel
     wallfinder)
 
+add_executable(vertexfilterapp apps/vertexfilterapp.cpp
+    apps/invrenderapp.cpp apps/invrenderapp.h
+    solver.cpp solver.h
+    featurefinder.h featurefinder.cpp)
+target_link_libraries(vertexfilterapp ${PCL_LIBRARIES} ${OpenCV_LIBS} ${GLUT_LIBRARY} ${GAPS_LIBRARIES}
+    lighting datamanager roommodel wallfinder rendering)
+
 add_executable(solverapp apps/solverapp.cpp
     apps/invrenderapp.cpp apps/invrenderapp.h
     rerender.h rerender.cpp
