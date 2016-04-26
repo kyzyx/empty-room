@@ -1,7 +1,7 @@
 import sys, subprocess, tempfile, shutil, multiprocessing
 
 convert_binary = '/home/zyxlyr/Code/empty-room/inverse_render/build/convertimage'
-ffmpeg_call = "ffmpeg -framerate 30 -pattern_type glob -i %s/image*.png -c:v libx264 -vf vflip -pix_fmt yuv420p %s"
+ffmpeg_call = "ffmpeg -framerate 30 -pattern_type glob -i %s/image*.png -c:v libx264 -pix_fmt yuv420p %s"
 
 def run_cmd(cmd):
     print ' '.join(cmd)
@@ -39,10 +39,10 @@ else:
                 expg = float(toks[-2])*scale
                 expb = float(toks[-1])*scale
                 expstr = "%f,%f,%f"%(expr,expg,expb)
-                cmd = [convert_binary, toks[0], outfile, '-colorscale', expstr, '-gamma', str(gamma)]
+                cmd = [convert_binary, toks[0], outfile, '-colorscale', expstr, '-gamma', str(gamma), '-linear']
                 cmds.append(cmd)
             else:
-                cmd = [convert_binary, toks[0], outfile, '-intensityscale', str(scale), '-gamma', str(gamma)]
+                cmd = [convert_binary, toks[0], outfile, '-intensityscale', str(scale), '-gamma', str(gamma), '-linear']
                 cmds.append(cmd)
             n += 1
 
