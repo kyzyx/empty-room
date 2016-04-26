@@ -127,6 +127,11 @@ add_executable(vertexfilterapp apps/vertexfilterapp.cpp
 target_link_libraries(vertexfilterapp ${PCL_LIBRARIES} ${OpenCV_LIBS} ${GLUT_LIBRARY} ${GAPS_LIBRARIES}
     lighting datamanager roommodel wallfinder rendering)
 
+add_executable(windowapp apps/windowapp.cpp
+    apps/invrenderapp.cpp apps/invrenderapp.h)
+target_link_libraries(windowapp ${PCL_LIBRARIES} ${OpenCV_LIBS} ${GLUT_LIBRARY} ${GAPS_LIBRARIES}
+    lighting datamanager roommodel wallfinder rendering)
+
 add_executable(solverapp apps/solverapp.cpp
     apps/invrenderapp.cpp apps/invrenderapp.h
     rerender.h rerender.cpp
