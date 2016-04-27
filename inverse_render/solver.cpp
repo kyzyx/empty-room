@@ -53,6 +53,7 @@ void InverseRender::computeSamples(
 }
 
 void InverseRender::reloadLights() {
+    lights.resize(lightintensities.size(), NULL);
     for (int i = 0; i < lightintensities.size(); i++) {
         if (lightintensities[i]->typeId() & LIGHTTYPE_RGB) {
             lights[i] = ((RGBLight*)lightintensities[i])->getLight(0);

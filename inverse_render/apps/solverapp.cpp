@@ -35,6 +35,10 @@ class SolverApp : public InvrenderApp {
                     indices.push_back(i);
             }
 
+            if (inlightfilename.length()) {
+                readLightsFromFile(inlightfilename, ir.lightintensities);
+                ir.reloadLights();
+            }
             if (inputbinaryfilename.length()) {
                 ir.loadVariablesBinary(alldata, inputbinaryfilename);
                 if (inlightfilename.length()) {
@@ -42,10 +46,6 @@ class SolverApp : public InvrenderApp {
                     ir.reloadLights();
                 }
             } else {
-                if (inlightfilename.length()) {
-                    readLightsFromFile(inlightfilename, ir.lightintensities);
-                    ir.reloadLights();
-                }
                 ir.computeSamples(alldata, all, numsamples, discardthreshold, false, getProgressFunction(0,2));
             }
             for (int i = 0; i < indices.size(); i++) {
