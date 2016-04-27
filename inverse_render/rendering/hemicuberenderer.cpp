@@ -225,7 +225,7 @@ void HemicubeRenderer::computeSamples(
         R3Vector n = rendermanager->getMeshManager()->VertexNormal(indices[i]);
         for (int j = 0; j < lights.size(); j++) {
             if (lights[j]->typeId() & LIGHTTYPE_POINT) {
-                PointLight* pointlight = (PointLight*) sd.lightamount[j];
+                SymmetricPointLight* pointlight = (SymmetricPointLight*) sd.lightamount[j];
                 R3Point lp(pointlight->getPosition(0),
                            pointlight->getPosition(1),
                            pointlight->getPosition(2));
@@ -276,8 +276,8 @@ SampleData HemicubeRenderer::computeSample(int n, vector<Light*> lights, float* 
     for (int i = 0; i < lights.size(); i++) {
         Light* l = NewLightFromLightType(lights[i]->typeId());
         if (l->typeId() & LIGHTTYPE_POINT) {
-            PointLight* pl = (PointLight*) l;
-            PointLight* ol = (PointLight*) lights[i];
+            SymmetricPointLight* pl = (SymmetricPointLight*) l;
+            SymmetricPointLight* ol = (SymmetricPointLight*) lights[i];
             pl->setPosition(ol->getPosition(0), ol->getPosition(1), ol->getPosition(2));
         } else if (l->typeId() & LIGHTTYPE_LINE) {
             LineLight* ll = (LineLight*) l;

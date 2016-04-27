@@ -183,6 +183,49 @@ class PointLight : public Light {
         double p[3];
         Light* light;
 };
+class SymmetricPointLight : public Light {
+    public:
+        SymmetricPointLight()
+            : numcells(16)
+        {
+            setPosition(0,0,0);
+            perp = Eigen::Vector3d(0,0,1);
+            v.resize(numParameters());
+        }
+        SymmetricPointLight(double x, double y, double z)
+            : numcells(16)
+        {
+            setPosition(x,y,z);
+            perp = Eigen::Vector3d(0,0,1);
+            v.resize(numParameters());
+        }
+        void setPosition(double x, double y, double z) {
+            p[0] = x;
+            p[1] = y;
+            p[2] = z;
+        }
+        double getPosition(int n) {
+            return p[n];
+        }
+        Eigen::Vector3d getPosition() {
+            return p;
+        }
+        virtual int numParameters() const { return numcells; }
+        virtual int typeId() const { return LIGHTTYPE_POINT; }
+        void setPerpendicularVector(Eigen::Vector3d perpendicular) { perp = perpendicular; }
+
+        virtual void addIncident(
+                double px, double py, double pz,
+                double dx, double dy, double dz,
+                double weight=1);
+
+        virtual void writeToStream(std::ostream& out, bool binary=false);
+        virtual void readFromStream(std::istream& in, bool binary=false);
+    protected:
+        Eigen::Vector3d p;
+        Eigen::Vector3d perp;
+        int numcells;
+};
 
 class LineLight : public Light {
     public:

@@ -532,7 +532,7 @@ void outputPbrtFile(
             }
         } else if (lights[i]->typeId() & LIGHTTYPE_POINT) {
             generateImage(rgbl, rootdir.string());
-            PointLight* pl = static_cast<PointLight*>(rgbl->getLight(0));
+            SymmetricPointLight* pl = static_cast<SymmetricPointLight*>(rgbl->getLight(0));
             out << "AttributeBegin" << endl;
             out << "Translate ";
             for (int j = 0; j < 3; j++) out << pl->getPosition(j) << " ";

@@ -95,6 +95,44 @@ void PointLight::addIncident(
 
 using namespace Eigen;
 
+void SymmetricPointLight::writeToStream(std::ostream& out, bool binary) {
+    if (binary) {
+        for (int i = 0; i < 3; i++) {
+            out.write((char*) &p[i], sizeof(double));
+        }
+    } else {
+        for (int i = 0; i < 3; i++) {
+            out << p[i] << " ";
+        }
+        out << " ";
+    }
+    Light::writeToStream(out, binary);
+}
+void SymmetricPointLight::readFromStream(std::istream& in, bool binary) {
+    if (binary) {
+        for (int i = 0; i < 3; i++) {
+            in.read((char*) &p[i], sizeof(double));
+        }
+    } else {
+        for (int i = 0; i < 3; i++) {
+            in >> p[i];
+        }
+    }
+    Light::readFromStream(in, binary);
+}
+void SymmetricPointLight::addIncident(
+        double px, double py, double pz,
+        double dx, double dy, double dz,
+        double weight)
+{
+    Vector3d P(px, py, pz);
+    Vector3d d = P - getPosition();
+    d /= d.norm();
+    double theta = acos(d.dot(perp));
+    int idx = numcells*theta/(2*M_PI);
+    v[idx] += weight;
+}
+
 void LineLight::setPosition(int n, Vector3d pos) {
     p[n] = pos;
     vec = p[1] - p[0];
@@ -279,8 +317,11 @@ Light* NewLightFromLightType(int type) {
             case LIGHTTYPE_SH: return new SHLight;
             case LIGHTTYPE_ENVMAP: return new CubemapLight;
             case LIGHTTYPE_AREA: return new AreaLight;
-            case (LIGHTTYPE_SH | LIGHTTYPE_POINT): return new PointLight(new SHLight);
-            case (LIGHTTYPE_ENVMAP | LIGHTTYPE_POINT): return new PointLight(new CubemapLight);
+            //case (LIGHTTYPE_SH | LIGHTTYPE_POINT): return new PointLight(new SHLight);
+            //case (LIGHTTYPE_ENVMAP | LIGHTTYPE_POINT): return new PointLight(new CubemapLight);
+            case (LIGHTTYPE_SH | LIGHTTYPE_POINT):
+            case (LIGHTTYPE_ENVMAP | LIGHTTYPE_POINT):
+            case LIGHTTYPE_POINT: return new SymmetricPointLight;
             case LIGHTTYPE_LINE:
             case (LIGHTTYPE_SH | LIGHTTYPE_LINE):
             case (LIGHTTYPE_ENVMAP | LIGHTTYPE_LINE):

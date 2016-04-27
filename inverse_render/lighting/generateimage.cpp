@@ -59,6 +59,19 @@ double sampleLine(double theta, LineLight* light) {
     //return light->getCoef(n)*light->getLength()/light->getNumSubdivs();
     return CatmullRomSplineInterp(y[0], y[1], y[2], y[3], x)*light->getLength()/light->getNumSubdivs();
 }
+double sampleSymmetricPoint(double theta, SymmetricPointLight* light) {
+    int n = light->numParameters()*theta/M_PI;
+    double x = light->numParameters()*theta/M_PI - n;
+    double y[4];
+    for (int i = 0; i < 4; i++) {
+        int idx = n+i-1;
+        if (idx < 0) idx = 0;
+        else if (idx == light->numParameters()) idx--;
+        else if (idx == light->numParameters()+1) idx -= 3;
+        y[i] = light->getCoef(idx);
+    }
+    return CatmullRomSplineInterp(y[0], y[1], y[2], y[3], x);
+}
 bool negative = false;
 void generateImage(RGBLight* l, std::string filename, int res) {
     float* image = new float[res*res*2*3];
@@ -74,7 +87,7 @@ void generateImage(RGBLight* l, std::string filename, int res) {
                     double t = acos(sin(theta)*sin(phi));
                     phi = p;
                     theta = t;
-                    light = static_cast<PointLight*>(light)->getLight();
+                    //light = static_cast<PointLight*>(light)->getLight();
                 }
                 double v;
                 if (l->typeId() & LIGHTTYPE_SH) {
@@ -84,6 +97,8 @@ void generateImage(RGBLight* l, std::string filename, int res) {
                 } else if (l->typeId() & LIGHTTYPE_LINE) {
                     v = sampleLine(phi, static_cast<LineLight*>(light));
                     v *= sin(theta);
+                } else if (l->typeId() & LIGHTTYPE_POINT) {
+                    v = sampleSymmetricPoint(theta, static_cast<SymmetricPointLight*>(light));
                 }
                 if (!negative) v = std::max(v, 0.);
                 image[3*(i*res*2+j) + ch] = v;
