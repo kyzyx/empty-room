@@ -181,4 +181,16 @@ void GeometryGenerator::getTriangleVertexColors(std::vector<double>& colors) {
 Rect GeometryGenerator::getRectangleForWindow(RectangleWallObject* rwo) {
 	return windowRectangles[rwo];
 }
+
+void GeometryGenerator::doubleRectanglesForRaytracing(vector<Rect>& rectangles) {
+    vector<Rect> newrects;
+    double delta = 0.002;
+    for (int i = 0; i < rectangles.size(); i++) {
+        Rect rect(rectangles[i]);
+        rect.p[rect.axis] += delta*rect.normal;
+        newrects.push_back(rect);
+
+    }
+    rectangles.insert(rectangles.end(), newrects.begin(), newrects.end());
+}
 }

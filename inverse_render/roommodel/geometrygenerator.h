@@ -18,6 +18,7 @@ class GeometryGenerator {
         void getRectangles(std::vector<Rect>& rectangles);
         void getTriangleGeometry(std::vector<double>& triangles);
         void getTriangleVertexColors(std::vector<double>& colors);
+        void doubleRectanglesForRaytracing(std::vector<Rect>& rectangles);
 		Rect getRectangleForWindow(RectangleWallObject* rwo);
 
 		std::map<RectangleWallObject*, Rect> windowRectangles;

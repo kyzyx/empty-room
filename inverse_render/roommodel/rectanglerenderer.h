@@ -21,6 +21,17 @@ class Rect {
             w = h = 0;
 			depth = 0.1;
         }
+        Rect(const Rect& r) {
+            for (int i = 0; i < 3; ++i) {
+                p[i] = r.p[i];
+            }
+            axis = r.axis;
+            w = r.w;
+            h = r.h;
+            normal = r.normal;
+            material = r.material;
+			depth = r.depth;
+        }
         Rect(double x, double y, double z) {
             p[0] = x; p[1] = y; p[2] = z;
             axis = 1;

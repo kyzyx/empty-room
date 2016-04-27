@@ -132,7 +132,7 @@ void rectanglesToTriangles(
         bool includenormals,
         bool includeuvs)
 {
-    double delta = 0.001;
+    double delta = 0.003;
     for (int i = 0; i < rectangles.size(); ++i) {
         Rect& r = rectangles[i];
         double coords[4][3];

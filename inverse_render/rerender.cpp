@@ -414,6 +414,7 @@ void outputPbrtFile(
 
     vector<double> triangles;
     // Output wall geometry
+    gg.doubleRectanglesForRaytracing(gg.wallRectangles);
     rectanglesToTriangles(gg.wallRectangles, triangles, false, false, true);
     if (!triangles.empty()) {
         out << "AttributeBegin" << endl;
@@ -440,6 +441,7 @@ void outputPbrtFile(
     }
 
     // Output ceiling plane
+    gg.doubleRectanglesForRaytracing(gg.ceilRectangles);
     rectanglesToTriangles(gg.ceilRectangles, triangles, false, false, true);
     if (!triangles.empty()) {
         out << "AttributeBegin" << endl;
@@ -453,6 +455,7 @@ void outputPbrtFile(
     }
 
     // Output floor plane
+    gg.doubleRectanglesForRaytracing(gg.floorRectangles);
     rectanglesToTriangles(gg.floorRectangles, triangles, false, false, true);
     if (!triangles.empty()) {
         out << "AttributeBegin" << endl;
@@ -475,6 +478,7 @@ void outputPbrtFile(
             outputMaterial(out, room->walls[i].windows[j].material, matname);
             vector<roommodel::Rect> windowrect;
             windowrect.push_back(gg.getRectangleForWindow(&(room->walls[i].windows[j])));
+            gg.doubleRectanglesForRaytracing(windowrect);
             rectanglesToTriangles(windowrect, triangles, false, false, true);
             if (!triangles.empty()) {
                 out << "AttributeBegin" << endl;
