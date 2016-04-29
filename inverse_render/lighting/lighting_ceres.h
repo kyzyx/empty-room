@@ -7,6 +7,7 @@ namespace ceres {
 }
 
 void addCeres(const Light* light, ceres::Problem* problem, double* lightarr, int n, int idx=0);
+void addCeresSymmetricPoint(const SymmetricPointLight* light, ceres::Problem* problem, double* lightarr, int n, int idx=0);
 void addCeresLine(const LineLight* light, ceres::Problem* problem, double* lightarr, int n, int idx=0);
 void addCeresArea(const AreaLight* light, ceres::Problem* problem, double* lightarr, int n, int idx=0);
 void addCeresSH(const SHLight* light, ceres::Problem* problem, double* lightarr, int n, int idx=0);

@@ -24,6 +24,9 @@ void addCeres(const Light* light, ceres::Problem* problem, double* lightarr, int
         addCeres(irgbl->getLight(), problem, lightarr, n, idx+3);
     } else {
         switch (light->typeId()) {
+            case LIGHTTYPE_POINT:
+                addCeresSymmetricPoint((SymmetricPointLight*) light, problem, lightarr, n, idx);
+                break;
             case LIGHTTYPE_SH:
             case LIGHTTYPE_SH | LIGHTTYPE_POINT:
                 addCeresSH((SHLight*) light, problem, lightarr, n, idx);
@@ -64,6 +67,17 @@ void addCeresSH(const SHLight* light, ceres::Problem* problem, double* lightarr,
             problem->AddResidualBlock(CreateSHRegularizer(n, i+idx, r), NULL, lightarr);
         }
     }
+}
+
+void addCeresSymmetricPoint(const SymmetricPointLight* light, ceres::Problem* problem, double* lightarr, int n, int idx)
+{
+    double r = light->getRegularization();
+    if (r > 0) {
+        for (int i = 0; i < light->numParameters()-1; i++) {
+            problem->AddResidualBlock(CreateSmoothnessTerm(n, i, i+1, r), NULL /*new ceres::HuberLoss(lightscale)*/, lightarr);
+        }
+    }
+    setNonnegative(light, problem, lightarr, n, idx);
 }
 
 void addCeresLine(const LineLight* light, ceres::Problem* problem, double* lightarr, int n, int idx)
