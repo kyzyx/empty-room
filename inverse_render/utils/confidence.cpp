@@ -20,9 +20,11 @@ float confidence(unsigned char* rgb) {
 
 int main(int argc, char** argv) {
     if (argc < 2) {
-        cout << "Usage: generateconfidence camfile.cam" << endl;
+        cout << "Usage: generateconfidence camfile.cam [-full]" << endl;
         return 0;
     }
+    bool full = false;
+    if (argc > 2) full = true;
     ifstream in(argv[1]);
     int sz;
     int w, h;
@@ -38,7 +40,7 @@ int main(int argc, char** argv) {
         int ww, hh;
         ImageIO::readRGBImage(filename, image, ww, hh);
         for (int j = 0; j < w*h; j++) {
-            conf[j] = confidence(image + 3*j);
+            conf[j] = full?1:confidence(image + 3*j);
         }
         string conffilename = ImageIO::replaceExtension(filename, "conf");
         ImageIO::writeScalarMap(conffilename, conf, w, h, sizeof(float));
