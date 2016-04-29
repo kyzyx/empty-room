@@ -1066,7 +1066,9 @@ void MainWindow::on_solveButton_clicked()
         tempformfactors->close();
         extraflags += " -outputbinaryfile " + tempformfactors->fileName();
     }
-    if (lightintensities.size()) {
+    if (lightfile.length() > 0) {
+        extraflags += " -inputlightfile " + lightfile;
+    } else if (lightintensities.size()) {
         templights = new QTemporaryFile();
         templights->open();
         templights->close();
@@ -1329,6 +1331,7 @@ void MainWindow::on_actionLoad_Light_Locations_triggered()
     QString lwd = settings->value("lastworkingdirectory", "").toString();
     QString filename = QFileDialog::getOpenFileName(this, "Save Lights", lwd, "Text files (*.txt)");
     if (!filename.isEmpty()) {
+        lightfile = filename;
         readLightsFromFile(filename.toStdString(), lightintensities);
         for (int i = 0; i < lightintensities.size(); i++) {
             if (lightintensities[i]->typeId() & LIGHTTYPE_RGB) {
@@ -1433,8 +1436,33 @@ void MainWindow::on_actionCustom_Selector_triggered()
     QString s = QInputDialog::getText(this, "Vertex Selection Filter", "Options: -max[x,y,z], -min[x,y,z], -label, -wallidx", QLineEdit::Normal, "", &ok);
     if (ok) {
         selectedIndices.clear();
-        QString cmd = settings->value("vertex_filter_binary", "vertexfilterapp -meshfile %1 -roommodel %2").toString();
-        cmd = cmd.arg(meshfilename, roommodelfile);
+        /*QString cmd = settings->value("vertex_filter_binary", "vertexfilterapp -meshfile %1 -roommodel %2").toString();
+        cmd = cmd.arg(meshfilename, roommodelfile);*/
+        // ---------- TEMP
+        QString cmd = settings->value("solver_binary", "solverapp -meshfile %1 -p").toString();
+        cmd = cmd.arg(meshfilename);
+        QString extraflags = "";
+        if (tempformfactors) {
+            extraflags += " -inputbinaryfile " + tempformfactors->fileName();
+        } else if (formfactorsfile.length() > 0) {
+            extraflags += " -inputbinaryfile " + formfactorsfile;
+        } else {
+            tempformfactors = new QTemporaryFile();
+            tempformfactors->open();
+            tempformfactors->close();
+            extraflags += " -outputbinaryfile " + tempformfactors->fileName();
+        }
+        if (lightfile.length() > 0) {
+            extraflags += " -inputlightfile " + lightfile;
+        } else if (lightintensities.size()) {
+            templights = new QTemporaryFile();
+            templights->open();
+            templights->close();
+            writeLightsToFile(templights->fileName().toStdString(), lightintensities);
+            extraflags += " -inputlightfile " + templights->fileName();
+        }
+        cmd += extraflags;
+        // ---------------
         cmd += " " + s;
         SubprocessWorker* w = new SubprocessWorker(NULL, cmd);
         workers.push_back(w);

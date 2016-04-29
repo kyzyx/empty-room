@@ -20,6 +20,7 @@ class SolverApp : public InvrenderApp {
               meshcolorscale(1), gamma(1),
               label(WallFinder::LABEL_WALL),
               cameranum(-1), solveTexture(false), solveLights(true), dobaseboard(false), dorwo(false),
+              selectlight(0), selectlightthresh(0.001), selectlightcoef(-1),
               scale(0), reglambda(0) {}
         virtual int run() {
             // Setup
@@ -50,6 +51,25 @@ class SolverApp : public InvrenderApp {
             }
             for (int i = 0; i < indices.size(); i++) {
                 data.push_back(alldata[indices[i]]);
+            }
+            if (selectlight > 0) {
+                for (int i = 0; i < mmgr->size(); i++) {
+                    Light* l = alldata[i].lightamount[selectlight-1];
+                    double tot = 0;
+                    if (selectlightcoef >= 0) {
+                        tot += l->getCoef(selectlightcoef);
+                    } else {
+                        for (int j = 0; j < l->numParameters(); j++) {
+                            tot += l->getCoef(j);
+                        }
+                    }
+                    if (tot > selectlightthresh) {
+                        cout << ">>data:" << i << endl;
+                    }
+                }
+                cout << ">>done" << endl;
+
+                return 0;
             }
 
             // Optimization
@@ -405,6 +425,15 @@ class SolverApp : public InvrenderApp {
             if (pcl::console::find_argument(argc, argv, "-outputroommodel") >= 0) {
                 pcl::console::parse_argument(argc, argv, "-outputroommodel", outroommodelname);
             }
+            if (pcl::console::find_argument(argc, argv, "-selectlight") >= 0) {
+                pcl::console::parse_argument(argc, argv, "-selectlight", selectlight);
+            }
+            if (pcl::console::find_argument(argc, argv, "-selectlightthreshold") >= 0) {
+                pcl::console::parse_argument(argc, argv, "-selectlightthreshold", selectlightthresh);
+            }
+            if (pcl::console::find_argument(argc, argv, "-selectlightcoef") >= 0) {
+                pcl::console::parse_argument(argc, argv, "-selectlightcoef", selectlightcoef);
+            }
             return true;
         }
         int numsamples;
@@ -422,6 +451,9 @@ class SolverApp : public InvrenderApp {
         string outlightfilename;
         string inlightfilename;
         string outroommodelname;
+        int selectlight;
+        int selectlightcoef;
+        double selectlightthresh;
         bool dobaseboard;
         bool dorwo;
         int cameranum;

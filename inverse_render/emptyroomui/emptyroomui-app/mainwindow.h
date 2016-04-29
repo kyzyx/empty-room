@@ -154,6 +154,7 @@ private:
     QString settingsfilename;
 
     QTemporaryFile* templights;
+    QString lightfile;
     QTemporaryFile* tempformfactors;
     QString formfactorsfile;
     QTemporaryFile* temproommodel;
