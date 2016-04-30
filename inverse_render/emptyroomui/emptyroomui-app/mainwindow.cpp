@@ -1171,7 +1171,7 @@ void MainWindow::edgesAndFloorPlanLoaded() {
 
 void MainWindow::addLine(QString l) {
     QStringList ls = l.split(" ");
-    if (ls[0].toInt() < 0) {
+    if (ls[0][0] == '-') {
         lines.push_back(-(ls[0].toInt()));
         for (int i = 1; i < 5; i++) {
             lines.push_back(ls[i].toInt());

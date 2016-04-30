@@ -20,7 +20,7 @@ class SolverApp : public InvrenderApp {
               meshcolorscale(1), gamma(1),
               label(WallFinder::LABEL_WALL),
               cameranum(-1), solveTexture(false), solveLights(true), dobaseboard(false), dorwo(false),
-              selectlight(0), selectlightthresh(0.001), selectlightcoef(-1),
+              selectlight(-1), selectlightthresh(0.001), selectlightcoef(-1),
               scale(0), reglambda(0) {}
         virtual int run() {
             // Setup
@@ -70,6 +70,14 @@ class SolverApp : public InvrenderApp {
                 cout << ">>done" << endl;
 
                 return 0;
+            } else if (selectlight == 0) {
+                for (int i = 0; i < mmgr->size(); i++) {
+                    double meanexitant = alldata[i].radiosity.r + alldata[i].radiosity.g + alldata[i].radiosity.b;
+                    double meanincident = alldata[i].netIncoming.r + alldata[i].netIncoming.g + alldata[i].netIncoming.b;
+                    meanincident *= (1-alldata[i].fractionDirect)/(1-alldata[i].fractionUnknown-alldata[i].fractionDirect);
+                    if (meanexitant > 1.5*meanincident) cout << ">>data:" << i << endl;
+                }
+                cout << ">>done" << endl;
             }
 
             // Optimization
