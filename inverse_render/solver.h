@@ -13,6 +13,11 @@ enum {
     LOSS_HUBER,
 };
 
+inline double reweightIncoming(const SampleData& data) {
+    return (1-data.fractionDirect)/(1-data.fractionUnknown-data.fractionDirect);
+}
+
+
 class InverseRender {
     public:
         InverseRender(MeshManager* m, int hemicubeResolution=150, boost::function<void(int)> callback=NULL)

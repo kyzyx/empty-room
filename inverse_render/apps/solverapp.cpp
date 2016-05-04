@@ -74,7 +74,7 @@ class SolverApp : public InvrenderApp {
                 for (int i = 0; i < mmgr->size(); i++) {
                     double meanexitant = alldata[i].radiosity.r + alldata[i].radiosity.g + alldata[i].radiosity.b;
                     double meanincident = alldata[i].netIncoming.r + alldata[i].netIncoming.g + alldata[i].netIncoming.b;
-                    meanincident *= (1-alldata[i].fractionDirect)/(1-alldata[i].fractionUnknown-alldata[i].fractionDirect);
+                    meanincident *= reweightIncoming(alldata[i]);
                     if (meanexitant > 1.5*meanincident) cout << ">>data:" << i << endl;
                 }
                 cout << ">>done" << endl;
@@ -172,7 +172,7 @@ class SolverApp : public InvrenderApp {
                             lightContribution(rgbl[j], currlighting, alldata[i].lightamount[j]);
                         }
                         for (int j = 0; j < 3; j++) res(j) = currlighting[j];
-                        double frac = (1-alldata[i].fractionDirect)/(1-alldata[i].fractionDirect-alldata[i].fractionUnknown);
+                        double frac = reweightIncoming(alldata[i]);
                         res += alldata[i].netIncoming*frac;
                         res = res*ir.wallMaterial;
                         colors.push_back(res);
@@ -207,7 +207,7 @@ class SolverApp : public InvrenderApp {
                             lightContribution(rgbl[j], currlighting, alldata[i].lightamount[j]);
                         }
                         for (int j = 0; j < 3; j++) alldata[i].netIncoming(j) += currlighting[j];
-                        alldata[i].netIncoming *= (1-alldata[i].fractionDirect)/(1-alldata[i].fractionDirect-alldata[i].fractionUnknown);
+                        alldata[i].netIncoming *= reweightIncoming(alldata[i]);
                         float r = alldata[i].radiosity.r/alldata[i].netIncoming.r;
                         float g = alldata[i].radiosity.g/alldata[i].netIncoming.g;
                         float b = alldata[i].radiosity.b/alldata[i].netIncoming.b;

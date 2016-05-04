@@ -49,7 +49,7 @@ struct DynLightFunctor {
             T* residual) const
     {
         for (int ch = 0; ch < 3; ch++) {
-            residual[ch] = T(d.netIncoming[ch])*T((1-d.fractionDirect)/(1-d.fractionUnknown-d.fractionDirect));
+            residual[ch] = T(d.netIncoming[ch])*T(reweightIncoming(d));
         }
         int z = 0;
         for (int i = 0; i < d.lightamount.size(); i++) {
@@ -84,7 +84,7 @@ struct SingleChannelLightFunctor {
             T const* const* params,
             T* residual) const
     {
-        residual[0] = T(d.netIncoming[ch])*T((1-d.fractionDirect)/(1-d.fractionUnknown-d.fractionDirect));
+        residual[0] = T(d.netIncoming[ch])*T(reweightIncoming(d));
         int z = 0;
         for (int i = 0; i < d.lightamount.size(); i++) {
             lightContribution(lightintensities[i], residual, d.lightamount[i], params[1]+z);
