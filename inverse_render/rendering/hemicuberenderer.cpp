@@ -269,7 +269,7 @@ void HemicubeRenderer::computeSamples(
 SampleData HemicubeRenderer::computeSample(int n, vector<Light*> lights, float* radimage, float* lightimage) {
     SampleData sd;
     sd.vertexid = n;
-    sd.radiosity = rendermanager->getMeshManager()->getVertexColor(n);
+    sd.radiosity = rendermanager->getMeshManager()->getMedianVertexColor(n);
     sd.netIncoming = Material();
     sd.fractionUnknown = 0;
     sd.fractionDirect = 0;

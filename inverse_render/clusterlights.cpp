@@ -9,7 +9,7 @@ using namespace std;
 // Marks all lights with a 1
 void labelLights(MeshManager& m, double hdrthreshold) {
     for (int i = 0; i < m.NVertices(); ++i) {
-        Material mat = m.getVertexColor(i);
+        Material mat = m.getMedianVertexColor(i);
         if (mat.r > hdrthreshold || mat.g > hdrthreshold || mat.b > hdrthreshold) {
             m.setLabel(i, UNLABELLED_LIGHT);
         } else {
