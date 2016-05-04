@@ -129,7 +129,7 @@ void SymmetricPointLight::addIncident(
     Vector3d d = P - getPosition();
     d /= d.norm();
     double theta = acos(d.dot(perp));
-    int idx = numcells*theta/(2*M_PI);
+    int idx = numcells*theta/M_PI;
     v[idx] += weight;
 }
 

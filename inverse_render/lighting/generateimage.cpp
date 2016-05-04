@@ -86,7 +86,7 @@ void generateImage(RGBLight* l, std::string filename, int res) {
                     double p = atan2(cos(theta), sin(theta)*cos(phi));
                     double t = acos(sin(theta)*sin(phi));
                     phi = p;
-                    theta = t;
+                    theta = M_PI - t;
                     //light = static_cast<PointLight*>(light)->getLight();
                 }
                 double v;
