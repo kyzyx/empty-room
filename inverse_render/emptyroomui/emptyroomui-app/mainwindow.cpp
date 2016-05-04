@@ -565,10 +565,12 @@ void MainWindow::imagesLoaded() {
     connect(ui->imageTypeComboBox, SIGNAL(currentIndexChanged(int)), ui->imageWidget, SLOT(loadSettings(int)));
 
     bool edgeImagesInitialized = true;
-    for (int i = 0; i < imgr->size(); ++i) {
-        if (!(imgr->getFlags("edges", i) & ImageManager::DF_INITIALIZED)) {
-            edgeImagesInitialized = false;
-            break;
+    if (!lazyloadimages) {
+        for (int i = 0; i < imgr->size(); ++i) {
+            if (!(imgr->getFlags("edges", i) & ImageManager::DF_INITIALIZED)) {
+                edgeImagesInitialized = false;
+                break;
+            }
         }
     }
     if (edgeImagesInitialized) edgeImagesLoaded();
