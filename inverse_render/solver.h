@@ -37,8 +37,8 @@ class InverseRender {
             for (auto it : lights) delete it;
             for (auto it : lightintensities) delete it;
         }
-        void solve(std::vector<SampleData>& data, double reglambda=0);
-        void solveSingleChannel(std::vector<SampleData>& data, double reglambda=0);
+        void solve(std::vector<SampleData>& data, double reglambda=0, bool reweight=false);
+        void solveSingleChannel(std::vector<SampleData>& data, double reglambda=0, bool reweight=false);
         void solveTexture(
                 std::vector<SampleData>& data,
                 ImageManager* imagemanager,
