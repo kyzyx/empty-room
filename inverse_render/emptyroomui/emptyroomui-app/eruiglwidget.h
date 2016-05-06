@@ -233,8 +233,9 @@ protected:
 
     std::vector<Eigen::Vector3d> lines;
 
-    int* grid;
-    int gw, gh, gmax;
+    float* grid;
+    int gw, gh;
+    float gmax;
     double gres;
     QCursor* cursor;
     QCursor* defaultcursor;

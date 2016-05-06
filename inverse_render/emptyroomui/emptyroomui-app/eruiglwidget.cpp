@@ -410,14 +410,14 @@ void ERUIGLWidget::computeWallFindingHistogram(double res) {
     gw = maxx/res + 1;
     gh = maxz/res + 1;
     if (grid) delete [] grid;
-    grid = new int[gw*gh];
-    bzero(grid, gw*gh*sizeof(int));
+    grid = new float[gw*gh];
+    bzero(grid, gw*gh*sizeof(float));
     for (int i = 0; i < rendermanager.getMeshManager()->size(); ++i) {
         R3Point p = m*rendermanager.getMeshManager()->VertexPosition(i);
         int r = p.Z()/res;
         int c = p.X()/res;
         if (r < 0 || c < 0 || r >= gh || c >= gw) continue;
-        ++grid[r*gw+c];
+        grid[r*gw+c] += log(p.Y()+1);
     }
     gmax = *std::max_element(grid, grid+gw*gh);
 }
@@ -512,7 +512,7 @@ void ERUIGLWidget::renderHistogram() {
             p[1] = R3Point((j+1)*gres, 0, i*gres);
             p[2] = R3Point((j+1)*gres, 0, (i+1)*gres);
             p[3] = R3Point(j*gres, 0, (i+1)*gres);
-            double h = scale*std::min(grid[i*gw+j], renderoptions.getWfThreshold());
+            double h = scale*std::min(grid[i*gw+j], (float) renderoptions.getWfThreshold());
             for (int k = 0; k < 4; ++k) {
                 t[k] = p[k] + h*R3yaxis_vector;
                 p[k] = m*p[k];

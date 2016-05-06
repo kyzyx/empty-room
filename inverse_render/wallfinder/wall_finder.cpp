@@ -202,43 +202,56 @@ double WallFinder::findFloorAndCeiling(
 class Grid {
     public:
         Grid(int w, int h, double r) : width(w), height(h), resolution(r) {
-            grid = new GridCell*[width];
-            for (int i = 0; i < width; ++i) grid[i] = new GridCell[height];
+            grid.resize(4);
+            pointindices.resize(width);
+            for (int i = 0; i < width; i++) pointindices[i].resize(height);
+            for (int n = 0; n < 4; n++) {
+                grid[n] = new GridCell*[width];
+                for (int i = 0; i < width; ++i) grid[n][i] = new GridCell[height];
+            }
+            normals.push_back(Vector3f(1,0,0));
+            normals.push_back(Vector3f(-1,0,0));
+            normals.push_back(Vector3f(0,0,1));
+            normals.push_back(Vector3f(0,0,-1));
         }
-        void insert(const PointNormal& p, int idx) {
+        void insert(const PointNormal& p, int idx, double weight=1) {
             int r = p.x/resolution;
             int c = p.z/resolution;
             if (r < 0 || c < 0 || r >= width || c >= height) {
                 return;
             }
-            grid[r][c].add(p, idx);
+            for (int n = 0; n < 4; n++) {
+                Vector3f pn(p.normal_x, p.normal_y, p.normal_z);
+                grid[n][r][c].add(p, weight*pn.dot(normals[n]));
+            }
+            pointindices[r][c].push_back(idx);
         }
         vector<int>& getPointIndices(int i, int j) {
-            return grid[i][j].pointindices;
+            return pointindices[i][j];
         }
         vector<int>& getPointIndices(pair<int,int> p) {
-            return grid[p.first][p.second].pointindices;
+            return pointindices[p.first][p.second];
         }
-        int getCount(int i, int j) {
+        double getWeight(int i, int j, int n) {
             if (i < 0 || j < 0 || i >= width || j >= height) return 0;
-            return grid[i][j].count;
+            return grid[n][i][j].w;
         }
     private:
         class GridCell {
             public:
-                GridCell() : count(0), hi(0), lo(9999) {;}
-                void add(PointNormal p, int i) {
-                    ++count;
+                GridCell() : w(0), hi(0), lo(9999) {;}
+                void add(PointNormal p, double weight=1) {
+                    w += weight;
                     if (p.y > hi) hi = p.y;
                     if (p.y < lo) lo = p.y;
-                    pointindices.push_back(i);
                 }
-                int count;
+                double w;
                 double hi;
                 double lo;
-                vector<int> pointindices;
         };
-        GridCell** grid;
+        vector<Eigen::Vector3f> normals;
+        vector<GridCell**> grid;
+        vector<vector<vector<int> > > pointindices;
         int width;
         int height;
         double resolution;
@@ -263,7 +276,7 @@ bool WallFinder::findWalls(
     int height = maxz/resolution + 1;
     Grid grid(width, height, resolution);
     for (int i = 0; i < of->getCloud()->size(); ++i) {
-        grid.insert(of->getCloud()->at(i), i);
+        grid.insert(of->getCloud()->at(i), i, log(1+of->getCloud()->at(i).y));
     }
 
     // Scan grid and extract line segments
@@ -278,9 +291,7 @@ bool WallFinder::findWalls(
         numsegs = 0;
         skipped = 0;
         for (int j = 0; j < height; ++j) {
-            if (grid.getCount(i,j) > wallthreshold &&
-                grid.getCount(i,j) - grid.getCount(i-1,j) > steepness &&
-                grid.getCount(i,j) - grid.getCount(i+1,j) > steepness)
+            if (grid.getWeight(i,j,0) > wallthreshold || grid.getWeight(i,j,1) > wallthreshold)
             {
                 numsegs += skipped + 1;
                 skipped = 0;
@@ -306,9 +317,7 @@ bool WallFinder::findWalls(
         numsegs = 0;
         skipped = 0;
         for (int j = 0; j < width; ++j) {
-            if (grid.getCount(j,i) > wallthreshold &&
-                grid.getCount(j,i-1) < grid.getCount(j,i) &&
-                grid.getCount(j,i+1) < grid.getCount(j,i))
+            if (grid.getWeight(j,i,2) > wallthreshold || grid.getWeight(j,i,3) > wallthreshold)
             {
                 numsegs += skipped + 1;
                 skipped = 0;
