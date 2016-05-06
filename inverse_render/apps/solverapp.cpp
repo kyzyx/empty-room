@@ -108,7 +108,6 @@ class SolverApp : public InvrenderApp {
                 for (int i = 0; i < ir.lightintensities.size(); i++) {
                     ir.lightintensities[i]->setRegularization(reglambda);
                 }
-                ir.solve(labelleddata, reglambda);
                 ir.solve(labelleddata, reglambda, true);
             }
             vector<Light*> rgbl;

@@ -137,6 +137,7 @@ void InverseRender::solve(vector<SampleData>& data, double reglambda, bool rewei
             issingle = false;
         }
     }
+    bool lightsonly = false;
     if (issingle) {
         solveSingleChannel(data, reglambda, reweight);
         return;
@@ -156,7 +157,7 @@ void InverseRender::solve(vector<SampleData>& data, double reglambda, bool rewei
     double* ls = new double[numlights];
     linearArrayFromLights(ls, lightintensities);
     double* mat = new double[nummats];
-    if (reweight) {
+    if (lightsonly) {
         for (int i = 0; i < materials.size(); i++) {
             for (int j = 0; j < 3; j++)
                 mat[3*i+j] = materials[i][j];
@@ -176,8 +177,9 @@ void InverseRender::solve(vector<SampleData>& data, double reglambda, bool rewei
         double meanincident = data[i].netIncoming.r + data[i].netIncoming.g + data[i].netIncoming.b;
         meanincident *= reweightIncoming(data[i]);
         double weight = 1;
-        if (!reweight && meanexitant > meanincident) {
-            weight = std::exp(5*(1 - meanincident/meanexitant));
+        double thr = 0.8;
+        if (!reweight && meanexitant > thr*meanincident) {
+            weight = std::exp(9*(1 - meanincident/(thr*meanexitant)));
         }
         ceres::LossFunction* fn = NULL;
         if (lossfn == LOSS_CAUCHY) {
@@ -187,7 +189,7 @@ void InverseRender::solve(vector<SampleData>& data, double reglambda, bool rewei
         }
         problem.AddResidualBlock(Create(data[i], materialid, nummats, numlights, lightintensities, weight), fn, mat, ls);
     }
-    if (reweight) {
+    if (lightsonly) {
         problem.SetParameterBlockConstant(mat);
     } else {
         for (int i = 0; i < nummats; i++) {
@@ -222,6 +224,7 @@ void InverseRender::solveSingleChannel(vector<SampleData>& data, double reglambd
         int materialid = mesh->getLabel(data[i].vertexid, MeshManager::TYPE_CHANNEL);
         if (materialid > 0) nummats = std::max(nummats, materialid);
     }
+    bool lightsonly = false;;
     materials.resize(nummats);
     int numlights = 0;
     for (int i = 0; i < lightintensities.size(); i++) {
@@ -238,7 +241,7 @@ void InverseRender::solveSingleChannel(vector<SampleData>& data, double reglambd
     }
     double* mat = new double[nummats];
     for (int ch = 0; ch < 3; ch++) {
-        if (reweight) {
+        if (lightsonly) {
             for (int i = 0; i < nummats; i++) {
                 mat[i] = materials[i][ch];
             }
@@ -263,12 +266,13 @@ void InverseRender::solveSingleChannel(vector<SampleData>& data, double reglambd
             double meanincident = data[i].netIncoming.r + data[i].netIncoming.g + data[i].netIncoming.b;
             meanincident *= reweightIncoming(data[i]);
             double weight = 1;
-            if (!reweight && meanexitant > meanincident) {
-                weight = std::exp(5*(1 - meanincident/meanexitant));
+            double thr = 0.8;
+            if (!reweight && meanexitant > thr*meanincident) {
+                weight = std::exp(9*(1 - meanincident/(thr*meanexitant)));
             }
             problem.AddResidualBlock(CreateSingleChannel(data[i], materialid, nummats, numlights, lightintensities, ch, weight), fn, mat, ls);
         }
-        if (reweight) {
+        if (lightsonly) {
             problem.SetParameterBlockConstant(mat);
         } else {
             for (int i = 0; i < nummats; i++) {
