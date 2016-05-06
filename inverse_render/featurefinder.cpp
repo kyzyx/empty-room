@@ -19,6 +19,8 @@ void FeatureFinder::computeIndices(
         vector<int>& indices)
 {
     vector<double> ddepth;
+    double dwall = 0;
+    int dwallcount = 0;
     for (int i = 0; i < mmgr->size(); i++) {
         Eigen::Vector3f p = mmgr->VertexPositionE(i);
         Eigen::Vector3f n = mmgr->VertexNormalE(i);
@@ -39,10 +41,28 @@ void FeatureFinder::computeIndices(
                 if (fph.wallsegments[wallidx].norm < 0) d = -d;
                 ddepth.push_back(d);
             }
+        } else if (wallidx >= 0 && condition.getLabel() == mmgr->getLabel(i, MeshManager::TYPE_CHANNEL))
+        {
+            if (condition.getWallIndex() < 0 || wallidx == condition.getWallIndex()) {
+                double d = 0;
+                if (fph.wallsegments[wallidx].direction > 0) {
+                    d = p(2) - fph.wallsegments[wallidx].coord;
+                } else {
+                    d = p(0) - fph.wallsegments[wallidx].coord;
+                }
+                if (fph.wallsegments[wallidx].norm < 0) d = -d;
+                dwall += d;
+                dwallcount++;
+            }
         }
     }
     if (ddepth.size()) {
         depth = accumulate(ddepth.begin(), ddepth.end(), 0.0) / ddepth.size();
+    }
+    if (dwallcount) {
+        dwall /= dwallcount;
+        depth -= dwall;
+        cout << "Mean wall depth: " << dwall << ", feature depth " << depth << endl;
     }
 }
 

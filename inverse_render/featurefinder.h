@@ -24,7 +24,9 @@ class Condition {
         void setMin(int n, float v) { minp[n] = v; }
         void setMax(int n, float v) { maxp[n] = v; }
         void setWallIndex(int idx) { m_idx = idx; }
+        int getWallIndex() const { return m_idx; }
         void setLabel(int lbl) { m_lbl = lbl; }
+        int getLabel() const { return m_lbl; }
     private:
         Eigen::Vector3f minp, maxp;
         int m_idx, m_lbl;
