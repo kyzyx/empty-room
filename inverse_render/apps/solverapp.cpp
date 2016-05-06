@@ -136,9 +136,9 @@ class SolverApp : public InvrenderApp {
                     room->wallMaterial.diffuse.r = ir.materials[0].r;
                     room->wallMaterial.diffuse.g = ir.materials[0].g;
                     room->wallMaterial.diffuse.b = ir.materials[0].b;
-                    room->ceilingMaterial.diffuse.r = ir.materials[0].r;
-                    room->ceilingMaterial.diffuse.g = ir.materials[0].g;
-                    room->ceilingMaterial.diffuse.b = ir.materials[0].b;
+                    room->ceilingMaterial.diffuse.r = ir.materials[1].r;
+                    room->ceilingMaterial.diffuse.g = ir.materials[1].g;
+                    room->ceilingMaterial.diffuse.b = ir.materials[1].b;
                     room->floorMaterial.diffuse.r = ir.materials[2].r;
                     room->floorMaterial.diffuse.g = ir.materials[2].g;
                     room->floorMaterial.diffuse.b = ir.materials[2].b;
@@ -201,7 +201,7 @@ class SolverApp : public InvrenderApp {
                 vector<Material> colors;
                 int wk = 0;
                 for (int i = 0; i < mmgr->NVertices(); i++) {
-                    if (indices[wk] == i) {
+                    //if (indices[wk] == i) {
                         double currlighting[3];
                         for (int j = 0; j < 3; j++) currlighting[j] = 0;
                         for (int j = 0; j < rgbl.size(); j++) {
@@ -213,9 +213,9 @@ class SolverApp : public InvrenderApp {
                         float g = alldata[i].radiosity.g/alldata[i].netIncoming.g;
                         float b = alldata[i].radiosity.b/alldata[i].netIncoming.b;
                         colors.push_back(Material(r,g,b));
-                    } else {
-                        colors.push_back(Material(0,0,0));
-                    }
+                    //} else {
+                        //colors.push_back(Material(0,0,0));
+                    //}
                 }
                 mmgr->writePlyMesh(intrinsicplyfilename, colors, meshcolorscale);
             }
