@@ -254,6 +254,7 @@ class SolverApp : public InvrenderApp {
                              && lines[i].starty > mindoorheight
                         ) {
                             perwalllines[lines[i].wallindex].push_back(lines[i]);
+                        cout << "Potential door line " << lines[i].wallindex << " " << lines[i].endy << " " << lines[i].starty << " " << lines[i].p << endl;
                         }
                     } else {
                         perwallhoriz[lines[i].wallindex].push_back(lines[i]);
@@ -281,6 +282,7 @@ class SolverApp : public InvrenderApp {
                                         && pl < p2 + dh && pr > p2 - dh)
                                 {
                                     compatible = true;
+                                    cout << h << " " << h2 << " " << perwallhoriz[i][x].p << " " << perwallhoriz[i][x].endy << " " << perwallhoriz[i][x].starty << endl;
                                 }
                             }
                             if (abs(h-h2) < dh && compatible) {
@@ -315,6 +317,7 @@ class SolverApp : public InvrenderApp {
                             rwo.height = h;
                             rwo.width = abs(p - p2);
                             rwo.recessed = -ff.getDepth();
+                            cout << fph.wallsegments[i].norm << " " << fph.wallsegments[i].direction << " " <<fph.forwards[i] << " " << fph.wallsegments[i].start << " " << fph.wallsegments[i].end << " " << p << " " << p2 << " " << -ff.getDepth() << endl;
                             rwo.verticalposition = 0.0001; // Must be > 0 for geometry generator
                             int nn = fph.wallsegments[i].norm>0?1:0;
                             if (fph.forwards[i] != (fph.wallsegments[i].norm < 0)) {

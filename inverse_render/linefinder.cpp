@@ -312,7 +312,7 @@ void findWallLinesInImage(
                     Vector3f w2 = floorplan.getWallPoint(start[0], seg[0], seg[2]);
                     cout << " " << w1[0] << " " << w1[1] << " " << w1[2];
                     cout << " " << w2[0] << " " << w2[1] << " " << w2[2];
-                    cout << " " << z;
+                    cout << " " << start[0] << " " << seg[0];
                 } else {
                     if (abs(start[1] - end[1]) < minlength) {
                         cout << endl;
@@ -326,7 +326,7 @@ void findWallLinesInImage(
                     Vector3f w2 = floorplan.getWallPoint(start[0], seg[2], seg[0]);
                     cout << " " << w1[0] << " " << w1[1] << " " << w1[2];
                     cout << " " << w2[0] << " " << w2[1] << " " << w2[2];
-                    cout << " " << z;
+                    cout << " " << start[0] << " " << seg[0];
                 }
             }
             cout << endl;

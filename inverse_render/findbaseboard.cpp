@@ -88,10 +88,10 @@ void BaseboardFinder::compute(float resolution, float edgethreshold) {
             }
         }
         if (cellsobserved == 0) {
-            //printf("%d (%.4f): 0 0 0\n", i, i*resolution);
+            printf("%d (%.4f): 0 0 0\n", i, i*resolution);
         } else {
             v.push_back(weightedge/cellsobserved);
-            //printf("%d (%.4f): %.2f\n", i, i*resolution, v);
+            printf("%d (%.4f): %.2f\n", i, i*resolution, v.back());
         }
     }
     for (int i = 1; i < v.size()-1; i++) {
