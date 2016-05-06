@@ -108,35 +108,43 @@ void GeometryGenerator::generate() {
 			// Add baseboard geometry for relevant wall segments
 			if (model->baseboardHeight > 0 && newRects[j].p[2] == -delta && newRects[j].h >= model->baseboardHeight) {
 				Rect bbFront = newRects[j];
-				bbFront.p[bbFront.axis ? 0 : 1] -= model->baseboardDepth;
+				//bbFront.p[bbFront.axis ? 0 : 1] -= model->baseboardDepth;
 				bbFront.p[bbFront.axis] += newRects[j].normal*model->baseboardDepth;
-				bbFront.h = model->baseboardHeight;
-				bbFront.w += 2 * model->baseboardDepth;
+				bbFront.h = model->baseboardHeight + delta;
+				//bbFront.w += 2 * model->baseboardDepth;
 				bbFront.material = &(model->baseboardMaterial);
 				bbFront.depth = model->baseboardDepth;
 				baseboardRectangles.push_back(bbFront);
-				/*
+
+#ifndef _RECTS_AS_BOXES
 				Rect bbTop;
-				if (newRects[j].normal > 0) bbTop = Rect(newRects[j].p[0], newRects[j].p[1], model->baseboardHeight);
-				else                        bbTop = Rect(newRects[j].p[0] - newRects[j].w, newRects[j].p[1] - newRects[j].h, model->baseboardHeight);
+				if (newRects[j].normal > 0) {
+                    bbTop = Rect(
+                            newRects[j].p[0],
+                            newRects[j].p[1],
+                            model->baseboardHeight);
+                } else {
+                    bbTop = Rect(
+                            newRects[j].p[0] - newRects[j].w,
+                            newRects[j].p[1] - newRects[j].h,
+                            model->baseboardHeight);
+                }
 
 				if (newRects[j].axis == 0) {
-					if (newRects[j].normal > 0) bbTop = Rect(newRects[j].p[0], newRects[j].p[1] - model->baseboardDepth, model->baseboardHeight);
-					else                        bbTop = Rect(newRects[j].p[0] - model->baseboardDepth, newRects[j].p[1] - model->baseboardDepth, model->baseboardHeight);
-					bbTop.h = newRects[j].w+2*model->baseboardDepth;
-					bbTop.w = model->baseboardDepth;
+					bbTop = Rect(newRects[j].p[0], newRects[j].p[1] - newRects[j].normal*model->baseboardDepth, model->baseboardHeight);
+					bbTop.h = newRects[j].w;
+					bbTop.w = abs(model->baseboardDepth);
 				}
 				else if (newRects[j].axis == 1) {
-					if (newRects[j].normal > 0) bbTop = Rect(newRects[j].p[0] - model->baseboardDepth, newRects[j].p[1], model->baseboardHeight);
-					else                        bbTop = Rect(newRects[j].p[0] - model->baseboardDepth, newRects[j].p[1] - model->baseboardDepth, model->baseboardHeight);
-					bbTop.w = newRects[j].w+2*model->baseboardDepth;
-					bbTop.h = model->baseboardDepth;
+					bbTop = Rect(newRects[j].p[0] - newRects[j].normal*model->baseboardDepth, newRects[j].p[1], model->baseboardHeight);
+					bbTop.w = newRects[j].w;
+					bbTop.h = abs(model->baseboardDepth);
 				}
 				bbTop.material = &(model->baseboardMaterial);
 				bbTop.axis = 2;
-				bbTop.normal = 1;
+				bbTop.normal = model->baseboardDepth>0?-1:1;
 				baseboardRectangles.push_back(bbTop);
-				*/
+#endif
 			}
 		}
 		wallRectangles.insert(wallRectangles.end(), newRects.begin(), newRects.end());
