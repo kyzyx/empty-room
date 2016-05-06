@@ -387,7 +387,7 @@ void RoomModel::saveToPly(const string& filename) {
         p = m*reup*p;
         //n = m*reup*n;
         out << p[0] << " " << p[1] << " " << p[2] << " ";
-        out << colors[j++] << " " << colors[j++] << " " << colors[j++] << endl;
+        out << (int) colors[j++] << " " << (int) colors[j++] << " " << (int) colors[j++] << endl;
     }
     for (int i = 0; i < numroomtriangles; ++i) {
         if (i%3 == 0) out << "3 ";
