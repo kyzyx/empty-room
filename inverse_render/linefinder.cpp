@@ -314,7 +314,10 @@ void findWallLinesInImage(
                     cout << " " << w2[0] << " " << w2[1] << " " << w2[2];
                     cout << " " << z;
                 } else {
-                    if (abs(start[1] - end[1]) < minlength) continue;
+                    if (abs(start[1] - end[1]) < minlength) {
+                        cout << endl;
+                        continue;
+                    }
                     seg = Vector3d((start[2]+end[2])/2,
                         start[1],
                         end[1]);

@@ -241,7 +241,7 @@ class SolverApp : public InvrenderApp {
                 FloorplanHelper fph;
                 fph.loadFromRoomModel(room);
                 vector<WallLine> lines;
-                findWallLines(*imgr, fph, lines, 0.02);
+                findWallLines(*imgr, fph, lines, 0.03);
                 // Find all potential door vertical lines
                 double dh = 0.08;
                 double mindoorheight = 1.7;

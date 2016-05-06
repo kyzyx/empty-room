@@ -12,7 +12,7 @@ int FloorplanHelper::closestWall(Eigen::Vector3f p, Eigen::Vector3f n) {
 Eigen::Vector3f FloorplanHelper::getWallPoint(int i, double coord, double height) const {
     if (i >= wallsegments.size()) i %= wallsegments.size();
     Eigen::Vector4f p;
-    pair<double,double> x = wallsegments[i].getCoords(coord);
+    pair<double,double> x = wallsegments[i].getCoords(coord + wallsegments[i].start);
     p[0] = x.first;
     p[1] = floorplane + height;
     p[2] = x.second;
