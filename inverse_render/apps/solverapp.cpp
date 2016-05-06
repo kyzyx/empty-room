@@ -234,8 +234,8 @@ class SolverApp : public InvrenderApp {
                 room->baseboardMaterial.diffuse.g = bbmat.g;
                 room->baseboardMaterial.diffuse.b = bbmat.b;
                 room->baseboardHeight = bh;
-                room->baseboardDepth = -ff.getDepth();
-                if (room->baseboardDepth > 0) room->baseboardDepth = -0.005;
+                room->baseboardDepth = ff.getDepth();
+                if (room->baseboardDepth < 0) room->baseboardDepth = 0.002;
             }
             if (dorwo) {
                 FloorplanHelper fph;

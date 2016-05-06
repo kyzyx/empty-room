@@ -1,5 +1,6 @@
 #include "geometrygenerator.h"
 
+#include <iostream>
 namespace roommodel{
 using namespace std;
 
@@ -103,46 +104,83 @@ void GeometryGenerator::generate() {
 		}
 		else {
 			rectangleDiff(wall, windowRects, newRects);
+            if (wall.normal > 0) reverse(newRects.begin(), newRects.end());
 		}
 		for (int j = 0; j < newRects.size(); ++j) {
 			// Add baseboard geometry for relevant wall segments
 			if (model->baseboardHeight > 0 && newRects[j].p[2] == -delta && newRects[j].h >= model->baseboardHeight) {
+                double bbl = newRects[j].w;
+                bool nextconvex = false;
+                bool prevconvex = false;
+                if (j == 0) {
+                    int ni = (i-1+model->walls.size())%model->walls.size();
+                    int nin = model->walls[ni].normal;
+                    if (model->baseboardDepth > 0) {
+                        if (newRects[j].axis) {
+                            prevconvex = nin == newRects[j].normal;
+                        } else {
+                            prevconvex = nin != newRects[j].normal;
+                        }
+                    }
+                }
+                if (j == newRects.size()-1) {
+                    int ni = (i+1)%model->walls.size();
+                    int nin = model->walls[ni].normal;
+                    if (model->baseboardDepth > 0) {
+                        if (newRects[j].axis) {
+                            nextconvex = nin != newRects[j].normal;
+                        } else {
+                            nextconvex = nin == newRects[j].normal;
+                        }
+                    }
+                }
 				Rect bbFront = newRects[j];
-				//bbFront.p[bbFront.axis ? 0 : 1] -= model->baseboardDepth;
-				bbFront.p[bbFront.axis] += newRects[j].normal*model->baseboardDepth;
+				bbFront.p[bbFront.axis] -= newRects[j].normal*model->baseboardDepth;
+                if (nextconvex) {
+                    bbl += model->baseboardDepth;
+                    if (bbFront.normal < 0)
+                        bbFront.p[1-bbFront.axis] -= model->baseboardDepth;
+                }
+                if (prevconvex) {
+                    bbl += model->baseboardDepth;
+                    if (bbFront.normal < 0)
+                        bbFront.p[1-bbFront.axis] -= model->baseboardDepth;
+                }
+                bbFront.w = bbl;
 				bbFront.h = model->baseboardHeight + delta;
-				//bbFront.w += 2 * model->baseboardDepth;
 				bbFront.material = &(model->baseboardMaterial);
 				bbFront.depth = model->baseboardDepth;
 				baseboardRectangles.push_back(bbFront);
 
 #ifndef _RECTS_AS_BOXES
 				Rect bbTop;
-				if (newRects[j].normal > 0) {
-                    bbTop = Rect(
-                            newRects[j].p[0],
-                            newRects[j].p[1],
-                            model->baseboardHeight);
-                } else {
-                    bbTop = Rect(
-                            newRects[j].p[0] - newRects[j].w,
-                            newRects[j].p[1] - newRects[j].h,
-                            model->baseboardHeight);
-                }
-
 				if (newRects[j].axis == 0) {
-					bbTop = Rect(newRects[j].p[0], newRects[j].p[1] - newRects[j].normal*model->baseboardDepth, model->baseboardHeight);
-					bbTop.h = newRects[j].w;
-					bbTop.w = abs(model->baseboardDepth);
+                    bbTop = Rect(newRects[j].p[0], newRects[j].p[1], model->baseboardHeight);
+                    //if (newRects[j].normal < 0) bbTop.p[0] += model->baseboardDepth;
+                    if (newRects[j].normal < 0) {
+                        if (nextconvex) bbTop.p[1] -= model->baseboardDepth;
+                    }
+                    else {
+                        bbTop.p[0] -= model->baseboardDepth;
+                    }
+					bbTop.h = bbl;
+					bbTop.w = model->baseboardDepth;
 				}
 				else if (newRects[j].axis == 1) {
-					bbTop = Rect(newRects[j].p[0] - newRects[j].normal*model->baseboardDepth, newRects[j].p[1], model->baseboardHeight);
-					bbTop.w = newRects[j].w;
-					bbTop.h = abs(model->baseboardDepth);
+					bbTop = Rect(newRects[j].p[0], newRects[j].p[1], model->baseboardHeight);
+                    //if (newRects[j].normal < 0) bbTop.p[1] -= model->baseboardDepth;
+                    if (newRects[j].normal < 0) {
+                        if (nextconvex) bbTop.p[0] -= model->baseboardDepth;
+                    }
+                    else {
+                        bbTop.p[1] -= model->baseboardDepth;
+                    }
+					bbTop.w = bbl;
+					bbTop.h = model->baseboardDepth;
 				}
 				bbTop.material = &(model->baseboardMaterial);
 				bbTop.axis = 2;
-				bbTop.normal = model->baseboardDepth>0?-1:1;
+				bbTop.normal = 1;
 				baseboardRectangles.push_back(bbTop);
 #endif
 			}
