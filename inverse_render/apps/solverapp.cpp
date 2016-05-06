@@ -277,9 +277,12 @@ class SolverApp : public InvrenderApp {
                                 double ph = perwallhoriz[i][x].p;
                                 double pl = perwallhoriz[i][x].endy;
                                 double pr = perwallhoriz[i][x].starty;
+                                double ppl = min(p,p2);
+                                double ppr = max(p,p2);
                                 if (abs(ph-h) < dh
-                                        && pl < p + dh && pr > p - dh
-                                        && pl < p2 + dh && pr > p2 - dh)
+                                        && pl < ppl + dh && pr > ppr - dh)
+                                        //&& pl < p + dh && pr > p - dh
+                                        //&& pl < p2 + dh && pr > p2 - dh)
                                 {
                                     compatible = true;
                                     cout << h << " " << h2 << " " << perwallhoriz[i][x].p << " " << perwallhoriz[i][x].endy << " " << perwallhoriz[i][x].starty << endl;
