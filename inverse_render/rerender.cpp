@@ -487,7 +487,6 @@ void outputPbrtFile(
                 out << "Shape \"trianglemesh\"" << endl;
                 outputTriangles(out, triangles, m*reup);
                 triangles.clear();
-                out << "\"string name\" [\"Floor\"]" << endl;
                 out << "AttributeEnd" << endl;
             }
         }

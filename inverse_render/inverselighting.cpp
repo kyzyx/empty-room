@@ -60,6 +60,7 @@ struct DynLightFunctor {
             residual[ch] *= params[0][mat*3+ch];
             residual[ch] -= T(d.radiosity[ch]);
             residual[ch] *= T(wt);
+            //residual[ch] /= T(sqrt(d.radiosity[ch]) + MINRELATIVEERROR);
             //residual[ch] *= T(1-d.fractionUnknown)/T(d.radiosity[ch] + MINRELATIVEERROR);
             //residual[ch] /= T(d.radiosity[ch] + MINRELATIVEERROR);
         }
@@ -95,6 +96,7 @@ struct SingleChannelLightFunctor {
         residual[0] *= params[0][mat];
         residual[0] -= T(d.radiosity[ch]);
         residual[0] *= T(wt);
+        //residual[ch] /= T(sqrt(d.radiosity[ch]) + MINRELATIVEERROR);
         //residual[ch] *= T(1-d.fractionUnknown)/T(d.radiosity[ch] + MINRELATIVEERROR);
         //residual[ch] /= T(d.radiosity[ch] + MINRELATIVEERROR);
         return true;

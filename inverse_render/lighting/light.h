@@ -131,7 +131,7 @@ class SHLight : public Light {
 
 class CubemapLight : public Light {
     public:
-        CubemapLight() : res(5) { v.resize(numParameters(), 0); }
+        CubemapLight() : res(4) { v.resize(numParameters(), 0); }
         virtual int numParameters() const { return res*res*6; }
         virtual int typeId() const { return LIGHTTYPE_ENVMAP; }
 

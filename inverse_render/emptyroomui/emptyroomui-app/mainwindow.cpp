@@ -1443,7 +1443,7 @@ void MainWindow::on_actionCustom_Selector_triggered()
         // ---------- TEMP
         QString cmd = settings->value("solver_binary", "solverapp -meshfile %1 -p").toString();
         cmd = cmd.arg(meshfilename);
-        QString extraflags = "";
+        QString extraflags = " -nosolve";
         if (tempformfactors) {
             extraflags += " -inputbinaryfile " + tempformfactors->fileName();
         } else if (formfactorsfile.length() > 0) {

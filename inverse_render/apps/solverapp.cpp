@@ -75,7 +75,7 @@ class SolverApp : public InvrenderApp {
                     double meanexitant = alldata[i].radiosity.r + alldata[i].radiosity.g + alldata[i].radiosity.b;
                     double meanincident = alldata[i].netIncoming.r + alldata[i].netIncoming.g + alldata[i].netIncoming.b;
                     meanincident *= reweightIncoming(alldata[i]);
-                    if (meanexitant > 1.5*meanincident) cout << ">>data:" << i << endl;
+                    if (meanexitant > 0.8*meanincident) cout << ">>data:" << i << endl;
                 }
                 cout << ">>done" << endl;
             }

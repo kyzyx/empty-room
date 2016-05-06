@@ -214,8 +214,8 @@ Vector3d projectOntoWall(
     R3Point hit;
     RNClassID rncid = R3Intersects(ray, plane, &hit);
     if (rncid && hit.Y() < ceilingplane+margin && hit.Y() > floorplane-margin) {
-        double x = s.direction?hit.Z():hit.X();
-        return Vector3d(x - s.start, hit.Y(), (hit-cam.pos).Length());
+        double xx = s.direction?hit.Z():hit.X();
+        return Vector3d(xx - s.start, hit.Y(), (hit-cam.pos).Length());
     } else {
         return Vector3d(-numeric_limits<double>::infinity(), 0, numeric_limits<double>::infinity());
     }
