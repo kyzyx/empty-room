@@ -134,28 +134,16 @@ void InverseRender::solveTexture(
     if (miny >= maxy || minx >= maxx) {
         cerr << "Error solving for texture!" << endl;
     }
-    // Crop image to cluster
-    const float* uncropped = (const float*) imagemanager->getImage(bestimage);
-    Mat cropped(maxy-miny+1, maxx-minx+1, CV_32FC4);
-    for (int i = miny; i <= maxy; ++i) {
-        for (int j = minx; j <= maxx; ++j) {
-            cropped.at<Vec4f>(i-miny, j-minx) = Vec4f(
-                    uncropped[3*(i*w+j)],
-                    uncropped[3*(i*w+j)+1],
-                    uncropped[3*(i*w+j)+2],
-                    isfloor[i*w+j]
-            );
-        }
-    }
 
     // Trace rays to find corresponding points on plane
     vector<Vector3d> points;
     points.push_back(Vector3d(minx, miny, 0));
     points.push_back(Vector3d(minx, maxy, 0));
     points.push_back(Vector3d(maxx, maxy, 0));
-    //points.push_back(Vector3d(maxx, miny, 0));
+    points.push_back(Vector3d(maxx, miny, 0));
+    vector<SampleData> sd;
     for (int i = 0; i < points.size(); ++i) {
-        from.push_back(Point2f(points[i](0) - minx, points[i](1) - miny));
+        if (i < 3) from.push_back(Point2f(points[i](0) - minx, points[i](1) - miny));
         R3Point p = cam->pos + cam->focal_length*cam->towards;
         p += (points[i](0) - (w-1)/2.)*cam->right;
         p -= (points[i](1) - (h-1)/2.)*cam->up;
@@ -168,6 +156,20 @@ void InverseRender::solveTexture(
         for (int j = 0; j < 3; ++j) points[i](j) = isect[j];
     }
 
+    // Crop image to cluster, scaled by incident illumination
+    const float* uncropped = (const float*) imagemanager->getImage(bestimage);
+    Mat cropped(maxy-miny+1, maxx-minx+1, CV_32FC4);
+    for (int i = miny; i <= maxy; ++i) {
+        for (int j = minx; j <= maxx; ++j) {
+            double c[3];
+            for (int k = 0; k < 3; k++) {
+                c[k] = uncropped[3*(i*w+j)+k];
+            }
+            cropped.at<Vec4f>(i-miny, j-minx) = Vec4f(
+                    c[0], c[1], c[2], isfloor[i*w+j]);
+        }
+    }
+
     // Determine new coordinate system on floor plane
     Vector3d v1 = points[1] - points[0];
     Vector3d v2 = -v1.cross(gaps2eigen(surface.Normal()));
@@ -175,9 +177,9 @@ void InverseRender::solveTexture(
     v2 *= v1.norm()/v2.norm();
     Vector3d origin = points[0];
     // Project points onto new coordinate system
-    for (int i = 0; i < points.size(); ++i) {
+    for (int i = 0; i < 3; ++i) {
         Vector3d p = points[i] - origin;
-        to.push_back(Point2f(p.dot(v2), p.dot(v1)));
+        to.push_back(Point2f(2*p.dot(v2), 2*p.dot(v1)));
     }
 
     // Rectify
@@ -223,14 +225,52 @@ void InverseRender::solveTexture(
     delete [] largest;
     tex.size = best;
     tex.scale = ((points[1] - points[0]).norm()*best)/(maxy-miny);
+    cout << tex.scale << endl;
+
+    // Factor out lighting
+    Mat inverserectification;
+    invertAffineTransform(rectification, inverserectification);
+    vector<Vector3d> incident;
+    vector<Point2f> corners;
+    corners.push_back(Point2f(bestc-best+1, bestr-best+1));
+    corners.push_back(Point2f(bestc-best+1, bestr));
+    corners.push_back(Point2f(bestc, bestr));
+    corners.push_back(Point2f(bestc, bestr-best+1));
+    transform(corners, corners, inverserectification);
+    for (int i = 0; i < corners.size(); i++) {
+        R3Point p = cam->pos + cam->focal_length*cam->towards;
+        p += (corners[i].x - (w-1)/2.)*cam->right;
+        p -= (corners[i].y - (h-1)/2.)*cam->up;
+        R3Ray ray(cam->pos, p);
+        R3MeshIntersection misect;
+        mesh->getSearchTree()->FindIntersection(ray, misect, 0);
+        if (misect.type == R3_MESH_NULL_TYPE) {
+            cerr << "Unexpected error!" << endl;
+            return;
+        }
+
+        sd.push_back(
+                hr->computeSample(misect.point + 0.005*surface.Normal(),
+                    surface.Normal(), lights, NULL, NULL));
+        Material m = computeIncident(sd[i], lightintensities);
+        incident.push_back(Vector3d(m.r, m.g, m.b));
+    }
 
     // Copy into image
     tex.texture = new float[3*tex.size*tex.size];
     float* next = tex.texture;
     for (int i = bestr-best+1; i <= bestr; ++i) {
         for (int j = bestc-best+1; j <= bestc; ++j) {
-            for (int k = 0; k < 3; ++k) {
-                *(next++) = cropped.at<Vec4f>(i,j)[k];
+            double c[3];
+            double u = (j-bestc+best-1)/(float)(best);
+            double v = (i-bestr+best-1)/(float)(best);
+            for (int k = 0; k < 3; k++) {
+                *next = cropped.at<Vec4f>(i,j)[k];
+                *next /= (1-u)*(1-v)*incident[0][k]
+                       + (1-u)*v    *incident[1][k]
+                       +     u*v    *incident[2][k]
+                       +     u*(1-v)*incident[3][k];
+                next++;
             }
         }
     }
