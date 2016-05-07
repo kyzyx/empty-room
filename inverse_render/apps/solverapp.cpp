@@ -165,15 +165,7 @@ class SolverApp : public InvrenderApp {
                 vector<Material> errors;
                 for (int i = 0; i < mmgr->size(); i++) {
                     if (indices[wk] == i) {
-                        Material res(0,0,0);
-                        double currlighting[3];
-                        for (int j = 0; j < 3; j++) currlighting[j] = 0;
-                        for (int j = 0; j < rgbl.size(); j++) {
-                            lightContribution(rgbl[j], currlighting, alldata[i].lightamount[j]);
-                        }
-                        for (int j = 0; j < 3; j++) res(j) = currlighting[j];
-                        double frac = reweightIncoming(alldata[i]);
-                        res += alldata[i].netIncoming*frac;
+                        Material res = computeIncident(alldata[i], rgbl);
                         res = res*ir.wallMaterial;
                         colors.push_back(res);
                         Material errmat = res-alldata[i].radiosity;
@@ -201,16 +193,10 @@ class SolverApp : public InvrenderApp {
                 int wk = 0;
                 for (int i = 0; i < mmgr->NVertices(); i++) {
                     //if (indices[wk] == i) {
-                        double currlighting[3];
-                        for (int j = 0; j < 3; j++) currlighting[j] = 0;
-                        for (int j = 0; j < rgbl.size(); j++) {
-                            lightContribution(rgbl[j], currlighting, alldata[i].lightamount[j]);
-                        }
-                        for (int j = 0; j < 3; j++) alldata[i].netIncoming(j) += currlighting[j];
-                        alldata[i].netIncoming *= reweightIncoming(alldata[i]);
-                        float r = alldata[i].radiosity.r/alldata[i].netIncoming.r;
-                        float g = alldata[i].radiosity.g/alldata[i].netIncoming.g;
-                        float b = alldata[i].radiosity.b/alldata[i].netIncoming.b;
+                        Material m = computeIncident(alldata[i], rgbl);
+                        float r = alldata[i].radiosity.r/m.r;
+                        float g = alldata[i].radiosity.g/m.g;
+                        float b = alldata[i].radiosity.b/m.b;
                         colors.push_back(Material(r,g,b));
                     //} else {
                         //colors.push_back(Material(0,0,0));

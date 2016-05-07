@@ -16,7 +16,7 @@ enum {
 inline double reweightIncoming(const SampleData& data) {
     return (1-data.fractionDirect)/(1-data.fractionUnknown-data.fractionDirect);
 }
-
+Material computeIncident(const SampleData& data, std::vector<Light*>& lights);
 
 class InverseRender {
     public:

@@ -5,30 +5,30 @@
 
 using namespace std;
 
+Material computeIncident(const SampleData& data, std::vector<Light*>& lights) {
+    Material directlighting;   // Total incoming radiance from direct light
+    Material indirectlighting; // Total incoming indirect radiance
+    double currlighting[3];
+    for (int j = 0; j < 3; j++) currlighting[j] = 0;
+    for (int j = 0; j < lights.size(); j++) {
+        lightContribution(lights[j], currlighting, data.lightamount[j]);
+    }
+    for (int j = 0; j < 3; j++) directlighting(j) = currlighting[j];
+
+    if (directlighting.r < 0) directlighting.r = 0;
+    if (directlighting.g < 0) directlighting.g = 0;
+    if (directlighting.b < 0) directlighting.b = 0;
+    indirectlighting = data.netIncoming;
+    indirectlighting *= reweightIncoming(data);
+    return directlighting + indirectlighting;
+}
+
 Material InverseRender::computeAverageMaterial(vector<SampleData>& data)
 {
     Material avg;
     for (int i = 0; i < data.size(); ++i) {
-        // Compute incident direct lighting
-        Material directlighting;   // Total incoming radiance from direct light
-        Material indirectlighting; // Total incoming indirect radiance
-        Material incident;
+        Material incident = computeIncident(data[i], lightintensities);
         Material m(0,0,0);
-        double currlighting[3];
-        for (int j = 0; j < 3; j++) currlighting[j] = 0;
-        for (int j = 0; j < lightintensities.size(); j++) {
-            lightContribution(lightintensities[j], currlighting, data[i].lightamount[j]);
-        }
-        for (int j = 0; j < 3; j++) directlighting(j) = currlighting[j];
-
-        if (directlighting.r < 0) directlighting.r = 0;
-        if (directlighting.g < 0) directlighting.g = 0;
-        if (directlighting.b < 0) directlighting.b = 0;
-        indirectlighting = data[i].netIncoming;
-        // Assume unsampled regions of hemicube are equal to average
-        // indirect illumination
-        indirectlighting *= (1-data[i].fractionDirect)/(1-data[i].fractionDirect-data[i].fractionUnknown);
-        incident = indirectlighting + directlighting;
         if (incident.r > 0) m.r = data[i].radiosity.r / incident.r;
         if (incident.g > 0) m.g = data[i].radiosity.g / incident.g;
         if (incident.b > 0) m.b = data[i].radiosity.b / incident.b;
