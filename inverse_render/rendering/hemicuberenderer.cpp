@@ -267,9 +267,15 @@ void HemicubeRenderer::computeSamples(
 }
 
 SampleData HemicubeRenderer::computeSample(int n, vector<Light*> lights, float* radimage, float* lightimage) {
-    SampleData sd;
-    sd.vertexid = n;
+    R3Point p = rendermanager->getMeshManager()->VertexPosition(n);
+    R3Vector normal = rendermanager->getMeshManager()->VertexNormal(n);
+    SampleData sd = computeSample(p, normal, lights, radimage, lightimage);
     sd.radiosity = rendermanager->getMeshManager()->getMedianVertexColor(n);
+    sd.vertexid = n;
+    return sd;
+}
+SampleData HemicubeRenderer::computeSample(const R3Point& p, const R3Vector& n, std::vector<Light*> lights, float* radimage, float* lightimage) {
+    SampleData sd;
     sd.netIncoming = Material();
     sd.fractionUnknown = 0;
     sd.fractionDirect = 0;
@@ -289,9 +295,7 @@ SampleData HemicubeRenderer::computeSample(int n, vector<Light*> lights, float* 
         sd.lightamount.push_back(l);
     }
     renderHemicube(
-            rendermanager->getMeshManager()->VertexPosition(n),
-            rendermanager->getMeshManager()->VertexNormal(n),
-            sd.netIncoming, sd.lightamount, sd.fractionUnknown, sd.fractionDirect,
+            p, n, sd.netIncoming, sd.lightamount, sd.fractionUnknown, sd.fractionDirect,
             radimage, lightimage
             );
     return sd;

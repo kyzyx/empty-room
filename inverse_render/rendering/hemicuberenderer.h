@@ -59,6 +59,7 @@ class HemicubeRenderer {
                 float* color, float* light);
         int getHemicubeResolution() const { return res; }
         SampleData computeSample(int n, std::vector<Light*> lights, float* radimage, float* lightimage);
+        SampleData computeSample(const R3Point& p, const R3Vector& n, std::vector<Light*> lights, float* radimage, float* lightimage);
         void weightTopHemicube(float* img, float factor=1) const;
         void weightSideHemicube(float* img, float factor=1) const;
 
