@@ -49,6 +49,18 @@ class SolverApp : public InvrenderApp {
             } else {
                 ir.computeSamples(alldata, all, numsamples, discardthreshold, false, getProgressFunction(0,2));
             }
+            if (room) {
+                ir.materials.resize(3);
+                ir.materials[0].r = room->wallMaterial.diffuse.r   ;
+                ir.materials[0].g = room->wallMaterial.diffuse.g   ;
+                ir.materials[0].b = room->wallMaterial.diffuse.b   ;
+                ir.materials[1].r = room->ceilingMaterial.diffuse.r;
+                ir.materials[1].g = room->ceilingMaterial.diffuse.g;
+                ir.materials[1].b = room->ceilingMaterial.diffuse.b;
+                ir.materials[2].r = room->floorMaterial.diffuse.r  ;
+                ir.materials[2].g = room->floorMaterial.diffuse.g  ;
+                ir.materials[2].b = room->floorMaterial.diffuse.b  ;
+            }
             for (int i = 0; i < indices.size(); i++) {
                 data.push_back(alldata[indices[i]]);
             }
@@ -162,13 +174,23 @@ class SolverApp : public InvrenderApp {
             if (dorerender || doerror) {
                 int wk = 0;
                 vector<Material> colors;
-                vector<Material> errors;
+                vector<Material> poserrors;
+                vector<Material> negerrors;
                 for (int i = 0; i < mmgr->size(); i++) {
-                    if (indices[wk] == i) {
+                    if (wk < indices.size() && indices[wk] == i) {
                         Material res = computeIncident(alldata[i], rgbl);
-                        res = res*ir.wallMaterial;
+                        res = res*ir.materials[label-1];
                         colors.push_back(res);
                         Material errmat = res-alldata[i].radiosity;
+                        cout << errmat.r << " " << errmat.g << " " << errmat.b << endl;
+                        Material perrm(
+                                errmat.r>0?errmat.r:0,
+                                errmat.g>0?errmat.g:0,
+                                errmat.b>0?errmat.b:0);
+                        Material nerrm(
+                                errmat.r<0?errmat.r:0,
+                                errmat.g<0?errmat.g:0,
+                                errmat.b<0?errmat.b:0);
                         errmat.r = abs(errmat.r);
                         errmat.g = abs(errmat.g);
                         errmat.b = abs(errmat.b);
@@ -177,15 +199,20 @@ class SolverApp : public InvrenderApp {
                         maxerr = maxerr<errmat.r?errmat.r:maxerr;
                         maxerr = maxerr<errmat.g?errmat.g:maxerr;
                         maxerr = maxerr<errmat.b?errmat.b:maxerr;
-                        errors.push_back(errmat);
+                        poserrors.push_back(perrm);
+                        negerrors.push_back(nerrm);
                         wk++;
                     } else {
-                        colors.push_back(mmgr->getMedianVertexColor(i));
-                        errors.push_back(Material(200, 0, 200));
+                        colors.push_back(alldata[i].radiosity);
+                        poserrors.push_back(Material(200, 0, 200));
+                        negerrors.push_back(Material(200, 0, 200));
                     }
                 }
                 if (dorerender) mmgr->writePlyMesh(rerenderedplyfilename, colors, meshcolorscale, gamma);
-                if (doerror) mmgr->writePlyMesh(errorplyfilename, errors, .5);
+                if (doerror) {
+                    mmgr->writePlyMesh("pos" + errorplyfilename, poserrors, 25);
+                    mmgr->writePlyMesh("neg" + errorplyfilename, negerrors, 25);
+                }
                 cout << "Mean error: " << meanerr/(3*indices.size()) << "; " << "max error: " << maxerr << endl;
             }
             if (dointrinsic) {
