@@ -4,8 +4,10 @@
 
 using namespace std;
 using namespace ceres;
+using namespace Eigen;
 
 
+const double obslambda = 0.00001;
 const double MINRELATIVEERROR = 0.01;
 
 void linearArrayFromLights(double* a, vector<Light*>& d) {
@@ -199,6 +201,24 @@ void InverseRender::solve(vector<SampleData>& data, double reglambda, bool rewei
     }
     int curridx = 0;
     for (int i = 0; i < lightintensities.size(); i++) {
+        if (lightintensities[i]->typeId() & LIGHTTYPE_ENVMAP) {
+            vector<Vector3f> directions;
+            vector<Vector3f> colors;
+            vector<double> weights;
+            for (int j = 0; j < mesh->NVertices(); j++) {
+                int lightid = LIGHTID(mesh->getLabel(j, MeshManager::LABEL_CHANNEL));
+                if (lightid == i) {
+                    for (int k = 0; k < mesh->getVertexSampleCount(j); k++) {
+                        Sample s = mesh->getSample(j, k);
+                        colors.push_back(Vector3f(s.r, s.g, s.b));
+                        directions.push_back(Vector3f(s.x, s.y, s.z));
+                        weights.push_back(s.dA*s.confidence);
+                    }
+                }
+            }
+            addObservedConstraints(lightintensities[i], &problem, ls, numlights, obslambda, directions, colors, weights, -1, curridx);
+        }
+
         addCeres(lightintensities[i], &problem, ls, numlights, curridx);
         curridx += lightintensities[i]->numParameters();
     }
@@ -284,6 +304,23 @@ void InverseRender::solveSingleChannel(vector<SampleData>& data, double reglambd
         for (int i = 0; i < lightintensities.size(); i++) {
             RGBLight* rgbl = static_cast<RGBLight*>(lightintensities[i]);
             Light* l = rgbl->getLight(ch);
+            if (lightintensities[i]->typeId() & LIGHTTYPE_ENVMAP) {
+                vector<Vector3f> directions;
+                vector<Vector3f> colors;
+                vector<double> weights;
+                for (int j = 0; j < mesh->NVertices(); j++) {
+                    int lightid = LIGHTID(mesh->getLabel(j, MeshManager::LABEL_CHANNEL));
+                    if (lightid == i+1) {
+                        for (int k = 0; k < mesh->getVertexSampleCount(j); k++) {
+                            Sample s = mesh->getSample(j, k);
+                            colors.push_back(Vector3f(s.r, s.g, s.b));
+                            directions.push_back(Vector3f(s.x, s.y, s.z));
+                            weights.push_back(s.dA*s.confidence);
+                        }
+                    }
+                }
+                addObservedConstraints(l, &problem, ls, numlights, obslambda, directions, colors, weights, ch, curridx);
+            }
             addCeres(l, &problem, ls, numlights, curridx);
             curridx += l->numParameters();
         }

@@ -183,3 +183,29 @@ ceres::CostFunction* CreateIRGBTerm(int i, int numlights, double lambda) {
     ret->SetNumResiduals(1);
     return ret;
 }
+
+struct ObservedFunctor {
+    ObservedFunctor(int idx, double v, double lambda)
+        : i(idx), val(v), l(std::sqrt(lambda)) { }
+
+    template <typename T>
+    bool operator() (
+            T const* const* params,
+            T* residual) const
+    {
+        residual[0] = (params[0][i] - T(val))*T(l);
+        return true;
+    }
+
+    int i;
+    double l, val;
+};
+
+ceres::CostFunction* CreateObservedTerm(int numlights, int i, double v, double lambda) {
+    ceres::DynamicAutoDiffCostFunction<ObservedFunctor>* ret =
+        new ceres::DynamicAutoDiffCostFunction<ObservedFunctor>(
+                new ObservedFunctor(i, v, lambda));
+    ret->AddParameterBlock(numlights);
+    ret->SetNumResiduals(1);
+    return ret;
+}
