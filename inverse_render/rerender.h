@@ -1,13 +1,23 @@
 #ifndef _RERENDER_H
 #define _RERENDER_H
-#include "wall_finder.h"
-#include "mesh.h"
+#include "wallfinder/wall_finder.h"
+#include "datamanager/meshmanager.h"
 #include "solver.h"
-#include "colorhelper.h"
+#include "datamanager/camparams.h"
+#include "roommodel/roommodel.h"
 
 #include <string>
 
-void outputRadianceFile(std::string filename, WallFinder& wf, Mesh& m, InverseRender& ir);
-void outputPlyFile(std::string filename, WallFinder& f, Mesh& m, InverseRender& ir);
-void outputPbrtFile(std::string filename, WallFinder& wf, Mesh& m, InverseRender& ir, Texture floortex, const CameraParams* cam, std::string floortexfilename);
+void outputRadianceFile(std::string filename, WallFinder& wf, MeshManager& m, InverseRender& ir);
+void outputPlyFile(std::string filename, WallFinder& f, MeshManager& m, InverseRender& ir);
+void outputPbrtCameraFile(
+        std::string filename,
+        std::string includefilename,
+        const CameraParams* cam);
+void outputPbrtFile(
+        std::string filename,
+        roommodel::RoomModel* room,
+        MeshManager& m,
+        std::vector<Light*>& lights,
+        const CameraParams* cam);
 #endif

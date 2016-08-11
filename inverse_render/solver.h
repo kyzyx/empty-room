@@ -3,59 +3,89 @@
 #include <vector>
 
 #include "R3Shapes/R3Shapes.h"
-#include "colorhelper.h"
-#include "hemicuberenderer.h"
-#include "material.h"
-#include "mesh.h"
+#include "datamanager/imagemanager.h"
+#include "datamanager/meshmanager.h"
+#include "rendering/hemicuberenderer.h"
+
+enum {
+    LOSS_L2,
+    LOSS_CAUCHY,
+    LOSS_HUBER,
+};
+
+inline double reweightIncoming(const SampleData& data) {
+    return (1-data.fractionDirect)/(1-data.fractionUnknown-data.fractionDirect);
+}
+Material computeIncident(const SampleData& data, std::vector<Light*>& lights);
 
 class InverseRender {
     public:
-        InverseRender(Mesh* m, int nlights, int hemicubeResolution=150)
-            : hr(m, hemicubeResolution), mesh(m), numlights(nlights), images(NULL),
-              maxPercentErr(0.1), numRansacIters(1000)
+        InverseRender(MeshManager* m, int hemicubeResolution=150, boost::function<void(int)> callback=NULL)
+            : mesh(m),
+              lossfn(LOSS_L2), scale(1),
+              cb(callback)
         {
-            lights.resize(numlights);
+            rm = new RenderManager(m);
+            rm->setupMeshColors();
+            rm->precalculateAverageSamples();
+            hr = new HemicubeRenderer(rm, hemicubeResolution);
+            setupLightParameters(m);
         }
-        void solve(std::vector<SampleData>& data);
+        ~InverseRender() {
+            if (hr) delete hr;
+            if (rm) delete rm;
+            for (auto it : lights) delete it;
+            for (auto it : lightintensities) delete it;
+        }
+        void solve(std::vector<SampleData>& data, double reglambda=0, bool reweight=false);
+        void solveSingleChannel(std::vector<SampleData>& data, double reglambda=0, bool reweight=false);
         void solveTexture(
                 std::vector<SampleData>& data,
-                ColorHelper* colorhelper,
+                ImageManager* imagemanager,
                 const R3Plane& surface,
-                Texture& tex);
+                Texture& tex,
+                int label);
         void computeSamples(
                 std::vector<SampleData>& data,
                 std::vector<int> indices,
                 int numsamples,
                 double discardthreshold=1,
-                bool saveImages=true);
+                bool saveImages=true,
+                boost::function<void(int)> callback=NULL);
+        SampleData computeSample(int idx, float* color=NULL, float* aux=NULL) {
+            return hr->computeSample(idx, lights, color, aux);
+        }
 
+        void reloadLights();
         void writeVariablesMatlab(std::vector<SampleData>& data, std::string filename);
         void writeVariablesBinary(std::vector<SampleData>& data, std::string filename);
         void loadVariablesBinary(std::vector<SampleData>& data, std::string filename);
 
-        void setNumRansacIters(int n) { numRansacIters = n; }
-        void setMaxPercentErr(double d) { maxPercentErr = d; }
+        void setLossFunction(int fn) { lossfn = fn; }
+        void setLossFunctionScale(double s) { scale = s; }
+
+        RenderManager* getRenderManager() { return rm; }
+        Material computeAverageMaterial(std::vector<SampleData>& data);
     private:
-        // Inverse Rendering helpers
-        bool calculateWallMaterialFromUnlit(std::vector<SampleData>& data);
-        bool solveAll(std::vector<SampleData>& data);
-
         // Texture recovery helpers
-        Material computeAverageMaterial(
-                std::vector<SampleData>& data,
-                std::vector<Material>& lightintensies);
-        double generateBinaryMask(const CameraParams* cam, std::vector<bool>& mask, int label);
+        double generateBinaryMask(const CameraParams* cam, const char* labelimage, std::vector<bool>& mask, int label);
+        void setupLightParameters(MeshManager* m);
 
-        HemicubeRenderer hr;
+        HemicubeRenderer* hr;
+        RenderManager* rm;
 
-        int numRansacIters;
-        double maxPercentErr;
+        int lossfn;
+        double scale;
+
+        boost::function<void(int)> cb;
     public:
-        float** images;
-        Mesh* mesh;
-        int numlights;
-        std::vector<Material> lights;
+        std::vector<float*> images;
+        MeshManager* mesh;
+        std::vector<Light*> lights;
+        std::vector<Light*> lightintensities;
         Material wallMaterial;
+        std::vector<Material> materials;
+        const int numchannels = 3;
 };
 
 #endif

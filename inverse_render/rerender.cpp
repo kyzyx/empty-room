@@ -1,26 +1,30 @@
 #include "rerender.h"
+#include "roommodel/geometrygenerator.h"
+#include "lighting/generateimage.h"
 #include <fstream>
 #include <Eigen/Dense>
 #include <Eigen/SVD>
+#include <boost/filesystem.hpp>
 
 #include "Simplify.h"
 
 using namespace std;
 using namespace Eigen;
 
-const double EPSILON = 0.0001;
+const double EPSILON = 0.005;
 const double CIRCLETOLERANCE = 1.2;
 
-int getFaceLightID(R3MeshFace* f, R3Mesh* m, vector<char>& labels) {
+int getFaceLightID(MeshManager& m, int f) {
     int lightid = -1;
     for (int j = 0; j < 3; ++j) {
-        int n = m->VertexID(m->VertexOnFace(f, j));
-        if (labels[n] <= 0) {
+        int n = m.VertexOnFace(f,j);
+        unsigned char l = m.getLabel(n); // FIXME! Negative light id
+        if (l == 0) {
             lightid = -1;
             break;
         } else {
-            if (lightid <= 0) lightid = labels[n];
-            else if (lightid != labels[n]) {
+            if (lightid <= 0) lightid = l;
+            else if (lightid != l) {
                 lightid = -1;
                 break;
             }
@@ -29,16 +33,14 @@ int getFaceLightID(R3MeshFace* f, R3Mesh* m, vector<char>& labels) {
     return lightid;
 }
 
-void estimateLightShape(Mesh& m, int id, vector<R3Point>& points, vector<int>& indices) {
-    vector<int> vid2point(m.getMesh()->NVertices(), -1);
+void estimateLightShape(MeshManager& m, int id, vector<R3Point>& points, vector<int>& indices) {
+    vector<int> vid2point(m.NVertices(), -1);
     R3Point mean(0,0,0);
-    for (int i = 0; i < m.getMesh()->NVertices(); ++i) {
-        R3MeshVertex* v = m.getMesh()->Vertex(i);
-        int vid = m.getMesh()->VertexID(v);
-        if (m.labels[vid] == id) {
-            points.push_back(m.getMesh()->VertexPosition(v));
+    for (int i = 0; i < m.NVertices(); ++i) {
+        if (m.getLabel(i) == id) {
+            points.push_back(m.VertexPosition(i));
             mean += points.back();
-            vid2point[vid] = points.size()-1;
+            vid2point[i] = points.size()-1;
         }
     }
     mean /= points.size();
@@ -60,13 +62,12 @@ void estimateLightShape(Mesh& m, int id, vector<R3Point>& points, vector<int>& i
             v.p = points[i] - R3null_point;
             Simplify::vertices.push_back(v);
         }
-        for (int i = 0; i < m.getMesh()->NFaces(); ++i) {
-            R3MeshFace* f = m.getMesh()->Face(i);
-            int lightid = getFaceLightID(f, m.getMesh(), m.labels);
+        for (int i = 0; i < m.NFaces(); ++i) {
+            int lightid = getFaceLightID(m,i);
             if (lightid != id) continue;
             Simplify::Triangle t;
             for (int j = 0; j < 3; ++j) {
-                int n = m.getMesh()->VertexID(m.getMesh()->VertexOnFace(f, j));
+                int n = m.VertexOnFace(i,j);
                 t.v[j] = vid2point[n];
             }
             Simplify::triangles.push_back(t);
@@ -87,8 +88,8 @@ void estimateLightShape(Mesh& m, int id, vector<R3Point>& points, vector<int>& i
         for (int i = 0; i < 3; ++i) if (s[i] == 0) s[i] = 1;
         MatrixXd variance = MatrixXd::Ones(points.size(),1)*s.transpose();
         MatrixXd Y = A.cwiseQuotient(variance)*svd.matrixV();
-        Vector3d maxcoefs = Y.colwise().maxCoeff();
-        Vector3d mincoefs = Y.colwise().minCoeff();
+        Vector3d maxcoefs = Y.cwiseAbs().colwise().maxCoeff();
+        Vector3d mincoefs = Y.cwiseAbs().colwise().minCoeff();
 
         // Check if approximately circular
         bool circle = true;
@@ -99,13 +100,17 @@ void estimateLightShape(Mesh& m, int id, vector<R3Point>& points, vector<int>& i
             cout << "Not a circle - aspect ratio irregular" << endl;
             circle = false;
         } else {
-            // Check if points fall in the circle
-            double maxradius = Y.cwiseProduct(Y).rowwise().sum().maxCoeff();
+            // Count how many points lie outside the circle
             double xdiam = (maxcoefs-mincoefs)[0];
             double ydiam = (maxcoefs-mincoefs)[1];
             double r = max(xdiam,ydiam)/2;
-            cout << "Max radius: " << maxradius << "/" << r*r << endl;
-            if (maxradius - r*r > 0.64) {
+            int numout = 0;
+            for (int i = 0; i < points.size(); i++) {
+                double d = Y(i,0)*Y(i,0) + Y(i,1)*Y(i,1);
+                if (d - r*r > r*0.05) numout++;
+            }
+            cout << "Number of points outside circle: " << numout << "/" << points.size() << endl;
+            if (numout/(double) points.size() > (4-M_PI)/M_PI) {
                 cout << "Not a circle - points outside of circle" << endl;
                 circle = false;
             }
@@ -150,7 +155,7 @@ void estimateLightShape(Mesh& m, int id, vector<R3Point>& points, vector<int>& i
     }
 }
 
-void outputRadianceFile(string filename, WallFinder& wf, Mesh& m, InverseRender& ir) {
+void outputRadianceFile(string filename, WallFinder& wf, MeshManager& m, InverseRender& ir) {
     ofstream out(filename);
     // output wall material
     out << "void plastic wallmat" << endl << 0 << endl << 0 << endl << 5 << " ";
@@ -161,9 +166,12 @@ void outputRadianceFile(string filename, WallFinder& wf, Mesh& m, InverseRender&
     // RADIANCE light parameters are in radiance; for diffuse surfaces the radiance L
     // is related to the radiosity J by
     // J = pi*L
-    for (int i = 0; i < ir.lights.size(); ++i) {
+    for (int i = 0; i < ir.lightintensities.size(); ++i) {
+        if (!(ir.lightintensities[i]->typeId() & LIGHTTYPE_AREA)) continue;
         out << "void light l" << (i+1) << endl << 0 << endl << 0 << endl << 3 << " ";
-        out << ir.lights[i](0)/M_PI << " " << ir.lights[i](1)/M_PI << " " << ir.lights[i](2)/M_PI << endl << endl;
+        out << ir.lightintensities[i]->coef(0)/M_PI << " "
+            << ir.lightintensities[i]->coef(1)/M_PI << " "
+            << ir.lightintensities[i]->coef(2)/M_PI << endl << endl;
         vector<int> indices;
         vector<R3Point> points;
         int id = i+1;
@@ -221,7 +229,7 @@ void outputRadianceFile(string filename, WallFinder& wf, Mesh& m, InverseRender&
     out << xmin << " " << lo << " " << zmin << " " << xmax << " " << lo << " " << zmin << " ";
     out << xmax << " " << lo << " " << zmax << " " << xmin << " " << lo << " " << zmax << endl << endl;
 }
-void outputPlyFile(string filename, WallFinder& wf, Mesh& m, InverseRender& ir) {
+void outputPlyFile(string filename, WallFinder& wf, MeshManager& m, InverseRender& ir) {
     ofstream out(filename);
     int n = wf.wallsegments.size()*2+8;
     int f = (wf.wallsegments.size()+2)*2;
@@ -278,208 +286,338 @@ void outputPlyFile(string filename, WallFinder& wf, Mesh& m, InverseRender& ir) 
     out << "3 " << n+5 << " " << n+7 << " " << n+6 << endl;
 
 }
-void outputPbrtFile(string filename, WallFinder& wf, Mesh& m, InverseRender& ir, Texture floortex, const CameraParams* cam, string floortexfilename) {
+
+void outputMaterial(ofstream& out, roommodel::Material m, const string& name) {
+    if (m.texture) {
+        out << "Texture \"FloorTexture\" \"color\" \"imagemap\"" << endl;
+        out << "\t\"string filename\" [\"" << m.texture->filename << "\"]" << endl;
+        out << "\t\"string wrap\" [\"repeat\"]" << endl;
+        out << "\t\"float scale\" [" << m.texture->scale << "]" << endl << endl;
+    }
+    out << "MakeNamedMaterial \"" << name << "\"" << endl;
+    if (m.texture) {
+        out << "\t\"texture Kd\" [\"" << name << "Texture\"]" << endl;
+    } else {
+        out << "\t\"color Kd\" [";
+        out << m.diffuse.r << " " << m.diffuse.g << " " << m.diffuse.b;
+        out << "]" << endl;
+    }
+    out << "\t\"float sigma\" [0.0]" << endl;
+    out << "\t\"string type\" [\"matte\"]" << endl << endl;
+}
+
+void outputTriangles(ofstream& out, vector<double>& triangles, const R4Matrix& t) {
+    out << "\"point P\" [" << endl;
+    for (int i = 0; i < triangles.size(); i += 5) {
+        R3Point p(triangles[i], triangles[i+1], triangles[i+2]);
+        p = t*p;
+        out << '\t' << p[0] << " " << p[1] << " " << p[2] << endl;
+    }
+    out << "]" << endl;
+    out << "\"integer indices\" [";
+    for (int i = 0; i < triangles.size()/5; i++) {
+        if (i%3 == 0) out << endl << '\t';
+        out << i;
+        if (i%3 != 2) out << " ";
+    }
+    out << "]" << endl;
+    out << "\"float uv\" [" << endl;
+    for (int i = 3; i < triangles.size(); i += 5) {
+        out << '\t' << triangles[i] << " " << triangles[i+1] << endl;
+    }
+    out << "]" << endl;
+}
+
+void outputPbrtCameraFile(
+        std::string filename,
+        std::string includefilename,
+        const CameraParams* cam)
+{
+    ofstream out(filename);
+    if (cam) {
+        out << "Scale -1 1 1" << endl;
+        out << "Film \"image\"" << endl;
+        out << "\"integer xresolution\" [" << cam->width << "]" << endl;
+        out << "\"integer yresolution\" [" << cam->height << "]" << endl;
+        out << "LookAt ";
+        for (int i = 0; i < 3; ++i) out << cam->pos[i] << " ";
+        for (int i = 0; i < 3; ++i) out << cam->pos[i] + cam->towards[i] << " ";
+        for (int i = 0; i < 3; ++i) out << cam->up[i] << " ";
+        out << endl << endl;
+        out << "Camera \"perspective\"" << endl;
+        out << "\"float fov\" [" << cam->fov << "]" << endl;
+    }
+    if (includefilename.length()) {
+        out << "Include \"" << boost::filesystem::path(includefilename).filename().string()<< "\"" << endl;
+    }
+}
+
+void outputPbrtFile(
+        std::string filename,
+        roommodel::RoomModel* room,
+        MeshManager& mmgr,
+        vector<Light*>& lights,
+        const CameraParams* cam) {
     ofstream out(filename);
 
     // Basic rendering info
     out << "# Main Scene File" << endl;
-    out << "Renderer \"sampler\"" << endl << endl;
+    // PBRT v2
     out << "Sampler \"lowdiscrepancy\"" << endl;
-    out << "\"integer pixelsamples\" [1024]" << endl << endl;
-    out << "SurfaceIntegrator \"path\"" << endl << endl;
+    out << "\"integer pixelsamples\" [2048]" << endl << endl;
+    out << "Renderer \"sampler\"" << endl << endl;
+    out << "SurfaceIntegrator \"path\" \"integer maxdepth\" [10]" << endl << endl;
+    // PBRT v3 (with bidirectional path tracing)
+    out << "#Sampler \"lowdiscrepancy\"" << endl;
+    out << "#\"integer pixelsamples\" [1024]" << endl << endl;
+    out << "#Integrator \"bdpt\" \"integer maxdepth\" [10]" << endl << endl;
+    // Smoothing
     out << "PixelFilter \"mitchell\"" << endl;
     out << "\"float B\" [0.333333343267441]" << endl;
     out << "\"float C\" [0.333333343267441]" << endl;
     out << "\"float xwidth\" [2.000000000000000]" << endl;
     out << "\"float ywidth\" [2.000000000000000]" << endl << endl;
-    out << "Film \"image\"" << endl;
-    out << "\"integer xresolution\" [" << cam->width << "]" << endl;
-    out << "\"integer yresolution\" [" << cam->height << "]" << endl;
-    out << "\"string filename\" [\"scene.exr\"]" << endl << endl;
-    out << "LookAt ";
-    for (int i = 0; i < 3; ++i) out << cam->pos[i] << " ";
-    for (int i = 0; i < 3; ++i) out << cam->up[i] << " ";
-    for (int i = 0; i < 3; ++i) out << cam->towards[i] << " ";
-    out << endl << endl;
-    out << "Camera \"perspective\"" << endl;
-    out << "\"float fov\" [" << cam->fov << "]" << endl;
-    out << "\"float shutteropen\" [0.000000000000000]" << endl;
-    out << "\"float shutterclose\" [0.041666666666667]" << endl << endl;
 
-    // Calculate room dimensions and aspect ratio
-    R3Box b = R3null_box;
-    for (int i = 0; i < wf.wallsegments.size(); ++i) {
-        Eigen::Vector3f c = wf.getNormalizedWallEndpoint(i,0,0);
-        R3Point p(c(0),c(1),c(2));
-        b.Union(p);
+    if (cam) {
+        out << "Scale -1 1 1" << endl;
+        out << "Film \"image\"" << endl;
+        out << "\"integer xresolution\" [" << cam->width << "]" << endl;
+        out << "\"integer yresolution\" [" << cam->height << "]" << endl;
+        out << "LookAt ";
+        for (int i = 0; i < 3; ++i) out << cam->pos[i] << " ";
+        for (int i = 0; i < 3; ++i) out << cam->pos[i] + cam->towards[i] << " ";
+        for (int i = 0; i < 3; ++i) out << cam->up[i] << " ";
+        out << endl << endl;
+        out << "Camera \"perspective\"" << endl;
+        out << "\"float fov\" [" << cam->fov << "]" << endl;
     }
-    double roomw = b.XLength();
-    double roomd = b.ZLength();
+
+    // Generate geometry
+    roommodel::GeometryGenerator gg(room);
+    gg.generate();
+
+    // Compute denormalization
+    R4Matrix m = room->globaltransform;
+    m = m.Inverse();
+    R4Matrix reup = R4identity_matrix;
+    reup.XRotate(M_PI/2);
+    reup.YRotate(M_PI);
+    reup.ZRotate(-M_PI/2);
 
     out << "WorldBegin" << endl;
-    // Output wall material
-    out << "MakeNamedMaterial \"Wall\"" << endl;
-    out << "\t\"color Kd\" [";
-    for (int i = 0; i < 3; ++i) out << ir.wallMaterial(i) << " ";
-    out << "]" << endl;
-    out << "\t\"float sigma\" [0.0]" << endl;
-    out << "\t\"string type\" [\"matte\"]" << endl << endl;
-    // Output floor material
-    if (floortexfilename.empty()) {
-        out << "MakeNamedMaterial \"FloorMaterial\"" << endl;
-        out << "\t\"color Kd\" [";
-        for (int i = 0; i < 3; ++i) out << ir.wallMaterial(i) << " ";
-        out << "]" << endl;
-    } else {
-        // Output floor texture
-        out << "Texture \"FloorTexture\" \"color\" \"imagemap\"" << endl;
-        out << "\t\"string filename\" [\"" << floortexfilename << "\"]" << endl;
-        out << "\t\"string wrap\" [\"repeat\"]" << endl;
-        out << "\t\"float scale\" [" << floortex.scale/min(roomw, roomd) << "]" << endl << endl;
-        out << "MakeNamedMaterial \"FloorMaterial\"" << endl;
-        out << "\t\"texture Kd\" [\"FloorTexture\"]" << endl;
+
+    // Output materials
+    outputMaterial(out, room->wallMaterial, "WallMaterial");
+    outputMaterial(out, room->floorMaterial, "FloorMaterial");
+    outputMaterial(out, room->ceilingMaterial, "CeilingMaterial");
+    outputMaterial(out, room->baseboardMaterial, "BaseboardMaterial");
+
+    vector<double> triangles;
+    // Output wall geometry
+    gg.doubleRectanglesForRaytracing(gg.wallRectangles);
+    rectanglesToTriangles(gg.wallRectangles, triangles, false, false, true);
+    if (!triangles.empty()) {
+        out << "AttributeBegin" << endl;
+        out << "Transform [1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1]" << endl;
+        out << "NamedMaterial \"WallMaterial\"" << endl;
+        out << "Shape \"trianglemesh\"" << endl;
+        outputTriangles(out, triangles, m*reup);
+        triangles.clear();
+        out << "\"string name\" [\"Walls\"]" << endl;
+        out << "AttributeEnd" << endl;
     }
-    out << "\t\"float sigma\" [0.0]" << endl;
-    out << "\t\"string type\" [\"matte\"]" << endl << endl;
-    // Output room geometry
-    out << "AttributeBegin" << endl;
-    out << "Transform [1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1]" << endl;
-    out << "NamedMaterial \"Wall\"" << endl;
-    out << "Shape \"trianglemesh\"" << endl;
-    out << "\"point P\" [" << endl;
-    for (int i = 0; i < wf.wallsegments.size(); ++i) {
-        Eigen::Vector3f p[] = {
-            wf.getWallEndpoint(i,0,1),
-            wf.getWallEndpoint(i,0,0)
-        };
-        for (int j = 0; j < 2; ++j) {
-            out << '\t' << p[j](0) << " " << p[j](1) << " " << p[j](2) << endl;
-        }
+
+    // Output baseboard geometry
+    rectanglesToTriangles(gg.baseboardRectangles, triangles, false, false, true);
+    if (!triangles.empty()) {
+        out << "AttributeBegin" << endl;
+        out << "Transform [1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1]" << endl;
+        out << "NamedMaterial \"BaseboardMaterial\"" << endl;
+        out << "Shape \"trianglemesh\"" << endl;
+        outputTriangles(out, triangles, m*reup);
+        triangles.clear();
+        out << "\"string name\" [\"Baseboard\"]" << endl;
+        out << "AttributeEnd" << endl;
     }
-    for (int i = 0; i < 8; ++i) {
-        Vector4f p(b.Coord(i&1,0),((i>>2)&1)?wf.floorplane:wf.ceilplane,b.Coord((i>>1)&1,2),1);
-        p = wf.getNormalizationTransform().inverse()*p;
-        out <<  '\t' << p(0)/p(3) << " " << p(1)/p(3) << " " << p(2)/p(3) << endl;
+
+    // Output ceiling plane
+    gg.doubleRectanglesForRaytracing(gg.ceilRectangles);
+    rectanglesToTriangles(gg.ceilRectangles, triangles, false, false, true);
+    if (!triangles.empty()) {
+        out << "AttributeBegin" << endl;
+        out << "Transform [1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1]" << endl;
+        out << "NamedMaterial \"CeilingMaterial\"" << endl;
+        out << "Shape \"trianglemesh\"" << endl;
+        outputTriangles(out, triangles, m*reup);
+        triangles.clear();
+        out << "\"string name\" [\"Ceiling\"]" << endl;
+        out << "AttributeEnd" << endl;
     }
-    out << "]" << endl;
-    out << "\"integer indices\" [" << endl;
-    for (int i = 0; i < wf.wallsegments.size(); ++i) {
-        if (i == wf.wallsegments.size() - 1) {
-            out << '\t' << 2*i << " " << 0 << " " << 2*i+1 << endl;
-            out << '\t' << 0 << " " << 1 << " " << 2*i+1 << endl;
-        } else {
-            out << '\t' << 2*i << " " << 2*i+2 << " " << 2*i+1 << endl;
-            out << '\t' << 2*i+2 << " " << 2*i+3 << " " << 2*i+1 << endl;
-        }
-    }
-    int n = wf.wallsegments.size()*2;
-    // Ceiling triangles
-    out << '\t' << n+4 << " " << n+5 << " " << n+6 << endl;
-    out << '\t' << n+5 << " " << n+7 << " " << n+6 << endl;
-    out << "]" << endl;
-    out << "\"bool generatetangents\" [\"false\"]" << endl;
-    out << "\"string name\" [\"Room\"]" << endl;
-    out << "AttributeEnd" << endl;
 
     // Output floor plane
-    out << "AttributeBegin" << endl;
-    out << "Transform [1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1]" << endl;
-    out << "NamedMaterial \"FloorMaterial\"" << endl;
-    out << "Shape \"trianglemesh\"" << endl;
-    out << "\"point P\" [" << endl;
-    for (int i = 0; i < 4; ++i) {
-        Vector4f p(b.Coord(i&1,0),wf.floorplane,b.Coord((i>>1)&1,2),1);
-        p = wf.getNormalizationTransform().inverse()*p;
-        out <<  '\t' << p(0)/p(3) << " " << p(1)/p(3) << " " << p(2)/p(3) << endl;
+    gg.doubleRectanglesForRaytracing(gg.floorRectangles);
+    rectanglesToTriangles(gg.floorRectangles, triangles, false, false, true);
+    if (!triangles.empty()) {
+        out << "AttributeBegin" << endl;
+        out << "Transform [1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1]" << endl;
+        out << "NamedMaterial \"FloorMaterial\"" << endl;
+        out << "Shape \"trianglemesh\"" << endl;
+        outputTriangles(out, triangles, m*reup);
+        triangles.clear();
+        out << "\"string name\" [\"Floor\"]" << endl;
+        out << "AttributeEnd" << endl;
     }
-    out << "]" << endl;
-    out << "\"integer indices\" [" << endl;
-        out << '\t' << 0 << " " << 2 << " " << 1 << endl;
-        out << '\t' << 1 << " " << 2 << " " << 3 << endl;
-    out << "]" << endl;
-    out << "\"float uv\" [" << endl;
-    if (roomw < roomd) {
-        double s = roomd/roomw;
-        out << "\t0 0 1 0 0 " << s << " 1 " << s;
-    } else {
-        double s = roomw/roomd;
-        out << "\t0 0 " << s << " 0 0 1 " << s << " 1";
+
+    // Output RWOs
+    for (int i = 0; i < room->walls.size(); i++) {
+        for (int j = 0; j < room->walls[i].windows.size(); j++) {
+
+            stringstream matstream;
+            matstream << "rwo" << i << "_" << j;
+            string matname = matstream.str();
+            outputMaterial(out, room->walls[i].windows[j].material, matname);
+            vector<roommodel::Rect> windowrect;
+            windowrect.push_back(gg.getRectangleForWindow(&(room->walls[i].windows[j])));
+            gg.doubleRectanglesForRaytracing(windowrect);
+            rectanglesToTriangles(windowrect, triangles, false, false, true);
+            if (!triangles.empty()) {
+                out << "AttributeBegin" << endl;
+                out << "Transform [1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1]" << endl;
+                out << "NamedMaterial \"" << matname << "\"" << endl;
+                out << "Shape \"trianglemesh\"" << endl;
+                outputTriangles(out, triangles, m*reup);
+                triangles.clear();
+                out << "AttributeEnd" << endl;
+            }
+        }
     }
-    out << "]" << endl;
-    out << "\"bool generatetangents\" [\"false\"]" << endl;
-    out << "\"string name\" [\"Floor\"]" << endl;
-    out << "AttributeEnd" << endl;
 
     // Output light sources
-    for (int i = 0; i < ir.lights.size(); ++i) {
-        if (ir.lights[i].isEmpty()) continue;
-        vector<R3Point> pts;
-        vector<int> indices;
-        estimateLightShape(m, i+1, pts, indices);
-        out << "AttributeBegin" << endl;
-        if (pts.size() == 4 && indices.size() == 0) {
-            if (pts.size() == 4) {
-                // Disk area light
-                out << "AreaLightSource \"diffuse\" \"rgb L\" [";
-                for (int j = 0; j < 3; ++j) out << ir.lights[i](j)/M_PI << " ";
-                out << "]" << endl;
-                Matrix3d rot;
-                Vector3d axes[3];
-                axes[0] = Vector3d(pts[2][0], pts[2][1], pts[2][2]);
-                axes[2] = Vector3d(pts[3][0], pts[3][1], pts[3][2]);
-                axes[1] = axes[2].cross(axes[0]);
-                for (int j = 0; j < 3; ++j) rot.col(j) = axes[j];
-                rot = rot.inverse();
-                out << "Transform [";
-                for (int j = 0; j < 3; ++j) {
-                    for (int k = 0; k < 3; ++k) out << rot(j,k) << " ";
-                    out << pts[0][j] << " ";
-                }
+    for (int i = 0; i < lights.size(); ++i) {
+        RGBLight* rgbl = static_cast<RGBLight*>(lights[i]);
+        stringstream lightfilenamestream;
+        lightfilenamestream << "light" << i << ".exr";
+        boost::filesystem::path rootdir =
+            (boost::filesystem::path(filename)).parent_path();
+        string lightfilename = lightfilenamestream.str();
+        rootdir /= lightfilename;
+        // Generate lightfile
+        if (lights[i]->typeId() & LIGHTTYPE_LINE) {
+            generateImage(rgbl, rootdir.string());
+            LineLight* ll = static_cast<LineLight*>(rgbl->getLight(0));
+            for (int j = 0; j < ll->getNumSubdivs(); j++) {
+                Vector3d p = ll->getSubpoint(j);
+                Vector3d v = ll->getVector();
+                Vector3d u = ll->getPerpendicularVector();
+                Vector3d t = u.cross(v);
+                out << "AttributeBegin" << endl;
+                out << "Translate ";
+                for (int k = 0; k < 3; k++) out << p[k] << " ";
+                out << endl;
+                out << "ConcatTransform [";
+                // PBRT goniometric: X is "up", Y is light vector
+                for (int x = 0; x < 3; x++)
+                    out << u[x] << " ";
+                out << " 0 ";
+                for (int x = 0; x < 3; x++)
+                    out << v[x] << " ";
+                out << " 0 ";
+                for (int x = 0; x < 3; x++)
+                    out << t[x] << " ";
+                out << " 0 ";
                 out << "0 0 0 1]" << endl;
-                out << "Shape \"disk\" \"float radius\" [" << pts[1][0] << "]" << endl;
-            } else if (pts.size() == 1) {
-                // Point light
-                double radius = 0.02;
+                out << "LightSource \"goniometric\" \"string mapname\" [\"" << lightfilename << "\"]" << endl;
+                out << "AttributeEnd" << endl;
+            }
+        } else if (lights[i]->typeId() & LIGHTTYPE_POINT) {
+            generateImage(rgbl, rootdir.string());
+            SymmetricPointLight* pl = static_cast<SymmetricPointLight*>(rgbl->getLight(0));
+            out << "AttributeBegin" << endl;
+            out << "Translate ";
+            for (int j = 0; j < 3; j++) out << pl->getPosition(j) << " ";
+            out << endl;
+            out << "LightSource \"goniometric\" \"string mapname\" [\"" << lightfilename << "\"]" << endl;
+            out << "AttributeEnd" << endl;
+        } else if (lights[i]->typeId() & LIGHTTYPE_SH) {
+            generateImage(rgbl, rootdir.string());
+            out << "AttributeBegin" << endl;
+            out << "LightSource \"infinite\" \"string mapname\" [\"" << lightfilename << "\"]" << endl;
+            out << "AttributeEnd" << endl;
+        } else if (lights[i]->typeId() & LIGHTTYPE_ENVMAP) {
+            generateImage(rgbl, rootdir.string());
+            out << "AttributeBegin" << endl;
+            out << "LightSource \"infinite\" \"string mapname\" [\"" << lightfilename << "\"]" << endl;
+            out << "AttributeEnd" << endl;
+        } else if (lights[i]->typeId() & LIGHTTYPE_AREA) {
+            out << "AttributeBegin" << endl;
+            vector<R3Point> pts;
+            vector<int> indices;
+            estimateLightShape(mmgr, i+1, pts, indices);
+            if (pts.size() == 4 && indices.size() == 0) {
+                if (pts.size() == 4) {
+                    // Disk area light
+                    out << "AreaLightSource \"diffuse\" \"rgb L\" [";
+                    for (int j = 0; j < 3; ++j) out << lights[i]->coef(j)/M_PI << " ";
+                    out << "]" << endl;
+                    Matrix3d rot;
+                    Vector3d axes[3];
+                    axes[0] = Vector3d(pts[3][0], pts[3][1], pts[3][2]);
+                    axes[2] = Vector3d(pts[2][0], pts[2][1], pts[2][2]);
+                    axes[1] = axes[2].cross(axes[0]);
+                    for (int j = 0; j < 3; ++j) rot.col(j) = axes[j];
+                    rot = rot.inverse();
+                    out << "Transform [";
+                    for (int j = 0; j < 3; ++j) {
+                        for (int k = 0; k < 3; ++k) out << rot(j,k) << " ";
+                        out << pts[0][j] << " ";
+                    }
+                    out << "0 0 0 1]" << endl;
+                    out << "Shape \"disk\" \"float radius\" [" << pts[1][0] << "]" << endl;
+                } else if (pts.size() == 1) {
+                    // Point light
+                    double radius = 0.02;
+                    out << "AreaLightSource \"diffuse\" \"rgb L\" [";
+                    for (int j = 0; j < 3; ++j) out << lights[i]->coef(j)/(M_PI*radius*radius) << " ";
+                    out << "]" << endl;
+                    out << "Transform [1 0 0 " << pts[0][0] <<
+                        " 0 1 0 " << pts[0][1] <<
+                        " 0 0 1 " << pts[0][2] <<
+                        " 0 0 0 1]" << endl;
+                    out << "Shape \"sphere\" \"float radius\" [" << radius << "]" << endl;
+                }
+            } else {
                 out << "AreaLightSource \"diffuse\" \"rgb L\" [";
-                for (int j = 0; j < 3; ++j) out << ir.lights[i](j)/(M_PI*radius*radius) << " ";
+                for (int j = 0; j < 3; ++j) out << lights[i]->coef(j)/M_PI << " ";
                 out << "]" << endl;
-                out << "Transform [1 0 0 " << pts[0][0] <<
-                                 " 0 1 0 " << pts[0][1] <<
-                                 " 0 0 1 " << pts[0][2] <<
-                                 " 0 0 0 1]" << endl;
-                out << "Shape \"sphere\" \"float radius\" [" << radius << "]" << endl;
+                out << "Transform [1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1]" << endl;
+                for (int j = 0; j < pts.size(); ++j) {
+                    Vector4f q(pts[j][0],pts[j][1],pts[j][2],1);
+                    /*
+                       q = wf.getNormalizationTransform()*q;
+                       q /= q(3);
+                       R3Point tmp = b.ClosestPoint(R3Point(q(0),q(1),q(2)));
+                       q = wf.getNormalizationTransform().inverse()*Vector4f(tmp[0], tmp[1], tmp[2], 1);
+                       q /= q(3);*/
+                    pts[j] = R3Point(q(0),q(1),q(2));
+                }
+                out << "Shape \"trianglemesh\"" << endl;
+                out << "\"point P\" [" << endl;
+                for (int j = 0; j < pts.size(); ++j) {
+                    out << '\t';
+                    for (int k = 0; k < 3; ++k) out << pts[j][k] << " ";
+                    out << endl;
+                }
+                out << "]" << endl;
+                out << "\"integer indices\" [" << endl;
+                for (int j = 0; j < indices.size(); j+=3) {
+                    out << '\t';
+                    for (int k = 0; k < 3; ++k) out << indices[j+k] << " ";
+                    out << endl;
+                }
+                out << "]" << endl;
             }
-        } else {
-            out << "AreaLightSource \"diffuse\" \"rgb L\" [";
-            for (int j = 0; j < 3; ++j) out << ir.lights[i](j)/M_PI << " ";
-            out << "]" << endl;
-            out << "Transform [1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1]" << endl;
-            for (int j = 0; j < pts.size(); ++j) {
-                Vector4f q(pts[j][0],pts[j][1],pts[j][2],1);
-                q = wf.getNormalizationTransform()*q;
-                q /= q(3);
-                R3Point tmp = b.ClosestPoint(R3Point(q(0),q(1),q(2)));
-                q = wf.getNormalizationTransform().inverse()*Vector4f(tmp[0], tmp[1], tmp[2], 1);
-                q /= q(3);
-                pts[j] = R3Point(q(0),q(1),q(2));
-            }
-            out << "Shape \"trianglemesh\"" << endl;
-            out << "\"point P\" [" << endl;
-            for (int j = 0; j < pts.size(); ++j) {
-                out << '\t';
-                for (int k = 0; k < 3; ++k) out << pts[j][k] << " ";
-                out << endl;
-            }
-            out << "]" << endl;
-            out << "\"integer indices\" [" << endl;
-            for (int j = 0; j < indices.size(); j+=3) {
-                out << '\t';
-                for (int k = 0; k < 3; ++k) out << indices[j+k] << " ";
-                out << endl;
-            }
-            out << "]" << endl;
+            out << "AttributeEnd" << endl;
         }
-        out << "AttributeEnd" << endl;
     }
     out << "WorldEnd" << endl;
 }

@@ -441,7 +441,7 @@ namespace Simplify
 		if (!file)
 		{
 			printf("write_obj: can't write data file \"%s\".\n", filename);
-			system("PAUSE");
+			int ret = system("PAUSE");
 			exit(0);
 		}
 		for (int i = 0; i < vertices.size(); ++i)

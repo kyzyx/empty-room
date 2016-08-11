@@ -7,7 +7,6 @@ PKG_LIBS= \
   R3Shapes/libR3Shapes.a \
   R2Shapes/libR2Shapes.a \
   RNBasics/libRNBasics.a \
-  jpeg/libjpeg.a 
   #fglut/libfglut.a \
 
 all: $(PKG_LIBS)
@@ -29,6 +28,3 @@ R2Shapes/libR2Shapes.a:
 
 RNBasics/libRNBasics.a: 
 	    cd RNBasics; make
-
-jpeg/libjpeg.a: 
-	    cd jpeg; make

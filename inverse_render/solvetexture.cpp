@@ -1,5 +1,5 @@
 #include "solver.h"
-#include "wall_finder.h"
+#include "wallfinder/wall_finder.h"
 #include <deque>
 #include <opencv2/imgproc/imgproc.hpp>
 
@@ -58,35 +58,13 @@ int reduceToLargestCluster(vector<bool>& v, int w) {
     return szs[largestcluster];
 }
 
-Material InverseRender::computeAverageMaterial(vector<SampleData>& data, vector<Material>& lightintensities) {
-    Material avg;
-    for (int i = 0; i < data.size(); ++i) {
-        // Compute incident direct lighting
-        Material directlighting;   // Total incoming radiance from direct light
-        Material indirectlighting; // Total incoming indirect radiance
-        double totallight = 0;     // Proportion of hemisphere containing direct light
-        for (int j = 0; j < data[i].lightamount.size(); ++j) {
-            directlighting += lightintensities[j]*data[i].lightamount[j];
-            totallight += data[i].lightamount[j];
-        }
-        indirectlighting = data[i].netIncoming;
-        // Assume unsampled regions of hemicube are equal to average
-        // indirect illumination
-        indirectlighting *= (1-totallight)/(1-totallight-data[i].fractionUnknown);
-        avg += data[i].radiosity/(directlighting + indirectlighting);
-    }
-    return avg/data.size();
-}
-
-double InverseRender::generateBinaryMask(const CameraParams* cam, vector<bool>& mask, int label) {
+double InverseRender::generateBinaryMask(const CameraParams* cam, const char* labelimage, vector<bool>& mask, int label) {
     int w = cam->width;
     int h = cam->height;
-    float labelimage[w*h*3];
     mask.resize(w*h, false);
-    hr.render(cam->pos, cam->towards, cam->up, cam->fov, w, h, labelimage, false);
     int numlabelled = 0;
     for (int i = 0; i < w*h; ++i) {
-        mask[i] = (labelimage[3*i+1] == label/128.);
+        mask[i] = (labelimage[i] == label);
         if (mask[i]) numlabelled++;
     }
     return numlabelled / (double) (w*h);
@@ -94,13 +72,15 @@ double InverseRender::generateBinaryMask(const CameraParams* cam, vector<bool>& 
 
 void InverseRender::solveTexture(
         vector<SampleData>& data,
-        ColorHelper* colorhelper,
+        ImageManager* imagemanager,
         const R3Plane& surface,
-        Texture& tex)
+        Texture& tex,
+        int label)
 {
     tex.size = 0;
     // Compute average reflectance
-    Material avg = computeAverageMaterial(data, lights);
+    Material avg = computeAverageMaterial(data);
+    cout << "Average reflectance: " << avg.r << " " << avg.g << " " << avg.b << endl;
 
     // Find best image containing enough textured pixels and from a reasonably
     // direct camera pose
@@ -108,18 +88,18 @@ void InverseRender::solveTexture(
     double bestproportion = 0;
     const double threshold = 5*M_PI/12;
     vector<bool> isfloor;
-    for (int i = 0; i < colorhelper->size(); ++i) {
-        const CameraParams* cam = colorhelper->getCamera(i);
+    for (int i = 0; i < imagemanager->size(); ++i) {
+        const CameraParams* cam = imagemanager->getCamera(i);
         if (cam->towards.Dot(surface.Normal()) < -cos(threshold)) {
-            double p;
-            p = generateBinaryMask(cam, isfloor, WallFinder::LABEL_FLOOR);
+            double p = generateBinaryMask(cam, (const char*)imagemanager->getImage("labels", i), isfloor, WallFinder::LABEL_FLOOR);
             if (p == 0) continue;
             int n = reduceToLargestCluster(isfloor, cam->width);
             p = 0;
+            const float* conf = (const float*) imagemanager->getImage("confidence", i);
             for (int j = 0; j < isfloor.size(); ++j) {
-                if (isfloor[j]) p += colorhelper->getConfidenceMap(i)[j];
+                if (isfloor[j]) p += conf[j];
             }
-            if (p > 0) cout << i << ": Floor proportion " << p << endl;
+            //if (p > 0) cout << i << ": " << p << endl;
             if (p > bestproportion) {
                 bestproportion = p;
                 bestimage = i;
@@ -132,10 +112,10 @@ void InverseRender::solveTexture(
     } else {
         cout << "Using image index " << bestimage << " to obtain texture" << endl;
     }
-    const CameraParams* cam = colorhelper->getCamera(bestimage);
+    const CameraParams* cam = imagemanager->getCamera(bestimage);
     int w = cam->width;
     int h = cam->height;
-    generateBinaryMask(cam, isfloor, WallFinder::LABEL_FLOOR);
+    generateBinaryMask(cam, (const char*) imagemanager->getImage("labels",bestimage), isfloor, WallFinder::LABEL_FLOOR);
     reduceToLargestCluster(isfloor, w);
 
     vector<Point2f> from, to;
@@ -154,19 +134,6 @@ void InverseRender::solveTexture(
     if (miny >= maxy || minx >= maxx) {
         cerr << "Error solving for texture!" << endl;
     }
-    // Crop image to cluster
-    float* uncropped = (float*) colorhelper->getImage(bestimage);
-    Mat cropped(maxy-miny+1, maxx-minx+1, CV_32FC4);
-    for (int i = miny; i <= maxy; ++i) {
-        for (int j = minx; j <= maxx; ++j) {
-            cropped.at<Vec4f>(i-miny, j-minx) = Vec4f(
-                    uncropped[3*((h-i-1)*w+j)],
-                    uncropped[3*((h-i-1)*w+j)+1],
-                    uncropped[3*((h-i-1)*w+j)+2],
-                    isfloor[i*w+j]
-            );
-        }
-    }
 
     // Trace rays to find corresponding points on plane
     vector<Vector3d> points;
@@ -174,8 +141,9 @@ void InverseRender::solveTexture(
     points.push_back(Vector3d(minx, maxy, 0));
     points.push_back(Vector3d(maxx, maxy, 0));
     points.push_back(Vector3d(maxx, miny, 0));
+    vector<SampleData> sd;
     for (int i = 0; i < points.size(); ++i) {
-        from.push_back(Point2f(points[i](0) - minx, points[i](1) - miny));
+        if (i < 3) from.push_back(Point2f(points[i](0) - minx, points[i](1) - miny));
         R3Point p = cam->pos + cam->focal_length*cam->towards;
         p += (points[i](0) - (w-1)/2.)*cam->right;
         p -= (points[i](1) - (h-1)/2.)*cam->up;
@@ -188,6 +156,20 @@ void InverseRender::solveTexture(
         for (int j = 0; j < 3; ++j) points[i](j) = isect[j];
     }
 
+    // Crop image to cluster, scaled by incident illumination
+    const float* uncropped = (const float*) imagemanager->getImage(bestimage);
+    Mat cropped(maxy-miny+1, maxx-minx+1, CV_32FC4);
+    for (int i = miny; i <= maxy; ++i) {
+        for (int j = minx; j <= maxx; ++j) {
+            double c[3];
+            for (int k = 0; k < 3; k++) {
+                c[k] = uncropped[3*(i*w+j)+k];
+            }
+            cropped.at<Vec4f>(i-miny, j-minx) = Vec4f(
+                    c[0], c[1], c[2], isfloor[i*w+j]);
+        }
+    }
+
     // Determine new coordinate system on floor plane
     Vector3d v1 = points[1] - points[0];
     Vector3d v2 = -v1.cross(gaps2eigen(surface.Normal()));
@@ -195,24 +177,25 @@ void InverseRender::solveTexture(
     v2 *= v1.norm()/v2.norm();
     Vector3d origin = points[0];
     // Project points onto new coordinate system
-    for (int i = 0; i < points.size(); ++i) {
+    for (int i = 0; i < 3; ++i) {
         Vector3d p = points[i] - origin;
-        to.push_back(Point2f(p.dot(v2), p.dot(v1)));
+        to.push_back(Point2f(2*p.dot(v2), 2*p.dot(v1)));
     }
 
     // Rectify
-    int xx[] = {0,w,w,0};
-    int yy[] = {0,0,h,h};
+    Mat rectification = getAffineTransform(from, to);
+
     int neww = 0;
     int newh = 0;
-    Mat rectification = getAffineTransform(from, to);
-    Mat invrectification;
-    invertAffineTransform(rectification, invrectification);
+    vector<Point2f> vv;
+    vv.push_back(Point2f(0,0));
+    vv.push_back(Point2f(w,0));
+    vv.push_back(Point2f(w,h));
+    vv.push_back(Point2f(0,h));
+    transform(vv, vv, rectification);
     for (int i = 0; i < 4; ++i) {
-        Point2f corner(xx[i], yy[i]);
-        Mat src = invrectification*Mat(corner, false);
-        if (src.at<double>(0) > neww) neww = src.at<double>(0);
-        if (src.at<double>(1) > newh) newh = src.at<double>(1);
+        if (vv[i].x > neww) neww = vv[i].x;
+        if (vv[i].y > newh) newh = vv[i].y;
     }
     warpAffine(cropped, cropped, rectification, Size(neww, newh));
 
@@ -242,14 +225,52 @@ void InverseRender::solveTexture(
     delete [] largest;
     tex.size = best;
     tex.scale = ((points[1] - points[0]).norm()*best)/(maxy-miny);
+    cout << tex.scale << endl;
+
+    // Factor out lighting
+    Mat inverserectification;
+    invertAffineTransform(rectification, inverserectification);
+    vector<Vector3d> incident;
+    vector<Point2f> corners;
+    corners.push_back(Point2f(bestc-best+1, bestr-best+1));
+    corners.push_back(Point2f(bestc-best+1, bestr));
+    corners.push_back(Point2f(bestc, bestr));
+    corners.push_back(Point2f(bestc, bestr-best+1));
+    transform(corners, corners, inverserectification);
+    for (int i = 0; i < corners.size(); i++) {
+        R3Point p = cam->pos + cam->focal_length*cam->towards;
+        p += (corners[i].x - (w-1)/2.)*cam->right;
+        p -= (corners[i].y - (h-1)/2.)*cam->up;
+        R3Ray ray(cam->pos, p);
+        R3MeshIntersection misect;
+        mesh->getSearchTree()->FindIntersection(ray, misect, 0);
+        if (misect.type == R3_MESH_NULL_TYPE) {
+            cerr << "Unexpected error!" << endl;
+            return;
+        }
+
+        sd.push_back(
+                hr->computeSample(misect.point + 0.005*surface.Normal(),
+                    surface.Normal(), lights, NULL, NULL));
+        Material m = computeIncident(sd[i], lightintensities);
+        incident.push_back(Vector3d(m.r, m.g, m.b));
+    }
 
     // Copy into image
     tex.texture = new float[3*tex.size*tex.size];
     float* next = tex.texture;
     for (int i = bestr-best+1; i <= bestr; ++i) {
         for (int j = bestc-best+1; j <= bestc; ++j) {
-            for (int k = 0; k < 3; ++k) {
-                *(next++) = cropped.at<Vec4f>(i,j)[k];
+            double c[3];
+            double u = (j-bestc+best-1)/(float)(best);
+            double v = (i-bestr+best-1)/(float)(best);
+            for (int k = 0; k < 3; k++) {
+                *next = cropped.at<Vec4f>(i,j)[k];
+                *next /= (1-u)*(1-v)*incident[0][k]
+                       + (1-u)*v    *incident[1][k]
+                       +     u*v    *incident[2][k]
+                       +     u*(1-v)*incident[3][k];
+                next++;
             }
         }
     }

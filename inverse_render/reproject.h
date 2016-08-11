@@ -1,25 +1,21 @@
 #ifndef _REPROJECT_H
 #define _REPROJECT_H
-#include "mesh.h"
-#include "colorhelper.h"
+#include "datamanager/meshmanager.h"
+#include "datamanager/imagemanager.h"
 
-void reproject(ColorHelper& ch, ColorHelper& lights, Mesh& mesh);
 void reproject(
-        ColorHelper& hdr,
-        Mesh& mesh,
+        ImageManager& hdr,
+        MeshManager& mesh,
         double threshold,
-        bool flip_x=false,
-        bool flip_y=false
+        boost::function<void(int)> cb=NULL
 );
 void reproject(
         const float* hdrimage,
         const float* confidencemap,
         const float* depthmap,
         const CameraParams* cam,
-        Mesh& mesh,
+        MeshManager& mesh,
         double threshold,
-        bool flip_x=false,
-        bool flip_y=false
+        int16_t id=-1
 );
-void reproject(const char* color, const char* light, const CameraParams* cam, Mesh& mesh);
 #endif

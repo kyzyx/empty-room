@@ -1,187 +1,146 @@
 #include "solver.h"
-#include "wall_finder.h"
+#include <set>
 #include <random>
-#include <Eigen/Dense>
 #include <fstream>
-#include "eigen_nnls.h"
 
 using namespace std;
-using namespace Eigen;
 
-void solveLights(vector<SampleData>& data, vector<int>& indices, vector<Material>& lights, double r, int ch) {
-    VectorXd b(indices.size());
-    MatrixXd A(indices.size(), lights.size());
-    for (int i = 0; i < indices.size(); ++i) {
-        b[i] = (1-data[indices[i]].fractionUnknown)*(data[indices[i]].radiosity(ch) - r*data[indices[i]].netIncoming(ch));
-        for (int j = 0; j < data[indices[i]].lightamount.size(); ++j) {
-            A(i,j) = (1-data[indices[i]].fractionUnknown)*r*data[indices[i]].lightamount[j];
-        }
+Material computeIncident(const SampleData& data, std::vector<Light*>& lights) {
+    Material directlighting;   // Total incoming radiance from direct light
+    Material indirectlighting; // Total incoming indirect radiance
+    double currlighting[3];
+    for (int j = 0; j < 3; j++) currlighting[j] = 0;
+    for (int j = 0; j < lights.size(); j++) {
+        lightContribution(lights[j], currlighting, data.lightamount[j]);
     }
-    VectorXd x(lights.size());
-    NNLS<MatrixXd>::solve(A, b, x);
-    //VectorXd x = A.jacobiSvd(ComputeThinU | ComputeThinV).solve(b);
-    for (int i = 0; i < lights.size(); ++i) {
-        lights[i](ch) = x[i];
-    }
+    for (int j = 0; j < 3; j++) directlighting(j) = currlighting[j];
+
+    if (directlighting.r < 0) directlighting.r = 0;
+    if (directlighting.g < 0) directlighting.g = 0;
+    if (directlighting.b < 0) directlighting.b = 0;
+    indirectlighting = data.netIncoming;
+    indirectlighting *= reweightIncoming(data);
+    return directlighting + indirectlighting;
 }
 
-double error(vector<SampleData>& data, vector<int>& indices, vector<Material>& lights, double r, int ch) {
-    double err = 0;
-    for (int i = 0; i < indices.size(); ++i) {
-        double d = data[indices[i]].radiosity(ch) - r*data[indices[i]].netIncoming(ch);
-        for (int j = 0; j < data[indices[i]].lightamount.size(); ++j) {
-            d -= r*data[indices[i]].lightamount[j]*lights[j](ch);
-        }
-        d *= 1-data[indices[i]].fractionUnknown;
-        err += d*d;
-    }
-    return err;
-}
-
-void searchSolveSubset(vector<SampleData>& data, vector<int>& indices,
-                       vector<Material>& lights, Material& mat, int ch,
-                       int numpoints, double lower, double upper, double precision)
+Material InverseRender::computeAverageMaterial(vector<SampleData>& data)
 {
-    double inc = (upper-lower)/numpoints;
-    double besterr = numeric_limits<double>::max();
-    double bestr = -1;
-    for (double r = lower; r <= upper; r += inc) {
-        solveLights(data, indices, lights, r, ch);
-        double err = error(data, indices, lights, r, ch);
-        if (err < besterr) {
-            besterr = err;
-            bestr = r;
-        }
-    }
-    if (inc < precision) {
-        mat(ch) = bestr;
-        solveLights(data, indices, lights, bestr, ch);
-    }
-    else {
-        double ll, hh;
-        if (bestr == lower) ll = bestr;
-        else ll = bestr - inc;
-        if (bestr == upper) hh = bestr;
-        else hh = bestr + inc;
-        searchSolveSubset(data, indices, lights, mat, ch, numpoints, ll, hh, precision);
-    }
-}
-
-void solveSubset(vector<SampleData>& data, vector<int>& indices, vector<Material>& lights, Material& mat) {
-    int numpoints = 8;
-    double precision = 0.005;
-    for (int ch = 0; ch < 3; ++ch) {
-        searchSolveSubset(data, indices, lights, mat, ch, numpoints, 0, 1, precision);
-    }
-}
-
-bool InverseRender::solveAll(vector<SampleData>& data) {
+    Material avg;
     for (int i = 0; i < data.size(); ++i) {
-        double direct = 0;
-        for (int j = 0; j < data[i].lightamount.size(); ++j) direct += data[i].lightamount[j];
-        double indirect = 1 - data[i].fractionUnknown - direct;
-        data[i].netIncoming *= (indirect + data[i].fractionUnknown)/indirect;
+        Material incident = computeIncident(data[i], lightintensities);
+        Material m(0,0,0);
+        if (incident.r > 0) m.r = data[i].radiosity.r / incident.r;
+        if (incident.g > 0) m.g = data[i].radiosity.g / incident.g;
+        if (incident.b > 0) m.b = data[i].radiosity.b / incident.b;
+        avg += m;
     }
-    int subsetSize = 4+numlights;
-    vector<int> bestinliers;
-    vector<int> indices;
-    for (int i = 0; i < numRansacIters; ++i) {
-        // Select subset
-        indices.resize(data.size());
-        for (int j = 0; j < data.size(); ++j) indices[j] = j;
-        random_shuffle(indices.begin(), indices.end());
-        indices.resize(subsetSize);
-
-        // Solve for subset
-        solveSubset(data, indices, lights, wallMaterial);
-
-        // Compute inliers
-        vector<int> inliers;
-        for (int j = 0; j < data.size(); ++j) {
-            bool isinlier = true;
-            for (int ch = 0; ch < 3; ++ch) {
-                double err = data[j].netIncoming(ch);
-                for (int k = 0; k < numlights; ++k) {
-                    err += data[j].lightamount[k]*lights[k](ch);
-                }
-                err = abs(data[j].radiosity(ch) - wallMaterial(ch)*err);
-                if (err/data[j].radiosity(ch) > maxPercentErr) isinlier = false;
-            }
-            if (isinlier) inliers.push_back(j);
-        }
-        if (inliers.size() > bestinliers.size()) swap(inliers, bestinliers);
-        if (i%100 == 0) cout << "Iteration " << i << endl;
+    if (data.size()) {
+        avg /= data.size();
     }
-    cout << "Inlier proportion: " << bestinliers.size()/(double) data.size() << endl;
-
-    // Recompute parameters with inliers
-    solveSubset(data, bestinliers, lights, wallMaterial);
+    return avg;
 }
 
-void InverseRender::solve(vector<SampleData>& data) {
-    if (!numlights) return;
-    solveAll(data);
-    lights.resize(numlights);
-    cout << "Material estimate: (" << wallMaterial(0) << "," << wallMaterial(1) << "," << wallMaterial(2) << ")" << endl;
-    for (int i = 0; i < lights.size(); ++i) {
-        cout << "Light estimate " << i << ": (" << lights[i](0)/M_PI << "," << lights[i](1)/M_PI << "," << lights[i](2)/M_PI << ")" << endl;
-    }
-}
+
 void InverseRender::computeSamples(
         vector<SampleData>& data,
         vector<int> indices,
         int numsamples,
         double discardthreshold,
-        bool saveImages)
+        bool saveImages,
+        boost::function<void(int)> callback)
 {
-    if (saveImages) {
-        images = new float*[numsamples*2];
+    hr->computeSamples(data, indices, numsamples, lights, discardthreshold, saveImages?&images:NULL, callback);
+}
+
+void InverseRender::reloadLights() {
+    lights.resize(lightintensities.size(), NULL);
+    for (int i = 0; i < lightintensities.size(); i++) {
+        if (lightintensities[i]->typeId() & LIGHTTYPE_RGB) {
+            lights[i] = ((RGBLight*)lightintensities[i])->getLight(0);
+        } else if (lightintensities[i]->typeId() & LIGHTTYPE_IRGB) {
+            lights[i] = ((IRGBLight*)lightintensities[i])->getLight();
+        }
     }
-    hr.computeSamples(data, indices, numsamples, discardthreshold, images);
-    for (int i = 0; i < data.size(); ++i) {
-        data[i].lightamount.resize(numlights, 0);
+}
+
+void InverseRender::setupLightParameters(MeshManager* m) {
+    lights.clear();
+    set<unsigned char> lightids;
+    for (int i = 0; i < m->size(); i++) {
+        unsigned char l = m->getLabel(i,MeshManager::LABEL_CHANNEL);
+        if (l) lightids.insert(l);
+    }
+    for (auto lightinfo : lightids) {
+        int t = LIGHTTYPE(lightinfo);
+        Light* l = NewLightFromLightType(t);
+        lights.push_back(l);
+        if ((l->typeId() & LIGHTTYPE_LINE) || (l->typeId() & LIGHTTYPE_POINT)) {
+            lightintensities.push_back(new IRGBLight(l));
+        } else {
+            lightintensities.push_back(new RGBLight(l));
+        }
     }
 }
 
 void InverseRender::writeVariablesMatlab(vector<SampleData>& data, string filename) {
     ofstream out(filename);
-    out << "A = [";
+    out << "A = [" << endl;
+    // FIXME
     for (int i = 0; i < data.size(); ++i) {
-        for (int j = 0; j < numlights; ++j) {
-            if (j < data[i].lightamount.size()) out << data[i].lightamount[j];
-            else out << 0;
-            if (j != numlights-1) out << ",";
+        for (int j = 0; j < data[i].lightamount.size(); ++j) {
+            for (int k = 0; k < data[i].lightamount[j]->numParameters(); k++) {
+                if (j+k) out << ",";
+                out << data[i].lightamount[j]->coef(k);
+            }
         }
         if (i != data.size()-1) out << ";" << endl;
     }
     out << "];" << endl;
-    out << "weights = [";
+    out << "weights = [" << endl;
     for (int i = 0; i < data.size(); ++i) {
         out << data[i].fractionUnknown;
         if (i != data.size()-1) out << ";";
     }
     out << "];" << endl;
+    out << "direct = [" << endl;
+    for (int i = 0; i < data.size(); ++i) {
+        out << data[i].fractionDirect;
+        if (i != data.size()-1) out << ";";
+    }
+    out << "];" << endl;
     for (int ch = 0; ch < 3; ++ch) {
         out << "% Channel " << ch << endl;
-        out << "B" << ch << " = [";
+        out << "B" << ch << " = [" << endl;
         for (int i = 0; i < data.size(); ++i) {
             out << data[i].radiosity(ch);
             if (i != data.size()-1) out << ";";
         }
         out << "];" << endl;
-        out << "C" << ch << " = [";
+        out << "C" << ch << " = [" << endl;
         for (int i = 0; i < data.size(); ++i) {
             out << data[i].netIncoming(ch);
             if (i != data.size()-1) out << ";";
         }
         out << "];" << endl;
     }
+    /*for (int ch = 0; ch < 3; ch++) {
+        out << "L" << ch << " = [" << endl;
+        for (int i = 0; i < lights[ch].size(); i++) {
+            if (lights[ch][i]) {
+                for (int j = 0; j < lights[ch][i]->numParameters(); j++) {
+                    if (i+j) out << ";";
+                    out << lights[ch][i]->coef(j);
+                }
+            }
+        }
+        out << "];" << endl;
+    }*/
 }
 void InverseRender::writeVariablesBinary(vector<SampleData>& data, string filename) {
     ofstream out(filename, ofstream::binary);
     uint32_t sz = data.size();
     out.write((char*) &sz, 4);
-    sz = numlights;
+    sz = lightintensities.size();
     out.write((char*) &sz, 4);
     for (int i = 0; i < data.size(); ++i) {
         out.write((char*)&(data[i].fractionUnknown), sizeof(float));
@@ -192,22 +151,30 @@ void InverseRender::writeVariablesBinary(vector<SampleData>& data, string filena
         out.write((char*)&(data[i].netIncoming(0)), sizeof(float));
         out.write((char*)&(data[i].netIncoming(1)), sizeof(float));
         out.write((char*)&(data[i].netIncoming(2)), sizeof(float));
-        for (int j = 0; j < numlights; ++j) {
-            static float zero = 0.f;
-            if (j < data[i].lightamount.size()) out.write((char*)&(data[i].lightamount[j]), sizeof(float));
-            else out.write((char*)&zero, sizeof(float));
+        for (int j = 0; j < data[i].lightamount.size(); ++j) {
+            data[i].lightamount[j]->writeToStream(out, true);
         }
+    }
+    for (int i = 0; i < lightintensities.size(); i++) {
+        int t = lightintensities[i]->typeId();
+        out.write((char*) &t, sizeof(int));
+        lightintensities[i]->writeToStream(out, true);
+    }
+    for (int j = 0; j < 3; j++) {
+        out.write((char*)&(wallMaterial(j)), sizeof(float));
     }
 }
 
 void InverseRender::loadVariablesBinary(vector<SampleData>& data, string filename) {
+    lightintensities.clear();
+    lights.clear();
     ifstream in(filename, ifstream::binary);
     uint32_t sz;
     in.read((char*) &sz, 4);
     data.resize(sz);
     in.read((char*) &sz, 4);
     for (int i = 0; i < data.size(); ++i) {
-        data[i].lightamount.resize(sz);
+        data[i].lightamount.resize(0);
         in.read((char*)&(data[i].fractionUnknown), sizeof(float));
         in.read((char*)&(data[i].vertexid), sizeof(int));
         in.read((char*)&(data[i].radiosity(0)), sizeof(float));
@@ -216,87 +183,28 @@ void InverseRender::loadVariablesBinary(vector<SampleData>& data, string filenam
         in.read((char*)&(data[i].netIncoming(0)), sizeof(float));
         in.read((char*)&(data[i].netIncoming(1)), sizeof(float));
         in.read((char*)&(data[i].netIncoming(2)), sizeof(float));
-        for (int j = 0; j < data[i].lightamount.size(); ++j) {
-            in.read((char*)&(data[i].lightamount[j]), sizeof(float));
+        for (int j = 0; j < sz; j++) {
+            int t = lights[j]->typeId();
+            data[i].lightamount.push_back(NewLightFromLightType(t));
+            data[i].lightamount[j]->readFromStream(in, true);
         }
     }
-}
-
-bool InverseRender::calculateWallMaterialFromUnlit(vector<SampleData>& data) {
-    vector<double> estimates[3];
-    vector<double> weights;
-    for (int i = 0; i < data.size(); ++i) {
-        bool unlit = true;
-        for (int j = 0; j < data[i].lightamount.size(); ++j) {
-            if (data[i].lightamount[j] > 0) {
-                unlit = false;
-                break;
-            }
-        }
-        if (unlit) {
-            double w = 1 - data[i].fractionUnknown;
-            bool valid = true;
-            for (int ch = 0; ch < 3; ++ch) {
-                if (data[i].radiosity(ch)*w/data[i].netIncoming(ch) > 1) {
-                    valid = false;
-                    break;
-                }
-            }
-            if (valid) {
-                for (int ch = 0; ch < 3; ++ch) {
-                    estimates[ch].push_back(data[i].radiosity(ch)*w/data[i].netIncoming(ch));
-                }
-                weights.push_back(w);
-            }
+    for (int i = 0; i < sz; i++) {
+        int t;
+        in.read((char*) &t, sizeof(int));
+        Light* l;
+        if (t & LIGHTTYPE_RGB) {
+            t -= LIGHTTYPE_RGB;
+            l = NewLightFromLightType(t);
+            lights.push_back(l);
+            lightintensities.push_back(new RGBLight(l));
+            lightintensities[i]->readFromStream(in, true);
+        } else if (t & LIGHTTYPE_IRGB) {
+            t -= LIGHTTYPE_IRGB;
+            l = NewLightFromLightType(t);
+            lights.push_back(l);
+            lightintensities.push_back(new IRGBLight(l));
+            lightintensities[i]->readFromStream(in, true);
         }
     }
-    if (estimates[0].size() == 0) return false;
-    cout << "Unlit estimates: " << estimates[0].size() << endl;
-
-    double totweight = accumulate(weights.begin(), weights.end(), 0.);
-    double mean[3];
-    double stddev[3];
-    double newmean[3];
-    double count = 0;
-    for (int ch = 0; ch < 3; ++ch) {
-        mean[ch] = 0;
-        for (int i = 0; i < estimates[ch].size(); ++i) {
-            mean[ch] += estimates[ch][i]*weights[i];
-        }
-        mean[ch] /= totweight;
-        stddev[ch] = 0;
-    }
-    for (int i = 0; i < estimates[0].size(); ++i) {
-        for (int ch = 0; ch < 3; ++ch) {
-            cout << estimates[ch][i] << " ";
-            stddev[ch] += weights[i]*(estimates[ch][i]-mean[ch])*(estimates[ch][i]-mean[ch]);
-        }
-        cout << endl;
-    }
-    for (int ch = 0; ch < 3; ++ch) {
-        stddev[ch] = sqrt(stddev[ch]/totweight);
-    }
-    for (int mult = 1; count == 0; ++mult) {
-        for (int ch = 0; ch < 3; ++ch) {
-            newmean[ch] = 0;
-        }
-        for (int i = 0; i < estimates[0].size(); ++i) {
-            int bound = 0;
-            for (int ch = 0; ch < 3; ++ch) {
-                if (estimates[ch][i] < mean[ch] - mult*stddev[ch]) bound = -1;
-                else if (estimates[ch][i] > mean[ch] + mult*stddev[ch]) bound = 1;
-            }
-
-            if (bound < 0) continue;
-            if (bound > 0) break;
-            count += weights[i];
-            for (int ch = 0; ch < 3; ++ch) {
-                newmean[ch] += weights[i]*estimates[ch][i];
-            }
-        }
-    }
-    for (int ch = 0; ch < 3; ++ch) {
-        wallMaterial(ch) = newmean[ch]/count;
-    }
-    return true;
 }

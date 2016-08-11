@@ -8,3 +8,4 @@ build/
 Debug/
 
 .*.swp
+*.pro.user*
