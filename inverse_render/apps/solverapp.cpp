@@ -11,6 +11,26 @@
 #include <pcl/console/parse.h>
 
 using namespace std;
+using namespace Eigen;
+
+Matrix3d getRotationMatrix(const CameraParams* cam) {
+    Matrix3d ret;
+    ret << cam->right[0], cam->towards[0], cam->up[0],
+           cam->right[1], cam->towards[1], cam->up[1],
+           cam->right[2], cam->towards[2], cam->up[2];
+    return ret;
+}
+CameraParams fromRotationMatrix(Eigen::Matrix3d m) {
+    CameraParams ret;
+    Vector3d right = m*Vector3d(1,0,0);
+    Vector3d up = m*Vector3d(0,0,1);
+    Vector3d towards = m*Vector3d(0,1,0);
+    ret.up = R3Vector(up[0], up[1], up[2]);
+    ret.right = R3Vector(right[0], right[1], right[2]);
+    ret.towards = R3Vector(towards[0], towards[1], towards[2]);
+    return ret;
+}
+
 
 class SolverApp : public InvrenderApp {
     public:
@@ -392,6 +412,24 @@ class SolverApp : public InvrenderApp {
                             outputPbrtCameraFile(
                                     buf, pbrtfilename+".pbrt",
                                     imgr->getCamera(i));
+                            if (i) {
+                                // Output interpolated camera position
+                                CameraParams cam;
+                                Eigen::Quaterniond q(getRotationMatrix(imgr->getCamera(i)));
+                                Eigen::Quaterniond q2(getRotationMatrix(imgr->getCamera(i-1)));
+                                Eigen::Quaterniond q3 = q2.slerp(0.5,q);
+                                cam = fromRotationMatrix(q3.toRotationMatrix());
+                                cam.pos = (imgr->getCamera(i)->pos + imgr->getCamera(i-1)->pos)/2;
+                                cam.gamma = imgr->getCamera(i)->gamma;
+                                cam.width = imgr->getCamera(i)->width;
+                                cam.height = imgr->getCamera(i)->height;
+                                cam.focal_length = imgr->getCamera(i)->focal_length;
+                                cam.fov = imgr->getCamera(i)->fov;
+                                snprintf(buf, 100, "%s%04d_5.pbrt", pbrtfilename.c_str(), i-1);
+                                outputPbrtCameraFile(
+                                        buf, pbrtfilename+".pbrt",
+                                        &cam);
+                            }
                         }
                     }
                 } else {
